@@ -20,6 +20,6 @@ If you are developing a production application, we recommend using TypeScript wi
 
 cd ..
 cd ..
-git add -p
-git commit -m "beaucoup de modifs, Claude dans VSstudio, visuel metronome"
+git add .
+git commit -m "?"
 git push

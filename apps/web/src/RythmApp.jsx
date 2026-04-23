@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import RythmStaff from "./RythmStaff";
 import SettingsPage from "./SettingsPage";
+import useSheetData from "./useSheetData";
 
 // ─── Figures de base ──────────────────────────────────────────────────────────
 const q  = { dur:"q"  };
@@ -144,6 +145,10 @@ function scoreTap(actual, expected) {
 const GRADE_COLOR = { perfect:"#a78bfa", good:"#34d399", ok:"#fbbf24", miss:"#f87171" };
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
+// Probabilité de tirer une mesure binaire quand les deux groupes sont disponibles.
+// 0.7 = 70% binaire / 30% ternaire. Modifier pour ajuster l'équilibre.
+const BINARY_PROBABILITY = 0.7;
+
 const REVEAL_BONUS = { 1:0, 2:10, 3:20, 4:50 };
 const ACTIVITIES   = [
   { id:1, label:"Reproduire vu" },
@@ -153,35 +158,37 @@ const ACTIVITIES   = [
 ];
 
 // ─── Métronome visuel ────────────────────────────────────────────────────────
-function MetronomeViz({ angle, beatDurationMs }) {
+function MetronomeViz({ flash }) {
+  /*
+  // ── Ancien pendule SVG (commenté) ────────────────────────────────────────
   // Pivot à la base, barre s'élève vers le haut — ±22°, longueur 185px
-  return (
-    <svg width="60" height="215" viewBox="0 0 60 215"
-      style={{overflow:"visible", flexShrink:0}}>
-      {/* Guides d'amplitude (positions extrêmes) */}
-      <line x1="30" y1="202" x2="-38" y2="32" stroke="#1e293b" strokeWidth="1" strokeDasharray="3,5" opacity="0.6"/>
-      <line x1="30" y1="202" x2="98" y2="32" stroke="#1e293b" strokeWidth="1" strokeDasharray="3,5" opacity="0.6"/>
-      {/* Guide vertical centre */}
-      <line x1="30" y1="202" x2="30" y2="16" stroke="#1e293b" strokeWidth="1" strokeDasharray="2,4" opacity="0.4"/>
-      {/* Socle */}
-      <rect x="6" y="203" width="48" height="10" rx="3" fill="#111827" stroke="#1e293b" strokeWidth="1.5"/>
-      {/* Pivot */}
-      <circle cx="30" cy="202" r="4.5" fill="#374151" stroke="#4b5563" strokeWidth="1.5"/>
-      {/* Balancier — pivote depuis la base */}
-      <g style={{
-        transformOrigin:"30px 202px",
-        transform:`rotate(${angle}deg)`,
-        transition:`transform ${beatDurationMs * 0.88}ms linear`,
-      }}>
-        <line x1="30" y1="202" x2="30" y2="24" stroke="#6b7280" strokeWidth="3.5" strokeLinecap="round"/>
-        <circle cx="30" cy="16" r="10" fill="#374151" stroke="#6b7280" strokeWidth="2"/>
-      </g>
-    </svg>
-  );
+  // <svg width="60" height="215" viewBox="0 0 60 215"
+  //   style={{overflow:"visible", flexShrink:0}}>
+  //   <line x1="30" y1="202" x2="-38" y2="32" stroke="#1e293b" strokeWidth="1" strokeDasharray="3,5" opacity="0.6"/>
+  //   <line x1="30" y1="202" x2="98" y2="32" stroke="#1e293b" strokeWidth="1" strokeDasharray="3,5" opacity="0.6"/>
+  //   <line x1="30" y1="202" x2="30" y2="16" stroke="#1e293b" strokeWidth="1" strokeDasharray="2,4" opacity="0.4"/>
+  //   <rect x="6" y="203" width="48" height="10" rx="3" fill="#111827" stroke="#1e293b" strokeWidth="1.5"/>
+  //   <circle cx="30" cy="202" r="4.5" fill="#374151" stroke="#4b5563" strokeWidth="1.5"/>
+  //   <g style={{
+  //     transformOrigin:"30px 202px",
+  //     transform:`rotate(${angle}deg)`,
+  //     transition:`transform ${beatDurationMs * 0.88}ms linear`,
+  //   }}>
+  //     <line x1="30" y1="202" x2="30" y2="24" stroke="#6b7280" strokeWidth="3.5" strokeLinecap="round"/>
+  //     <circle cx="30" cy="16" r="10" fill="#374151" stroke="#6b7280" strokeWidth="2"/>
+  //   </g>
+  // </svg>
+  */
+  return null; // dot déplacé dans l'en-tête central
 }
 
 // ─── Composant principal ──────────────────────────────────────────────────────
 export default function RythmApp() {
+  const {
+    formulaCatalog, levelOrder, levelFormulaIds,
+    sheetId, sheetStatus, sheetError, setSheetId, resetToDefault,
+  } = useSheetData({ formulaCatalog: FORMULA_CATALOG, levelOrder: LEVEL_ORDER, levelFormulaIds: LEVEL_FORMULA_IDS });
+
   const [currentPage,     setCurrentPage]     = useState("game");
   const [selectedFormulas,setSelectedFormulas] = useState(DEFAULT_SELECTED);
   const [activity,        setActivity]        = useState(1);
@@ -210,8 +217,16 @@ export default function RythmApp() {
   const [tapFlash,     setTapFlash]     = useState(false);
   const [beatFlash,    setBeatFlash]    = useState(false);
   const [beatStrong,   setBeatStrong]   = useState(false);
-  const [metroBeat,    setMetroBeat]    = useState(0);
+  const [metroDotFlash,setMetroDotFlash]= useState(false);
+  const [flashOffsetMs,setFlashOffsetMs]= useState(-50);
   const [lives,        setLives]        = useState(3);
+
+  // Microphone
+  const [inputMode,    setInputMode]    = useState("tap"); // "tap" | "mic"
+  const [micActive,    setMicActive]    = useState(false);
+  const [micLevel,     setMicLevel]     = useState(0);
+  const [micThreshold, setMicThreshold] = useState(0.05);
+  const [micError,     setMicError]     = useState("");
 
   const startRef       = useRef(null);
   const playStartRef   = useRef(null); // heure absolue estimée du début du jeu
@@ -220,6 +235,11 @@ export default function RythmApp() {
   const audioCtxRef    = useRef(null);
   const tapTimesRef    = useRef([]);
   tapTimesRef.current  = tapTimes;
+
+  const micStreamRef   = useRef(null);
+  const micAnalyserRef = useRef(null);
+  const micRafRef      = useRef(null);
+  const lastOnsetRef   = useRef(0);
 
   // ── Gestion formules / niveaux ─────────────────────────────────────────────
   const toggleFormula = useCallback(id => {
@@ -230,15 +250,22 @@ export default function RythmApp() {
     });
   }, []);
 
+  // Quand le catalog change (sheet chargé), reset au premier niveau
+  useEffect(() => {
+    if (levelOrder.length > 0) {
+      setSelectedFormulas(new Set(levelFormulaIds[levelOrder[0]] ?? []));
+    }
+  }, [formulaCatalog]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Sélectionne toutes les formules de C1/1 jusqu'au niveau cliqué (cumulatif)
   const selectLevel = useCallback(level => {
     const ids = new Set();
-    for (const lv of LEVEL_ORDER) {
-      (LEVEL_FORMULA_IDS[lv] ?? []).forEach(id => ids.add(id));
+    for (const lv of levelOrder) {
+      (levelFormulaIds[lv] ?? []).forEach(id => ids.add(id));
       if (lv === level) break;
     }
     setSelectedFormulas(ids);
-  }, []);
+  }, [levelOrder, levelFormulaIds]);
 
   // ── Audio ──────────────────────────────────────────────────────────────────
   const getCtx = useCallback(() => {
@@ -266,20 +293,48 @@ export default function RythmApp() {
     setTimeout(() => setBeatFlash(false), strong ? 160 : 110);
   }, [beep]);
 
+  // ── Microphone ─────────────────────────────────────────────────────────────
+  const startMic = useCallback(async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+      micStreamRef.current = stream;
+      const ac = getCtx();
+      const source = ac.createMediaStreamSource(stream);
+      const analyser = ac.createAnalyser();
+      analyser.fftSize = 256;
+      source.connect(analyser);
+      micAnalyserRef.current = analyser;
+      setMicActive(true);
+      setMicError("");
+    } catch (e) {
+      setMicError(e.message ?? "Microphone refusé");
+      setInputMode("tap");
+    }
+  }, [getCtx]);
+
+  const stopMic = useCallback(() => {
+    cancelAnimationFrame(micRafRef.current);
+    micStreamRef.current?.getTracks().forEach(t => t.stop());
+    micStreamRef.current = null;
+    micAnalyserRef.current = null;
+    setMicActive(false);
+    setMicLevel(0);
+  }, []);
+
   // ── Helpers ────────────────────────────────────────────────────────────────
   const clearTids = () => { tidsRef.current.forEach(clearTimeout); tidsRef.current = []; };
   const tid       = (fn, ms) => { const id = setTimeout(fn, ms); tidsRef.current.push(id); return id; };
 
   const randomPattern = useCallback(() => {
-    const pool = FORMULA_CATALOG.filter(f => selectedFormulas.has(f.id));
+    const pool = formulaCatalog.filter(f => selectedFormulas.has(f.id));
     if (pool.length === 0) return { timeSig:"4/4", name:"Noire × 4", figs:[q,q,q,q] };
     const hasBinary  = pool.some(f => f.group === "binary");
     const hasTernary = pool.some(f => f.group === "ternary");
     let timeSig = "4/4";
-    if (hasBinary && hasTernary) timeSig = Math.random() < 0.5 ? "4/4" : "12/8";
+    if (hasBinary && hasTernary) timeSig = Math.random() < BINARY_PROBABILITY ? "4/4" : "12/8";
     else if (hasTernary)         timeSig = "12/8";
     return generateMeasure(timeSig, pool);
-  }, [selectedFormulas]);
+  }, [selectedFormulas, formulaCatalog]);
 
   const actualBpm = useCallback(() => {
     if (tempoMode === "fixed") return bpmFixed;
@@ -309,11 +364,17 @@ export default function RythmApp() {
     playStartRef.current = performance.now() + 4 * beatMs;
     const { timestamps, totalMs } = toTimestamps(pat.figs, bpm, pat.timeSig);
 
-    // Métronome : un tick par battement BPM, du début jusqu'à la fin de l'exercice
-    setMetroBeat(0);
+    // Flash bordure — planifié avec offset (peut être négatif = avance)
+    setMetroDotFlash(false);
     const totalTicks = 4 + Math.ceil((totalMs + beatMs * 0.6) / beatMs) + 1;
     for (let k = 0; k < totalTicks; k++) {
-      tid(() => setMetroBeat(b => b + 1), k * beatMs);
+      const delay = k * beatMs + flashOffsetMs;
+      if (delay >= 0) {
+        tid(() => {
+          setMetroDotFlash(true);
+          setTimeout(() => setMetroDotFlash(false), 120);
+        }, delay);
+      }
     }
 
     [1,2,3,4].forEach((n, i) => {
@@ -348,7 +409,7 @@ export default function RythmApp() {
         setProgress(1); setActiveIdx(-1); setPhase("results");
       }, totalMs + beatMs * 0.6);
     }, 4 * beatMs);
-  }, [randomPattern, actualBpm, pulse, revealBeat, activity]);
+  }, [randomPattern, actualBpm, pulse, revealBeat, activity, flashOffsetMs]);
 
   // ── Tap ────────────────────────────────────────────────────────────────────
   const handleTap = useCallback((e) => {
@@ -385,19 +446,53 @@ export default function RythmApp() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase]);
 
-  useEffect(() => () => { clearTids(); cancelAnimationFrame(rafRef.current); }, []);
+  // ── Détection d'attaques micro ─────────────────────────────────────────────
+  useEffect(() => {
+    if (!micActive || (phase !== "playing" && phase !== "countdown")) return;
+    const analyser = micAnalyserRef.current;
+    if (!analyser) return;
+    const data = new Float32Array(analyser.fftSize);
+    const COOLDOWN = 200;
+    const detect = () => {
+      analyser.getFloatTimeDomainData(data);
+      const rms = Math.sqrt(data.reduce((s, v) => s + v * v, 0) / data.length);
+      setMicLevel(rms);
+      const now = performance.now();
+      if (rms > micThreshold && now - lastOnsetRef.current > COOLDOWN) {
+        lastOnsetRef.current = now;
+        const t = now - playStartRef.current;
+        if (t >= -TOL.ok) {
+          setTapTimes(prev => [...prev, t]);
+          setTapFlash(true);
+          setTimeout(() => setTapFlash(false), 80);
+        }
+      }
+      micRafRef.current = requestAnimationFrame(detect);
+    };
+    micRafRef.current = requestAnimationFrame(detect);
+    return () => cancelAnimationFrame(micRafRef.current);
+  }, [micActive, phase, micThreshold]);
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => () => { clearTids(); cancelAnimationFrame(rafRef.current); stopMic(); }, []);
+
 
   // ── Page réglages ──────────────────────────────────────────────────────────
   if (currentPage === "settings") {
     return (
       <SettingsPage
-        formulaCatalog={FORMULA_CATALOG}
-        levelOrder={LEVEL_ORDER}
-        levelFormulaIds={LEVEL_FORMULA_IDS}
+        formulaCatalog={formulaCatalog}
+        levelOrder={levelOrder}
+        levelFormulaIds={levelFormulaIds}
         selectedFormulas={selectedFormulas}
         onToggle={toggleFormula}
         onLevelSelect={selectLevel}
         onClose={() => setCurrentPage("game")}
+        sheetId={sheetId}
+        sheetStatus={sheetStatus}
+        sheetError={sheetError}
+        onSheetLoad={setSheetId}
+        onSheetReset={resetToDefault}
       />
     );
   }
@@ -535,6 +630,19 @@ export default function RythmApp() {
             ))}
           </div>
         )}
+        {/* Offset flash visuel */}
+        <div style={{marginTop:8,paddingTop:8,borderTop:"1px solid #1f2937"}}>
+          <div style={{display:"flex",justifyContent:"space-between",
+            fontSize:10,color:"#6b7280",marginBottom:3}}>
+            <span>Offset flash bordure</span>
+            <span style={{color:"#c084fc",fontWeight:700}}>{flashOffsetMs} ms</span>
+          </div>
+          <input type="range" min={-200} max={200} step={5}
+            value={flashOffsetMs}
+            onChange={e => setFlashOffsetMs(+e.target.value)}
+            style={{width:"100%",accentColor:"#7c3aed"}}
+          />
+        </div>
       </div>
 
       {/* ── BONUS RÉVÉLATION ── */}
@@ -632,14 +740,16 @@ export default function RythmApp() {
 
               {/* Portée — toujours présente */}
               {revealed ? (
-                <div style={{background:"#0f172a",border:"1px solid #1e293b",
+                <div style={{
+                  background:"#0f172a",
+                  border: metroDotFlash ? "2px solid #7c3aed" : "2px solid #1e293b",
                   borderRadius:14,padding:"10px 6px 6px",overflow:"hidden"}}>
                   <RythmStaff
                     figures={vexFigs}
                     timeSig={pattern.timeSig}
                     activeIdx={isPlaying ? activeIdx : -1}
                     scoreGrades={phase==="results" ? gradeMap : undefined}
-                    width={452}
+                    width={520}
                   />
                 </div>
               ) : (
@@ -694,17 +804,59 @@ export default function RythmApp() {
           )}
         </div>
 
-        {/* Métronome — instance unique persistante, survit aux transitions de phase */}
-        {phase !== "idle" && (
-          <div style={{display:"flex",alignItems:"center",paddingBottom:16}}>
-            <MetronomeViz angle={metroBeat % 2 === 0 ? -22 : 22} beatDurationMs={60000/sessionBpm}/>
-          </div>
-        )}
       </div>
 
-      {/* ── BOUTON TAP / START ── */}
+      {/* ── BOUTON TAP / MIC / START ── */}
       <div style={{width:"100%",maxWidth:540,marginTop:14}}>
-        {(isPlaying || phase==="countdown") && (
+
+        {/* Toggle TAP / MIC — visible quand canStart */}
+        {canStart && activity===1 && (
+          <div style={{display:"flex",gap:6,marginBottom:8}}>
+            {[["tap","TAP"],["mic","🎤 MIC"]].map(([mode,label]) => (
+              <button key={mode}
+                onClick={() => {
+                  if (mode === "mic") { setInputMode("mic"); startMic(); }
+                  else { setInputMode("tap"); stopMic(); }
+                }}
+                style={{
+                  flex:1,padding:"6px",borderRadius:10,fontSize:12,fontWeight:700,
+                  cursor:"pointer",border:"none",
+                  background: inputMode===mode ? "#7c3aed" : "#111827",
+                  color: inputMode===mode ? "#fff" : "#6b7280",
+                }}
+              >{label}</button>
+            ))}
+          </div>
+        )}
+
+        {/* Sensibilité micro — visible quand mode MIC + canStart */}
+        {inputMode==="mic" && canStart && (
+          <div style={{marginBottom:8,background:"#0a0f1a",
+            borderRadius:10,padding:"8px 12px"}}>
+            <div style={{display:"flex",justifyContent:"space-between",
+              fontSize:10,color:"#6b7280",marginBottom:3}}>
+              <span>Seuil de détection <span style={{color:"#4b5563"}}>↑ moins sensible</span></span>
+              <span style={{color:"#c084fc",fontWeight:700}}>
+                {micThreshold.toFixed(3)}
+              </span>
+            </div>
+            <input type="range" min={5} max={500} step={5}
+              value={Math.round(micThreshold * 1000)}
+              onChange={e => setMicThreshold(+e.target.value / 1000)}
+              style={{width:"100%",accentColor:"#7c3aed"}}
+            />
+          </div>
+        )}
+
+        {/* Erreur micro */}
+        {micError && (
+          <div style={{fontSize:10,color:"#f87171",marginBottom:6,textAlign:"center"}}>
+            {micError}
+          </div>
+        )}
+
+        {/* Entrée pendant le jeu */}
+        {(isPlaying || phase==="countdown") && inputMode==="tap" && (
           <button onPointerDown={handleTap} style={{
             width:"100%",height:130,
             background:tapFlash
@@ -721,6 +873,38 @@ export default function RythmApp() {
             transform:tapFlash?"scale(0.96)":"scale(1)",
             transition:"transform 0.06s,background 0.06s,color 0.06s",touchAction:"none",
           }}>TAP</button>
+        )}
+
+        {(isPlaying || phase==="countdown") && inputMode==="mic" && (
+          <div style={{
+            width:"100%",height:130,borderRadius:20,overflow:"hidden",
+            background: tapFlash ? "#4c1d95" : "#0a0f1a",
+            border: tapFlash ? "2px solid #c084fc" : "2px solid #1e293b",
+            display:"flex",flexDirection:"column",
+            alignItems:"center",justifyContent:"center",gap:10,
+            transition:"background 0.06s,border-color 0.06s",
+          }}>
+            <div style={{fontSize:13,color: micActive ? "#c084fc" : "#4b5563",fontWeight:700}}>
+              {micActive ? "🎤 Écoute…" : "🎤 Micro inactif"}
+            </div>
+            {/* Barre de niveau */}
+            <div style={{width:"80%",height:8,background:"#1e293b",borderRadius:99,overflow:"hidden"}}>
+              <div style={{
+                height:"100%",borderRadius:99,
+                width:`${Math.min(micLevel / (micThreshold * 3), 1) * 100}%`,
+                background: micLevel > micThreshold ? "#c084fc" : "#374151",
+                transition:"width 0.05s",
+              }}/>
+            </div>
+            {/* Marqueur seuil */}
+            <div style={{width:"80%",position:"relative",height:4}}>
+              <div style={{
+                position:"absolute",
+                left:`${Math.min(1/3, 1) * 100}%`,
+                top:0,width:2,height:4,background:"#7c3aed",borderRadius:1,
+              }}/>
+            </div>
+          </div>
         )}
         {canStart && activity===1 && (
           <button onClick={startGame} style={{

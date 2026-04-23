@@ -1,0 +1,130 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# APP RYTHME — Catalogue de formules rythmiques
+# Version : 1.0
+# ═══════════════════════════════════════════════════════════════════════════════
+#
+# ── COMMENT UTILISER CE FICHIER ────────────────────────────────────────────────
+#
+#   1. Importer dans Google Sheets : Fichier → Importer → Télécharger ce fichier
+#   2. Les lignes commençant par # sont des commentaires — les conserver ou les supprimer
+#   3. Modifier les formules selon votre progression pédagogique
+#   4. Publier le sheet : Fichier → Partager → Publier sur le web
+#      → sélectionner "Feuille entière" → format "CSV (.csv)" → cliquer "Publier"
+#   5. Copier l'URL publiée
+#   6. Dans l'app : Réglages → Source des formules → coller l'URL → Charger
+#
+# ── PARTAGER AVEC VOS ÉLÈVES OU COLLÈGUES ──────────────────────────────────────
+#
+#   Ajouter ?sheet=VOTRE_ID_SHEET à l'URL de l'app.
+#   Exemple : https://votre-app.vercel.app/?sheet=1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74
+#   L'identifiant du sheet se trouve dans son URL : .../spreadsheets/d/[IDENTIFIANT]/...
+#
+# ═══════════════════════════════════════════════════════════════════════════════
+# LÉGENDE DES COLONNES
+# ═══════════════════════════════════════════════════════════════════════════════
+#
+#  id       Identifiant technique unique de la formule.
+#           Convention : bin_ = formule binaire, ter_ = formule ternaire.
+#           Attention : ne pas modifier les identifiants existants.
+#           Un changement d'identifiant sera interprété comme une nouvelle formule.
+#
+#  nom      Nom affiché dans l'interface de l'application.
+#
+#  groupe   Type de métrique auquel appartient la formule :
+#             binary   → mesures binaires (2/4, 3/4, 4/4…)
+#             ternary  → mesures ternaires (6/8, 9/8, 12/8…)
+#
+#  temps    Nombre de temps que la formule occupe dans la mesure :
+#             1 → un seul temps
+#             2 → deux temps consécutifs
+#
+#  niveau   Niveau à partir duquel la formule est introduite (système cumulatif).
+#           Format : C[cycle]/[trimestre]   Exemples valides : C1/1, C1/4, C2/2, C3
+#           Une formule de niveau C1/2 est active à partir du niveau C1/2
+#           et reste disponible à tous les niveaux suivants.
+#           Tri automatique dans l'app : C1/1 < C1/2 < C1/3 < C1/4 < C2/1 < … < C3
+#
+#  figures  Séquence de figures rythmiques, séparées par des virgules.
+#           Si la cellule contient des virgules, elle doit être entourée
+#           de guillemets doubles dans le fichier CSV (Google Sheets le fait automatiquement).
+#
+# ── CODES DES FIGURES ──────────────────────────────────────────────────────────
+#
+#   Code    Nom               Durée en temps binaires
+#   ─────── ──────────────── ───────────────────────────────────────────────────
+#   q       Noire             1 temps binaire
+#   h       Blanche           2 temps binaires
+#   qd      Noire pointée     1 temps ternaire  (= 3 croches = 1,5 noire)
+#   hd      Blanche pointée   2 temps ternaires (= 6 croches)
+#   8       Croche            1/2 temps binaire
+#   16      Double croche     1/4 temps binaire
+#
+#   Suffixe r = silence (repos)
+#     qr    Soupir               (silence 1 temps binaire)
+#     hr    Demi-soupir 2 temps  (silence 2 temps binaires)
+#     8r    Demi-soupir          (silence 1/2 temps binaire)
+#     16r   Quart de soupir      (silence 1/4 temps binaire)
+#
+#   Suffixe t = triolet
+#     8t    Croche en triolet    (toujours groupées par 3 : 8t,8t,8t)
+#     qt    Noire en triolet     (usage avancé)
+#
+# ── EXEMPLES DE VALEURS POUR LA COLONNE "figures" ──────────────────────────────
+#
+#   q              → noire seule (1 temps binaire)
+#   qr             → soupir (silence 1 temps binaire)
+#   "8,8"          → deux croches (1 temps binaire)
+#   "8,8,8"        → trois croches (1 temps ternaire)
+#   "q,8"          → noire + croche (1 temps ternaire)
+#   "8,q"          → croche + noire (1 temps ternaire)
+#   "8t,8t,8t"     → triolet de trois croches (1 temps binaire)
+#   "qd,8"         → noire pointée + croche (2 temps binaires)
+#   "8,qd"         → croche + noire pointée (2 temps binaires)
+#   "8,q,8"        → syncope croche-noire-croche (2 temps binaires)
+#   "8r,8,8"       → demi-soupir + 2 croches (1 temps ternaire)
+#   "16,16,16,16"  → quatre doubles croches (1 temps binaire)
+#
+# ═══════════════════════════════════════════════════════════════════════════════
+# DONNÉES
+# ═══════════════════════════════════════════════════════════════════════════════
+#
+#   Pour ajouter une formule  : ajouter une ligne de données sous les existantes
+#   Pour supprimer une formule: supprimer la ligne entière
+#   Pour déplacer une formule : changer la valeur dans la colonne "niveau"
+#   L'ordre des lignes n'a pas d'importance (tri automatique par niveau dans l'app)
+#
+id,nom,groupe,temps,niveau,figures
+# ── Niveau C1/1 — Formules de base ─────────────────────────────────────────────
+bin_q,Noire,binary,1,C1/1,q
+bin_qr,Soupir,binary,1,C1/1,qr
+bin_h,Blanche,binary,2,C1/1,h
+bin_hr,Demi-soupir (2 temps),binary,2,C1/1,hr
+bin_ee,Deux croches,binary,1,C1/1,"8,8"
+ter_qd,Noire pointée,ternary,1,C1/1,qd
+ter_eee,Trois croches,ternary,1,C1/1,"8,8,8"
+ter_qe,Noire + croche,ternary,1,C1/1,"q,8"
+ter_eq,Croche + noire,ternary,1,C1/1,"8,q"
+# ── Niveau C1/2 — Noire pointée et rythmes ternaires composés ──────────────────
+bin_qde,Noire pointée + croche,binary,2,C1/2,"qd,8"
+bin_eqd,Croche + noire pointée,binary,2,C1/2,"8,qd"
+ter_ree,Demi-soupir + deux croches,ternary,1,C1/2,"8r,8,8"
+ter_eer,Deux croches + demi-soupir,ternary,1,C1/2,"8,8,8r"
+ter_qde_qde,Deux noires pointées,ternary,2,C1/2,"qd,qd"
+# ── Niveau C1/3 — Triolet ──────────────────────────────────────────────────────
+bin_ttt,Triolet de croches,binary,1,C1/3,"8t,8t,8t"
+# ── Niveau C1/4 — Doubles croches ──────────────────────────────────────────────
+bin_ssss,Quatre doubles croches,binary,1,C1/4,"16,16,16,16"
+bin_ess,Croche + deux doubles croches,binary,1,C1/4,"8,16,16"
+bin_sse,Deux doubles croches + croche,binary,1,C1/4,"16,16,8"
+bin_sser,Deux doubles croches + demi-soupir,binary,1,C1/4,"16,16,8r"
+# ── Niveau C2/1 — Blanche pointée ──────────────────────────────────────────────
+ter_hd,Blanche pointée,ternary,2,C2/1,hd
+# ── Niveau C2/2 — Syncopes et contretemps ──────────────────────────────────────
+bin_ere,Demi-soupir + croche,binary,1,C2/2,"8r,8"
+bin_eer,Croche + demi-soupir,binary,1,C2/2,"8,8r"
+bin_eqe,Syncope croche-noire-croche,binary,2,C2/2,"8,q,8"
+ter_ere,Croche-demi-soupir-croche,ternary,1,C2/2,"8,8r,8"
+# ── Niveaux C2/3, C2/4, C3 — À compléter selon votre progression ───────────────
+# Exemple (décommenter et adapter) :
+# ma_formule,Ma formule,binary,1,C2/3,"8,16,16"
+#bin_ses,Syncope double-croche-double,binary,1,C3,"16,8,16"

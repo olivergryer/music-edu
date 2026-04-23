@@ -1,3 +1,4 @@
+import { useState } from "react";
 import RythmStaff from "./RythmStaff";
 
 // ─── Carte d'une formule ──────────────────────────────────────────────────────
@@ -40,6 +41,122 @@ function FormulaCard({ formula, selected, onToggle }) {
   );
 }
 
+// ─── Section source Google Sheets ────────────────────────────────────────────
+function SheetSourceSection({ sheetId, sheetStatus, sheetError, onSheetLoad, onSheetReset }) {
+  const [inputVal,  setInputVal]  = useState(sheetId ?? "");
+  const [copied,    setCopied]    = useState(false);
+
+  const shareUrl = sheetStatus === "loaded" && sheetId
+    ? `${window.location.origin}${window.location.pathname}?sheet=${encodeURIComponent(sheetId)}`
+    : null;
+
+  const copyShareUrl = () => {
+    navigator.clipboard.writeText(shareUrl).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
+  const statusBadge = {
+    idle:    <span style={{color:"#6b7280"}}>● Données par défaut</span>,
+    loading: <span style={{color:"#fbbf24"}}>⟳ Chargement…</span>,
+    loaded:  <span style={{color:"#34d399"}}>✓ Sheet chargé</span>,
+    error:   <span style={{color:"#f87171"}}>✕ {sheetError}</span>,
+  }[sheetStatus] ?? null;
+
+  return (
+    <div style={{width:"100%",maxWidth:540,marginBottom:20,
+      background:"#0a0f1a",borderRadius:14,padding:"12px 14px"}}>
+      <div style={{fontSize:10,fontWeight:700,color:"#6b7280",
+        textTransform:"uppercase",letterSpacing:1,marginBottom:10}}>
+        Source des formules
+      </div>
+      <div style={{display:"flex",gap:8,marginBottom:8}}>
+        <input
+          type="text"
+          value={inputVal}
+          onChange={e => setInputVal(e.target.value)}
+          onKeyDown={e => e.key === "Enter" && onSheetLoad(inputVal)}
+          placeholder="URL publiée ou ID Google Sheet"
+          style={{
+            flex:1,background:"#111827",border:"1px solid #1f2937",
+            borderRadius:8,padding:"6px 10px",color:"#f9fafb",fontSize:11,
+            outline:"none",
+          }}
+        />
+        <button
+          onClick={() => onSheetLoad(inputVal)}
+          disabled={sheetStatus === "loading"}
+          style={{
+            background:"#4f46e5",border:"none",borderRadius:8,
+            padding:"6px 14px",color:"#fff",fontSize:11,fontWeight:700,
+            cursor:"pointer",flexShrink:0,
+          }}
+        >
+          Charger
+        </button>
+      </div>
+      <div style={{fontSize:10,marginBottom:8}}>{statusBadge}</div>
+
+      {shareUrl && (
+        <div style={{marginBottom:8,padding:"8px 10px",background:"#0f172a",
+          borderRadius:8,border:"1px solid #1e293b"}}>
+          <div style={{fontSize:9,color:"#6b7280",marginBottom:4}}>
+            Lien de partage (URL encodée)
+          </div>
+          <div style={{display:"flex",gap:6,alignItems:"center"}}>
+            <div style={{flex:1,fontSize:9,color:"#9ca3af",
+              wordBreak:"break-all",lineHeight:1.4}}>
+              {shareUrl}
+            </div>
+            <button
+              onClick={copyShareUrl}
+              style={{
+                background: copied ? "#065f46" : "#1f2937",
+                border:"none",borderRadius:6,
+                padding:"4px 10px",color: copied ? "#34d399" : "#9ca3af",
+                fontSize:10,fontWeight:700,cursor:"pointer",flexShrink:0,
+              }}
+            >
+              {copied ? "Copié !" : "Copier"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {sheetStatus !== "idle" && (
+        <button
+          onClick={() => { setInputVal(""); onSheetReset(); }}
+          style={{
+            background:"none",border:"1px solid #374151",borderRadius:8,
+            padding:"4px 12px",color:"#6b7280",fontSize:10,fontWeight:600,
+            cursor:"pointer",marginBottom:8,display:"block",
+          }}
+        >
+          ↺ Réinitialiser (formules par défaut)
+        </button>
+      )}
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",
+        marginTop:6,gap:8,flexWrap:"wrap"}}>
+        <div style={{fontSize:9,color:"#374151",lineHeight:1.5}}>
+          Publier le sheet : Fichier → Partager → Publier sur le web → CSV
+        </div>
+        <a
+          href="/formules-rythme-template.csv"
+          download="formules-rythme-template.csv"
+          style={{
+            background:"#111827",border:"1px solid #1f2937",borderRadius:8,
+            padding:"4px 12px",color:"#9ca3af",fontSize:10,fontWeight:600,
+            textDecoration:"none",flexShrink:0,whiteSpace:"nowrap",
+          }}
+        >
+          ↓ Télécharger le modèle CSV
+        </a>
+      </div>
+    </div>
+  );
+}
+
 // ─── Page réglages ────────────────────────────────────────────────────────────
 export default function SettingsPage({
   formulaCatalog,
@@ -49,6 +166,11 @@ export default function SettingsPage({
   onToggle,
   onLevelSelect,
   onClose,
+  sheetId,
+  sheetStatus,
+  sheetError,
+  onSheetLoad,
+  onSheetReset,
 }) {
   const binaryFormulas  = formulaCatalog.filter(f => f.group === "binary");
   const ternaryFormulas = formulaCatalog.filter(f => f.group === "ternary");
@@ -96,6 +218,15 @@ export default function SettingsPage({
           {selectedCount} formule{selectedCount!==1?"s":""}
         </div>
       </div>
+
+      {/* ── SOURCE SHEET ── */}
+      <SheetSourceSection
+        sheetId={sheetId}
+        sheetStatus={sheetStatus}
+        sheetError={sheetError}
+        onSheetLoad={onSheetLoad}
+        onSheetReset={onSheetReset}
+      />
 
       {/* ── NIVEAUX ── */}
       <div style={{width:"100%",maxWidth:540,marginBottom:20,
