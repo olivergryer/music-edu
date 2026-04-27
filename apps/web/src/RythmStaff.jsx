@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Renderer, Stave, StaveNote, Beam, Voice, Formatter, Dot, Tuplet } from "vexflow";
 
 const DUR_Q = {
@@ -82,20 +82,35 @@ export default function RythmStaff({
   showClef     = true,
   showTimeSig  = true,
 }) {
-  const ref = useRef(null);
+  const ref         = useRef(null);
+  const [renderWidth, setRenderWidth] = useState(null);
+
+  // Mesure la largeur réelle du container — s'adapte au viewport
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const update = () => {
+      const w = el.offsetWidth;
+      if (w > 0) setRenderWidth(Math.min(w, width));
+    };
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [width]);
 
   useEffect(() => {
-    if (!ref.current || !figures?.length) return;
+    if (!ref.current || !figures?.length || !renderWidth) return;
     ref.current.innerHTML = "";
 
     try {
       const renderer = new Renderer(ref.current, Renderer.Backends.SVG);
-      renderer.resize(width, height);
+      renderer.resize(renderWidth, height);
       const ctx = renderer.getContext();
       ctx.setFont("Arial", 10);
 
       const staveY = height < 120 ? 8 : 24;
-      const stave  = new Stave(10, staveY, width - 20);
+      const stave  = new Stave(10, staveY, renderWidth - 20);
       if (showClef)    stave.addClef("treble");
       if (showTimeSig) stave.addTimeSignature(timeSig);
       stave.setStyle({ strokeStyle: "#4b5563", fillStyle: "#4b5563" });
@@ -114,14 +129,11 @@ export default function RythmStaff({
       const DECO = "#4b5563";
       const beams = buildBeams(figures, vexNotes, timeSig);
 
-      // Calcul précis de la largeur disponible pour les notes
       const noteWidth = stave.getX() + stave.getWidth() - stave.getNoteStartX() - 10;
       new Formatter().joinVoices([voice]).format([voice], noteWidth);
       voice.draw(ctx, stave);
 
-      // ── Dessin des ligatures (les drapeaux ne sont plus visibles) ─────────────
-      // VexFlow 5: Beam.draw() never calls applyStyle(), so setStyle() is a no-op.
-      // Must set fill/stroke on the context directly before each draw.
+      // ── Dessin des ligatures ──────────────────────────────────────────────────
       beams.forEach(b => {
         ctx.setFillStyle(DECO);
         ctx.setStrokeStyle(DECO);
@@ -163,7 +175,7 @@ export default function RythmStaff({
     } catch (err) {
       console.warn("VexFlow:", err.message ?? err);
     }
-  }, [figures, timeSig, activeIdx, scoreGrades, width, height, showClef, showTimeSig]);
+  }, [figures, timeSig, activeIdx, scoreGrades, renderWidth, height, showClef, showTimeSig]);
 
   return <div ref={ref} style={{ width:"100%", maxWidth:width, overflow:"hidden" }} />;
 }

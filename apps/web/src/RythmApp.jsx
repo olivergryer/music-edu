@@ -486,11 +486,23 @@ export default function RythmApp() {
         });
       }, 4 * beatMs);
 
-      // Mesure 3 — reproduction : commence exactement après la mesure modèle
+      // Après modèle : 1 beat muet, puis beats 3 & 4 sonores (prépare-toi)
+      tid(() => { setPhase("countdown"); setCountdownN(null); setBeatFlash(false); }, 4 * beatMs + totalMs);
+      tid(() => { setCountdownN(3); pulse(false); }, 4 * beatMs + totalMs + beatMs);
+      tid(() => { setCountdownN(4); pulse(false); }, 4 * beatMs + totalMs + 2 * beatMs);
+
+      // Mesure 3 — reproduction : 3 beats après la fin du modèle
       tid(() => {
         pulse(true);
         setPhase("playing");
         startRef.current = performance.now();
+        // Beats 2,3,4 : flash visuel pendant la mesure de reproduction
+        [1,2,3].forEach(k => {
+          tid(() => {
+            setBeatStrong(false); setBeatFlash(true);
+            setTimeout(() => setBeatFlash(false), 110);
+          }, k * beatMs);
+        });
         const tick = () => {
           const el = performance.now() - startRef.current;
           setProgress(Math.min(el / totalMs, 1));
@@ -503,7 +515,7 @@ export default function RythmApp() {
           setRevealed(true);
           setPhase("results");
         }, totalMs + beatMs * 0.6);
-      }, 4 * beatMs + totalMs);
+      }, 4 * beatMs + totalMs + 3 * beatMs);
       return;
     }
 
@@ -882,11 +894,11 @@ export default function RythmApp() {
                 {(phase==="countdown" || phase==="listening") ? (
                   <>
                     <div style={{fontSize:72,fontWeight:900,color:"#c084fc",lineHeight:1}}>
-                      {countdownN}
+                      {countdownN ?? ""}
                     </div>
                     <p style={{color:"#6b7280",fontSize:12,marginTop:4}}>
                       {activity===1 && (revealed ? "Mémorise le rythme…" : "Prépare-toi…")}
-                      {activity===2 && phase==="countdown" && "Prépare-toi…"}
+                      {activity===2 && phase==="countdown" && (countdownN ? "Prépare-toi…" : "")}
                       {activity===2 && phase==="listening" && "Écoute le rythme…"}
                     </p>
                   </>
@@ -910,20 +922,21 @@ export default function RythmApp() {
               {revealed ? (
                 <div style={{
                   background:"#0f172a",
-                  border: metroDotFlash ? "2px solid #7c3aed" : "2px solid #1e293b",
+                  border: (activity === 1 ? metroDotFlash : beatFlash) ? "2px solid #7c3aed" : "2px solid #1e293b",
                   borderRadius:14,padding:"10px 6px 6px",overflow:"hidden"}}>
                   <RythmStaff
                     figures={vexFigs}
                     timeSig={pattern.timeSig}
                     activeIdx={isPlaying ? activeIdx : -1}
                     scoreGrades={phase==="results" ? gradeMap : undefined}
-                    width={520}
                   />
                 </div>
               ) : (
-                <div style={{background:"#0f172a",border:"1px dashed #374151",
+                <div style={{background:"#0f172a",
+                  border: (activity === 2 && beatFlash) ? "2px solid #7c3aed" : "1px dashed #374151",
                   borderRadius:14,padding:"20px",textAlign:"center",
-                  fontSize:28,color:"#374151",letterSpacing:8}}>
+                  fontSize:28,color:"#374151",letterSpacing:8,
+                  transition:"border-color 0.04s"}}>
                   ? ? ? ?
                 </div>
               )}
@@ -990,7 +1003,7 @@ export default function RythmApp() {
                   </>
                 )}
               </div>
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,
+              <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(155px, 1fr))",gap:8,
                 opacity: phase==="countdown" ? 0.45 : 1, transition:"opacity 0.3s"}}>
                 {choices.map((c, i) => {
                   let borderColor = "#1e293b";
@@ -1052,7 +1065,7 @@ export default function RythmApp() {
                 borderRadius:14,padding:"10px 6px 6px",overflow:"hidden",marginBottom:12,
                 transition:"border-color 0.2s",
               }}>
-                <RythmStaff figures={pattern.figs} timeSig={pattern.timeSig} activeIdx={-1} width={520} />
+                <RythmStaff figures={pattern.figs} timeSig={pattern.timeSig} activeIdx={-1} />
               </div>
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:10}}>
                 {choices.map((c, i) => {
@@ -1170,18 +1183,18 @@ export default function RythmApp() {
         )}
 
         {/* Entrée pendant le jeu */}
-        {(phase === "playing" || (phase === "countdown" && activity === 1)) && inputMode==="tap" && (activity === 1 || activity === 2) && (
+        {(phase === "playing" || (phase === "countdown" && (activity === 1 || activity === 2)) || (phase === "listening" && activity === 2)) && inputMode==="tap" && (activity === 1 || activity === 2) && (
           <button onPointerDown={handleTap} style={{
             width:"100%",height:130,
             background:tapFlash
               ?"linear-gradient(135deg,#9333ea,#ec4899)"
-              : phase==="countdown"
+              : (phase==="countdown" || (phase==="listening" && activity===2))
                 ?"linear-gradient(135deg,#4c1d95,#3b0764)"
                 :"linear-gradient(135deg,#7c3aed,#6d28d9)",
             border:"none",borderRadius:20,cursor:"pointer",
-            color: phase==="countdown" ? "#6b21a8" : "#fff",
+            color: (phase==="countdown" || (phase==="listening" && activity===2)) ? "#6b21a8" : "#fff",
             fontSize:26,fontWeight:900,letterSpacing:3,
-            boxShadow: phase==="countdown"
+            boxShadow: (phase==="countdown" || (phase==="listening" && activity===2))
               ?"0 8px 32px rgba(109,40,217,0.2)"
               :"0 8px 32px rgba(109,40,217,0.5)",
             transform:tapFlash?"scale(0.96)":"scale(1)",
@@ -1189,7 +1202,7 @@ export default function RythmApp() {
           }}>TAP</button>
         )}
 
-        {(phase === "playing" || (phase === "countdown" && activity === 1)) && inputMode==="mic" && (activity === 1 || activity === 2) && (
+        {(phase === "playing" || (phase === "countdown" && (activity === 1 || activity === 2)) || (phase === "listening" && activity === 2)) && inputMode==="mic" && (activity === 1 || activity === 2) && (
           <div style={{
             width:"100%",height:130,borderRadius:20,overflow:"hidden",
             background: tapFlash ? "#4c1d95" : "#0a0f1a",

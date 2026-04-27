@@ -1,0 +1,773 @@
+[
+  {
+    "id": "VI001", "niveau": "C1/1", "categorie": "vocabulaire_italien", "type": "qcm",
+    "question": "Que signifie « Allegro » ?",
+    "reponse_correcte": "Vif et rapide",
+    "reponse_fausse_1": "Lent et solennel", "reponse_fausse_2": "Doux et expressif", "reponse_fausse_3": "Modéré",
+    "explication": "Allegro indique un tempo vif et animé (120–156 bpm environ)."
+  },
+  {
+    "id": "VI002", "niveau": "C1/1", "categorie": "vocabulaire_italien", "type": "qcm",
+    "question": "Que signifie « Adagio » ?",
+    "reponse_correcte": "Lent et expressif",
+    "reponse_fausse_1": "Très rapide", "reponse_fausse_2": "Allant et marchant", "reponse_fausse_3": "Fort",
+    "explication": "Adagio désigne un tempo lent, souvent expressif et chantant."
+  },
+  {
+    "id": "VI003", "niveau": "C1/1", "categorie": "vocabulaire_italien", "type": "qcm",
+    "question": "Que signifie « Piano » (p) ?",
+    "reponse_correcte": "Doux",
+    "reponse_fausse_1": "Fort", "reponse_fausse_2": "Très fort", "reponse_fausse_3": "Modéré",
+    "explication": "Piano (p) est une nuance indiquant de jouer doucement."
+  },
+  {
+    "id": "VI004", "niveau": "C1/1", "categorie": "vocabulaire_italien", "type": "qcm",
+    "question": "Que signifie « Forte » (f) ?",
+    "reponse_correcte": "Fort",
+    "reponse_fausse_1": "Doux", "reponse_fausse_2": "Très doux", "reponse_fausse_3": "Rapide",
+    "explication": "Forte (f) indique de jouer fort."
+  },
+  {
+    "id": "VI005", "niveau": "C1/1", "categorie": "vocabulaire_italien", "type": "qcm",
+    "question": "Que signifie « Andante » ?",
+    "reponse_correcte": "Allant, pas marchant",
+    "reponse_fausse_1": "Très lent", "reponse_fausse_2": "Très rapide", "reponse_fausse_3": "Joyeux",
+    "explication": "Andante vient du verbe italiano « andare » (aller). Tempo modérément lent, comme une marche."
+  },
+  {
+    "id": "VI006", "niveau": "C1/2", "categorie": "vocabulaire_italien", "type": "qcm",
+    "question": "Que signifie « Presto » ?",
+    "reponse_correcte": "Très rapide",
+    "reponse_fausse_1": "Lent", "reponse_fausse_2": "Modéré", "reponse_fausse_3": "Avec douceur",
+    "explication": "Presto est l'un des tempos les plus rapides, au-dessus de l'Allegro."
+  },
+  {
+    "id": "VI007", "niveau": "C1/2", "categorie": "vocabulaire_italien", "type": "qcm",
+    "question": "Que signifie « Crescendo » ?",
+    "reponse_correcte": "En augmentant progressivement le son",
+    "reponse_fausse_1": "En diminuant progressivement le son", "reponse_fausse_2": "En accélérant", "reponse_fausse_3": "En ralentissant",
+    "explication": "Crescendo (cresc.) indique d'augmenter progressivement le volume."
+  },
+  {
+    "id": "VI008", "niveau": "C1/2", "categorie": "vocabulaire_italien", "type": "qcm",
+    "question": "Que signifie « Decrescendo » (ou Diminuendo) ?",
+    "reponse_correcte": "En diminuant progressivement le son",
+    "reponse_fausse_1": "En augmentant progressivement le son", "reponse_fausse_2": "En ralentissant", "reponse_fausse_3": "En détachant les notes",
+    "explication": "Decrescendo/Diminuendo indique de baisser progressivement le volume."
+  },
+  {
+    "id": "VI009", "niveau": "C1/2", "categorie": "vocabulaire_italien", "type": "vrai_faux",
+    "question": "« Legato » signifie jouer les notes liées, sans interruption.",
+    "reponse_correcte": "Vrai",
+    "explication": "Legato (lié) indique de jouer les notes de façon fluide et connectée."
+  },
+  {
+    "id": "VI010", "niveau": "C1/2", "categorie": "vocabulaire_italien", "type": "vrai_faux",
+    "question": "« Staccato » signifie jouer les notes liées.",
+    "reponse_correcte": "Faux",
+    "explication": "Staccato indique au contraire de détacher les notes, les jouer courtes."
+  },
+  {
+    "id": "VI011", "niveau": "C1/3", "categorie": "vocabulaire_italien", "type": "qcm",
+    "question": "Que signifie « Ritardando » (rit.) ?",
+    "reponse_correcte": "En ralentissant progressivement",
+    "reponse_fausse_1": "En accélérant", "reponse_fausse_2": "En maintenant le tempo", "reponse_fausse_3": "Soudainement fort",
+    "explication": "Ritardando (rit. ou ritard.) indique de ralentir graduellement."
+  },
+  {
+    "id": "VI012", "niveau": "C1/3", "categorie": "vocabulaire_italien", "type": "qcm",
+    "question": "Que signifie « Mezzo forte » (mf) ?",
+    "reponse_correcte": "Moyennement fort",
+    "reponse_fausse_1": "Très fort", "reponse_fausse_2": "Très doux", "reponse_fausse_3": "Modéré en tempo",
+    "explication": "Mezzo forte (mf) est entre piano et forte — intermédiaire, assez fort."
+  },
+  {
+    "id": "VT001", "niveau": "C1/2", "categorie": "vocabulaire_technique", "type": "qcm",
+    "question": "Que signifie « D.C. » (Da Capo) ?",
+    "reponse_correcte": "Reprendre depuis le début",
+    "reponse_fausse_1": "Aller à la fin", "reponse_fausse_2": "Répéter la dernière mesure", "reponse_fausse_3": "Jouer plus fort",
+    "explication": "Da Capo (D.C.) signifie littéralement « depuis la tête » — retourner au début."
+  },
+  {
+    "id": "VT002", "niveau": "C1/2", "categorie": "vocabulaire_technique", "type": "qcm",
+    "question": "Que signifie « Fine » sur une partition ?",
+    "reponse_correcte": "Fin du morceau",
+    "reponse_fausse_1": "Reprendre depuis le début", "reponse_fausse_2": "Jouer doucement", "reponse_fausse_3": "Pause",
+    "explication": "Fine marque la fin du morceau, souvent utilisé avec D.C. al Fine."
+  },
+  {
+    "id": "VT003", "niveau": "C1/3", "categorie": "vocabulaire_technique", "type": "qcm",
+    "question": "Que signifie « Coda » ?",
+    "reponse_correcte": "Section finale qui conclut le morceau",
+    "reponse_fausse_1": "Section d'introduction", "reponse_fausse_2": "Reprise du thème principal", "reponse_fausse_3": "Transition entre deux thèmes",
+    "explication": "La Coda (queue) est la section conclusive ajoutée à la fin d'une pièce."
+  },
+  {
+    "id": "VT004", "niveau": "C1/3", "categorie": "vocabulaire_technique", "type": "qcm",
+    "question": "Que signifie « Tutti » ?",
+    "reponse_correcte": "Tous les musiciens jouent ensemble",
+    "reponse_fausse_1": "Un seul musicien joue", "reponse_fausse_2": "Section en solo", "reponse_fausse_3": "Instruments divisés",
+    "explication": "Tutti (tous) indique que tout l'ensemble joue, par opposition aux solos."
+  },
+  {
+    "id": "VT005", "niveau": "C2/1", "categorie": "vocabulaire_technique", "type": "qcm",
+    "question": "Que signifie « Divisi » (div.) ?",
+    "reponse_correcte": "Les instruments de même famille se divisent en groupes",
+    "reponse_fausse_1": "Jouer à l'unisson", "reponse_fausse_2": "Jouer très fort", "reponse_fausse_3": "Jouer détaché",
+    "explication": "Divisi indique que des pupitres (ex. violons) se divisent pour jouer différentes parties."
+  },
+  {
+    "id": "VT006", "niveau": "C2/1", "categorie": "vocabulaire_technique", "type": "qcm",
+    "question": "Que signifie « Sforzando » (sfz) ?",
+    "reponse_correcte": "Accent fort et soudain sur une note",
+    "reponse_fausse_1": "Très doux soudainement", "reponse_fausse_2": "En ralentissant fortement", "reponse_fausse_3": "Jouer sans vibrato",
+    "explication": "Sforzando/Sforzato indique un accent brusque et puissant."
+  },
+  {
+    "id": "VT007", "niveau": "C2/1", "categorie": "vocabulaire_technique", "type": "vrai_faux",
+    "question": "« Subito piano » (sp) signifie devenir doux soudainement.",
+    "reponse_correcte": "Vrai",
+    "explication": "Subito (soudain) + piano (doux) = baisser brusquement le volume sans transition."
+  },
+  {
+    "id": "VT008", "niveau": "C2/2", "categorie": "vocabulaire_technique", "type": "qcm",
+    "question": "Que signifie « Con moto » ?",
+    "reponse_correcte": "Avec mouvement, animé",
+    "reponse_fausse_1": "Sans mouvement", "reponse_fausse_2": "Avec douceur", "reponse_fausse_3": "Avec force",
+    "explication": "Con moto indique d'ajouter un peu de vie et d'animation au tempo."
+  },
+  {
+    "id": "VT009", "niveau": "C1/3", "categorie": "vocabulaire_technique", "type": "texte",
+    "question": "Quel signe indique de reprendre depuis le début ? (2 lettres)",
+    "reponse_correcte": "DC",
+    "reponses_acceptees": "D.C.|Da Capo|da capo",
+    "explication": "D.C. = Da Capo = depuis le début."
+  },
+  {
+    "id": "VT010", "niveau": "C2/1", "categorie": "vocabulaire_technique", "type": "qcm",
+    "question": "Que signifie « Ossia » sur une partition ?",
+    "reponse_correcte": "Passage alternatif, ou bien",
+    "reponse_fausse_1": "Fin du morceau", "reponse_fausse_2": "Reprendre au signe", "reponse_fausse_3": "Jouer à l'octave supérieure",
+    "explication": "Ossia présente une version alternative d'un passage, souvent plus simple."
+  },
+  {
+    "id": "NP001", "niveau": "C1/1", "categorie": "notation_partition", "type": "qcm",
+    "question": "Sur quelle ligne de la portée est posée la clef de sol ?",
+    "reponse_correcte": "2e ligne",
+    "reponse_fausse_1": "1re ligne", "reponse_fausse_2": "3e ligne", "reponse_fausse_3": "4e ligne",
+    "explication": "La clef de sol s'enroule autour de la 2e ligne (en partant du bas), qui correspond au Sol."
+  },
+  {
+    "id": "NP002", "niveau": "C1/1", "categorie": "notation_partition", "type": "qcm",
+    "question": "Sur quelle ligne de la portée est posée la clef de fa ?",
+    "reponse_correcte": "4e ligne",
+    "reponse_fausse_1": "2e ligne", "reponse_fausse_2": "3e ligne", "reponse_fausse_3": "5e ligne",
+    "explication": "La clef de fa s'écrit sur la 4e ligne, qui correspond au Fa."
+  },
+  {
+    "id": "NP003", "niveau": "C1/1", "categorie": "notation_partition", "type": "qcm",
+    "question": "À quoi sert la barre de mesure ?",
+    "reponse_correcte": "Séparer les mesures entre elles",
+    "reponse_fausse_1": "Indiquer le tempo", "reponse_fausse_2": "Marquer un accent", "reponse_fausse_3": "Indiquer la fin du morceau",
+    "explication": "La barre de mesure est une ligne verticale qui délimite chaque mesure."
+  },
+  {
+    "id": "NP004", "niveau": "C1/2", "categorie": "notation_partition", "type": "vrai_faux",
+    "question": "Une liaison de prolongation relie deux notes identiques pour former une seule note plus longue.",
+    "reponse_correcte": "Vrai",
+    "explication": "Contrairement à la liaison de phrasé, la liaison de prolongation (tie) unit deux notes de même hauteur."
+  },
+  {
+    "id": "NP005", "niveau": "C1/2", "categorie": "notation_partition", "type": "vrai_faux",
+    "question": "Un point d'orgue (fermata) indique d'augmenter le volume.",
+    "reponse_correcte": "Faux",
+    "explication": "Le point d'orgue indique de tenir la note (ou le silence) plus longtemps que sa valeur normale."
+  },
+  {
+    "id": "NP006", "niveau": "C1/2", "categorie": "notation_partition", "type": "qcm",
+    "question": "Que représentent les deux points devant une double barre ?",
+    "reponse_correcte": "Un signe de reprise",
+    "reponse_fausse_1": "La fin du morceau", "reponse_fausse_2": "Un changement de tempo", "reponse_fausse_3": "Un changement de tonalité",
+    "explication": "Deux points + double barre = barre de reprise. La section entre les deux barres est répétée."
+  },
+  {
+    "id": "NP007", "niveau": "C1/3", "categorie": "notation_partition", "type": "qcm",
+    "question": "Que signifie le chiffre supérieur de l'indication de mesure ?",
+    "reponse_correcte": "Le nombre de temps par mesure",
+    "reponse_fausse_1": "La valeur d'un temps", "reponse_fausse_2": "Le tempo en bpm", "reponse_fausse_3": "Le nombre de lignes de la portée",
+    "explication": "En 3/4, le « 3 » indique 3 temps par mesure. Le « 4 » indique que la noire vaut 1 temps."
+  },
+  {
+    "id": "NP008", "niveau": "C2/1", "categorie": "notation_partition", "type": "qcm",
+    "question": "Que signifie « 8va » au-dessus d'une note ?",
+    "reponse_correcte": "Jouer à l'octave supérieure",
+    "reponse_fausse_1": "Jouer à l'octave inférieure", "reponse_fausse_2": "Jouer 8 fois", "reponse_fausse_3": "Jouer très doux",
+    "explication": "8va (ottava) indique de jouer une octave plus haut que noté."
+  },
+  {
+    "id": "NP009", "niveau": "C2/1", "categorie": "notation_partition", "type": "qcm",
+    "question": "À quoi servent les crochets de 1re et 2e fois (volta) ?",
+    "reponse_correcte": "Jouer des fins différentes à chaque reprise",
+    "reponse_fausse_1": "Indiquer deux instrumentistes différents", "reponse_fausse_2": "Jouer deux fois plus vite", "reponse_fausse_3": "Répéter deux fois la mesure",
+    "explication": "La 1re fois on joue sous le crochet 1, à la reprise on saute directement au crochet 2."
+  },
+  {
+    "id": "NP010", "niveau": "C1/3", "categorie": "notation_partition", "type": "qcm",
+    "question": "Quelle est la différence entre liaison de phrasé et liaison de prolongation ?",
+    "reponse_correcte": "La liaison de phrasé relie des notes différentes, la prolongation relie deux notes identiques",
+    "reponse_fausse_1": "La liaison de phrasé ne concerne que le piano", "reponse_fausse_2": "La prolongation indique de jouer plus fort", "reponse_fausse_3": "Il n'y a aucune différence",
+    "explication": "Liaison de phrasé = arc sur notes de hauteurs différentes (jouer lié). Prolongation = arc sur deux notes identiques (additionner les durées)."
+  },
+  {
+    "id": "TA001", "niveau": "C1/1", "categorie": "tonalites_alterations", "type": "qcm",
+    "question": "Combien d'altérations comporte la gamme de Do majeur ?",
+    "reponse_correcte": "0",
+    "reponse_fausse_1": "1 dièse", "reponse_fausse_2": "1 bémol", "reponse_fausse_3": "2 dièses",
+    "explication": "Do majeur est la seule tonalité majeure sans altération à l'armure."
+  },
+  {
+    "id": "TA002", "niveau": "C1/1", "categorie": "tonalites_alterations", "type": "qcm",
+    "question": "Quelle tonalité majeure a 1 dièse à l'armure ?",
+    "reponse_correcte": "Sol majeur",
+    "reponse_fausse_1": "Fa majeur", "reponse_fausse_2": "Ré majeur", "reponse_fausse_3": "La majeur",
+    "explication": "Sol majeur a 1 dièse (Fa#). Rappel : chaque quinte ascendante ajoute un dièse."
+  },
+  {
+    "id": "TA003", "niveau": "C1/1", "categorie": "tonalites_alterations", "type": "qcm",
+    "question": "Quelle tonalité majeure a 1 bémol à l'armure ?",
+    "reponse_correcte": "Fa majeur",
+    "reponse_fausse_1": "Sol majeur", "reponse_fausse_2": "Ré majeur", "reponse_fausse_3": "Sib majeur",
+    "explication": "Fa majeur a 1 bémol (Sib). Chaque quinte descendante ajoute un bémol."
+  },
+  {
+    "id": "TA004", "niveau": "C1/2", "categorie": "tonalites_alterations", "type": "qcm",
+    "question": "Quelle est la tonalité relative mineure de Do majeur ?",
+    "reponse_correcte": "La mineur",
+    "reponse_fausse_1": "Ré mineur", "reponse_fausse_2": "Mi mineur", "reponse_fausse_3": "Sol mineur",
+    "explication": "La tonalité relative mineure est une tierce mineure en dessous de la tonique. Do − tierce mineure = La."
+  },
+  {
+    "id": "TA005", "niveau": "C1/2", "categorie": "tonalites_alterations", "type": "qcm",
+    "question": "Quelle tonalité majeure a 2 dièses à l'armure ?",
+    "reponse_correcte": "Ré majeur",
+    "reponse_fausse_1": "Sol majeur", "reponse_fausse_2": "La majeur", "reponse_fausse_3": "Mi majeur",
+    "explication": "Ré majeur a 2 dièses : Fa# et Do#."
+  },
+  {
+    "id": "TA006", "niveau": "C1/2", "categorie": "tonalites_alterations", "type": "qcm",
+    "question": "Quelle tonalité majeure a 2 bémols à l'armure ?",
+    "reponse_correcte": "Sib majeur",
+    "reponse_fausse_1": "Fa majeur", "reponse_fausse_2": "Mib majeur", "reponse_fausse_3": "Lab majeur",
+    "explication": "Sib majeur a 2 bémols : Sib et Mib."
+  },
+  {
+    "id": "TA007", "niveau": "C1/3", "categorie": "tonalites_alterations", "type": "texte",
+    "question": "Quel est le premier dièse qui apparaît à l'armure (ordre des dièses) ?",
+    "reponse_correcte": "Fa",
+    "reponses_acceptees": "Fa#|fa dièse|fa#",
+    "explication": "L'ordre des dièses est : Fa Do Sol Ré La Mi Si. Le Fa# est toujours le premier."
+  },
+  {
+    "id": "TA008", "niveau": "C1/3", "categorie": "tonalites_alterations", "type": "texte",
+    "question": "Quel est le premier bémol qui apparaît à l'armure (ordre des bémols) ?",
+    "reponse_correcte": "Si",
+    "reponses_acceptees": "Sib|si bémol|si bemol",
+    "explication": "L'ordre des bémols est : Si Mib Lab Réb Solb Dob Fab. Le Sib est toujours le premier."
+  },
+  {
+    "id": "TA009", "niveau": "C1/3", "categorie": "tonalites_alterations", "type": "qcm",
+    "question": "Combien de dièses a La majeur ?",
+    "reponse_correcte": "3",
+    "reponse_fausse_1": "2", "reponse_fausse_2": "4", "reponse_fausse_3": "1",
+    "explication": "La majeur : Fa#, Do#, Sol#. Soit 3 dièses."
+  },
+  {
+    "id": "TA010", "niveau": "C1/3", "categorie": "tonalites_alterations", "type": "qcm",
+    "question": "Quelle est la tonalité relative mineure de Sol majeur ?",
+    "reponse_correcte": "Mi mineur",
+    "reponse_fausse_1": "La mineur", "reponse_fausse_2": "Ré mineur", "reponse_fausse_3": "Si mineur",
+    "explication": "Sol − tierce mineure = Mi. Mi mineur est le relatif de Sol majeur (1 dièse)."
+  },
+  {
+    "id": "TA011", "niveau": "C2/1", "categorie": "tonalites_alterations", "type": "qcm",
+    "question": "Combien de bémols a Mib majeur ?",
+    "reponse_correcte": "3",
+    "reponse_fausse_1": "2", "reponse_fausse_2": "4", "reponse_fausse_3": "5",
+    "explication": "Mib majeur : Sib, Mib, Lab. Soit 3 bémols."
+  },
+  {
+    "id": "TA012", "niveau": "C2/1", "categorie": "tonalites_alterations", "type": "vrai_faux",
+    "question": "La mineur naturel utilise exactement les mêmes notes que Do majeur.",
+    "reponse_correcte": "Vrai",
+    "explication": "La mineur naturel est le relatif de Do majeur : Do Ré Mi Fa Sol La Si = La Si Do Ré Mi Fa Sol."
+  },
+  {
+    "id": "IN001", "niveau": "C1/2", "categorie": "intervalles", "type": "qcm",
+    "question": "Combien de demi-tons comporte une seconde majeure ?",
+    "reponse_correcte": "2",
+    "reponse_fausse_1": "1", "reponse_fausse_2": "3", "reponse_fausse_3": "4",
+    "explication": "La seconde majeure = 1 ton = 2 demi-tons. Ex : Do → Ré."
+  },
+  {
+    "id": "IN002", "niveau": "C1/2", "categorie": "intervalles", "type": "qcm",
+    "question": "Combien de demi-tons comporte une seconde mineure ?",
+    "reponse_correcte": "1",
+    "reponse_fausse_1": "2", "reponse_fausse_2": "3", "reponse_fausse_3": "0",
+    "explication": "La seconde mineure = 1 demi-ton. Ex : Mi → Fa, Si → Do."
+  },
+  {
+    "id": "IN003", "niveau": "C1/2", "categorie": "intervalles", "type": "qcm",
+    "question": "Combien de demi-tons comporte une tierce majeure ?",
+    "reponse_correcte": "4",
+    "reponse_fausse_1": "3", "reponse_fausse_2": "5", "reponse_fausse_3": "2",
+    "explication": "Tierce majeure = 2 tons = 4 demi-tons. Ex : Do → Mi."
+  },
+  {
+    "id": "IN004", "niveau": "C1/2", "categorie": "intervalles", "type": "qcm",
+    "question": "Combien de demi-tons comporte une tierce mineure ?",
+    "reponse_correcte": "3",
+    "reponse_fausse_1": "4", "reponse_fausse_2": "2", "reponse_fausse_3": "5",
+    "explication": "Tierce mineure = 1,5 tons = 3 demi-tons. Ex : La → Do."
+  },
+  {
+    "id": "IN005", "niveau": "C1/3", "categorie": "intervalles", "type": "qcm",
+    "question": "Combien de demi-tons comporte une quinte juste ?",
+    "reponse_correcte": "7",
+    "reponse_fausse_1": "6", "reponse_fausse_2": "8", "reponse_fausse_3": "5",
+    "explication": "Quinte juste = 3,5 tons = 7 demi-tons. Ex : Do → Sol."
+  },
+  {
+    "id": "IN006", "niveau": "C1/3", "categorie": "intervalles", "type": "qcm",
+    "question": "Combien de demi-tons comporte une quarte juste ?",
+    "reponse_correcte": "5",
+    "reponse_fausse_1": "6", "reponse_fausse_2": "4", "reponse_fausse_3": "7",
+    "explication": "Quarte juste = 2,5 tons = 5 demi-tons. Ex : Do → Fa."
+  },
+  {
+    "id": "IN007", "niveau": "C2/1", "categorie": "intervalles", "type": "qcm",
+    "question": "Quel est le renversement d'une tierce majeure ?",
+    "reponse_correcte": "Sixte mineure",
+    "reponse_fausse_1": "Sixte majeure", "reponse_fausse_2": "Tierce mineure", "reponse_fausse_3": "Quinte juste",
+    "explication": "Renversement : 9 − 3 = 6. Majeure → mineure. Donc tierce majeure → sixte mineure."
+  },
+  {
+    "id": "IN008", "niveau": "C2/1", "categorie": "intervalles", "type": "qcm",
+    "question": "Quel est le renversement d'une quinte juste ?",
+    "reponse_correcte": "Quarte juste",
+    "reponse_fausse_1": "Quarte augmentée", "reponse_fausse_2": "Sixte juste", "reponse_fausse_3": "Quinte diminuée",
+    "explication": "9 − 5 = 4. Juste → juste. Quinte juste → quarte juste."
+  },
+  {
+    "id": "IN009", "niveau": "C2/1", "categorie": "intervalles", "type": "qcm",
+    "question": "Combien de demi-tons comporte le triton (quarte augmentée) ?",
+    "reponse_correcte": "6",
+    "reponse_fausse_1": "5", "reponse_fausse_2": "7", "reponse_fausse_3": "4",
+    "explication": "Le triton divise l'octave en deux parties égales : 6 demi-tons. Ex : Do → Fa#."
+  },
+  {
+    "id": "IN010", "niveau": "C1/3", "categorie": "intervalles", "type": "vrai_faux",
+    "question": "L'octave comporte 12 demi-tons.",
+    "reponse_correcte": "Vrai",
+    "explication": "L'octave = 6 tons = 12 demi-tons. C'est la base du système tempéré."
+  },
+  {
+    "id": "IN011", "niveau": "C2/1", "categorie": "intervalles", "type": "qcm",
+    "question": "Combien de demi-tons comporte une sixte majeure ?",
+    "reponse_correcte": "9",
+    "reponse_fausse_1": "8", "reponse_fausse_2": "10", "reponse_fausse_3": "7",
+    "explication": "Sixte majeure = 4,5 tons = 9 demi-tons. Ex : Do → La."
+  },
+  {
+    "id": "IN012", "niveau": "C2/2", "categorie": "intervalles", "type": "qcm",
+    "question": "Comment appelle-t-on un intervalle de seconde augmentée ?",
+    "reponse_correcte": "3 demi-tons (comme une tierce mineure, mais noté différemment)",
+    "reponse_fausse_1": "2 demi-tons", "reponse_fausse_2": "4 demi-tons", "reponse_fausse_3": "1 demi-ton",
+    "explication": "La seconde augmentée = 3 demi-tons. Elle est enharmonique de la tierce mineure mais s'écrit sur deux degrés consécutifs."
+  },
+  {
+    "id": "RM001", "niveau": "C1/1", "categorie": "rythme_mesure", "type": "qcm",
+    "question": "Combien de temps vaut une ronde ?",
+    "reponse_correcte": "4 temps",
+    "reponse_fausse_1": "2 temps", "reponse_fausse_2": "1 temps", "reponse_fausse_3": "8 temps",
+    "explication": "La ronde est la valeur de note la plus longue en usage courant : 4 temps."
+  },
+  {
+    "id": "RM002", "niveau": "C1/1", "categorie": "rythme_mesure", "type": "qcm",
+    "question": "Combien de temps vaut une blanche ?",
+    "reponse_correcte": "2 temps",
+    "reponse_fausse_1": "4 temps", "reponse_fausse_2": "1 temps", "reponse_fausse_3": "3 temps",
+    "explication": "La blanche = 2 temps. Il faut 2 blanches pour remplir une ronde."
+  },
+  {
+    "id": "RM003", "niveau": "C1/1", "categorie": "rythme_mesure", "type": "qcm",
+    "question": "Que signifie l'indication de mesure 4/4 ?",
+    "reponse_correcte": "4 noires par mesure",
+    "reponse_fausse_1": "4 blanches par mesure", "reponse_fausse_2": "4 rondes par mesure", "reponse_fausse_3": "4 croches par mesure",
+    "explication": "En 4/4 : le haut = 4 temps, le bas = 4 (noire). Donc 4 noires par mesure."
+  },
+  {
+    "id": "RM004", "niveau": "C1/1", "categorie": "rythme_mesure", "type": "qcm",
+    "question": "Combien de croches valent une noire ?",
+    "reponse_correcte": "2",
+    "reponse_fausse_1": "4", "reponse_fausse_2": "3", "reponse_fausse_3": "1",
+    "explication": "La croche vaut la moitié d'une noire. 2 croches = 1 noire."
+  },
+  {
+    "id": "RM005", "niveau": "C1/2", "categorie": "rythme_mesure", "type": "qcm",
+    "question": "Que signifie le point après une note ?",
+    "reponse_correcte": "Augmente la valeur de la note de moitié",
+    "reponse_fausse_1": "Double la valeur de la note", "reponse_fausse_2": "Indique de jouer staccato", "reponse_fausse_3": "Indique de jouer fort",
+    "explication": "Un point ajoute la moitié de la valeur. Ex : noire pointée = 1 + 0,5 = 1,5 temps."
+  },
+  {
+    "id": "RM006", "niveau": "C1/2", "categorie": "rythme_mesure", "type": "qcm",
+    "question": "Combien de croches par mesure en 6/8 ?",
+    "reponse_correcte": "6",
+    "reponse_fausse_1": "8", "reponse_fausse_2": "3", "reponse_fausse_3": "4",
+    "explication": "En 6/8 : 6 croches par mesure, regroupées en 2 × 3 (deux temps ternaires)."
+  },
+  {
+    "id": "RM007", "niveau": "C1/3", "categorie": "rythme_mesure", "type": "vrai_faux",
+    "question": "La mesure 3/4 est une mesure ternaire à trois temps.",
+    "reponse_correcte": "Vrai",
+    "explication": "La mesure 3/4 a 3 temps à la noire. C'est la mesure de la valse."
+  },
+  {
+    "id": "RM008", "niveau": "C2/1", "categorie": "rythme_mesure", "type": "qcm",
+    "question": "Qu'est-ce qu'une syncope ?",
+    "reponse_correcte": "Une note qui commence sur un temps faible et se prolonge sur un temps fort",
+    "reponse_fausse_1": "Une note très courte", "reponse_fausse_2": "Une note sur le premier temps", "reponse_fausse_3": "Un silence entre deux notes",
+    "explication": "La syncope déplace l'accent du temps fort vers le temps faible, créant un effet de déséquilibre rythmique."
+  },
+  {
+    "id": "RM009", "niveau": "C1/2", "categorie": "rythme_mesure", "type": "qcm",
+    "question": "Combien de doubles croches valent une noire ?",
+    "reponse_correcte": "4",
+    "reponse_fausse_1": "2", "reponse_fausse_2": "8", "reponse_fausse_3": "3",
+    "explication": "Doubles croches valent 1/4 de noire. 4 doubles croches = 1 noire."
+  },
+  {
+    "id": "RM010", "niveau": "C2/1", "categorie": "rythme_mesure", "type": "qcm",
+    "question": "Qu'est-ce qu'un triolet de noires ?",
+    "reponse_correcte": "3 notes jouées dans l'espace de 2 noires",
+    "reponse_fausse_1": "3 notes jouées dans l'espace de 3 noires", "reponse_fausse_2": "3 notes très rapides", "reponse_fausse_3": "Une mesure à 3 temps",
+    "explication": "Le triolet divise la valeur en 3 parties égales au lieu de 2. Un triolet de noires = 3 notes en 2 temps."
+  },
+  {
+    "id": "HA001", "niveau": "C1/2", "categorie": "harmonie_accords", "type": "qcm",
+    "question": "Quelles notes forment l'accord parfait de Do majeur ?",
+    "reponse_correcte": "Do - Mi - Sol",
+    "reponse_fausse_1": "Do - Mib - Sol", "reponse_fausse_2": "Do - Mi - Sol#", "reponse_fausse_3": "Do - Mi - Solb",
+    "explication": "L'accord parfait majeur = fondamentale + tierce majeure + quinte juste."
+  },
+  {
+    "id": "HA002", "niveau": "C1/3", "categorie": "harmonie_accords", "type": "qcm",
+    "question": "Quelles notes forment l'accord parfait de La mineur ?",
+    "reponse_correcte": "La - Do - Mi",
+    "reponse_fausse_1": "La - Do# - Mi", "reponse_fausse_2": "La - Do - Mi#", "reponse_fausse_3": "La - Dob - Mi",
+    "explication": "L'accord parfait mineur = fondamentale + tierce mineure + quinte juste."
+  },
+  {
+    "id": "HA003", "niveau": "C1/3", "categorie": "harmonie_accords", "type": "qcm",
+    "question": "Quel degré de la gamme correspond à la dominante ?",
+    "reponse_correcte": "V (5e degré)",
+    "reponse_fausse_1": "IV (4e degré)", "reponse_fausse_2": "VII (7e degré)", "reponse_fausse_3": "II (2e degré)",
+    "explication": "La dominante est le 5e degré de la gamme. En Do majeur, c'est Sol."
+  },
+  {
+    "id": "HA004", "niveau": "C1/3", "categorie": "harmonie_accords", "type": "qcm",
+    "question": "Quel degré est la sous-dominante ?",
+    "reponse_correcte": "IV (4e degré)",
+    "reponse_fausse_1": "V (5e degré)", "reponse_fausse_2": "II (2e degré)", "reponse_fausse_3": "VI (6e degré)",
+    "explication": "La sous-dominante est le 4e degré. En Do majeur, c'est Fa."
+  },
+  {
+    "id": "HA005", "niveau": "C2/1", "categorie": "harmonie_accords", "type": "qcm",
+    "question": "Qu'ajoute-t-on à l'accord parfait pour former un accord de 7e de dominante ?",
+    "reponse_correcte": "Une septième mineure",
+    "reponse_fausse_1": "Une septième majeure", "reponse_fausse_2": "Une neuvième", "reponse_fausse_3": "Une sixte",
+    "explication": "V7 = accord parfait majeur + 7e mineure. Ex : Sol-Si-Ré-Fa en Do majeur."
+  },
+  {
+    "id": "HA006", "niveau": "C2/1", "categorie": "harmonie_accords", "type": "qcm",
+    "question": "Qu'est-ce que le 1er renversement d'un accord ?",
+    "reponse_correcte": "La tierce de l'accord est à la basse",
+    "reponse_fausse_1": "La quinte de l'accord est à la basse", "reponse_fausse_2": "La fondamentale est à la basse", "reponse_fausse_3": "La septième est à la basse",
+    "explication": "En 1er renversement, la tierce est la note la plus basse. Chiffré 6 (ou 6/3)."
+  },
+  {
+    "id": "HA007", "niveau": "C2/1", "categorie": "harmonie_accords", "type": "qcm",
+    "question": "Qu'est-ce que le 2e renversement d'un accord ?",
+    "reponse_correcte": "La quinte de l'accord est à la basse",
+    "reponse_fausse_1": "La tierce est à la basse", "reponse_fausse_2": "La fondamentale est à la basse", "reponse_fausse_3": "La septième est à la basse",
+    "explication": "En 2e renversement, la quinte est à la basse. Chiffré 6/4."
+  },
+  {
+    "id": "HA008", "niveau": "C2/2", "categorie": "harmonie_accords", "type": "qcm",
+    "question": "Quelles notes forment un accord diminué sur Do ?",
+    "reponse_correcte": "Do - Mib - Solb",
+    "reponse_fausse_1": "Do - Mi - Sol", "reponse_fausse_2": "Do - Mib - Sol", "reponse_fausse_3": "Do - Mi - Sol#",
+    "explication": "Accord diminué = tierce mineure + quinte diminuée (tierce mineure + tierce mineure)."
+  },
+  {
+    "id": "HA009", "niveau": "C2/2", "categorie": "harmonie_accords", "type": "vrai_faux",
+    "question": "Un accord augmenté est formé d'une tierce majeure et d'une quinte augmentée.",
+    "reponse_correcte": "Vrai",
+    "explication": "Accord augmenté = tierce majeure + quinte augmentée (tierce majeure + tierce majeure). Ex : Do-Mi-Sol#."
+  },
+  {
+    "id": "HA010", "niveau": "C1/2", "categorie": "harmonie_accords", "type": "qcm",
+    "question": "Quel accord est la tonique ?",
+    "reponse_correcte": "I (1er degré)",
+    "reponse_fausse_1": "IV", "reponse_fausse_2": "V", "reponse_fausse_3": "VI",
+    "explication": "La tonique est l'accord construit sur le 1er degré de la gamme. C'est l'accord de repos."
+  },
+  {
+    "id": "CA001", "niveau": "C1/3", "categorie": "cadences", "type": "qcm",
+    "question": "Quelle est la cadence parfaite ?",
+    "reponse_correcte": "V → I (dominante vers tonique)",
+    "reponse_fausse_1": "IV → I", "reponse_fausse_2": "V → VI", "reponse_fausse_3": "I → V",
+    "explication": "La cadence parfaite (V→I) est la conclusion harmonique la plus forte et définitive."
+  },
+  {
+    "id": "CA002", "niveau": "C1/3", "categorie": "cadences", "type": "qcm",
+    "question": "Quelle est la cadence plagale ?",
+    "reponse_correcte": "IV → I (sous-dominante vers tonique)",
+    "reponse_fausse_1": "V → I", "reponse_fausse_2": "V → VI", "reponse_fausse_3": "II → V",
+    "explication": "La cadence plagale (IV→I) a un caractère doux et conclusif. On l'appelle aussi cadence « Amen »."
+  },
+  {
+    "id": "CA003", "niveau": "C2/1", "categorie": "cadences", "type": "qcm",
+    "question": "Qu'est-ce qu'une demi-cadence ?",
+    "reponse_correcte": "Une cadence qui se termine sur la dominante (V)",
+    "reponse_fausse_1": "Une cadence qui va de V à I", "reponse_fausse_2": "Une cadence qui va de IV à I", "reponse_fausse_3": "Une cadence rompue",
+    "explication": "La demi-cadence s'arrête sur V, créant une impression d'attente. C'est une cadence suspensive."
+  },
+  {
+    "id": "CA004", "niveau": "C2/1", "categorie": "cadences", "type": "qcm",
+    "question": "Quelle est la cadence rompue ?",
+    "reponse_correcte": "V → VI (dominante vers sus-tonique)",
+    "reponse_fausse_1": "V → I", "reponse_fausse_2": "IV → I", "reponse_fausse_3": "II → V",
+    "explication": "La cadence rompue (V→VI) surprend l'auditeur qui attend I mais entend VI à la place."
+  },
+  {
+    "id": "CA005", "niveau": "C1/3", "categorie": "cadences", "type": "vrai_faux",
+    "question": "La cadence parfaite est la conclusion harmonique la plus définitive et conclusive.",
+    "reponse_correcte": "Vrai",
+    "explication": "V→I avec fondamentales à la basse et soprano = cadence parfaite, la plus forte des conclusions."
+  },
+  {
+    "id": "CA006", "niveau": "C2/2", "categorie": "cadences", "type": "qcm",
+    "question": "La cadence plagale est souvent associée à quel mot dans la musique sacrée ?",
+    "reponse_correcte": "Amen",
+    "reponse_fausse_1": "Alleluia", "reponse_fausse_2": "Gloria", "reponse_fausse_3": "Kyrie",
+    "explication": "Dans la musique chorale, les syllabes « A-men » sont souvent harmonisées IV→I (cadence plagale)."
+  },
+  {
+    "id": "CA007", "niveau": "C2/2", "categorie": "cadences", "type": "qcm",
+    "question": "Qu'est-ce qu'une cadence imparfaite ?",
+    "reponse_correcte": "V → I mais sans fondamentale à la basse ou au soprano",
+    "reponse_fausse_1": "IV → I", "reponse_fausse_2": "V → VI", "reponse_fausse_3": "II → V",
+    "explication": "La cadence imparfaite va bien de V à I mais avec un renversement ou tierce au soprano, moins conclusive."
+  },
+  {
+    "id": "CA008", "niveau": "C2/1", "categorie": "cadences", "type": "vrai_faux",
+    "question": "Une demi-cadence crée une sensation de repos complet.",
+    "reponse_correcte": "Faux",
+    "explication": "La demi-cadence s'arrête sur V (dominante) qui crée une tension et appelle une résolution."
+  },
+  {
+    "id": "FM001", "niveau": "C1/3", "categorie": "formes_musicales", "type": "qcm",
+    "question": "Qu'est-ce qu'un canon ?",
+    "reponse_correcte": "Une même mélodie reprise en décalé par plusieurs voix",
+    "reponse_fausse_1": "Une pièce pour orchestre seul", "reponse_fausse_2": "Une forme en 3 parties A-B-A", "reponse_fausse_3": "Une danse baroque",
+    "explication": "Dans un canon, chaque voix entre à tour de rôle avec la même mélodie (ex : Frère Jacques)."
+  },
+  {
+    "id": "FM002", "niveau": "C1/3", "categorie": "formes_musicales", "type": "qcm",
+    "question": "Qu'est-ce que le menuet ?",
+    "reponse_correcte": "Une danse à 3 temps originaire de France",
+    "reponse_fausse_1": "Une danse à 4 temps d'origine allemande", "reponse_fausse_2": "Une forme en 2 parties", "reponse_fausse_3": "Un tempo très rapide",
+    "explication": "Le menuet est une danse de cour française en 3/4, souvent utilisé comme 3e mouvement de sonate."
+  },
+  {
+    "id": "FM003", "niveau": "C2/1", "categorie": "formes_musicales", "type": "qcm",
+    "question": "Quelles sont les 3 sections principales de la forme sonate ?",
+    "reponse_correcte": "Exposition, Développement, Réexposition",
+    "reponse_fausse_1": "Introduction, Thème, Coda", "reponse_fausse_2": "A, B, A'", "reponse_fausse_3": "Allegro, Adagio, Finale",
+    "explication": "La forme sonate classique : Exposition (2 thèmes), Développement (transformation), Réexposition (retour)."
+  },
+  {
+    "id": "FM004", "niveau": "C2/1", "categorie": "formes_musicales", "type": "qcm",
+    "question": "Quelle est la structure du Rondo ?",
+    "reponse_correcte": "Un refrain (A) alternant avec des couplets (ABACA...)",
+    "reponse_fausse_1": "Exposition-Développement-Réexposition", "reponse_fausse_2": "Thème puis variations", "reponse_fausse_3": "Fugue à 3 voix",
+    "explication": "Dans le Rondo, le thème principal (A) revient régulièrement entre des épisodes différents."
+  },
+  {
+    "id": "FM005", "niveau": "C2/1", "categorie": "formes_musicales", "type": "qcm",
+    "question": "Qu'est-ce qu'un thème et variations ?",
+    "reponse_correcte": "Un thème présenté puis transformé plusieurs fois",
+    "reponse_fausse_1": "Une fugue à plusieurs voix", "reponse_fausse_2": "Une forme avec refrain et couplets", "reponse_fausse_3": "Une pièce sans structure fixe",
+    "explication": "Le thème est d'abord exposé clairement, puis chaque variation le modifie (rythme, harmonie, ornements...)."
+  },
+  {
+    "id": "FM006", "niveau": "C2/2", "categorie": "formes_musicales", "type": "qcm",
+    "question": "Qu'est-ce qu'une fugue ?",
+    "reponse_correcte": "Une pièce contrapuntique où un sujet est imité par plusieurs voix",
+    "reponse_fausse_1": "Une danse baroque rapide", "reponse_fausse_2": "Une forme en A-B-A", "reponse_fausse_3": "Une pièce pour instrument seul sans contrepoint",
+    "explication": "Dans la fugue, chaque voix entre successivement avec le même sujet (exposition), puis se développe."
+  },
+  {
+    "id": "FM007", "niveau": "C2/1", "categorie": "formes_musicales", "type": "qcm",
+    "question": "Qu'est-ce qu'une suite ?",
+    "reponse_correcte": "Une série de pièces de danse enchaînées dans la même tonalité",
+    "reponse_fausse_1": "Un opéra en plusieurs actes", "reponse_fausse_2": "Une forme d'improvisation", "reponse_fausse_3": "Une symphonie en 4 mouvements",
+    "explication": "La suite baroque enchaîne des danses contrastées : Allemande, Courante, Sarabande, Gigue..."
+  },
+  {
+    "id": "FM008", "niveau": "C2/1", "categorie": "formes_musicales", "type": "vrai_faux",
+    "question": "Le prélude est généralement une pièce d'introduction à forme libre.",
+    "reponse_correcte": "Vrai",
+    "explication": "Le prélude n'a pas de forme fixe — c'est souvent une pièce introductive ou improvisatoire."
+  },
+  {
+    "id": "HS001", "niveau": "C2/1", "categorie": "histoire_styles", "type": "qcm",
+    "question": "Quelle période correspond à l'époque baroque ?",
+    "reponse_correcte": "1600 – 1750",
+    "reponse_fausse_1": "1750 – 1820", "reponse_fausse_2": "1400 – 1600", "reponse_fausse_3": "1820 – 1900",
+    "explication": "Le Baroque s'étend environ de 1600 (naissance de l'opéra) à 1750 (mort de Bach)."
+  },
+  {
+    "id": "HS002", "niveau": "C2/1", "categorie": "histoire_styles", "type": "qcm",
+    "question": "Quelle période correspond au classicisme musical ?",
+    "reponse_correcte": "1750 – 1820",
+    "reponse_fausse_1": "1600 – 1750", "reponse_fausse_2": "1820 – 1900", "reponse_fausse_3": "1000 – 1400",
+    "explication": "Le Classicisme s'étend de la mort de Bach (1750) à l'émergence du romantisme (vers 1820)."
+  },
+  {
+    "id": "HS003", "niveau": "C2/1", "categorie": "histoire_styles", "type": "qcm",
+    "question": "Quel instrument est caractéristique de la musique baroque (remplacé ensuite par le piano) ?",
+    "reponse_correcte": "Le clavecin",
+    "reponse_fausse_1": "Le piano", "reponse_fausse_2": "L'orgue électrique", "reponse_fausse_3": "Le saxophone",
+    "explication": "Le clavecin est l'instrument à clavier dominant du Baroque. Le piano le remplace au Classicisme."
+  },
+  {
+    "id": "HS004", "niveau": "C2/1", "categorie": "histoire_styles", "type": "qcm",
+    "question": "Combien de mouvements comporte une symphonie classique standard ?",
+    "reponse_correcte": "4",
+    "reponse_fausse_1": "3", "reponse_fausse_2": "2", "reponse_fausse_3": "5",
+    "explication": "La symphonie classique comprend 4 mouvements : Allegro (forme sonate), Adagio, Menuet, Finale."
+  },
+  {
+    "id": "HS005", "niveau": "C2/2", "categorie": "histoire_styles", "type": "qcm",
+    "question": "Quel est le terme désignant la basse chiffrée omniprésente dans le baroque ?",
+    "reponse_correcte": "Basso continuo",
+    "reponse_fausse_1": "Contrepoint", "reponse_fausse_2": "Leitmotiv", "reponse_fausse_3": "Basso ostinato",
+    "explication": "Le basso continuo est une ligne de basse réalisée au clavecin/orgue + instrument grave, typique du baroque."
+  },
+  {
+    "id": "HS006", "niveau": "C2/2", "categorie": "histoire_styles", "type": "qcm",
+    "question": "Quel compositeur est associé à l'impressionnisme musical ?",
+    "reponse_correcte": "Claude Debussy",
+    "reponse_fausse_1": "Ludwig van Beethoven", "reponse_fausse_2": "Johann Sebastian Bach", "reponse_fausse_3": "Giuseppe Verdi",
+    "explication": "Debussy est le chef de file de l'impressionnisme, avec des œuvres comme La Mer et Prélude à l'après-midi d'un faune."
+  },
+  {
+    "id": "HS007", "niveau": "C2/2", "categorie": "histoire_styles", "type": "qcm",
+    "question": "Qu'est-ce qu'un leitmotiv ?",
+    "reponse_correcte": "Un thème musical associé à un personnage ou une idée",
+    "reponse_fausse_1": "Un tempo très lent", "reponse_fausse_2": "Une forme de fugue", "reponse_fausse_3": "Une danse populaire",
+    "explication": "Terme utilisé par Wagner dans ses opéras : chaque personnage/idée a un thème récurrent reconnaissable."
+  },
+  {
+    "id": "HS008", "niveau": "C2/1", "categorie": "histoire_styles", "type": "qcm",
+    "question": "À quelle période musicale correspond environ 1820 – 1900 ?",
+    "reponse_correcte": "Romantisme",
+    "reponse_fausse_1": "Baroque", "reponse_fausse_2": "Classicisme", "reponse_fausse_3": "Modernisme",
+    "explication": "Le Romantisme est marqué par l'expression des émotions, l'orchestre agrandi et des formes plus libres."
+  },
+  {
+    "id": "HS009", "niveau": "C3", "categorie": "histoire_styles", "type": "qcm",
+    "question": "Qu'est-ce que le dodécaphonisme ?",
+    "reponse_correcte": "Technique de composition utilisant les 12 sons de la gamme chromatique en série",
+    "reponse_fausse_1": "Musique à 12 instruments", "reponse_fausse_2": "Musique en 12/8", "reponse_fausse_3": "Style folklorique du 12e siècle",
+    "explication": "Inventé par Schoenberg, le dodécaphonisme organise les 12 sons en une série de base sans tonalité centrale."
+  },
+  {
+    "id": "HS010", "niveau": "C2/2", "categorie": "histoire_styles", "type": "vrai_faux",
+    "question": "Le romantisme musical est caractérisé par des orchestres plus grands et une expression émotionnelle plus intense que le classicisme.",
+    "reponse_correcte": "Vrai",
+    "explication": "Les romantiques (Beethoven, Brahms, Wagner) ont considérablement agrandi l'orchestre et étendu les formes musicales."
+  },
+  {
+    "id": "CO001", "niveau": "C2/1", "categorie": "compositeurs", "type": "qcm",
+    "question": "À quelle période musicale appartient Johann Sebastian Bach ?",
+    "reponse_correcte": "Baroque",
+    "reponse_fausse_1": "Classicisme", "reponse_fausse_2": "Romantisme", "reponse_fausse_3": "Modernisme",
+    "explication": "Bach (1685–1750) est la figure centrale du Baroque tardif. Il meurt en 1750, date symbolique de fin du Baroque."
+  },
+  {
+    "id": "CO002", "niveau": "C2/1", "categorie": "compositeurs", "type": "qcm",
+    "question": "À quelle période appartient Wolfgang Amadeus Mozart ?",
+    "reponse_correcte": "Classicisme",
+    "reponse_fausse_1": "Baroque", "reponse_fausse_2": "Romantisme", "reponse_fausse_3": "Renaissance",
+    "explication": "Mozart (1756–1791) est un des maîtres absolus du Classicisme viennois."
+  },
+  {
+    "id": "CO003", "niveau": "C2/1", "categorie": "compositeurs", "type": "qcm",
+    "question": "Quel compositeur est particulièrement associé à la musique pour piano solo romantique ?",
+    "reponse_correcte": "Frédéric Chopin",
+    "reponse_fausse_1": "Joseph Haydn", "reponse_fausse_2": "Georg Friedrich Haendel", "reponse_fausse_3": "Jean-Philippe Rameau",
+    "explication": "Chopin (1810–1849) a consacré presque toute son œuvre au piano : nocturnes, études, polonaises, mazurkas."
+  },
+  {
+    "id": "CO004", "niveau": "C2/1", "categorie": "compositeurs", "type": "qcm",
+    "question": "Quel compositeur baroque est connu pour ses oratorios, notamment Le Messie ?",
+    "reponse_correcte": "Georg Friedrich Haendel",
+    "reponse_fausse_1": "Johann Sebastian Bach", "reponse_fausse_2": "Antonio Vivaldi", "reponse_fausse_3": "Henry Purcell",
+    "explication": "Le Messie de Haendel (1741) est l'oratorio le plus célèbre du répertoire occidental."
+  },
+  {
+    "id": "CO005", "niveau": "C2/2", "categorie": "compositeurs", "type": "qcm",
+    "question": "Quel compositeur romantique est célèbre pour ses opéras et le concept de leitmotiv ?",
+    "reponse_correcte": "Richard Wagner",
+    "reponse_fausse_1": "Giuseppe Verdi", "reponse_fausse_2": "Georges Bizet", "reponse_fausse_3": "Giacomo Puccini",
+    "explication": "Wagner (1813–1883) a révolutionné l'opéra avec ses drames musicaux et le système des leitmotivs."
+  },
+  {
+    "id": "CO006", "niveau": "C2/2", "categorie": "compositeurs", "type": "qcm",
+    "question": "Quel compositeur est associé au Sacre du printemps et à l'expressionnisme du 20e siècle ?",
+    "reponse_correcte": "Igor Stravinsky",
+    "reponse_fausse_1": "Sergueï Rachmaninov", "reponse_fausse_2": "Piotr Tchaïkovski", "reponse_fausse_3": "Nikolaï Rimski-Korsakov",
+    "explication": "Le Sacre du printemps (1913) de Stravinsky a provoqué un scandale par ses rythmes violents et ses harmonies nouvelles."
+  },
+  {
+    "id": "CO007", "niveau": "C2/1", "categorie": "compositeurs", "type": "qcm",
+    "question": "Ludwig van Beethoven est à la charnière de quelle transition stylistique ?",
+    "reponse_correcte": "Du Classicisme vers le Romantisme",
+    "reponse_fausse_1": "Du Baroque vers le Classicisme", "reponse_fausse_2": "Du Romantisme vers le Modernisme", "reponse_fausse_3": "De la Renaissance vers le Baroque",
+    "explication": "Beethoven (1770–1827) commence dans la tradition classique (Haydn/Mozart) et ouvre la voie au Romantisme."
+  },
+  {
+    "id": "CO008", "niveau": "C2/2", "categorie": "compositeurs", "type": "qcm",
+    "question": "Quel compositeur romantique est surtout connu pour ses 4 symphonies et son Requiem allemand ?",
+    "reponse_correcte": "Johannes Brahms",
+    "reponse_fausse_1": "Franz Schubert", "reponse_fausse_2": "Robert Schumann", "reponse_fausse_3": "Felix Mendelssohn",
+    "explication": "Brahms (1833–1897) est un des grands symphonistes romantiques, héritier de Beethoven."
+  },
+  {
+    "id": "CO009", "niveau": "C3", "categorie": "compositeurs", "type": "qcm",
+    "question": "Quel compositeur est le père du dodécaphonisme ?",
+    "reponse_correcte": "Arnold Schoenberg",
+    "reponse_fausse_1": "Alban Berg", "reponse_fausse_2": "Anton Webern", "reponse_fausse_3": "Paul Hindemith",
+    "explication": "Schoenberg (1874–1951) a développé la technique des 12 sons dans les années 1920."
+  },
+  {
+    "id": "CO010", "niveau": "C2/1", "categorie": "compositeurs", "type": "texte",
+    "question": "Quel compositeur baroque a écrit les Quatre Saisons ?",
+    "reponse_correcte": "Vivaldi",
+    "reponses_acceptees": "Antonio Vivaldi|vivaldi|antonio vivaldi",
+    "explication": "Les Quatre Saisons d'Antonio Vivaldi (1725) sont parmi les œuvres baroques les plus célèbres."
+  }
+]
