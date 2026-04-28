@@ -171,6 +171,8 @@ export default function SettingsPage({
   sheetError,
   onSheetLoad,
   onSheetReset,
+  flashOffsetMs,
+  onFlashOffsetChange,
 }) {
   const binaryFormulas  = formulaCatalog.filter(f => f.group === "binary");
   const ternaryFormulas = formulaCatalog.filter(f => f.group === "ternary");
@@ -310,6 +312,33 @@ export default function SettingsPage({
           ))}
         </div>
       </div>
+
+      {/* ── OFFSET FLASH BORDURE ── */}
+      {onFlashOffsetChange && (
+        <div style={{width:"100%",maxWidth:540,marginBottom:20,
+          background:"#0a0f1a",borderRadius:14,padding:"12px 14px"}}>
+          <div style={{fontSize:10,fontWeight:700,color:"#6b7280",
+            textTransform:"uppercase",letterSpacing:1,marginBottom:10}}>
+            Synchronisation bordure
+          </div>
+          <div style={{display:"flex",alignItems:"center",gap:10}}>
+            <div style={{flex:1}}>
+              <input type="range" min={-200} max={200} step={5}
+                value={flashOffsetMs}
+                onChange={e => onFlashOffsetChange(+e.target.value)}
+                style={{width:"100%",accentColor:"#7c3aed",display:"block"}}
+              />
+            </div>
+            <div style={{fontSize:11,color:"#c084fc",fontWeight:700,
+              flexShrink:0,minWidth:52,textAlign:"right"}}>
+              {flashOffsetMs} ms
+            </div>
+          </div>
+          <div style={{fontSize:9,color:"#374151",marginTop:6,lineHeight:1.5}}>
+            Ajuste l'avance du flash de bordure par rapport aux beats. Négatif = plus tôt.
+          </div>
+        </div>
+      )}
 
       {/* ── BOUTON RETOUR BAS DE PAGE ── */}
       <button

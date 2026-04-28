@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { Link } from "react-router-dom";
 import RythmStaff from "./RythmStaff";
 import SettingsPage from "./SettingsPage";
 import useSheetData from "./useSheetData";
@@ -192,11 +193,12 @@ function toTimestamps(figs, bpm, timeSig) {
 // ─── Scoring ──────────────────────────────────────────────────────────────────
 const TOL = { perfect:80, good:160, ok:280 };
 function scoreTap(actual, expected) {
-  const d = Math.abs(actual - expected);
-  if (d <= TOL.perfect) return { label:"Parfait ✦", pts:100, grade:"perfect" };
-  if (d <= TOL.good)    return { label:"Bien ✓",    pts:70,  grade:"good" };
-  if (d <= TOL.ok)      return { label:"Moyen",     pts:40,  grade:"ok" };
-  return                       { label:"Raté ✕",    pts:0,   grade:"miss" };
+  const dev = actual - expected; // + = tard, - = tôt
+  const d = Math.abs(dev);
+  if (d <= TOL.perfect) return { label:"Parfait ✦", pts:100, grade:"perfect", dev };
+  if (d <= TOL.good)    return { label:"Bien ✓",    pts:70,  grade:"good",    dev };
+  if (d <= TOL.ok)      return { label:"Moyen",     pts:40,  grade:"ok",      dev };
+  return                       { label:"Raté ✕",    pts:0,   grade:"miss",    dev };
 }
 const GRADE_COLOR = { perfect:"#a78bfa", good:"#34d399", ok:"#fbbf24", miss:"#f87171" };
 
@@ -212,6 +214,46 @@ const ACTIVITIES   = [
   { id:3, label:"Reconnaître écrit" },
   { id:4, label:"Reconnaître joué" },
 ];
+
+// ─── Slider double extrémité ─────────────────────────────────────────────────
+function DualRangeSlider({ lo, hi, setLo, setHi, disabled }) {
+  const maxIdx = TEMPI.length - 1;
+  const loIdx  = closestTempoIdx(lo);
+  const hiIdx  = closestTempoIdx(hi);
+  const minI   = Math.min(loIdx, hiIdx);
+  const maxI   = Math.max(loIdx, hiIdx);
+  // Le pouce lo prend le dessus quand il est dans la moitié haute (évite le blocage)
+  const loZ = loIdx > maxIdx / 2 ? 3 : 2;
+  const hiZ = loIdx > maxIdx / 2 ? 2 : 3;
+  return (
+    <div style={{ position:"relative", width:"100%", height:20 }}>
+      {/* Track fond */}
+      <div style={{
+        position:"absolute", top:"50%", transform:"translateY(-50%)",
+        left:0, right:0, height:4, background:"#1f2937", borderRadius:2, pointerEvents:"none",
+      }}>
+        <div style={{
+          position:"absolute",
+          left:`${(minI / maxIdx) * 100}%`,
+          width:`${((maxI - minI) / maxIdx) * 100}%`,
+          height:"100%", background:"#7c3aed", borderRadius:2,
+        }}/>
+      </div>
+      <input type="range" min={0} max={maxIdx} value={loIdx}
+        onChange={e => setLo(TEMPI[+e.target.value])}
+        disabled={disabled}
+        style={{ position:"absolute", width:"100%", height:"100%",
+          opacity:0, cursor:disabled?"not-allowed":"pointer", margin:0, padding:0, zIndex:loZ }}
+      />
+      <input type="range" min={0} max={maxIdx} value={hiIdx}
+        onChange={e => setHi(TEMPI[+e.target.value])}
+        disabled={disabled}
+        style={{ position:"absolute", width:"100%", height:"100%",
+          opacity:0, cursor:disabled?"not-allowed":"pointer", margin:0, padding:0, zIndex:hiZ }}
+      />
+    </div>
+  );
+}
 
 // ─── Métronome visuel ────────────────────────────────────────────────────────
 function MetronomeViz({ flash }) {
@@ -276,6 +318,12 @@ export default function RythmApp() {
   const [metroDotFlash,setMetroDotFlash]= useState(false);
   const [flashOffsetMs,setFlashOffsetMs]= useState(-50);
   const [lives,        setLives]        = useState(3);
+  const [rhythmSoundOn, setRhythmSoundOn] = useState(true);
+  const [tapSoundOn,    setTapSoundOn]    = useState(true);
+  const rhythmSoundRef = useRef(true);
+  const tapSoundRef    = useRef(true);
+  rhythmSoundRef.current = rhythmSoundOn;
+  tapSoundRef.current    = tapSoundOn;
 
   // Act 3 & 4
   const [choices,     setChoices]     = useState([]);
@@ -338,6 +386,7 @@ export default function RythmApp() {
     return audioCtxRef.current;
   }, []);
 
+  // Métronome — clic sec, sine aigu
   const beep = useCallback((strong = false) => {
     try {
       const ac = getCtx();
@@ -350,12 +399,52 @@ export default function RythmApp() {
     } catch(_) {}
   }, [getCtx]);
 
+  // Note du rythme — triangle chaud, plus long
+  const rhythmBeep = useCallback((strong = false) => {
+    if (!rhythmSoundRef.current) return;
+    try {
+      const ac = getCtx();
+      const o  = ac.createOscillator(), g = ac.createGain();
+      o.type = 'triangle';
+      o.connect(g); g.connect(ac.destination);
+      o.frequency.value = strong ? 440 : 330;
+      g.gain.setValueAtTime(0.3, ac.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.14);
+      o.start(ac.currentTime); o.stop(ac.currentTime + 0.15);
+    } catch(_) {}
+  }, [getCtx]);
+
+  // Confirmation tap — bruit court et sec
+  const tapBeep = useCallback(() => {
+    if (!tapSoundRef.current) return;
+    try {
+      const ac = getCtx();
+      const frames = Math.floor(ac.sampleRate * 0.04);
+      const buf = ac.createBuffer(1, frames, ac.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < frames; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / frames, 2);
+      const src = ac.createBufferSource();
+      src.buffer = buf;
+      const g = ac.createGain();
+      g.gain.setValueAtTime(0.3, ac.currentTime);
+      src.connect(g); g.connect(ac.destination);
+      src.start(ac.currentTime);
+    } catch(_) {}
+  }, [getCtx]);
+
   const pulse = useCallback((strong = false) => {
     beep(strong);
     setBeatStrong(strong);
     setBeatFlash(true);
     setTimeout(() => setBeatFlash(false), strong ? 160 : 110);
   }, [beep]);
+
+  const rhythmPulse = useCallback((strong = false) => {
+    rhythmBeep(strong);
+    setBeatStrong(strong);
+    setBeatFlash(true);
+    setTimeout(() => setBeatFlash(false), strong ? 160 : 110);
+  }, [rhythmBeep]);
 
   // ── Microphone ─────────────────────────────────────────────────────────────
   const startMic = useCallback(async () => {
@@ -395,11 +484,11 @@ export default function RythmApp() {
     const { timestamps } = toTimestamps(pat.figs, bpmVal, pat.timeSig);
     pat.figs.forEach((fig, i) => {
       if (!fig.rest) {
-        const id = setTimeout(() => beep(i === 0), delayMs + timestamps[i]);
+        const id = setTimeout(() => rhythmBeep(false), delayMs + timestamps[i]);
         audioTidsRef.current.push(id);
       }
     });
-  }, [beep]);
+  }, [rhythmBeep]);
 
   const randomPattern = useCallback(() => {
     const pool = formulaCatalog.filter(f => selectedFormulas.has(f.id));
@@ -414,12 +503,11 @@ export default function RythmApp() {
 
   const actualBpm = useCallback(() => {
     if (tempoMode === "fixed") return bpmFixed;
-    const lo = Math.min(bpmMin, bpmMax);
-    const hi = Math.max(bpmMin, bpmMax);
-    return TEMPI.reduce((prev, cur) => {
-      const rand = lo + Math.random() * (hi - lo);
-      return Math.abs(cur - rand) < Math.abs(prev - rand) ? cur : prev;
-    }, TEMPI[0]);
+    const lo   = Math.min(bpmMin, bpmMax);
+    const hi   = Math.max(bpmMin, bpmMax);
+    const rand = lo + Math.random() * (hi - lo);
+    return TEMPI.reduce((prev, cur) =>
+      Math.abs(cur - rand) < Math.abs(prev - rand) ? cur : prev, TEMPI[0]);
   }, [tempoMode, bpmFixed, bpmMin, bpmMax]);
 
   // ── Démarrage ─────────────────────────────────────────────────────────────
@@ -432,7 +520,7 @@ export default function RythmApp() {
     const beatMs = 60000 / bpm;
     const { timestamps, totalMs } = toTimestamps(pat.figs, bpm, pat.timeSig);
 
-    // ── Activités 3 & 4 : countdown court + choix parmi 4 ─────────────────
+    // ── Activités 3 & 4 : choix parmi 4 ──────────────────────────────────
     if (activity === 3 || activity === 4) {
       const pool = formulaCatalog.filter(f => selectedFormulas.has(f.id));
       const distract = generateDistractors(pat, pool, 3);
@@ -443,60 +531,57 @@ export default function RythmApp() {
       setSelectedIdx(null); setPendingIdx(null); setAct4CountN(null);
       setScores([]); setEarnedPts(0); setProgress(0); setActiveIdx(-1);
       setRevealed(activity === 4);
-      setPhase("countdown"); setCountdownN(3);
-      pulse();
-      tid(() => { setCountdownN(4); pulse(false); }, beatMs);
-      tid(() => {
+      if (activity === 3) {
+        // Décompte 3,4 puis lecture audio
+        setPhase("countdown"); setCountdownN(3);
+        pulse(false);
+        tid(() => { setCountdownN(4); pulse(false); }, beatMs);
+        tid(() => { setPhase("playing"); playPatternAudio(pat, bpm); }, 2 * beatMs);
+      } else {
+        // Act 4 : pas de décompte, directement playing
         setPhase("playing");
-        if (activity === 3) playPatternAudio(pat, bpm);
-      }, 2 * beatMs);
+      }
       return;
     }
 
-    // ── Activité 2 : écoute puis reproduit (3 mesures enchaînées) ──────────
+    // ── Activité 2 : écoute puis reproduit ────────────────────────────────
     if (activity === 2) {
       setPattern(pat); setSessionBpm(bpm);
       setTapTimes([]); tapTimesRef.current = [];
       setScores([]); setActiveIdx(-1); setProgress(0);
       setRevealed(false);
-      setPhase("countdown"); setCountdownN(1);
-      pulse(true);
-      // playStartRef = début de la mesure de reproduction (mesure 3)
-      playStartRef.current = performance.now() + 4 * beatMs + totalMs + 3 * beatMs;
+      // Décompte réduit : beats 3 et 4 uniquement
+      setPhase("countdown"); setCountdownN(3);
+      pulse(false);
+      playStartRef.current = performance.now() + 2 * beatMs + totalMs + 3 * beatMs;
 
-      // Mesure 1 — décompte avec beeps : beats 2,3,4 graves
-      [1,2,3,4].forEach((n, i) => {
-        tid(() => { setCountdownN(n); if (i > 0) pulse(false); }, i * beatMs);
-      });
+      tid(() => { setCountdownN(4); pulse(false); }, beatMs);
 
-      // Mesure 2 — modèle joue : flash visuel seulement, pas de beep métronome
+      // Modèle — flash visuel seulement, notes en rhythmBeep
       tid(() => {
         setPhase("listening"); setCountdownN(1);
         setBeatStrong(true); setBeatFlash(true); setTimeout(() => setBeatFlash(false), 160);
-        // Notes du rythme modèle
         timestamps.forEach((ts, i) => {
-          if (!pat.figs[i].rest) tid(() => beep(i === 0), ts);
+          if (!pat.figs[i].rest) tid(() => rhythmBeep(false), ts);
         });
-        // Beats 2,3,4 : flash visuel uniquement
         [1,2,3].forEach(k => {
           tid(() => {
             setCountdownN(k + 1);
             setBeatStrong(false); setBeatFlash(true); setTimeout(() => setBeatFlash(false), 110);
           }, k * beatMs);
         });
-      }, 4 * beatMs);
+      }, 2 * beatMs);
 
-      // Après modèle : 1 beat muet, puis beats 3 & 4 sonores (prépare-toi)
-      tid(() => { setPhase("countdown"); setCountdownN(null); setBeatFlash(false); }, 4 * beatMs + totalMs);
-      tid(() => { setCountdownN(3); pulse(false); }, 4 * beatMs + totalMs + beatMs);
-      tid(() => { setCountdownN(4); pulse(false); }, 4 * beatMs + totalMs + 2 * beatMs);
+      // Après modèle : 1 beat muet, puis 3 & 4 sonores
+      tid(() => { setPhase("countdown"); setCountdownN(null); setBeatFlash(false); }, 2 * beatMs + totalMs);
+      tid(() => { setCountdownN(3); pulse(false); }, 2 * beatMs + totalMs + beatMs);
+      tid(() => { setCountdownN(4); pulse(false); }, 2 * beatMs + totalMs + 2 * beatMs);
 
-      // Mesure 3 — reproduction : 3 beats après la fin du modèle
+      // Reproduction
       tid(() => {
         pulse(true);
         setPhase("playing");
         startRef.current = performance.now();
-        // Beats 2,3,4 : flash visuel pendant la mesure de reproduction
         [1,2,3].forEach(k => {
           tid(() => {
             setBeatStrong(false); setBeatFlash(true);
@@ -515,7 +600,7 @@ export default function RythmApp() {
           setRevealed(true);
           setPhase("results");
         }, totalMs + beatMs * 0.6);
-      }, 4 * beatMs + totalMs + 3 * beatMs);
+      }, 2 * beatMs + totalMs + 3 * beatMs);
       return;
     }
 
@@ -550,14 +635,16 @@ export default function RythmApp() {
     });
 
     tid(() => {
-      pulse(true);
+      // Visual flash beat 1 toujours, son seulement si pas silence
+      setBeatFlash(true); setTimeout(() => setBeatFlash(false), 160);
+      if (!pat.figs[0]?.rest) rhythmBeep(false);
       setPhase("playing");
       startRef.current = performance.now();
 
       timestamps.forEach((ts, i) => {
         tid(() => {
           setActiveIdx(i);
-          if (i > 0 && !pat.figs[i].rest) pulse();
+          if (i > 0 && !pat.figs[i].rest) rhythmPulse(false);
         }, ts);
       });
 
@@ -574,7 +661,7 @@ export default function RythmApp() {
         setPhase("results");
       }, totalMs + beatMs * 0.6);
     }, 4 * beatMs);
-  }, [randomPattern, actualBpm, pulse, beep, revealBeat, activity, flashOffsetMs, formulaCatalog, selectedFormulas, playPatternAudio]);
+  }, [randomPattern, actualBpm, pulse, rhythmBeep, rhythmPulse, revealBeat, activity, flashOffsetMs, formulaCatalog, selectedFormulas, playPatternAudio]);
 
   // ── Choix act 3 & 4 ───────────────────────────────────────────────────────
   const handleChoice = useCallback((idx) => {
@@ -598,9 +685,10 @@ export default function RythmApp() {
     // Pendant le décompte : n'accepter que dans la fenêtre d'anticipation
     if (t < -TOL.ok) return;
     setTapTimes(prev => [...prev, t]);
+    tapBeep();
     setTapFlash(true);
     setTimeout(() => setTapFlash(false), 80);
-  }, [phase, activity]);
+  }, [phase, activity, tapBeep]);
 
   // ── Calcul des résultats ───────────────────────────────────────────────────
   useEffect(() => {
@@ -612,7 +700,7 @@ export default function RythmApp() {
       .filter(({ fig }) => !fig.rest);
     const s = playable.map(({ ts }, i) => {
       const tap = tapTimesRef.current[i];
-      if (tap === undefined) return { label:"Manqué ✕", pts:0, grade:"miss" };
+      if (tap === undefined) return { label:"Manqué ✕", pts:0, grade:"miss", dev:null };
       return scoreTap(tap, ts);
     });
     setScores(s);
@@ -673,6 +761,8 @@ export default function RythmApp() {
         sheetError={sheetError}
         onSheetLoad={setSheetId}
         onSheetReset={resetToDefault}
+        flashOffsetMs={flashOffsetMs}
+        onFlashOffsetChange={setFlashOffsetMs}
       />
     );
   }
@@ -686,10 +776,14 @@ export default function RythmApp() {
   const medal         = pct >= 90 ? "🥇" : pct >= 70 ? "🥈" : pct >= 50 ? "🥉" : "🎯";
 
   const gradeMap = {};
+  const devMap   = {};
   pattern?.figs.forEach((fig, i) => {
     if (!fig.rest) {
       const scoreIdx = pattern.figs.slice(0, i+1).filter(f => !f.rest).length - 1;
-      if (scores[scoreIdx]) gradeMap[i] = scores[scoreIdx].grade;
+      if (scores[scoreIdx]) {
+        gradeMap[i] = scores[scoreIdx].grade;
+        devMap[i]   = scores[scoreIdx].dev; // null si manqué
+      }
     }
   });
 
@@ -740,6 +834,15 @@ export default function RythmApp() {
             }}
             title="Réglages"
           >⚙</button>
+          <Link
+            to="/"
+            style={{
+              background:"#111827",border:"1px solid #1f2937",borderRadius:10,
+              color:"#9ca3af",fontSize:11,fontWeight:700,cursor:"pointer",
+              padding:"4px 8px",lineHeight:1,textDecoration:"none",
+            }}
+            title="Retour au hub"
+          >⌂</Link>
         </div>
       </div>
 
@@ -747,7 +850,26 @@ export default function RythmApp() {
       <div style={{width:"100%",maxWidth:540,display:"flex",gap:5,marginBottom:10,flexWrap:"wrap"}}>
         {ACTIVITIES.map(a => (
           <button key={a.id}
-            onClick={() => { if (canStart) setActivity(a.id); }}
+            onClick={() => {
+              if (!canStart || activity === a.id) return;
+              clearTids();
+              audioTidsRef.current.forEach(clearTimeout); audioTidsRef.current = [];
+              cancelAnimationFrame(rafRef.current);
+              setActivity(a.id);
+              setPhase("idle");
+              setPattern(null);
+              setChoices([]);
+              setSelectedIdx(null);
+              setPendingIdx(null);
+              setScores([]);
+              setEarnedPts(0);
+              setProgress(0);
+              setActiveIdx(-1);
+              setRevealed(false);
+              setBeatFlash(false);
+              setMetroDotFlash(false);
+              setCountdownN(1);
+            }}
             style={{
               flex:1,padding:"5px 4px",borderRadius:10,fontSize:10,fontWeight:600,
               cursor:"pointer",border:"none",minWidth:80,
@@ -763,65 +885,42 @@ export default function RythmApp() {
       {/* ── TEMPO ── */}
       <div style={{width:"100%",maxWidth:540,marginBottom:12,
         background:"#0a0f1a",borderRadius:14,padding:"10px 14px"}}>
-        <div style={{display:"flex",gap:6,marginBottom:8}}>
-          {["fixed","range"].map(mode => (
-            <button key={mode}
-              onClick={() => { if (canStart) setTempoMode(mode); }}
-              style={{
-                flex:1,padding:"4px",borderRadius:8,fontSize:11,fontWeight:600,
-                cursor:"pointer",border:"none",
-                background:tempoMode===mode?"#4f46e5":"#111827",
-                color:tempoMode===mode?"#fff":"#6b7280",
-              }}
-            >{mode==="fixed"?"Tempo fixe":"Plage aléatoire"}</button>
-          ))}
-        </div>
-        {tempoMode === "fixed" && (
-          <div>
-            <div style={{display:"flex",justifyContent:"space-between",
-              fontSize:10,color:"#6b7280",marginBottom:3}}>
-              <span>Tempo</span>
-              <span style={{color:"#c084fc",fontWeight:700}}>{bpmFixed} BPM</span>
-            </div>
-            <input type="range" min={0} max={TEMPI.length-1}
-              value={closestTempoIdx(bpmFixed)}
-              onChange={e => setBpmFixed(TEMPI[+e.target.value])}
-              disabled={isPlaying||phase==="countdown"}
-              style={{width:"100%",accentColor:"#7c3aed"}}
-            />
-          </div>
-        )}
-        {tempoMode === "range" && (
-          <div style={{display:"flex",gap:12}}>
-            {[["Min",bpmMin,setBpmMin],["Max",bpmMax,setBpmMax]].map(([label,val,set])=>(
-              <div key={label} style={{flex:1}}>
-                <div style={{display:"flex",justifyContent:"space-between",
-                  fontSize:10,color:"#6b7280",marginBottom:3}}>
-                  <span>{label}</span>
-                  <span style={{color:"#c084fc",fontWeight:700}}>{val} BPM</span>
-                </div>
-                <input type="range" min={0} max={TEMPI.length-1}
-                  value={closestTempoIdx(val)}
-                  onChange={e => set(TEMPI[+e.target.value])}
-                  disabled={isPlaying||phase==="countdown"}
-                  style={{width:"100%",accentColor:"#7c3aed"}}
-                />
-              </div>
+        {/* Toggle + slider sur une ligne */}
+        <div style={{display:"flex",alignItems:"center",gap:10}}>
+          <div style={{display:"flex",gap:4,flexShrink:0}}>
+            {["fixed","range"].map(mode => (
+              <button key={mode}
+                onClick={() => { if (canStart) setTempoMode(mode); }}
+                style={{
+                  padding:"4px 8px",borderRadius:8,fontSize:10,fontWeight:600,
+                  cursor:"pointer",border:"none",
+                  background:tempoMode===mode?"#4f46e5":"#111827",
+                  color:tempoMode===mode?"#fff":"#6b7280",
+                }}
+              >{mode==="fixed"?"Fixe":"Variable"}</button>
             ))}
           </div>
-        )}
-        {/* Offset flash visuel */}
-        <div style={{marginTop:8,paddingTop:8,borderTop:"1px solid #1f2937"}}>
-          <div style={{display:"flex",justifyContent:"space-between",
-            fontSize:10,color:"#6b7280",marginBottom:3}}>
-            <span>Offset flash bordure</span>
-            <span style={{color:"#c084fc",fontWeight:700}}>{flashOffsetMs} ms</span>
+          <div style={{flex:1}}>
+            {tempoMode === "fixed" ? (
+              <input type="range" min={0} max={TEMPI.length-1}
+                value={closestTempoIdx(bpmFixed)}
+                onChange={e => setBpmFixed(TEMPI[+e.target.value])}
+                disabled={isPlaying||phase==="countdown"}
+                style={{width:"100%",accentColor:"#7c3aed",display:"block"}}
+              />
+            ) : (
+              <DualRangeSlider
+                lo={bpmMin} hi={bpmMax}
+                setLo={setBpmMin} setHi={setBpmMax}
+                disabled={isPlaying||phase==="countdown"}
+              />
+            )}
           </div>
-          <input type="range" min={-200} max={200} step={5}
-            value={flashOffsetMs}
-            onChange={e => setFlashOffsetMs(+e.target.value)}
-            style={{width:"100%",accentColor:"#7c3aed"}}
-          />
+          <div style={{fontSize:11,color:"#c084fc",fontWeight:700,flexShrink:0,minWidth:64,textAlign:"right"}}>
+            {tempoMode === "fixed"
+              ? `${bpmFixed} BPM`
+              : `${Math.min(bpmMin,bpmMax)}↔${Math.max(bpmMin,bpmMax)}`}
+          </div>
         </div>
       </div>
 
@@ -929,6 +1028,8 @@ export default function RythmApp() {
                     timeSig={pattern.timeSig}
                     activeIdx={isPlaying ? activeIdx : -1}
                     scoreGrades={phase==="results" ? gradeMap : undefined}
+                    scoreDevs={phase==="results" ? devMap : undefined}
+                    sessionBpm={sessionBpm}
                   />
                 </div>
               ) : (
@@ -1003,7 +1104,7 @@ export default function RythmApp() {
                   </>
                 )}
               </div>
-              <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(155px, 1fr))",gap:8,
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,
                 opacity: phase==="countdown" ? 0.45 : 1, transition:"opacity 0.3s"}}>
                 {choices.map((c, i) => {
                   let borderColor = "#1e293b";
@@ -1132,6 +1233,31 @@ export default function RythmApp() {
         </div>
 
       </div>
+
+      {/* ── SON RYTHME / TAP — act 1 & 2 ── */}
+      {(activity === 1 || activity === 2) && (
+        <div style={{width:"100%",maxWidth:540,display:"flex",gap:6,marginBottom:8,marginTop:6}}>
+          {[
+            { on: rhythmSoundOn, set: setRhythmSoundOn, label: "Rythme", icon: "🔊", iconOff: "🔇" },
+            { on: tapSoundOn,    set: setTapSoundOn,    label: "Tap",    icon: "🥁", iconOff: "🔕" },
+          ].map(({ on, set, label, icon, iconOff }) => (
+            <button
+              key={label}
+              onClick={() => set(v => !v)}
+              style={{
+                flex:1, padding:"6px 8px", borderRadius:10, fontSize:11, fontWeight:700,
+                cursor:"pointer", border:"none",
+                background: on ? "#0a0f1a" : "#1f2937",
+                color: on ? "#c084fc" : "#4b5563",
+                display:"flex", alignItems:"center", justifyContent:"center", gap:5,
+              }}
+            >
+              <span style={{fontSize:15}}>{on ? icon : iconOff}</span>
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* ── BOUTON TAP / MIC / START ── */}
       <div style={{width:"100%",maxWidth:540,marginTop:14}}>

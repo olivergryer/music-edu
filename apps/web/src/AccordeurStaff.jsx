@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { Renderer, Stave, StaveNote, Voice, Formatter, Annotation } from 'vexflow'
+import { Renderer, Stave, StaveNote, Voice, Formatter, Annotation, Accidental } from 'vexflow'
 import { couleurJustesse, transposerMidi } from './accordeurUtils'
 
 const NOTE_NAMES_VEX = ['c', 'c#', 'd', 'd#', 'e', 'f', 'f#', 'g', 'g#', 'a', 'a#', 'b']
@@ -65,7 +65,7 @@ export default function AccordeurStaff({ notes, seuil = 10, transpoKey = 'C', co
         stave.addClef('treble')
       }
 
-      stave.setStyle({ strokeStyle: '#4b5563', fillStyle: '#4b5563' })
+      stave.setStyle({ strokeStyle: '#9ca3af', fillStyle: '#9ca3af' })
       stave.setContext(ctx).draw()
 
       // ── StaveNotes ───────────────────────────────────────────────────────────
@@ -76,6 +76,12 @@ export default function AccordeurStaff({ notes, seuil = 10, transpoKey = 'C', co
 
         const sn = new StaveNote({ keys: [key], duration: 'q' })
         sn.setStyle({ fillStyle: couleur, strokeStyle: couleur })
+
+        if (key.includes('#')) {
+          const acc = new Accidental('#')
+          acc.setStyle({ fillStyle: couleur, strokeStyle: couleur })
+          sn.addModifier(acc, 0)
+        }
 
         const centsLabel = (note.muCents >= 0 ? '+' : '') + note.muCents.toFixed(1) + '¢'
         const ann = new Annotation(centsLabel)

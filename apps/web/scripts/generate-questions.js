@@ -318,7 +318,7 @@ function generateMinorAltQuestions() {
     const wrong = allAccidentelles.filter(a => a !== k.accidentelle).slice(0, 3)
     qs.push({
       id: `TGm_${k.note.replace('#','s')}_acc`,
-      niveau: Math.max(altCountToLevel(k.count) === 'C1/1' ? 'C1/2' : 0, altCountToLevel(k.count)),
+      niveau: altCountToLevel(k.count) === 'C1/1' ? 'C1/2' : altCountToLevel(k.count),
       categorie: 'tonalites_alterations',
       type: 'qcm',
       question: `Quelle est l'altération accidentelle (sensible) en ${k.note} mineur harmonique ?`,

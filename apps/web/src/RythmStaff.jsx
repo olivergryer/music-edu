@@ -72,11 +72,15 @@ function buildBeams(figures, vexNotes, timeSig) {
   return beams;
 }
 
+const DEV_COLORS = { perfect:"#a78bfa", good:"#34d399", ok:"#fbbf24", miss:"#f87171" };
+
 export default function RythmStaff({
   figures,
   timeSig      = "4/4",
   activeIdx    = -1,
   scoreGrades,
+  scoreDevs,
+  sessionBpm,
   width        = 480,
   height       = 150,
   showClef     = true,
@@ -171,11 +175,38 @@ export default function RythmStaff({
       if (svg) {
         svg.style.background = "transparent";
         svg.querySelectorAll("text").forEach(t => { t.style.fill = "#6b7280"; });
+
+        // ── Flèches de décalage temporel ────────────────────────────────────
+        if (scoreDevs && sessionBpm) {
+          const beatMs = 60000 / sessionBpm;
+          vexNotes.forEach((note, i) => {
+            const dev   = scoreDevs[i];
+            const grade = scoreGrades?.[i];
+            if (dev == null || !grade) return;
+            const x     = note.getAbsoluteX();
+            const pct   = Math.round(Math.abs(dev) / beatMs * 100);
+            const capped = Math.min(Math.abs(dev), 420);
+            const size  = 9 + Math.round((capped / 420) * 5);
+            const arrow = dev < 0 ? "←" : "→";
+            const color = DEV_COLORS[grade] ?? "#6b7280";
+            const el    = document.createElementNS("http://www.w3.org/2000/svg", "text");
+            el.setAttribute("x", x);
+            el.setAttribute("y", staveY - 2);
+            el.setAttribute("text-anchor", "middle");
+            el.setAttribute("font-size", size);
+            el.setAttribute("fill", color);
+            el.setAttribute("font-family", "Arial");
+            el.setAttribute("font-weight", "700");
+            el.setAttribute("title", `${dev < 0 ? "Trop tôt" : "Trop tard"} : ${pct}% du temps`);
+            el.textContent = arrow;
+            svg.appendChild(el);
+          });
+        }
       }
     } catch (err) {
       console.warn("VexFlow:", err.message ?? err);
     }
-  }, [figures, timeSig, activeIdx, scoreGrades, renderWidth, height, showClef, showTimeSig]);
+  }, [figures, timeSig, activeIdx, scoreGrades, scoreDevs, sessionBpm, renderWidth, height, showClef, showTimeSig]);
 
   return <div ref={ref} style={{ width:"100%", maxWidth:width, overflow:"hidden" }} />;
 }

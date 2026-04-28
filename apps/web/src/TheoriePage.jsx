@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { Link } from 'react-router-dom'
+import IntervalleStaff from './IntervalleStaff.jsx'
 
 const CATEGORIES = [
   {
@@ -106,7 +107,7 @@ function getTimeLimit(q) {
 
 function getChoices(q) {
   if (q.type === 'vrai_faux') return ['Vrai', 'Faux']
-  if (q.type === 'qcm' || q.type === 'qcm_image_question') {
+  if (q.type === 'qcm' || q.type === 'qcm_image_question' || q.type === 'vexflow_intervalle') {
     const opts = [q.reponse_correcte, q.reponse_fausse_1, q.reponse_fausse_2, q.reponse_fausse_3].filter(Boolean)
     return shuffleArray(opts)
   }
@@ -533,8 +534,12 @@ function QuizScreen({ session, mode, onAnswer, onNext }) {
           {q.question}
         </div>
 
-        {(q.type === 'qcm' || q.type === 'vrai_faux' || q.type === 'image_qcm' || q.type === 'qcm_image_question') && (
+        {(q.type === 'qcm' || q.type === 'vrai_faux' || q.type === 'image_qcm' || q.type === 'qcm_image_question' || q.type === 'vexflow_intervalle') && (
           <ChoiceQuestion q={q} choices={choices} selected={selected} onSelect={handleSelect} revealed={revealed} />
+        )}
+
+        {q.type === 'vexflow_intervalle' && q.vexflow_notes && (
+          <IntervalleStaff notes={q.vexflow_notes} />
         )}
 
         {q.type === 'texte' && (

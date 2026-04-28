@@ -161,6 +161,7 @@ export default function AccordeurPage() {
   const [erreur, setErreur] = useState(null)
 
   // ── Vue résultats ─────────────────────────────────────────────────────────────
+  const [dirty,      setDirty]      = useState(false)     // réglages modifiés, recalcul en attente
   const [vue,        setVue]        = useState('portee')  // 'portee' | 'tableau'
   const [showCourbe, setShowCourbe] = useState(true)
   const [showBarres, setShowBarres] = useState(true)
@@ -194,9 +195,8 @@ export default function AccordeurPage() {
     setStructureId(struct.id)
   }, [])
 
-  // ── Recalcul unifié : re-lance YIN si yinThreshold change, re-segmente sinon ──
-  // audioBufferRef.current null = aucun audio → guard suffit
-  useEffect(() => {
+  // ── Recalcul : déclenché manuellement via bouton ──────────────────────────────
+  const recalculer = useCallback(() => {
     if (!audioBufferRef.current) return
     const s = analyserBuffer(audioBufferRef.current, { yinThreshold })
     serieRef.current = s
@@ -211,6 +211,13 @@ export default function AccordeurPage() {
     setCourbe(courbeB)
     setScoreP(scorePedagogique(notesCalc, seuil))
     setScoreQ(scoreQualite(notesCalc))
+    setDirty(false)
+  }, [yinThreshold, referentiel, seuil, silenceDurationMs, noteJumpCents, diapason, structureId, structures])
+
+  // ── Marque dirty quand réglages changent après chargement audio ───────────────
+  useEffect(() => {
+    if (!audioBufferRef.current) return
+    setDirty(true)
   }, [yinThreshold, referentiel, seuil, silenceDurationMs, noteJumpCents, diapason, structureId, structures])
 
   // ─── Enregistrement ──────────────────────────────────────────────────────────
@@ -309,6 +316,7 @@ export default function AccordeurPage() {
     setCourbe(courbeB)
     setScoreP(scorePedagogique(notesAv, seuil))
     setScoreQ(scoreQualite(notesAv))
+    setDirty(false)
     setPhase('resultats')
   }, [structures, structureId, referentiel, diapason, seuil, silenceDurationMs, noteJumpCents, yinThreshold])
 
@@ -348,6 +356,7 @@ export default function AccordeurPage() {
       setCourbe(courbeB)
       setScoreP(scorePedagogique(notesAv, seuil))
       setScoreQ(scoreQualite(notesAv))
+      setDirty(false)
       setPhase('resultats')
     } catch (e) {
       setErreur('Erreur lecture fichier : ' + e.message)
@@ -614,7 +623,7 @@ export default function AccordeurPage() {
             </div>
             {phase === 'resultats' && (
               <div style={{ marginTop: 8, fontSize: 10, color: COL_MUTED2 }}>
-                Modification re-segmente l'enregistrement en temps réel.
+                Modification active le bouton ↻ Recalculer sur la portée.
               </div>
             )}
           </div>
@@ -795,14 +804,19 @@ export default function AccordeurPage() {
 
             {/* Vue Portée — scroll horizontal */}
             {vue === 'portee' && (
-              <div style={{ background: COL_SURFACE, borderRadius: 12, padding: '16px 8px', marginBottom: 16, border: `1px solid ${COL_BORDER}` }}>
+              <div style={{ position: 'relative', background: COL_SURFACE, borderRadius: 12, padding: '16px 8px', marginBottom: 16, border: `1px solid ${COL_BORDER}` }}>
                 <AccordeurStaff notes={notes} seuil={seuil} transpoKey={transpoKey} containerWidth={524} height={180} />
+                {dirty && (
+                  <div style={{ position: 'absolute', inset: 0, borderRadius: 12, background: 'rgba(3,7,18,0.72)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Btn onClick={recalculer} style={{ fontSize: 13, padding: '10px 28px' }}>↻ Recalculer</Btn>
+                  </div>
+                )}
               </div>
             )}
 
             {/* Vue Tableau */}
             {vue === 'tableau' && (
-              <div style={{ background: COL_SURFACE, borderRadius: 12, padding: 16, marginBottom: 16, border: `1px solid ${COL_BORDER}` }}>
+              <div style={{ position: 'relative', background: COL_SURFACE, borderRadius: 12, padding: 16, marginBottom: 16, border: `1px solid ${COL_BORDER}` }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
                   <thead>
                     <tr style={{ color: COL_MUTED, borderBottom: `1px solid ${COL_BORDER}` }}>
@@ -847,6 +861,11 @@ export default function AccordeurPage() {
                     })}
                   </tbody>
                 </table>
+                {dirty && (
+                  <div style={{ position: 'absolute', inset: 0, borderRadius: 12, background: 'rgba(3,7,18,0.72)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Btn onClick={recalculer} style={{ fontSize: 13, padding: '10px 28px' }}>↻ Recalculer</Btn>
+                  </div>
+                )}
               </div>
             )}
 
