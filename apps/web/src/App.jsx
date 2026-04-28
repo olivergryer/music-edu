@@ -3,6 +3,7 @@ import HubPage from './HubPage'
 import RythmApp from './RythmApp'
 import TheoriePage from './TheoriePage'
 import AccordeurPage from './AccordeurPage'
+import ProfilPage from './ProfilPage'
 
 export default function App() {
   return (
@@ -12,6 +13,7 @@ export default function App() {
         <Route path="/rythme" element={<RythmApp />} />
         <Route path="/theorie" element={<TheoriePage />} />
         <Route path="/accordeur" element={<AccordeurPage />} />
+        <Route path="/profil" element={<ProfilPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

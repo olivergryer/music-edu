@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import RythmStaff from "./RythmStaff";
 import SettingsPage from "./SettingsPage";
 import useSheetData from "./useSheetData";
+import useProgress, { TROPHIES as TROPHIES_IMPORT } from "./useProgress";
 
 // ─── Figures de base ──────────────────────────────────────────────────────────
 const q  = { dur:"q"  };
@@ -280,6 +281,102 @@ function MetronomeViz({ flash }) {
   return null; // dot déplacé dans l'en-tête central
 }
 
+// ─── Écran fin de série ───────────────────────────────────────────────────────
+function SeriesEndScreen({ xpLog, medals, totalXp, dominantMedal, perfectSeries, addSession, onReplay, onBack }) {
+  const [result, setResult] = useState(null);
+
+  useEffect(() => {
+    const r = addSession({ module: "rythme", xpEarned: totalXp, medal: dominantMedal, meta: { perfectSeries } });
+    setResult(r);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  return (
+    <div style={{
+      minHeight:"100dvh", background:"#030712", color:"#f9fafb",
+      display:"flex", flexDirection:"column", alignItems:"center",
+      padding:"20px 14px 32px", fontFamily:"'Inter','Segoe UI',sans-serif",
+    }}>
+      <div style={{width:"100%",maxWidth:540}}>
+        <div style={{textAlign:"center",marginBottom:24}}>
+          <div style={{fontSize:52,marginBottom:8}}>{dominantMedal}</div>
+          <div style={{fontSize:26,fontWeight:900,color:"#c084fc"}}>Série terminée !</div>
+          <div style={{fontSize:14,color:"#6b7280",marginTop:4}}>
+            {perfectSeries ? "Série parfaite — incroyable !" : `Score total : +${totalXp} XP`}
+          </div>
+        </div>
+
+        {/* Grille des 10 exercices */}
+        <div style={{background:"#0a0f1a",borderRadius:14,padding:"14px",marginBottom:16}}>
+          <div style={{fontSize:10,fontWeight:700,color:"#6b7280",
+            textTransform:"uppercase",letterSpacing:1,marginBottom:10}}>
+            Détail de la série
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:6}}>
+            {medals.map((m, i) => (
+              <div key={i} style={{
+                background:"#111827",borderRadius:10,padding:"8px 4px",
+                textAlign:"center",
+              }}>
+                <div style={{fontSize:18}}>{m}</div>
+                <div style={{fontSize:9,color:"#6b7280",marginTop:2}}>+{xpLog[i] ?? 0}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* XP total */}
+        <div style={{background:"#0a0f1a",borderRadius:14,padding:"14px",marginBottom:16,
+          display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+          <span style={{fontSize:13,color:"#9ca3af"}}>XP gagné</span>
+          <span style={{fontSize:20,fontWeight:900,color:"#c084fc"}}>+{totalXp} ⭐</span>
+        </div>
+
+        {/* Trophées débloqués */}
+        {result?.newTrophies?.length > 0 && (
+          <div style={{background:"#1a0d3a",border:"1px solid #7c3aed",
+            borderRadius:14,padding:"14px",marginBottom:16}}>
+            <div style={{fontSize:11,fontWeight:700,color:"#c084fc",marginBottom:8}}>
+              🏅 Trophée{result.newTrophies.length > 1 ? "s" : ""} débloqué{result.newTrophies.length > 1 ? "s" : ""} !
+            </div>
+            {result.newTrophies.map(id => {
+              const t = TROPHIES_IMPORT.find(x => x.id === id);
+              return t ? (
+                <div key={id} style={{fontSize:13,color:"#e9d5ff",marginBottom:4}}>
+                  {t.icon} {t.label}
+                </div>
+              ) : null;
+            })}
+          </div>
+        )}
+
+        {/* Level-up */}
+        {result?.leveledUp && (
+          <div style={{background:"#1a0d3a",border:"1px solid #c084fc",
+            borderRadius:14,padding:"14px",marginBottom:16,textAlign:"center"}}>
+            <div style={{fontSize:22,marginBottom:4}}>🎉</div>
+            <div style={{fontSize:14,fontWeight:700,color:"#c084fc"}}>Niveau supérieur !</div>
+          </div>
+        )}
+
+        <div style={{display:"flex",gap:10,marginTop:8}}>
+          <button onClick={onBack} style={{
+            flex:1,padding:"14px",borderRadius:16,cursor:"pointer",
+            background:"#111827",border:"1px solid #1f2937",
+            color:"#9ca3af",fontSize:13,fontWeight:700,
+          }}>← Activités</button>
+          <button onClick={onReplay} style={{
+            flex:2,padding:"14px",borderRadius:16,cursor:"pointer",
+            background:"linear-gradient(135deg,#7c3aed,#6d28d9)",border:"none",
+            color:"#fff",fontSize:13,fontWeight:700,
+            boxShadow:"0 8px 32px rgba(109,40,217,0.4)",
+          }}>🔄 Rejouer la série</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Composant principal ──────────────────────────────────────────────────────
 export default function RythmApp() {
   const {
@@ -287,7 +384,7 @@ export default function RythmApp() {
     sheetId, sheetStatus, sheetError, setSheetId, resetToDefault,
   } = useSheetData({ formulaCatalog: FORMULA_CATALOG, levelOrder: LEVEL_ORDER, levelFormulaIds: LEVEL_FORMULA_IDS });
 
-  const [currentPage,     setCurrentPage]     = useState("game");
+  const [currentPage,     setCurrentPage]     = useState("home");
   const [selectedFormulas,setSelectedFormulas] = useState(DEFAULT_SELECTED);
   const [activity,        setActivity]        = useState(1);
 
@@ -332,6 +429,16 @@ export default function RythmApp() {
   const [pendingIdx,  setPendingIdx]  = useState(null);
   const [act4CountN,  setAct4CountN]  = useState(null);
 
+  // Série de 10
+  const [seriesMode,   setSeriesMode]   = useState(false);
+  const [seriesIdx,    setSeriesIdx]    = useState(0);
+  const [seriesXpLog,  setSeriesXpLog]  = useState([]);
+  const [seriesMedals, setSeriesMedals] = useState([]);
+  const seriesBaseBpmRef               = useRef(null);
+  const seriesIdxRef                   = useRef(0);
+  // Résultat addSession (trophées + level-up) — affiché dans series-end
+  const [seriesResult, setSeriesResult] = useState(null);
+
   // Microphone
   const [inputMode,    setInputMode]    = useState("tap"); // "tap" | "mic"
   const [micActive,    setMicActive]    = useState(false);
@@ -352,6 +459,8 @@ export default function RythmApp() {
   const micAnalyserRef = useRef(null);
   const micRafRef      = useRef(null);
   const lastOnsetRef   = useRef(0);
+
+  const { addSession } = useProgress();
 
   // ── Gestion formules / niveaux ─────────────────────────────────────────────
   const toggleFormula = useCallback(id => {
@@ -516,7 +625,10 @@ export default function RythmApp() {
     audioTidsRef.current.forEach(clearTimeout); audioTidsRef.current = [];
     cancelAnimationFrame(rafRef.current);
     const pat  = randomPattern();
-    const bpm  = actualBpm();
+    // En mode série : BPM de base + ramp +5 tous les 3 exercices
+    const bpm  = seriesBaseBpmRef.current !== null
+      ? seriesBaseBpmRef.current + Math.floor(seriesIdxRef.current / 3) * 5
+      : actualBpm();
     const beatMs = 60000 / bpm;
     const { timestamps, totalMs } = toTimestamps(pat.figs, bpm, pat.timeSig);
 
@@ -755,7 +867,7 @@ export default function RythmApp() {
         selectedFormulas={selectedFormulas}
         onToggle={toggleFormula}
         onLevelSelect={selectLevel}
-        onClose={() => setCurrentPage("game")}
+        onClose={() => setCurrentPage("home")}
         sheetId={sheetId}
         sheetStatus={sheetStatus}
         sheetError={sheetError}
@@ -763,6 +875,374 @@ export default function RythmApp() {
         onSheetReset={resetToDefault}
         flashOffsetMs={flashOffsetMs}
         onFlashOffsetChange={setFlashOffsetMs}
+        revealBeat={revealBeat}
+        onRevealBeatChange={setRevealBeat}
+        activity={activity}
+        tempoMode={tempoMode}
+        onTempoModeChange={setTempoMode}
+        bpmFixed={bpmFixed}
+        onBpmFixedChange={setBpmFixed}
+        bpmMin={bpmMin}
+        onBpmMinChange={setBpmMin}
+        bpmMax={bpmMax}
+        onBpmMaxChange={setBpmMax}
+      />
+    );
+  }
+
+  // ── Page accueil ───────────────────────────────────────────────────────────
+  if (currentPage === "home") {
+    const ACTIVITY_DESCS = {
+      1: "Un rythme s'affiche. Reproduis-le en tapant.",
+      2: "Écoute le rythme, puis reproduis-le en tapant.",
+      3: "Écoute et identifie la bonne portée parmi 4.",
+      4: "Observe la portée et identifie la bonne lecture audio.",
+    };
+    const formulaCountHome = selectedFormulas.size;
+
+    // Détermine si un niveau est entièrement sélectionné (cumulatif)
+    const isLevelActiveHome = (level) => {
+      const cumIds = [];
+      for (const lv of levelOrder) {
+        (levelFormulaIds[lv] ?? []).forEach(id => cumIds.push(id));
+        if (lv === level) break;
+      }
+      return cumIds.length > 0 && cumIds.every(id => selectedFormulas.has(id));
+    };
+
+    const styleBackHub = {
+      background:"#111827", border:"1px solid #1f2937", borderRadius:8,
+      color:"#c084fc", fontWeight:700, fontSize:12, padding:"4px 10px",
+      cursor:"pointer", textDecoration:"none",
+    };
+
+    return (
+      <div style={{
+        minHeight:"100dvh", background:"#030712", color:"#f9fafb",
+        display:"flex", flexDirection:"column", alignItems:"center",
+        padding:"12px 14px 32px",
+        fontFamily:"'Inter','Segoe UI',sans-serif", userSelect:"none",
+      }}>
+        {/* Header */}
+        <div style={{width:"100%",maxWidth:540,display:"flex",
+          justifyContent:"space-between",alignItems:"center",marginBottom:18}}>
+          <Link to="/" style={styleBackHub}>← Tessitura</Link>
+          <button
+            onClick={() => setCurrentPage("settings")}
+            style={{
+              background:"#111827",border:"1px solid #1f2937",borderRadius:10,
+              color:"#9ca3af",fontSize:18,cursor:"pointer",
+              padding:"2px 8px",lineHeight:1,
+            }}
+            title="Réglages avancés"
+          >⚙</button>
+        </div>
+
+        <div style={{width:"100%",maxWidth:540}}>
+          <div style={{fontSize:28,fontWeight:900,color:"#c084fc",marginBottom:18}}>
+            Rythme
+          </div>
+
+          {/* 4 cartes activités */}
+          <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:18}}>
+            {ACTIVITIES.map(a => {
+              const sel = activity === a.id;
+              return (
+                <div key={a.id}
+                  role="button"
+                  onClick={() => setActivity(a.id)}
+                  style={{
+                    borderRadius:14,border:`2px solid ${sel?"#7c3aed":"#1f2937"}`,
+                    background:sel?"#1a0d3a":"#0a0f1a",
+                    padding:"12px 16px",cursor:"pointer",
+                    display:"flex",alignItems:"center",gap:14,
+                    transition:"all 0.12s",
+                  }}
+                >
+                  <div style={{
+                    fontSize:22,fontWeight:900,color:sel?"#c084fc":"#374151",
+                    minWidth:28,textAlign:"center",flexShrink:0,
+                  }}>{a.id}</div>
+                  <div>
+                    <div style={{fontSize:14,fontWeight:700,color:sel?"#f9fafb":"#9ca3af"}}>
+                      {a.label}
+                    </div>
+                    <div style={{fontSize:11,color:sel?"#a78bfa":"#4b5563",marginTop:2}}>
+                      {ACTIVITY_DESCS[a.id]}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Toggle Exercice seul / Série de 10 */}
+          <div style={{display:"flex",gap:6,marginBottom:14}}>
+            {[["single","Exercice seul"],["series","Série de 10"]].map(([mode,label]) => {
+              const active = seriesMode ? mode==="series" : mode==="single";
+              return (
+                <button key={mode}
+                  onClick={() => setSeriesMode(mode==="series")}
+                  style={{
+                    flex:1,padding:"8px",borderRadius:10,fontSize:12,fontWeight:700,
+                    cursor:"pointer",border:"none",
+                    background:active?"#4f46e5":"#111827",
+                    color:active?"#fff":"#6b7280",
+                  }}
+                >{label}</button>
+              );
+            })}
+          </div>
+
+          {/* Niveaux */}
+          <div style={{background:"#0a0f1a",borderRadius:14,padding:"12px 14px",marginBottom:10}}>
+            <div style={{fontSize:10,fontWeight:700,color:"#6b7280",
+              textTransform:"uppercase",letterSpacing:1,marginBottom:8}}>
+              Niveau
+            </div>
+            <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:6}}>
+              {levelOrder.map(level => {
+                const active = isLevelActiveHome(level);
+                const hasFormulas = (levelFormulaIds[level] ?? []).length > 0;
+                return (
+                  <button key={level}
+                    onClick={() => selectLevel(level)}
+                    disabled={!hasFormulas}
+                    style={{
+                      padding:"5px 14px",borderRadius:999,fontSize:11,fontWeight:700,
+                      cursor:hasFormulas?"pointer":"default",border:"none",
+                      background:active?"#7c3aed":hasFormulas?"#1f2937":"#111827",
+                      color:active?"#fff":hasFormulas?"#9ca3af":"#374151",
+                      transition:"all 0.15s",
+                    }}
+                  >{level}</button>
+                );
+              })}
+            </div>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+              <div style={{fontSize:11,color:"#6b7280"}}>
+                {formulaCountHome} formule{formulaCountHome!==1?"s":""} sélectionnée{formulaCountHome!==1?"s":""}
+              </div>
+              <button
+                onClick={() => setCurrentPage("settings")}
+                style={{
+                  background:"none",border:"none",color:"#7c3aed",fontSize:11,
+                  fontWeight:700,cursor:"pointer",padding:0,
+                }}
+              >Voir toutes les formules →</button>
+            </div>
+          </div>
+
+          {/* Tempo + TAP/MIC */}
+          <div style={{background:"#0a0f1a",borderRadius:14,padding:"12px 14px",marginBottom:10}}>
+            <div style={{fontSize:10,fontWeight:700,color:"#6b7280",
+              textTransform:"uppercase",letterSpacing:1,marginBottom:8}}>
+              Tempo
+            </div>
+            <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+              {/* Fixe / Variable */}
+              <div style={{display:"flex",gap:4,flexShrink:0}}>
+                {["fixed","range"].map(mode => (
+                  <button key={mode}
+                    onClick={() => setTempoMode(mode)}
+                    style={{
+                      padding:"4px 8px",borderRadius:8,fontSize:10,fontWeight:600,
+                      cursor:"pointer",border:"none",
+                      background:tempoMode===mode?"#4f46e5":"#111827",
+                      color:tempoMode===mode?"#fff":"#6b7280",
+                    }}
+                  >{mode==="fixed"?"Fixe":"Variable"}</button>
+                ))}
+              </div>
+              {/* Slider */}
+              <div style={{flex:1,minWidth:80}}>
+                {tempoMode === "fixed" ? (
+                  <input type="range" min={0} max={TEMPI.length-1}
+                    value={closestTempoIdx(bpmFixed)}
+                    onChange={e => setBpmFixed(TEMPI[+e.target.value])}
+                    style={{width:"100%",accentColor:"#7c3aed",display:"block"}}
+                  />
+                ) : (
+                  <DualRangeSlider
+                    lo={bpmMin} hi={bpmMax}
+                    setLo={setBpmMin} setHi={setBpmMax}
+                    disabled={false}
+                  />
+                )}
+              </div>
+              {/* BPM affiché */}
+              <div style={{fontSize:11,color:"#c084fc",fontWeight:700,
+                flexShrink:0,minWidth:54,textAlign:"right"}}>
+                {tempoMode==="fixed"
+                  ? `${bpmFixed} BPM`
+                  : `${Math.min(bpmMin,bpmMax)}↔${Math.max(bpmMin,bpmMax)}`}
+              </div>
+              {/* TAP / MIC — act 1 & 2 seulement */}
+              {(activity===1||activity===2) && (
+                <div style={{display:"flex",gap:4,flexShrink:0}}>
+                  {[["tap","TAP"],["mic","🎤"]].map(([mode,label]) => (
+                    <button key={mode}
+                      onClick={() => {
+                        if (mode==="mic") { setInputMode("mic"); startMic(); }
+                        else { setInputMode("tap"); stopMic(); }
+                      }}
+                      style={{
+                        padding:"4px 8px",borderRadius:8,fontSize:10,fontWeight:700,
+                        cursor:"pointer",border:"none",
+                        background:inputMode===mode?"#7c3aed":"#111827",
+                        color:inputMode===mode?"#fff":"#6b7280",
+                      }}
+                    >{label}</button>
+                  ))}
+                </div>
+              )}
+            </div>
+            {/* Seuil MIC */}
+            {inputMode==="mic" && (activity===1||activity===2) && (
+              <div style={{marginTop:10,background:"#111827",
+                borderRadius:10,padding:"8px 12px"}}>
+                <div style={{display:"flex",justifyContent:"space-between",
+                  fontSize:10,color:"#6b7280",marginBottom:3}}>
+                  <span>Seuil détection</span>
+                  <span style={{color:"#c084fc",fontWeight:700}}>{micThreshold.toFixed(3)}</span>
+                </div>
+                <input type="range" min={5} max={500} step={5}
+                  value={Math.round(micThreshold*1000)}
+                  onChange={e => setMicThreshold(+e.target.value/1000)}
+                  style={{width:"100%",accentColor:"#7c3aed"}}
+                />
+              </div>
+            )}
+            {micError && (
+              <div style={{fontSize:10,color:"#f87171",marginTop:6,textAlign:"center"}}>
+                {micError}
+              </div>
+            )}
+          </div>
+
+          {/* Reveal beat — act 1 seulement */}
+          {activity===1 && (
+            <div style={{background:"#0a0f1a",borderRadius:14,padding:"12px 14px",marginBottom:10}}>
+              <div style={{fontSize:10,fontWeight:700,color:"#6b7280",
+                textTransform:"uppercase",letterSpacing:1,marginBottom:8}}>
+                Voir le rythme au temps…
+              </div>
+              <div style={{display:"flex",gap:5}}>
+                {[1,2,3,4].map(beat => (
+                  <button key={beat}
+                    onClick={() => setRevealBeat(beat)}
+                    style={{
+                      flex:1,padding:"6px 4px",borderRadius:10,
+                      fontSize:11,fontWeight:700,cursor:"pointer",border:"none",
+                      background:revealBeat===beat?"#7c3aed":"#111827",
+                      color:revealBeat===beat?"#fff":"#6b7280",
+                    }}
+                  >
+                    {beat}
+                    <div style={{fontSize:9,fontWeight:400,marginTop:1,
+                      color:revealBeat===beat?"#ddd8fe":"#4b5563"}}>
+                      {beat===1?"pas de bonus":beat===2?"+10%":beat===3?"+20%":"+50%"}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* CTA Commencer */}
+          <button
+            onClick={() => {
+              // Init série
+              if (seriesMode) {
+                const baseBpm = tempoMode === "fixed" ? bpmFixed : Math.round((bpmMin + bpmMax) / 2);
+                seriesBaseBpmRef.current = baseBpm;
+                seriesIdxRef.current = 0;
+              } else {
+                seriesBaseBpmRef.current = null;
+                seriesIdxRef.current = 0;
+              }
+              setSeriesIdx(0);
+              setSeriesXpLog([]);
+              setSeriesMedals([]);
+              setSeriesResult(null);
+              setCurrentPage("game");
+              setPhase("idle");
+              setPattern(null);
+              setScores([]);
+              setEarnedPts(0);
+              setProgress(0);
+              setActiveIdx(-1);
+              setRevealed(false);
+              setChoices([]);
+              setSelectedIdx(null);
+              setPendingIdx(null);
+              setBeatFlash(false);
+              setMetroDotFlash(false);
+              setCountdownN(1);
+              startGame();
+            }}
+            style={{
+              width:"100%",padding:"18px 0",
+              background:"linear-gradient(135deg,#7c3aed,#6d28d9)",
+              border:"none",borderRadius:20,cursor:"pointer",
+              color:"#fff",fontSize:16,fontWeight:700,
+              boxShadow:"0 8px 32px rgba(109,40,217,0.4)",
+              marginTop:8,
+            }}
+          >{seriesMode ? "▶ Commencer la série" : "▶ Commencer"}</button>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Page fin de série ─────────────────────────────────────────────────────
+  if (currentPage === "series-end") {
+    const totalXp     = seriesXpLog.reduce((a, b) => a + b, 0);
+    const perfectSeries = seriesMedals.length === 10 && seriesMedals.every(m => m === "🥇");
+    const medalCounts = seriesMedals.reduce((acc, m) => { acc[m] = (acc[m] ?? 0) + 1; return acc; }, {});
+    const dominantMedal = ["🥇","🥈","🥉","🎯"].find(m => medalCounts[m] === Math.max(...Object.values(medalCounts))) ?? "🎯";
+
+    return (
+      <SeriesEndScreen
+        xpLog={seriesXpLog}
+        medals={seriesMedals}
+        totalXp={totalXp}
+        dominantMedal={dominantMedal}
+        perfectSeries={perfectSeries}
+        addSession={addSession}
+        onReplay={() => {
+          const baseBpm = tempoMode === "fixed" ? bpmFixed : Math.round((bpmMin + bpmMax) / 2);
+          seriesBaseBpmRef.current = baseBpm;
+          seriesIdxRef.current = 0;
+          setSeriesIdx(0);
+          setSeriesXpLog([]);
+          setSeriesMedals([]);
+          setSeriesResult(null);
+          setCurrentPage("game");
+          setPhase("idle");
+          setPattern(null);
+          setScores([]);
+          setEarnedPts(0);
+          setProgress(0);
+          setActiveIdx(-1);
+          setRevealed(false);
+          setChoices([]);
+          setSelectedIdx(null);
+          setPendingIdx(null);
+          setBeatFlash(false);
+          setMetroDotFlash(false);
+          setCountdownN(1);
+          startGame();
+        }}
+        onBack={() => {
+          seriesBaseBpmRef.current = null;
+          seriesIdxRef.current = 0;
+          setSeriesIdx(0);
+          setSeriesXpLog([]);
+          setSeriesMedals([]);
+          setSeriesResult(null);
+          setCurrentPage("home");
+        }}
       />
     );
   }
@@ -834,123 +1314,31 @@ export default function RythmApp() {
             }}
             title="Réglages"
           >⚙</button>
-          <Link
-            to="/"
-            style={{
-              background:"#111827",border:"1px solid #1f2937",borderRadius:10,
-              color:"#9ca3af",fontSize:11,fontWeight:700,cursor:"pointer",
-              padding:"4px 8px",lineHeight:1,textDecoration:"none",
-            }}
-            title="Retour au hub"
-          >⌂</Link>
-        </div>
-      </div>
-
-      {/* ── ACTIVITÉS ── */}
-      <div style={{width:"100%",maxWidth:540,display:"flex",gap:5,marginBottom:10,flexWrap:"wrap"}}>
-        {ACTIVITIES.map(a => (
-          <button key={a.id}
+          <button
             onClick={() => {
-              if (!canStart || activity === a.id) return;
               clearTids();
-              audioTidsRef.current.forEach(clearTimeout); audioTidsRef.current = [];
+              audioTidsRef.current.forEach(clearTimeout);
+              audioTidsRef.current = [];
               cancelAnimationFrame(rafRef.current);
-              setActivity(a.id);
+              stopMic();
+              seriesBaseBpmRef.current = null;
+              seriesIdxRef.current = 0;
+              setSeriesIdx(0);
+              setSeriesXpLog([]);
+              setSeriesMedals([]);
+              setCurrentPage("home");
               setPhase("idle");
               setPattern(null);
-              setChoices([]);
-              setSelectedIdx(null);
-              setPendingIdx(null);
-              setScores([]);
-              setEarnedPts(0);
-              setProgress(0);
-              setActiveIdx(-1);
-              setRevealed(false);
-              setBeatFlash(false);
-              setMetroDotFlash(false);
-              setCountdownN(1);
             }}
             style={{
-              flex:1,padding:"5px 4px",borderRadius:10,fontSize:10,fontWeight:600,
-              cursor:"pointer",border:"none",minWidth:80,
-              background:activity===a.id?"#7c3aed":"#111827",
-              color:activity===a.id?"#fff":"#6b7280",
+              background:"#111827",border:"1px solid #1f2937",borderRadius:8,
+              color:"#c084fc",fontWeight:700,fontSize:12,padding:"4px 10px",
+              cursor:"pointer",
             }}
-          >
-            {a.id}. {a.label}
-          </button>
-        ))}
-      </div>
-
-      {/* ── TEMPO ── */}
-      <div style={{width:"100%",maxWidth:540,marginBottom:12,
-        background:"#0a0f1a",borderRadius:14,padding:"10px 14px"}}>
-        {/* Toggle + slider sur une ligne */}
-        <div style={{display:"flex",alignItems:"center",gap:10}}>
-          <div style={{display:"flex",gap:4,flexShrink:0}}>
-            {["fixed","range"].map(mode => (
-              <button key={mode}
-                onClick={() => { if (canStart) setTempoMode(mode); }}
-                style={{
-                  padding:"4px 8px",borderRadius:8,fontSize:10,fontWeight:600,
-                  cursor:"pointer",border:"none",
-                  background:tempoMode===mode?"#4f46e5":"#111827",
-                  color:tempoMode===mode?"#fff":"#6b7280",
-                }}
-              >{mode==="fixed"?"Fixe":"Variable"}</button>
-            ))}
-          </div>
-          <div style={{flex:1}}>
-            {tempoMode === "fixed" ? (
-              <input type="range" min={0} max={TEMPI.length-1}
-                value={closestTempoIdx(bpmFixed)}
-                onChange={e => setBpmFixed(TEMPI[+e.target.value])}
-                disabled={isPlaying||phase==="countdown"}
-                style={{width:"100%",accentColor:"#7c3aed",display:"block"}}
-              />
-            ) : (
-              <DualRangeSlider
-                lo={bpmMin} hi={bpmMax}
-                setLo={setBpmMin} setHi={setBpmMax}
-                disabled={isPlaying||phase==="countdown"}
-              />
-            )}
-          </div>
-          <div style={{fontSize:11,color:"#c084fc",fontWeight:700,flexShrink:0,minWidth:64,textAlign:"right"}}>
-            {tempoMode === "fixed"
-              ? `${bpmFixed} BPM`
-              : `${Math.min(bpmMin,bpmMax)}↔${Math.max(bpmMin,bpmMax)}`}
-          </div>
+          >← Activités</button>
         </div>
       </div>
 
-      {/* ── BONUS RÉVÉLATION ── */}
-      {canStart && activity===1 && (
-        <div style={{width:"100%",maxWidth:540,marginBottom:12}}>
-          <div style={{fontSize:10,color:"#6b7280",marginBottom:6}}>
-            Voir le rythme au temps…
-          </div>
-          <div style={{display:"flex",gap:5}}>
-            {[1,2,3,4].map(beat => (
-              <button key={beat}
-                onClick={() => setRevealBeat(beat)}
-                style={{
-                  flex:1,padding:"6px 4px",borderRadius:10,
-                  fontSize:11,fontWeight:700,cursor:"pointer",border:"none",
-                  background:revealBeat===beat?"#7c3aed":"#111827",
-                  color:revealBeat===beat?"#fff":"#6b7280",
-                }}
-              >
-                {beat}
-                <div style={{fontSize:9,fontWeight:400,marginTop:1,
-                  color:revealBeat===beat?"#ddd8fe":"#4b5563"}}>
-                  {beat===1?"pas de bonus":beat===2?"+10%":beat===3?"+20%":"+50%"}
-                </div>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* ── ZONE PRINCIPALE ── */}
       <div style={{flex:1,width:"100%",maxWidth:540,display:"flex",gap:10,alignItems:"stretch"}}>
@@ -1020,9 +1408,22 @@ export default function RythmApp() {
               {/* Portée — toujours présente */}
               {revealed ? (
                 <div style={{
+                  position:"relative",
                   background:"#0f172a",
                   border: (activity === 1 ? metroDotFlash : beatFlash) ? "2px solid #7c3aed" : "2px solid #1e293b",
                   borderRadius:14,padding:"10px 6px 6px",overflow:"hidden"}}>
+                  {/* Bouton son Rythme — top-left de la portée */}
+                  <button
+                    onClick={() => setRhythmSoundOn(v => !v)}
+                    style={{
+                      position:"absolute",top:6,left:6,zIndex:10,
+                      background:rhythmSoundOn?"rgba(124,58,237,0.25)":"rgba(31,41,55,0.7)",
+                      border:"1px solid rgba(255,255,255,0.08)",
+                      borderRadius:99,padding:"3px 9px",
+                      color:rhythmSoundOn?"#c084fc":"#4b5563",
+                      fontSize:11,fontWeight:700,cursor:"pointer",height:28,lineHeight:1,
+                    }}
+                  >{rhythmSoundOn?"🔊":"🔇"}</button>
                   <RythmStaff
                     figures={vexFigs}
                     timeSig={pattern.timeSig}
@@ -1234,83 +1635,13 @@ export default function RythmApp() {
 
       </div>
 
-      {/* ── SON RYTHME / TAP — act 1 & 2 ── */}
-      {(activity === 1 || activity === 2) && (
-        <div style={{width:"100%",maxWidth:540,display:"flex",gap:6,marginBottom:8,marginTop:6}}>
-          {[
-            { on: rhythmSoundOn, set: setRhythmSoundOn, label: "Rythme", icon: "🔊", iconOff: "🔇" },
-            { on: tapSoundOn,    set: setTapSoundOn,    label: "Tap",    icon: "🥁", iconOff: "🔕" },
-          ].map(({ on, set, label, icon, iconOff }) => (
-            <button
-              key={label}
-              onClick={() => set(v => !v)}
-              style={{
-                flex:1, padding:"6px 8px", borderRadius:10, fontSize:11, fontWeight:700,
-                cursor:"pointer", border:"none",
-                background: on ? "#0a0f1a" : "#1f2937",
-                color: on ? "#c084fc" : "#4b5563",
-                display:"flex", alignItems:"center", justifyContent:"center", gap:5,
-              }}
-            >
-              <span style={{fontSize:15}}>{on ? icon : iconOff}</span>
-              {label}
-            </button>
-          ))}
-        </div>
-      )}
-
       {/* ── BOUTON TAP / MIC / START ── */}
       <div style={{width:"100%",maxWidth:540,marginTop:14}}>
-
-        {/* Toggle TAP / MIC — visible quand canStart + act 1 & 2 */}
-        {canStart && (activity === 1 || activity === 2) && (
-          <div style={{display:"flex",gap:6,marginBottom:8}}>
-            {[["tap","TAP"],["mic","🎤 MIC"]].map(([mode,label]) => (
-              <button key={mode}
-                onClick={() => {
-                  if (mode === "mic") { setInputMode("mic"); startMic(); }
-                  else { setInputMode("tap"); stopMic(); }
-                }}
-                style={{
-                  flex:1,padding:"6px",borderRadius:10,fontSize:12,fontWeight:700,
-                  cursor:"pointer",border:"none",
-                  background: inputMode===mode ? "#7c3aed" : "#111827",
-                  color: inputMode===mode ? "#fff" : "#6b7280",
-                }}
-              >{label}</button>
-            ))}
-          </div>
-        )}
-
-        {/* Sensibilité micro — visible quand mode MIC + canStart */}
-        {inputMode==="mic" && canStart && (
-          <div style={{marginBottom:8,background:"#0a0f1a",
-            borderRadius:10,padding:"8px 12px"}}>
-            <div style={{display:"flex",justifyContent:"space-between",
-              fontSize:10,color:"#6b7280",marginBottom:3}}>
-              <span>Seuil de détection <span style={{color:"#4b5563"}}>↑ moins sensible</span></span>
-              <span style={{color:"#c084fc",fontWeight:700}}>
-                {micThreshold.toFixed(3)}
-              </span>
-            </div>
-            <input type="range" min={5} max={500} step={5}
-              value={Math.round(micThreshold * 1000)}
-              onChange={e => setMicThreshold(+e.target.value / 1000)}
-              style={{width:"100%",accentColor:"#7c3aed"}}
-            />
-          </div>
-        )}
-
-        {/* Erreur micro */}
-        {micError && (
-          <div style={{fontSize:10,color:"#f87171",marginBottom:6,textAlign:"center"}}>
-            {micError}
-          </div>
-        )}
 
         {/* Entrée pendant le jeu */}
         {(phase === "playing" || (phase === "countdown" && (activity === 1 || activity === 2)) || (phase === "listening" && activity === 2)) && inputMode==="tap" && (activity === 1 || activity === 2) && (
           <button onPointerDown={handleTap} style={{
+            position:"relative",
             width:"100%",height:130,
             background:tapFlash
               ?"linear-gradient(135deg,#9333ea,#ec4899)"
@@ -1325,7 +1656,22 @@ export default function RythmApp() {
               :"0 8px 32px rgba(109,40,217,0.5)",
             transform:tapFlash?"scale(0.96)":"scale(1)",
             transition:"transform 0.06s,background 0.06s,color 0.06s",touchAction:"none",
-          }}>TAP</button>
+          }}>
+            {/* Bouton son TAP — top-left de la zone TAP */}
+            <button
+              onPointerDown={e => e.stopPropagation()}
+              onClick={e => { e.stopPropagation(); setTapSoundOn(v => !v); }}
+              style={{
+                position:"absolute",top:8,left:10,zIndex:10,
+                background:tapSoundOn?"rgba(124,58,237,0.35)":"rgba(0,0,0,0.45)",
+                border:"1px solid rgba(255,255,255,0.1)",
+                borderRadius:99,padding:"3px 9px",
+                color:tapSoundOn?"#e9d5ff":"#6b7280",
+                fontSize:11,fontWeight:700,cursor:"pointer",height:28,lineHeight:1,
+              }}
+            >{tapSoundOn?"🥁":"🔕"}</button>
+            TAP
+          </button>
         )}
 
         {(phase === "playing" || (phase === "countdown" && (activity === 1 || activity === 2)) || (phase === "listening" && activity === 2)) && inputMode==="mic" && (activity === 1 || activity === 2) && (
@@ -1360,14 +1706,41 @@ export default function RythmApp() {
           </div>
         )}
         {canStart && (
-          <button onClick={startGame} style={{
-            width:"100%",padding:"18px 0",
-            background:"linear-gradient(135deg,#7c3aed,#6d28d9)",
-            border:"none",borderRadius:20,cursor:"pointer",
-            color:"#fff",fontSize:16,fontWeight:700,
-            boxShadow:"0 8px 32px rgba(109,40,217,0.4)",
-          }}>
-            {phase==="idle" ? "▶ Commencer" : "🔄 Exercice suivant"}
+          <button
+            onClick={() => {
+              if (seriesMode && phase === "results") {
+                const nextIdx = seriesIdx + 1;
+                const updatedXpLog    = [...seriesXpLog, earnedPts];
+                const updatedMedals   = [...seriesMedals, medal];
+                if (nextIdx >= 10) {
+                  // Fin de série
+                  setSeriesXpLog(updatedXpLog);
+                  setSeriesMedals(updatedMedals);
+                  setCurrentPage("series-end");
+                } else {
+                  setSeriesXpLog(updatedXpLog);
+                  setSeriesMedals(updatedMedals);
+                  setSeriesIdx(nextIdx);
+                  seriesIdxRef.current = nextIdx;
+                  startGame();
+                }
+              } else {
+                startGame();
+              }
+            }}
+            style={{
+              width:"100%",padding:"18px 0",
+              background:"linear-gradient(135deg,#7c3aed,#6d28d9)",
+              border:"none",borderRadius:20,cursor:"pointer",
+              color:"#fff",fontSize:16,fontWeight:700,
+              boxShadow:"0 8px 32px rgba(109,40,217,0.4)",
+            }}
+          >
+            {phase==="idle"
+              ? (seriesMode ? "▶ Commencer la série" : "▶ Commencer")
+              : seriesMode
+                ? `➜ Exercice ${seriesIdx + 2}/10`
+                : "🔄 Exercice suivant"}
           </button>
         )}
       </div>

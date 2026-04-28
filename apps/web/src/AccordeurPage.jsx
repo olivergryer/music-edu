@@ -450,9 +450,11 @@ export default function AccordeurPage() {
 
         {/* ── Header ─────────────────────────────────────────────────────────── */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
-          <Link to="/" style={{ color: COL_ACCENT, fontWeight: 700, fontSize: 13, textDecoration: 'none' }}>
-            ← Tessitura
-          </Link>
+          <Link to="/" style={{
+            background: '#111827', border: '1px solid #1f2937', borderRadius: 8,
+            color: COL_ACCENT, fontWeight: 700, fontSize: 12, padding: '4px 10px',
+            cursor: 'pointer', textDecoration: 'none',
+          }}>← Tessitura</Link>
           <h2 style={{ color: COL_ACCENT, margin: 0, fontSize: 20 }}>Accordeur</h2>
           <Btn variant="ghost" onClick={() => setShowSessions(v => !v)}>
             {showSessions ? 'Fermer suivi' : 'Suivi ▾'}

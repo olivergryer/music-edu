@@ -154,7 +154,11 @@ const S = {
     padding: '20px', fontFamily: "'Inter','Segoe UI',sans-serif",
   },
   inner: { width: '100%', maxWidth: 600 },
-  back: { color: '#c084fc', fontWeight: 700, fontSize: 13, textDecoration: 'none' },
+  back: {
+    background: '#111827', border: '1px solid #1f2937', borderRadius: 8,
+    color: '#c084fc', fontWeight: 700, fontSize: 12, padding: '4px 10px',
+    cursor: 'pointer', textDecoration: 'none', display: 'inline-block',
+  },
   h2: { color: '#c084fc', marginTop: 24, marginBottom: 4 },
   card: {
     background: '#0a0f1a', border: '2px solid #1f2937',

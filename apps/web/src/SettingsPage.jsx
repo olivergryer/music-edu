@@ -173,6 +173,17 @@ export default function SettingsPage({
   onSheetReset,
   flashOffsetMs,
   onFlashOffsetChange,
+  revealBeat,
+  onRevealBeatChange,
+  activity,
+  tempoMode,
+  onTempoModeChange,
+  bpmFixed,
+  onBpmFixedChange,
+  bpmMin,
+  onBpmMinChange,
+  bpmMax,
+  onBpmMaxChange,
 }) {
   const binaryFormulas  = formulaCatalog.filter(f => f.group === "binary");
   const ternaryFormulas = formulaCatalog.filter(f => f.group === "ternary");
@@ -221,6 +232,72 @@ export default function SettingsPage({
         </div>
       </div>
 
+      {/* ── TEMPO ── */}
+      {onTempoModeChange && (
+        <div style={{width:"100%",maxWidth:540,marginBottom:20,
+          background:"#0a0f1a",borderRadius:14,padding:"12px 14px"}}>
+          <div style={{fontSize:10,fontWeight:700,color:"#6b7280",
+            textTransform:"uppercase",letterSpacing:1,marginBottom:10}}>
+            Tempo
+          </div>
+          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom: tempoMode==="range"?10:0}}>
+            <div style={{display:"flex",gap:4,flexShrink:0}}>
+              {["fixed","range"].map(mode => (
+                <button key={mode}
+                  onClick={() => onTempoModeChange(mode)}
+                  style={{
+                    padding:"4px 8px",borderRadius:8,fontSize:10,fontWeight:600,
+                    cursor:"pointer",border:"none",
+                    background:tempoMode===mode?"#4f46e5":"#111827",
+                    color:tempoMode===mode?"#fff":"#6b7280",
+                  }}
+                >{mode==="fixed"?"Fixe":"Variable"}</button>
+              ))}
+            </div>
+            {tempoMode==="fixed" && (
+              <>
+                <div style={{flex:1}}>
+                  <input type="range" min={50} max={220} step={2}
+                    value={bpmFixed}
+                    onChange={e => onBpmFixedChange(+e.target.value)}
+                    style={{width:"100%",accentColor:"#7c3aed",display:"block"}}
+                  />
+                </div>
+                <div style={{fontSize:11,color:"#c084fc",fontWeight:700,flexShrink:0,minWidth:54,textAlign:"right"}}>
+                  {bpmFixed} BPM
+                </div>
+              </>
+            )}
+          </div>
+          {tempoMode==="range" && (
+            <div style={{display:"flex",flexDirection:"column",gap:6}}>
+              <div style={{display:"flex",alignItems:"center",gap:8}}>
+                <div style={{fontSize:10,color:"#6b7280",flexShrink:0,minWidth:36}}>Min</div>
+                <input type="range" min={50} max={220} step={2}
+                  value={bpmMin}
+                  onChange={e => onBpmMinChange(+e.target.value)}
+                  style={{flex:1,accentColor:"#7c3aed"}}
+                />
+                <div style={{fontSize:11,color:"#c084fc",fontWeight:700,flexShrink:0,minWidth:54,textAlign:"right"}}>
+                  {bpmMin} BPM
+                </div>
+              </div>
+              <div style={{display:"flex",alignItems:"center",gap:8}}>
+                <div style={{fontSize:10,color:"#6b7280",flexShrink:0,minWidth:36}}>Max</div>
+                <input type="range" min={50} max={220} step={2}
+                  value={bpmMax}
+                  onChange={e => onBpmMaxChange(+e.target.value)}
+                  style={{flex:1,accentColor:"#7c3aed"}}
+                />
+                <div style={{fontSize:11,color:"#c084fc",fontWeight:700,flexShrink:0,minWidth:54,textAlign:"right"}}>
+                  {bpmMax} BPM
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* ── SOURCE SHEET ── */}
       <SheetSourceSection
         sheetId={sheetId}
@@ -264,6 +341,39 @@ export default function SettingsPage({
           Cliquer sur un niveau sélectionne toutes les formules jusqu'à ce niveau.
         </div>
       </div>
+
+      {/* ── REVEAL BEAT (activité 1 seulement) ── */}
+      {activity === 1 && onRevealBeatChange && (
+        <div style={{width:"100%",maxWidth:540,marginBottom:20,
+          background:"#0a0f1a",borderRadius:14,padding:"12px 14px"}}>
+          <div style={{fontSize:10,fontWeight:700,color:"#6b7280",
+            textTransform:"uppercase",letterSpacing:1,marginBottom:10}}>
+            Voir le rythme au temps…
+          </div>
+          <div style={{display:"flex",gap:5}}>
+            {[1,2,3,4].map(beat => (
+              <button key={beat}
+                onClick={() => onRevealBeatChange(beat)}
+                style={{
+                  flex:1,padding:"6px 4px",borderRadius:10,
+                  fontSize:11,fontWeight:700,cursor:"pointer",border:"none",
+                  background:revealBeat===beat?"#7c3aed":"#111827",
+                  color:revealBeat===beat?"#fff":"#6b7280",
+                }}
+              >
+                {beat}
+                <div style={{fontSize:9,fontWeight:400,marginTop:1,
+                  color:revealBeat===beat?"#ddd8fe":"#4b5563"}}>
+                  {beat===1?"pas de bonus":beat===2?"+10%":beat===3?"+20%":"+50%"}
+                </div>
+              </button>
+            ))}
+          </div>
+          <div style={{fontSize:9,color:"#374151",marginTop:6,lineHeight:1.5}}>
+            Plus tard vous révélez le rythme, plus le bonus de score est élevé.
+          </div>
+        </div>
+      )}
 
       {/* ── FORMULES BINAIRES ── */}
       <div style={{width:"100%",maxWidth:540,marginBottom:16}}>
