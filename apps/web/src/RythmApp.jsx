@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import RythmStaff from "./RythmStaff";
 import SettingsPage from "./SettingsPage";
 import useSheetData from "./useSheetData";
-import useProgress, { TROPHIES as TROPHIES_IMPORT } from "./useProgress";
+import useProgressFirebase, { TROPHIES as TROPHIES_IMPORT } from "./hooks/useProgressFirebase";
 
 // ─── Figures de base ──────────────────────────────────────────────────────────
 const q  = { dur:"q"  };
@@ -460,7 +460,7 @@ export default function RythmApp() {
   const micRafRef      = useRef(null);
   const lastOnsetRef   = useRef(0);
 
-  const { addSession } = useProgress();
+  const { addSession } = useProgressFirebase();
 
   // ── Gestion formules / niveaux ─────────────────────────────────────────────
   const toggleFormula = useCallback(id => {

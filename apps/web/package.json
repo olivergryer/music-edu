@@ -11,6 +11,7 @@
     "generate:questions": "node scripts/generate-questions.js"
   },
   "dependencies": {
+    "firebase": "^12.12.1",
     "pitchfinder": "^2.3.4",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",

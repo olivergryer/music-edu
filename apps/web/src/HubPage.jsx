@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
-import useProgress from './useProgress'
+import useProgressFirebase from './hooks/useProgressFirebase'
+import { useAuth } from './auth/AuthProvider'
 
 const MODULES = [
   { id: 'rythme',    label: 'Rythme',    desc: 'Lecture et reproduction rythmique', to: '/rythme',  active: true  },
@@ -30,7 +31,8 @@ function ModuleCard({ label, desc, active }) {
 }
 
 export default function HubPage() {
-  const { xp, level, streak, trophies } = useProgress()
+  const { xp, level, streak, trophies } = useProgressFirebase()
+  const { user, profile } = useAuth()
 
   return (
     <div style={{
@@ -60,23 +62,26 @@ export default function HubPage() {
         )}
       </div>
 
-      {(xp > 0 || streak.current > 0) && (
-        <div style={{
-          marginTop: 32, display: 'flex', gap: 12, alignItems: 'center',
-          justifyContent: 'center', flexWrap: 'wrap',
-          fontSize: 12, color: '#6b7280',
-        }}>
-          {streak.current > 0 && (
-            <span>🔥 {streak.current} jour{streak.current > 1 ? 's' : ''}</span>
-          )}
-          <span>⭐ {xp} XP</span>
-          <span style={{ color: '#c084fc', fontWeight: 700 }}>{level.id}</span>
-          {trophies.length > 0 && <span>{trophies.length} 🏅</span>}
-          <Link to="/profil" style={{
-            color: '#7c3aed', fontWeight: 700, textDecoration: 'none', fontSize: 11,
-          }}>Profil →</Link>
-        </div>
-      )}
+      <div style={{
+        marginTop: 32, display: 'flex', gap: 12, alignItems: 'center',
+        justifyContent: 'center', flexWrap: 'wrap',
+        fontSize: 12, color: '#6b7280',
+      }}>
+        {user ? (
+          <>
+            {streak.current > 0 && <span>🔥 {streak.current} jour{streak.current > 1 ? 's' : ''}</span>}
+            {xp > 0 && <span>⭐ {xp} XP</span>}
+            {xp > 0 && <span style={{ color: '#c084fc', fontWeight: 700 }}>{level.id}</span>}
+            {trophies.length > 0 && <span>{trophies.length} 🏅</span>}
+            <Link to={profile?.role === 'prof' ? '/dashboard/prof' : '/dashboard/eleve'} style={{ color: '#fbbf24', fontWeight: 700, textDecoration: 'none', fontSize: 11 }}>
+              {profile?.displayName ?? 'Mon compte'} →
+            </Link>
+            <Link to="/profil" style={{ color: '#7c3aed', fontWeight: 700, textDecoration: 'none', fontSize: 11 }}>Profil</Link>
+          </>
+        ) : (
+          <Link to="/login" style={{ color: '#c084fc', fontWeight: 700, textDecoration: 'none', fontSize: 12 }}>Se connecter →</Link>
+        )}
+      </div>
 
       <footer style={{ marginTop: 'auto', paddingTop: 48, color: '#1f2937', fontSize: 10 }}>
         Tessitura
