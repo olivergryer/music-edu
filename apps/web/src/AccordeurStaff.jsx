@@ -30,7 +30,7 @@ function bestOctaveShift(midis) {
 }
 
 // 72px par note + marge clef/armure
-const NOTE_PX = 72
+const NOTE_PX = 40
 const STAVE_MARGIN = 140
 
 export default function AccordeurStaff({ notes, seuil = 10, transpoKey = 'C', containerWidth = 500, height = 180 }) {

@@ -97,6 +97,22 @@ function frameRMS(frame) {
   return Math.sqrt(sum / frame.length)
 }
 
+function preEmphasis(frame, coeff = 0.97) {
+  const out = new Float32Array(frame.length)
+  out[0] = frame[0]
+  for (let k = 1; k < frame.length; k++) out[k] = frame[k] - coeff * frame[k - 1]
+  return out
+}
+
+function filtrerIsolés(serie) {
+  return serie.map((pt, i) => {
+    if (!pt.hz) return pt
+    const prevHz = serie[i - 1]?.hz ?? null
+    const nextHz = serie[i + 1]?.hz ?? null
+    return (prevHz || nextHz) ? pt : { ...pt, hz: null }
+  })
+}
+
 export function analyserBuffer(audioBuffer, opts = {}) {
   const clarityThreshold = opts.clarityThreshold ?? 0.9
   const rmsGate   = opts.rmsGate ?? 0.01
@@ -112,13 +128,14 @@ export function analyserBuffer(audioBuffer, opts = {}) {
   for (let i = 0; i + frameSize <= channelData.length; i += hopSize) {
     const frame         = channelData.subarray(i, i + frameSize)
     const rms           = frameRMS(frame)
-    const [hz, clarity] = detector.findPitch(frame, sampleRate)
+    const emphasized    = preEmphasis(frame)
+    const [hz, clarity] = detector.findPitch(emphasized, sampleRate)
     const tMs           = (i / sampleRate) * 1000
     const hzVal = (rms >= rmsGate && clarity >= clarityThreshold && hz >= HZ_MIN && hz <= HZ_MAX) ? hz : null
     serie.push({ tMs, hz: hzVal })
   }
 
-  return serie
+  return filtrerIsolés(serie)
 }
 
 // ─── Segmentation ─────────────────────────────────────────────────────────────
