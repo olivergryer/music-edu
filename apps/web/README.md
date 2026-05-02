@@ -21,6 +21,18 @@ If you are developing a production application, we recommend using TypeScript wi
 cd ..
 cd ..
 git add .
-git commit -m "?"
+git commit -m "V2 - Authentification"
 git push
 cd apps/web
+
+
+# Skills and plugins
+
+# Everything Claude Code
+https://github.com/affaan-m/everything-claude-code
+
+# Claude Mem
+https://github.com/thedotmack/claude-mem
+
+# UI UX Pro Max
+https://github.com/nextlevelbuilder/ui-ux-pro-max-skill

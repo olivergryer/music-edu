@@ -144,18 +144,44 @@ function generateDistractorVariant(target, pool) {
   return { timeSig: target.timeSig, name: "Aléatoire", figs: newFigs, formulaSlots: newSlots };
 }
 
+// Empreinte des onsets non-silences (en unités de noires × 1000 pour éviter float)
+function attackFingerprint(figs) {
+  let pos = 0;
+  return figs
+    .map(fig => { const onset = pos; pos += figDur(fig); return { onset, rest: fig.rest }; })
+    .filter(({ rest }) => !rest)
+    .map(({ onset }) => Math.round(onset * 1000))
+    .join(",");
+}
+
 function generateDistractors(target, pool, n = 3) {
-  const key = p => p.figs.map(f => f.dur + (f.triplet ? "t" : "")).join(",");
-  const targetKey = key(target);
+  const key    = p => p.figs.map(f => f.dur + (f.triplet ? "t" : "")).join(",");
+  const targetKey     = key(target);
+  const targetAttacks = attackFingerprint(target.figs);
   const result = [];
   let attempts = 0;
-  while (result.length < n && attempts < 50) {
+  while (result.length < n && attempts < 80) {
     attempts++;
-    const c = generateDistractorVariant(target, pool);
+    const c  = generateDistractorVariant(target, pool);
     const ck = key(c);
-    if (ck !== targetKey && result.every(d => key(d) !== ck)) result.push(c);
+    if (
+      ck !== targetKey &&
+      attackFingerprint(c.figs) !== targetAttacks &&
+      result.every(d => key(d) !== ck)
+    ) result.push(c);
   }
-  while (result.length < n) result.push(generateMeasure(target.timeSig, pool));
+  // Fallback : mesures aléatoires, aussi filtrées homorythmes
+  let fallbackAttempts = 0;
+  while (result.length < n && fallbackAttempts < 80) {
+    fallbackAttempts++;
+    const c  = generateMeasure(target.timeSig, pool);
+    const ck = key(c);
+    if (
+      ck !== targetKey &&
+      attackFingerprint(c.figs) !== targetAttacks &&
+      result.every(d => key(d) !== ck)
+    ) result.push(c);
+  }
   return result;
 }
 

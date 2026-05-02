@@ -147,7 +147,7 @@ export default function AccordeurPage() {
   // ── Seuils segmentation + YIN (curseurs de calibration) ─────────────────────
   const [silenceDurationMs, setSilenceDurationMs] = useState(SILENCE_MS_DEFAULT)
   const [noteJumpCents,     setNoteJumpCents]     = useState(NOTE_JUMP_CENTS_DEFAULT)
-  const [yinThreshold,      setYinThreshold]      = useState(0.15)
+  const [clarityThreshold,  setClarityThreshold]  = useState(0.9)
 
   // ── Pipeline ─────────────────────────────────────────────────────────────────
   // phase : 'pret' | 'enregistrement' | 'analyse' | 'resultats'
@@ -198,7 +198,7 @@ export default function AccordeurPage() {
   // ── Recalcul : déclenché manuellement via bouton ──────────────────────────────
   const recalculer = useCallback(() => {
     if (!audioBufferRef.current) return
-    const s = analyserBuffer(audioBufferRef.current, { yinThreshold })
+    const s = analyserBuffer(audioBufferRef.current, { clarityThreshold })
     serieRef.current = s
     const struct    = [...DEFAULT_STRUCTURES, ...structures].find(x => x.id === structureId)
     const tonikMidi = struct
@@ -212,13 +212,13 @@ export default function AccordeurPage() {
     setScoreP(scorePedagogique(notesCalc, seuil))
     setScoreQ(scoreQualite(notesCalc))
     setDirty(false)
-  }, [yinThreshold, referentiel, seuil, silenceDurationMs, noteJumpCents, diapason, structureId, structures])
+  }, [clarityThreshold, referentiel, seuil, silenceDurationMs, noteJumpCents, diapason, structureId, structures])
 
   // ── Marque dirty quand réglages changent après chargement audio ───────────────
   useEffect(() => {
     if (!audioBufferRef.current) return
     setDirty(true)
-  }, [yinThreshold, referentiel, seuil, silenceDurationMs, noteJumpCents, diapason, structureId, structures])
+  }, [clarityThreshold, referentiel, seuil, silenceDurationMs, noteJumpCents, diapason, structureId, structures])
 
   // ─── Enregistrement ──────────────────────────────────────────────────────────
 
@@ -318,7 +318,7 @@ export default function AccordeurPage() {
     setScoreQ(scoreQualite(notesAv))
     setDirty(false)
     setPhase('resultats')
-  }, [structures, structureId, referentiel, diapason, seuil, silenceDurationMs, noteJumpCents, yinThreshold])
+  }, [structures, structureId, referentiel, diapason, seuil, silenceDurationMs, noteJumpCents])
 
   // ─── Analyse depuis fichier audio ────────────────────────────────────────────
 
@@ -580,7 +580,7 @@ export default function AccordeurPage() {
             border: `1px solid ${COL_BORDER}`, cursor: 'pointer',
             fontSize: 11, color: COL_MUTED, fontWeight: 600, listStyle: 'none',
           }}>
-            ⚙ Réglages segmentation YIN
+            ⚙ Réglages segmentation
           </summary>
           <div style={{ background: COL_SURFACE, borderRadius: '0 0 10px 10px', padding: '12px 14px 14px', border: `1px solid ${COL_BORDER}`, borderTop: 'none' }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
@@ -609,17 +609,17 @@ export default function AccordeurPage() {
             </div>
             <div style={{ marginTop: 12 }}>
               <label style={{ fontSize: 11, color: COL_MUTED }}>
-                Seuil YIN
+                Seuil clarté
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
                   <input
-                    type="range" min="0.05" max="0.50" step="0.01" value={yinThreshold}
-                    onChange={e => setYinThreshold(Number(e.target.value))}
+                    type="range" min="0.5" max="1.0" step="0.01" value={clarityThreshold}
+                    onChange={e => setClarityThreshold(Number(e.target.value))}
                     style={{ flex: 1, accentColor: COL_ACCENT }}
                   />
-                  <span style={{ color: COL_TEXT, fontWeight: 700, minWidth: 36 }}>{yinThreshold.toFixed(2)}</span>
+                  <span style={{ color: COL_TEXT, fontWeight: 700, minWidth: 36 }}>{clarityThreshold.toFixed(2)}</span>
                 </div>
                 <div style={{ color: COL_MUTED2, fontSize: 10, marginTop: 2 }}>
-                  Bas = plus de notes détectées (risque de faux positifs)
+                  Haut = moins de faux positifs (moins de notes détectées)
                 </div>
               </label>
             </div>

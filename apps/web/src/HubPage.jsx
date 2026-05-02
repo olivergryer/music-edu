@@ -81,6 +81,7 @@ export default function HubPage() {
         ) : (
           <Link to="/login" style={{ color: '#c084fc', fontWeight: 700, textDecoration: 'none', fontSize: 12 }}>Se connecter →</Link>
         )}
+        <Link to="/feedback" style={{ color: '#4b5563', fontWeight: 600, textDecoration: 'none', fontSize: 11 }}>💬 Retours</Link>
       </div>
 
       <footer style={{ marginTop: 'auto', paddingTop: 48, color: '#1f2937', fontSize: 10 }}>

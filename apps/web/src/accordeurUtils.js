@@ -1,4 +1,4 @@
-import { YIN, frequencies as pitchFrequencies } from 'pitchfinder'
+import { PitchDetector } from 'pitchy'
 
 // ─── Constantes segmentation ──────────────────────────────────────────────────
 const SILENCE_CONFIDENCE_MIN = 0.85   // en-dessous = silence (YIN renvoie null)
@@ -92,23 +92,21 @@ const HZ_MAX = 2000  // couvre toutes tessituras instrumentales + voix
  * @returns {Array<{tMs: number, hz: number|null}>}
  */
 export function analyserBuffer(audioBuffer, opts = {}) {
-  const yinThreshold = opts.yinThreshold ?? 0.15
-  const sampleRate   = audioBuffer.sampleRate
-  const channelData  = audioBuffer.getChannelData(0)
+  const clarityThreshold = opts.clarityThreshold ?? 0.9
+  const sampleRate  = audioBuffer.sampleRate
+  const channelData = audioBuffer.getChannelData(0)
 
-  // Taille de fenêtre YIN : ~46ms à 44100Hz
   const frameSize = 2048
-  const hopSize   = 512     // pas ~11.6ms
-  const detectYIN = YIN({ sampleRate, threshold: yinThreshold })
+  const hopSize   = 512
+  const detector  = PitchDetector.forFloat32Array(frameSize)
 
   const serie = []
 
   for (let i = 0; i + frameSize <= channelData.length; i += hopSize) {
-    const frame = channelData.subarray(i, i + frameSize)
-    const hz    = detectYIN(frame)
-    const tMs   = (i / sampleRate) * 1000
-    // Filtre plage instrumentale — élimine harmoniques et glitches
-    const hzVal = (hz && hz >= HZ_MIN && hz <= HZ_MAX) ? hz : null
+    const frame         = channelData.subarray(i, i + frameSize)
+    const [hz, clarity] = detector.findPitch(frame, sampleRate)
+    const tMs           = (i / sampleRate) * 1000
+    const hzVal = (clarity >= clarityThreshold && hz >= HZ_MIN && hz <= HZ_MAX) ? hz : null
     serie.push({ tMs, hz: hzVal })
   }
 
@@ -276,7 +274,8 @@ export function transposerNom(nom, octave, transpoKey) {
   const noteNames = NOTE_NAMES_FR
   const midiBase  = noteNames.indexOf(nom) + (octave + 1) * 12
   const midiTransp = midiBase + offset
-  return midiToNoteName(midiTransp)
+  const { name, octave: transposedOctave } = midiToNoteName(midiTransp)
+  return { nom: name, octave: transposedOctave }
 }
 
 // ─── UUID simple ──────────────────────────────────────────────────────────────

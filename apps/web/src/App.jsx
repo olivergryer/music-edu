@@ -9,6 +9,7 @@ import LoginPage from './auth/LoginPage'
 import RegisterPage from './auth/RegisterPage'
 import DashboardEleve from './pages/DashboardEleve'
 import DashboardProf from './pages/DashboardProf'
+import FeedbackPage from './pages/FeedbackPage'
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth()
@@ -27,6 +28,7 @@ function AppRoutes() {
       <Route path="/profil" element={<ProtectedRoute><ProfilPage /></ProtectedRoute>} />
       <Route path="/dashboard/eleve" element={<ProtectedRoute><DashboardEleve /></ProtectedRoute>} />
       <Route path="/dashboard/prof" element={<ProtectedRoute><DashboardProf /></ProtectedRoute>} />
+      <Route path="/feedback" element={<FeedbackPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route path="*" element={<Navigate to="/" replace />} />
