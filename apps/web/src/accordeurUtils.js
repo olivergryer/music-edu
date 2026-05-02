@@ -82,8 +82,8 @@ export function centsCinqLimite(hz, tonikMidi, diapason = 442) {
 // ─── Analyse audio ────────────────────────────────────────────────────────────
 
 // Plage fréquentielle instrumentale acceptée (Hz)
-const HZ_MIN = 60    // Si1 ≈ fondamentale la plus basse
-const HZ_MAX = 2000  // couvre toutes tessituras instrumentales + voix
+export const HZ_MIN = 60    // Si1 ≈ fondamentale la plus basse
+export const HZ_MAX = 2000  // couvre toutes tessituras instrumentales + voix
 
 /**
  * Analyse un AudioBuffer et renvoie une série temporelle de fréquences.
@@ -91,13 +91,13 @@ const HZ_MAX = 2000  // couvre toutes tessituras instrumentales + voix
  * @param {object} opts  { yinThreshold }
  * @returns {Array<{tMs: number, hz: number|null}>}
  */
-function frameRMS(frame) {
+export function frameRMS(frame) {
   let sum = 0
   for (let k = 0; k < frame.length; k++) sum += frame[k] * frame[k]
   return Math.sqrt(sum / frame.length)
 }
 
-function preEmphasis(frame, coeff = 0.97) {
+export function preEmphasis(frame, coeff = 0.97) {
   const out = new Float32Array(frame.length)
   out[0] = frame[0]
   for (let k = 1; k < frame.length; k++) out[k] = frame[k] - coeff * frame[k - 1]

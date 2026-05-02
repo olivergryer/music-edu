@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
+import { PitchDetector } from 'pitchy'
 import AccordeurStaff from './AccordeurStaff'
 import {
   analyserBuffer, segmenter, calculerEcarts, courbebrute,
@@ -10,6 +11,8 @@ import {
   transposerNom,
   TRANSPOSITIONS, uuid,
   NOTE_NAMES_FR, DEFAULT_STRUCTURES,
+  frameRMS, preEmphasis, HZ_MIN, HZ_MAX,
+  hzToMidi, midiToNoteName, centsTempere, centsCinqLimite,
 } from './accordeurUtils'
 
 // ─── Constantes UI ─────────────────────────────────────────────────────────────
@@ -151,6 +154,17 @@ export default function AccordeurPage() {
   const [gateLevel,         setGateLevel]         = useState(0.01)
   const gateLevelRef = useRef(0.01)
 
+  // ── Mode live ─────────────────────────────────────────────────────────────────
+  const [modeLive,    setModeLive]   = useState(false)
+  const [liveNote,    setLiveNote]   = useState(null)   // { nom, octave, muCents } | null
+  const [liveActive,  setLiveActive] = useState(false)
+  const liveStreamRef   = useRef(null)
+  const liveAudioCtxRef = useRef(null)
+  const liveAnalyserRef = useRef(null)
+  const liveRafRef      = useRef(null)
+  const liveDetectorRef = useRef(null)
+  const liveParamsRef   = useRef({})
+
   // ── Pipeline ─────────────────────────────────────────────────────────────────
   // phase : 'pret' | 'enregistrement' | 'analyse' | 'resultats'
   const [phase,  setPhase]  = useState('pret')
@@ -221,6 +235,18 @@ export default function AccordeurPage() {
     if (!audioBufferRef.current) return
     setDirty(true)
   }, [clarityThreshold, gateLevel, referentiel, seuil, silenceDurationMs, noteJumpCents, diapason, structureId, structures])
+
+  // ── Sync params live (accessibles dans la RAF loop via ref) ──────────────────
+  useEffect(() => {
+    const struct = [...DEFAULT_STRUCTURES, ...structures].find(x => x.id === structureId)
+    liveParamsRef.current = {
+      diapason,
+      referentiel,
+      clarityThreshold,
+      gateLevel,
+      tonikMidi: struct ? (NOTE_NAMES_FR.indexOf(struct.toniques[0]?.tonique ?? 'Do') + 60) : null,
+    }
+  }, [diapason, referentiel, clarityThreshold, gateLevel, structureId, structures])
 
   // ─── Enregistrement ──────────────────────────────────────────────────────────
 
@@ -333,6 +359,59 @@ export default function AccordeurPage() {
     setDirty(false)
     setPhase('resultats')
   }, [structures, structureId, referentiel, diapason, seuil, silenceDurationMs, noteJumpCents, clarityThreshold, gateLevel])
+
+  // ─── Mode live ───────────────────────────────────────────────────────────────
+
+  const demarrerLive = useCallback(async () => {
+    setErreur(null)
+    try {
+      const stream   = await navigator.mediaDevices.getUserMedia({ audio: true, video: false })
+      liveStreamRef.current = stream
+      const audioCtx = new AudioContext()
+      liveAudioCtxRef.current = audioCtx
+      const source   = audioCtx.createMediaStreamSource(stream)
+      const analyser = audioCtx.createAnalyser()
+      analyser.fftSize = 2048
+      source.connect(analyser)
+      liveAnalyserRef.current = analyser
+      liveDetectorRef.current = PitchDetector.forFloat32Array(2048)
+
+      const buf = new Float32Array(2048)
+      const loop = () => {
+        liveRafRef.current = requestAnimationFrame(loop)
+        analyser.getFloatTimeDomainData(buf)
+        const { diapason: d, referentiel: r, clarityThreshold: ct, gateLevel: gl, tonikMidi } = liveParamsRef.current
+        const rms = frameRMS(buf)
+        if (rms < gl) { setLiveNote(null); return }
+        const emp = preEmphasis(buf)
+        const [hz, clarity] = liveDetectorRef.current.findPitch(emp, audioCtx.sampleRate)
+        if (clarity < ct || hz < HZ_MIN || hz > HZ_MAX) { setLiveNote(null); return }
+        const midi = Math.round(hzToMidi(hz, d))
+        const { name: nom, octave } = midiToNoteName(midi)
+        const muCents = (r === '5-limite' && tonikMidi !== null)
+          ? centsCinqLimite(hz, tonikMidi, d)
+          : centsTempere(hz, d)
+        setLiveNote({ nom, octave, muCents })
+      }
+      loop()
+      setLiveActive(true)
+    } catch (e) {
+      setErreur('Microphone inaccessible : ' + e.message)
+    }
+  }, [])
+
+  const arreterLive = useCallback(() => {
+    cancelAnimationFrame(liveRafRef.current)
+    liveStreamRef.current?.getTracks().forEach(t => t.stop())
+    liveAudioCtxRef.current?.close()
+    setLiveActive(false)
+    setLiveNote(null)
+  }, [])
+
+  const basculerMode = useCallback((live) => {
+    if (!live) arreterLive()
+    setModeLive(live)
+  }, [arreterLive])
 
   // ─── Analyse depuis fichier audio ────────────────────────────────────────────
 
@@ -756,7 +835,68 @@ export default function AccordeurPage() {
 
         {/* ── Zone enregistrement ──────────────────────────────────────────────── */}
         <div style={{ background: COL_SURFACE, borderRadius: 16, padding: 24, marginBottom: 16, border: `1px solid ${COL_BORDER}`, textAlign: 'center' }}>
-          {phase === 'pret' && (
+          {/* Toggle Enregistrer / Live */}
+          <div style={{ display: 'flex', gap: 6, marginBottom: 20 }}>
+            {[['rec', '● Enregistrer'], ['live', '♩ Live']].map(([v, label]) => (
+              <button key={v} onClick={() => basculerMode(v === 'live')}
+                style={{
+                  flex: 1, padding: '8px 0', borderRadius: 8, border: 'none',
+                  fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit',
+                  background: modeLive === (v === 'live') ? COL_ACCENT2 : COL_BG,
+                  color:      modeLive === (v === 'live') ? '#fff' : COL_MUTED,
+                }}
+              >{label}</button>
+            ))}
+          </div>
+          {/* ── Accordeur live ───────────────────────────────────────────────── */}
+          {modeLive && (() => {
+            const liveDisplay = liveNote
+              ? transposerNom(liveNote.nom, liveNote.octave, transpoKey)
+              : null
+            const liveCouleur = liveNote ? couleurJustesse(liveNote.muCents, seuil) : COL_MUTED
+            const needlePct   = liveNote ? Math.max(0, Math.min(100, 50 + (liveNote.muCents / 50) * 50)) : 50
+            const centsLabel  = liveNote
+              ? `${liveNote.muCents >= 0 ? '+' : ''}${liveNote.muCents.toFixed(1)}¢`
+              : '—'
+            return (
+              <>
+                {!liveActive
+                  ? <Btn onClick={demarrerLive} style={{ fontSize: 15, padding: '12px 36px' }}>▶ Démarrer</Btn>
+                  : <Btn variant="secondary" onClick={arreterLive} style={{ fontSize: 13 }}>■ Arrêter</Btn>
+                }
+                <div style={{ marginTop: 28, marginBottom: 8 }}>
+                  <div style={{ fontSize: 56, fontWeight: 900, letterSpacing: 2, color: liveCouleur, lineHeight: 1 }}>
+                    {liveDisplay ? `${liveDisplay.nom}` : '—'}
+                    <span style={{ fontSize: 24, fontWeight: 400, color: COL_MUTED, marginLeft: 6 }}>
+                      {liveDisplay ? liveDisplay.octave : ''}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: 22, fontWeight: 700, color: liveCouleur, marginTop: 6 }}>
+                    {centsLabel}
+                  </div>
+                </div>
+                {/* Needle */}
+                <div style={{ margin: '16px 0 4px', position: 'relative', height: 12, background: COL_BG, borderRadius: 6 }}>
+                  {/* Graduation 0 */}
+                  <div style={{ position: 'absolute', left: '50%', top: -4, bottom: -4, width: 1, background: COL_MUTED, transform: 'translateX(-50%)' }} />
+                  {/* Curseur */}
+                  <div style={{
+                    position: 'absolute', top: 0, bottom: 0,
+                    left: `${needlePct}%`, width: 4, borderRadius: 2,
+                    background: liveCouleur,
+                    transform: 'translateX(-50%)',
+                    transition: 'left 0.08s ease, background 0.15s',
+                  }} />
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: COL_MUTED, padding: '0 2px' }}>
+                  <span>-50¢</span><span>0</span><span>+50¢</span>
+                </div>
+              </>
+            )
+          })()}
+
+          {/* ── Mode enregistrement ──────────────────────────────────────────── */}
+          {!modeLive && phase === 'pret' && (
             <>
               <div style={{ color: COL_MUTED, fontSize: 13, marginBottom: 20 }}>
                 Prêt à enregistrer
@@ -781,7 +921,7 @@ export default function AccordeurPage() {
             </>
           )}
 
-          {phase === 'enregistrement' && (
+          {!modeLive && phase === 'enregistrement' && (
             <>
               <div style={{ color: '#f87171', fontWeight: 700, fontSize: 13, marginBottom: 12 }}>
                 ● Enregistrement en cours…
@@ -794,13 +934,13 @@ export default function AccordeurPage() {
             </>
           )}
 
-          {phase === 'analyse' && (
+          {!modeLive && phase === 'analyse' && (
             <div style={{ color: COL_MUTED, fontSize: 14, padding: '20px 0' }}>
               Analyse en cours…
             </div>
           )}
 
-          {phase === 'resultats' && (
+          {!modeLive && phase === 'resultats' && (
             <Btn variant="secondary" onClick={() => { setPhase('pret'); setNotes([]); setCourbe([]); serieRef.current = []; audioBufferRef.current = null }} style={{ fontSize: 13 }}>
               ↺ Nouveau
             </Btn>
