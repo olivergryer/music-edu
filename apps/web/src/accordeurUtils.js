@@ -91,8 +91,15 @@ const HZ_MAX = 2000  // couvre toutes tessituras instrumentales + voix
  * @param {object} opts  { yinThreshold }
  * @returns {Array<{tMs: number, hz: number|null}>}
  */
+function frameRMS(frame) {
+  let sum = 0
+  for (let k = 0; k < frame.length; k++) sum += frame[k] * frame[k]
+  return Math.sqrt(sum / frame.length)
+}
+
 export function analyserBuffer(audioBuffer, opts = {}) {
   const clarityThreshold = opts.clarityThreshold ?? 0.9
+  const rmsGate   = opts.rmsGate ?? 0.01
   const sampleRate  = audioBuffer.sampleRate
   const channelData = audioBuffer.getChannelData(0)
 
@@ -104,9 +111,10 @@ export function analyserBuffer(audioBuffer, opts = {}) {
 
   for (let i = 0; i + frameSize <= channelData.length; i += hopSize) {
     const frame         = channelData.subarray(i, i + frameSize)
+    const rms           = frameRMS(frame)
     const [hz, clarity] = detector.findPitch(frame, sampleRate)
     const tMs           = (i / sampleRate) * 1000
-    const hzVal = (clarity >= clarityThreshold && hz >= HZ_MIN && hz <= HZ_MAX) ? hz : null
+    const hzVal = (rms >= rmsGate && clarity >= clarityThreshold && hz >= HZ_MIN && hz <= HZ_MAX) ? hz : null
     serie.push({ tMs, hz: hzVal })
   }
 

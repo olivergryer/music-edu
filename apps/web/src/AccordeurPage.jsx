@@ -148,6 +148,8 @@ export default function AccordeurPage() {
   const [silenceDurationMs, setSilenceDurationMs] = useState(SILENCE_MS_DEFAULT)
   const [noteJumpCents,     setNoteJumpCents]     = useState(NOTE_JUMP_CENTS_DEFAULT)
   const [clarityThreshold,  setClarityThreshold]  = useState(0.9)
+  const [gateLevel,         setGateLevel]         = useState(0.01)
+  const gateLevelRef = useRef(0.01)
 
   // ── Pipeline ─────────────────────────────────────────────────────────────────
   // phase : 'pret' | 'enregistrement' | 'analyse' | 'resultats'
@@ -198,7 +200,7 @@ export default function AccordeurPage() {
   // ── Recalcul : déclenché manuellement via bouton ──────────────────────────────
   const recalculer = useCallback(() => {
     if (!audioBufferRef.current) return
-    const s = analyserBuffer(audioBufferRef.current, { clarityThreshold })
+    const s = analyserBuffer(audioBufferRef.current, { clarityThreshold, rmsGate: gateLevel })
     serieRef.current = s
     const struct    = [...DEFAULT_STRUCTURES, ...structures].find(x => x.id === structureId)
     const tonikMidi = struct
@@ -212,13 +214,13 @@ export default function AccordeurPage() {
     setScoreP(scorePedagogique(notesCalc, seuil))
     setScoreQ(scoreQualite(notesCalc))
     setDirty(false)
-  }, [clarityThreshold, referentiel, seuil, silenceDurationMs, noteJumpCents, diapason, structureId, structures])
+  }, [clarityThreshold, gateLevel, referentiel, seuil, silenceDurationMs, noteJumpCents, diapason, structureId, structures])
 
   // ── Marque dirty quand réglages changent après chargement audio ───────────────
   useEffect(() => {
     if (!audioBufferRef.current) return
     setDirty(true)
-  }, [clarityThreshold, referentiel, seuil, silenceDurationMs, noteJumpCents, diapason, structureId, structures])
+  }, [clarityThreshold, gateLevel, referentiel, seuil, silenceDurationMs, noteJumpCents, diapason, structureId, structures])
 
   // ─── Enregistrement ──────────────────────────────────────────────────────────
 
@@ -236,25 +238,38 @@ export default function AccordeurPage() {
       source.connect(analyser)
       analyserRef.current = { analyser, audioCtx }
 
+      const VU_SCALE = 5  // rms=0.2 remplit la barre
       const drawVU = () => {
         animRef.current = requestAnimationFrame(drawVU)
         const canvas = vuRef.current
         if (!canvas) return
         const ctx2  = canvas.getContext('2d')
-        const data  = new Uint8Array(analyser.frequencyBinCount)
-        analyser.getByteFrequencyData(data)
-        const avg = data.reduce((a, b) => a + b, 0) / data.length
-        const W   = canvas.width, H = canvas.height
+        const data  = new Uint8Array(analyser.fftSize)
+        analyser.getByteTimeDomainData(data)
+        let sum = 0
+        for (let k = 0; k < data.length; k++) { const s = (data[k] - 128) / 128; sum += s * s }
+        const rms  = Math.sqrt(sum / data.length)
+        const W    = canvas.width, H = canvas.height
         ctx2.clearRect(0, 0, W, H)
         ctx2.fillStyle = COL_SURFACE
         ctx2.fillRect(0, 0, W, H)
-        const barW = (avg / 128) * W
+        const barW = Math.min(rms * VU_SCALE * W, W)
         const grad = ctx2.createLinearGradient(0, 0, W, 0)
         grad.addColorStop(0,   '#34d399')
         grad.addColorStop(0.6, '#fbbf24')
         grad.addColorStop(1,   '#f87171')
         ctx2.fillStyle = grad
         ctx2.fillRect(0, 0, barW, H)
+        // Ligne gate
+        const gateX = Math.min(gateLevelRef.current * VU_SCALE * W, W - 1)
+        ctx2.strokeStyle = '#f9fafb'
+        ctx2.lineWidth   = 1.5
+        ctx2.setLineDash([3, 3])
+        ctx2.beginPath()
+        ctx2.moveTo(gateX, 0)
+        ctx2.lineTo(gateX, H)
+        ctx2.stroke()
+        ctx2.setLineDash([])
       }
       drawVU()
 
@@ -299,8 +314,7 @@ export default function AccordeurPage() {
     }
     decodeCtx.close()
 
-    // Analyse YIN
-    const serieCalc = analyserBuffer(audioBuffer)
+    const serieCalc = analyserBuffer(audioBuffer, { clarityThreshold, rmsGate: gateLevel })
     const struct    = [...DEFAULT_STRUCTURES, ...structures].find(s => s.id === structureId)
     const tonikMidi = struct
       ? (NOTE_NAMES_FR.indexOf(struct.toniques[0]?.tonique ?? 'Do') + 60)
@@ -318,7 +332,7 @@ export default function AccordeurPage() {
     setScoreQ(scoreQualite(notesAv))
     setDirty(false)
     setPhase('resultats')
-  }, [structures, structureId, referentiel, diapason, seuil, silenceDurationMs, noteJumpCents])
+  }, [structures, structureId, referentiel, diapason, seuil, silenceDurationMs, noteJumpCents, clarityThreshold, gateLevel])
 
   // ─── Analyse depuis fichier audio ────────────────────────────────────────────
 
@@ -345,7 +359,7 @@ export default function AccordeurPage() {
         ? (NOTE_NAMES_FR.indexOf(struct.toniques[0]?.tonique ?? 'Do') + 60)
         : 60
 
-      const serieCalc = analyserBuffer(audioBuffer)
+      const serieCalc = analyserBuffer(audioBuffer, { clarityThreshold, rmsGate: gateLevel })
       const segments  = segmenter(serieCalc, diapason, { silenceDurationMs, noteJumpCents })
       const notesAv   = calculerEcarts(segments, referentiel, tonikMidi, diapason)
       const courbeB   = courbebrute(serieCalc, referentiel, tonikMidi, diapason)
@@ -362,7 +376,7 @@ export default function AccordeurPage() {
       setErreur('Erreur lecture fichier : ' + e.message)
       setPhase('pret')
     }
-  }, [structures, structureId, referentiel, diapason, seuil, silenceDurationMs, noteJumpCents])
+  }, [structures, structureId, referentiel, diapason, seuil, silenceDurationMs, noteJumpCents, clarityThreshold, gateLevel])
 
   // ─── Sauvegarde session ───────────────────────────────────────────────────────
 
@@ -620,6 +634,20 @@ export default function AccordeurPage() {
                 </div>
                 <div style={{ color: COL_MUTED2, fontSize: 10, marginTop: 2 }}>
                   Haut = moins de faux positifs (moins de notes détectées)
+                </div>
+              </label>
+              <label style={{ fontSize: 11, color: COL_MUTED, marginTop: 12, display: 'block' }}>
+                Gate bruit (RMS)
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
+                  <input
+                    type="range" min="0" max="0.15" step="0.005" value={gateLevel}
+                    onChange={e => { const v = Number(e.target.value); setGateLevel(v); gateLevelRef.current = v }}
+                    style={{ flex: 1, accentColor: COL_ACCENT }}
+                  />
+                  <span style={{ color: COL_TEXT, fontWeight: 700, minWidth: 40 }}>{gateLevel.toFixed(3)}</span>
+                </div>
+                <div style={{ color: COL_MUTED2, fontSize: 10, marginTop: 2 }}>
+                  Barre blanche sur le vumètre = seuil gate actuel
                 </div>
               </label>
             </div>
