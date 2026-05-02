@@ -203,7 +203,7 @@ export function segmenter(serie, diapason = 442, opts = {}) {
     segments.push(_finaliserSegment(courant, diapason))
   }
 
-  return segments.filter(s => s.frames.length >= 3)
+  return segments.filter(s => s.frames.length >= 3 && (s.finMs - s.debutMs) >= 100)
 }
 
 function _finaliserSegment(seg, diapason) {

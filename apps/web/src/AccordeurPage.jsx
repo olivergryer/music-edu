@@ -377,8 +377,12 @@ export default function AccordeurPage() {
       liveDetectorRef.current = PitchDetector.forFloat32Array(2048)
 
       const buf = new Float32Array(2048)
+      let lastUpdate = 0
       const loop = () => {
         liveRafRef.current = requestAnimationFrame(loop)
+        const now = performance.now()
+        if (now - lastUpdate < 250) return
+        lastUpdate = now
         analyser.getFloatTimeDomainData(buf)
         const { diapason: d, referentiel: r, clarityThreshold: ct, gateLevel: gl, tonikMidi } = liveParamsRef.current
         const rms = frameRMS(buf)
