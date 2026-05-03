@@ -3,15 +3,13 @@ import { useState, useCallback } from "react";
 const STORAGE_KEY = "tess_progress";
 
 export const XP_LEVELS = [
-  { id: "C1/1", xp: 0 },
-  { id: "C1/2", xp: 500 },
-  { id: "C1/3", xp: 1200 },
-  { id: "C1/4", xp: 2500 },
-  { id: "C2/1", xp: 4500 },
-  { id: "C2/2", xp: 7500 },
-  { id: "C2/3", xp: 11500 },
-  { id: "C2/4", xp: 17000 },
-  { id: "C3",   xp: 25000 },
+  { id: "Apprenti",      xp: 0 },
+  { id: "Musicien",      xp: 500 },
+  { id: "Instrumentiste",xp: 1200 },
+  { id: "Soliste",       xp: 2500 },
+  { id: "Concertiste",   xp: 4500 },
+  { id: "Virtuose",      xp: 8000 },
+  { id: "Maestro",       xp: 14000 },
 ];
 
 export function getLevel(xp) {
@@ -61,7 +59,7 @@ export const TROPHIES = [
   {
     id: "concert",
     icon: "🎻", label: "Concert",
-    check: s => getLevel(s.xp).id === "C3",
+    check: s => getLevel(s.xp).id === "Maestro",
   },
   {
     id: "perfect_series",

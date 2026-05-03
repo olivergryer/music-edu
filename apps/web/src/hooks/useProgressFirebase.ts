@@ -37,15 +37,13 @@ interface AddSessionResult {
 // ─── Niveaux XP ───────────────────────────────────────────────────────────────
 
 export const XP_LEVELS = [
-  { id: 'C1/1', xp: 0 },
-  { id: 'C1/2', xp: 500 },
-  { id: 'C1/3', xp: 1200 },
-  { id: 'C1/4', xp: 2500 },
-  { id: 'C2/1', xp: 4500 },
-  { id: 'C2/2', xp: 7500 },
-  { id: 'C2/3', xp: 11500 },
-  { id: 'C2/4', xp: 17000 },
-  { id: 'C3',   xp: 25000 },
+  { id: 'Apprenti',      xp: 0 },
+  { id: 'Musicien',      xp: 500 },
+  { id: 'Instrumentiste',xp: 1200 },
+  { id: 'Soliste',       xp: 2500 },
+  { id: 'Concertiste',   xp: 4500 },
+  { id: 'Virtuose',      xp: 8000 },
+  { id: 'Maestro',       xp: 14000 },
 ]
 
 export function getLevel(xp: number) {
@@ -62,61 +60,73 @@ export const TROPHIES = [
   {
     id: 'first_note',
     icon: '♩', label: 'Première note',
+    hint: 'Jouer ta première série de rythme ou session de théorie',
     check: (s: ProgressState) => s.modules.rythme.seriesPlayed >= 1 || s.modules.theorie.sessionsPlayed >= 1,
   },
   {
     id: 'first_series',
     icon: '🎵', label: 'Première série',
+    hint: 'Terminer une série complète de 10 exercices de rythme',
     check: (s: ProgressState) => s.modules.rythme.seriesPlayed >= 1,
   },
   {
     id: 'portee',
     icon: '♫', label: 'Sur la portée',
+    hint: 'Pratiquer 7 jours de suite sur Tessitura',
     check: (s: ProgressState) => s.streak.current >= 7,
   },
   {
     id: 'mesure',
     icon: '♬', label: 'Barre de mesure',
+    hint: 'Pratiquer 30 jours de suite sur Tessitura',
     check: (s: ProgressState) => s.streak.current >= 30,
   },
   {
     id: 'clef_sol',
     icon: '🎼', label: 'Clé de Sol',
+    hint: '10 séries de rythme ou 10 sessions de théorie',
     check: (s: ProgressState) => s.modules.rythme.seriesPlayed >= 10 || s.modules.theorie.sessionsPlayed >= 10,
   },
   {
     id: 'do_majeur',
     icon: '🎹', label: 'Do majeur',
+    hint: 'Atteindre le niveau Soliste',
     check: (s: ProgressState) => XP_LEVELS.findIndex(l => l.id === getLevel(s.xp).id) >= 3,
   },
   {
     id: 'diapason',
     icon: '🎺', label: 'Diapason',
+    hint: 'Atteindre le niveau Maestro',
     check: (s: ProgressState) => XP_LEVELS.findIndex(l => l.id === getLevel(s.xp).id) >= 6,
   },
   {
     id: 'concert',
     icon: '🎻', label: 'Concert',
-    check: (s: ProgressState) => getLevel(s.xp).id === 'C3',
+    hint: 'Atteindre le niveau Maestro',
+    check: (s: ProgressState) => getLevel(s.xp).id === 'Maestro',
   },
   {
     id: 'perfect_series',
     icon: '⭐', label: 'Série parfaite',
+    hint: 'Réussir une série de 10 exercices sans faute',
     check: (_s: ProgressState, meta?: AddSessionParams['meta']) => meta?.perfectSeries === true,
   },
   {
     id: 'virtuose',
     icon: '🏆', label: 'Virtuose',
+    hint: '50 séries de rythme terminées',
     check: (s: ProgressState) => s.modules.rythme.seriesPlayed >= 50,
   },
   {
     id: 'theoricien',
     icon: '📖', label: 'Théoricien',
+    hint: '20 sessions de théorie terminées',
     check: (s: ProgressState) => s.modules.theorie.sessionsPlayed >= 20,
   },
   {
     id: 'duo',
     icon: '🎶', label: 'Duo',
+    hint: 'Jouer au moins une série de rythme et une session de théorie',
     check: (s: ProgressState) => s.modules.rythme.seriesPlayed >= 1 && s.modules.theorie.sessionsPlayed >= 1,
   },
 ]

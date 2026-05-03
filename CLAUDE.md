@@ -31,6 +31,8 @@ App web pédagogique pour la musique. Hub multi-modules nommé **Tessitura**, d�
 | `AccordeurPage.jsx` | Module Accordeur — accordeur chromatique V2 |
 | `AccordeurStaff.jsx` | Portée VexFlow accordeur |
 | `accordeurUtils.js` | Utilitaires pitch, cents, structures toniques |
+| `useProgress.js` | **MORT — non utilisé.** Remplacé par `hooks/useProgressFirebase.ts` (Firebase). Ne pas modifier ni importer. |
+| `hooks/useProgressFirebase.ts` | Hook XP/niveaux/trophées Firebase — source de vérité pour la progression élève |
 
 ## Module Rythme (`RythmApp.jsx`)
 

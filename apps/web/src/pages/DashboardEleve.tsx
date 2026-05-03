@@ -23,6 +23,7 @@ export default function DashboardEleve() {
   const { user, profile } = useAuth()
   const { xp, level, nextLevel, streak, trophies, modules } = useProgressFirebase()
   const [history, setHistory] = useState<HistoryEntry[]>([])
+  const [hoveredTrophy, setHoveredTrophy] = useState<string | null>(null)
   const [teacherInput, setTeacherInput] = useState('')
   const [teacherMsg, setTeacherMsg] = useState('')
   const [teacherLoading, setTeacherLoading] = useState(false)
@@ -166,15 +167,36 @@ export default function DashboardEleve() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
             {TROPHIES.map(t => {
               const unlocked = trophies.includes(t.id)
+              const isHovered = hoveredTrophy === t.id
               return (
-                <div key={t.id} style={{
-                  background: unlocked ? '#1a0d3a' : '#0f172a',
-                  border: `1px solid ${unlocked ? '#7c3aed' : '#1f2937'}`,
-                  borderRadius: 12, padding: '10px 4px', textAlign: 'center',
-                  opacity: unlocked ? 1 : 0.35,
-                }}>
-                  <div style={{ fontSize: 20, marginBottom: 4 }}>{t.icon}</div>
-                  <div style={{ fontSize: 9, color: unlocked ? '#c084fc' : '#4b5563', fontWeight: 700, lineHeight: 1.3 }}>{t.label}</div>
+                <div key={t.id}
+                  style={{ position: 'relative' }}
+                  onMouseEnter={() => setHoveredTrophy(t.id)}
+                  onMouseLeave={() => setHoveredTrophy(null)}
+                >
+                  <div style={{
+                    background: unlocked ? '#1a0d3a' : '#0f172a',
+                    border: `1px solid ${unlocked ? '#7c3aed' : '#1f2937'}`,
+                    borderRadius: 12, padding: '10px 4px', textAlign: 'center',
+                    opacity: unlocked ? 1 : 0.35,
+                    cursor: 'default',
+                  }}>
+                    <div style={{ fontSize: 20, marginBottom: 4 }}>{t.icon}</div>
+                    <div style={{ fontSize: 9, color: unlocked ? '#c084fc' : '#4b5563', fontWeight: 700, lineHeight: 1.3 }}>{t.label}</div>
+                  </div>
+                  {isHovered && (
+                    <div style={{
+                      position: 'absolute', bottom: 'calc(100% + 6px)', left: '50%',
+                      transform: 'translateX(-50%)',
+                      background: '#1e293b', border: '1px solid #374151',
+                      borderRadius: 8, padding: '6px 8px',
+                      fontSize: 10, color: '#e2e8f0', lineHeight: 1.4,
+                      whiteSpace: 'nowrap', zIndex: 10,
+                      pointerEvents: 'none',
+                    }}>
+                      {t.hint}
+                    </div>
+                  )}
                 </div>
               )
             })}
