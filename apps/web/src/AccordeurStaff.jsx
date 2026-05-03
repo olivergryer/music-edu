@@ -64,6 +64,7 @@ export default function AccordeurStaff({ notes, seuil = 10, transpoKey = 'C', co
       }
 
       stave.setStyle({ strokeStyle: '#9ca3af', fillStyle: '#9ca3af' })
+      const STAVE_COL = '#9ca3af'
       stave.setContext(ctx).draw()
 
       // ── StaveNotes ───────────────────────────────────────────────────────────
@@ -117,7 +118,15 @@ export default function AccordeurStaff({ notes, seuil = 10, transpoKey = 'C', co
       const svg = ref.current.querySelector('svg')
       if (svg) {
         svg.style.background = 'transparent'
-        svg.querySelectorAll('text').forEach(t => { t.style.fill = '#9ca3af' })
+        // Recolor paths with default/black stroke — stave lines, barlines, stems
+        // VexFlow setStyle on Stave doesn't reliably propagate to path elements in SVG backend
+        svg.querySelectorAll('path').forEach(p => {
+          const s = p.getAttribute('stroke') ?? ''
+          const f = p.getAttribute('fill') ?? ''
+          if (!s || s === '#000000' || s === 'black') p.setAttribute('stroke', STAVE_COL)
+          if (!f || f === '#000000' || f === 'black') p.setAttribute('fill', STAVE_COL)
+        })
+        svg.querySelectorAll('text').forEach(t => { t.style.fill = STAVE_COL })
 
         vexNotes.forEach((sn, i) => {
           const note    = notes[i]
