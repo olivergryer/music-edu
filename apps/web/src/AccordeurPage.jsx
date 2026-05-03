@@ -142,18 +142,18 @@ export default function AccordeurPage() {
   const [searchParams] = useSearchParams()
 
   // ── Paramètres ──────────────────────────────────────────────────────────────
-  const [diapason,     setDiapason]     = useState(DIAPASON_DEFAULT)
-  const [transpoKey,   setTranspoKey]   = useState('C')
-  const [referentiel,  setReferentiel]  = useState('5-limite')
-  const [seuil,        setSeuil]        = useState(SEUIL_DEFAULT)
-  const [structureId,  setStructureId]  = useState(null)
+  const [diapason,    setDiapason]    = useState(() => { const v = parseFloat(localStorage.getItem('acc_diapason')); return isNaN(v) ? DIAPASON_DEFAULT : v })
+  const [transpoKey,  setTranspoKey]  = useState(() => localStorage.getItem('acc_transpo') || 'C')
+  const [referentiel, setReferentiel] = useState(() => localStorage.getItem('acc_ref') || '5-limite')
+  const [seuil,       setSeuil]       = useState(() => { const v = parseInt(localStorage.getItem('acc_seuil')); return isNaN(v) ? SEUIL_DEFAULT : v })
+  const [structureId, setStructureId] = useState(null)
 
-  // ── Seuils segmentation + YIN (curseurs de calibration) ─────────────────────
-  const [silenceDurationMs, setSilenceDurationMs] = useState(SILENCE_MS_DEFAULT)
-  const [noteJumpCents,     setNoteJumpCents]     = useState(NOTE_JUMP_CENTS_DEFAULT)
-  const [clarityThreshold,  setClarityThreshold]  = useState(0.82)
-  const [gateLevel,         setGateLevel]         = useState(0.02)
-  const gateLevelRef = useRef(0.01)
+  // ── Seuils segmentation ──────────────────────────────────────────────────────
+  const [silenceDurationMs, setSilenceDurationMs] = useState(() => { const v = parseInt(localStorage.getItem('acc_silence')); return isNaN(v) ? SILENCE_MS_DEFAULT : v })
+  const [noteJumpCents,     setNoteJumpCents]     = useState(() => { const v = parseInt(localStorage.getItem('acc_noteJump')); return isNaN(v) ? NOTE_JUMP_CENTS_DEFAULT : v })
+  const [clarityThreshold,  setClarityThreshold]  = useState(() => { const v = parseFloat(localStorage.getItem('acc_clarity')); return isNaN(v) ? 0.82 : v })
+  const [gateLevel,         setGateLevel]         = useState(() => { const v = parseFloat(localStorage.getItem('acc_gate')); return isNaN(v) ? 0.02 : v })
+  const gateLevelRef = useRef(0.02)
 
   // ── Mode live ─────────────────────────────────────────────────────────────────
   const [modeLive,    setModeLive]   = useState(true)
@@ -254,6 +254,16 @@ export default function AccordeurPage() {
       tonikMidi: struct ? (NOTE_NAMES_FR.indexOf(struct.toniques[0]?.tonique ?? 'Do') + 60) : null,
     }
   }, [diapason, referentiel, clarityThreshold, gateLevel, structureId, structures])
+
+  // ── Persist réglages localStorage ───────────────────────────────────────────
+  useEffect(() => { localStorage.setItem('acc_diapason', diapason) }, [diapason])
+  useEffect(() => { localStorage.setItem('acc_transpo',  transpoKey) }, [transpoKey])
+  useEffect(() => { localStorage.setItem('acc_ref',      referentiel) }, [referentiel])
+  useEffect(() => { localStorage.setItem('acc_seuil',    seuil) }, [seuil])
+  useEffect(() => { localStorage.setItem('acc_silence',  silenceDurationMs) }, [silenceDurationMs])
+  useEffect(() => { localStorage.setItem('acc_noteJump', noteJumpCents) }, [noteJumpCents])
+  useEffect(() => { localStorage.setItem('acc_clarity',  clarityThreshold) }, [clarityThreshold])
+  useEffect(() => { localStorage.setItem('acc_gate',     gateLevel) }, [gateLevel])
 
   // ── Autostart live au montage ─────────────────────────────────────────────────
   useEffect(() => { demarrerLive() }, []) // eslint-disable-line react-hooks/exhaustive-deps
@@ -744,151 +754,7 @@ export default function AccordeurPage() {
           {erreur && <div style={{ color: '#f87171', fontSize: 12, marginTop: 12 }}>{erreur}</div>}
         </div>
 
-        {/* ── Paramètres ──────────────────────────────────────────────────────── */}
-        <div style={{ background: COL_SURFACE, borderRadius: 12, padding: 16, marginBottom: 16, border: `1px solid ${COL_BORDER}` }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
-            {/* Diapason */}
-            <label style={{ fontSize: 11, color: COL_MUTED }}>
-              Diapason (Hz)
-              <div style={{ marginTop: 4 }}>
-                <input
-                  type="number" min="400" max="480" step="0.1"
-                  value={diapason}
-                  onChange={e => {
-                    const v = parseFloat(e.target.value)
-                    if (!isNaN(v)) setDiapason(v)
-                  }}
-                  style={{
-                    width: '100%', background: COL_BG, color: COL_TEXT,
-                    border: `1px solid ${COL_BORDER}`, borderRadius: 6,
-                    padding: '6px 10px', fontSize: 14, fontWeight: 700,
-                    fontFamily: 'inherit',
-                  }}
-                />
-              </div>
-            </label>
-            {/* Transposition */}
-            <label style={{ fontSize: 11, color: COL_MUTED }}>
-              Transposition
-              <select
-                value={transpoKey}
-                onChange={e => setTranspoKey(e.target.value)}
-                style={{ display: 'block', marginTop: 4, width: '100%', background: COL_BG, color: COL_TEXT, border: `1px solid ${COL_BORDER}`, borderRadius: 6, padding: '4px 8px', fontSize: 12 }}
-              >
-                {Object.entries(TRANSPOSITIONS).map(([k, v]) => (
-                  <option key={k} value={k}>{v.label}</option>
-                ))}
-              </select>
-            </label>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            {/* Référentiel */}
-            <label style={{ fontSize: 11, color: COL_MUTED }}>
-              Référentiel
-              <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
-                {REFERENTIELS.map(r => (
-                  <button key={r}
-                    onClick={() => setReferentiel(r)}
-                    style={{
-                      flex: 1, padding: '6px 0', borderRadius: 7, border: 'none', fontWeight: 700,
-                      fontSize: 11, cursor: 'pointer', fontFamily: 'inherit',
-                      background: referentiel === r ? COL_ACCENT2 : COL_BG,
-                      color:      referentiel === r ? '#fff' : COL_MUTED,
-                    }}
-                  >{r === 'tempere' ? 'Tempéré' : '5-limite'}</button>
-                ))}
-              </div>
-            </label>
-            {/* Seuil */}
-            <label style={{ fontSize: 11, color: COL_MUTED }}>
-              Seuil justesse
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
-                <input
-                  type="range" min="1" max="50" step="1" value={seuil}
-                  onChange={e => setSeuil(Number(e.target.value))}
-                  style={{ flex: 1, accentColor: seuil < 5 ? '#f87171' : COL_ACCENT }}
-                />
-                <span style={{ color: seuil < 5 ? '#f87171' : COL_TEXT, fontWeight: 700, minWidth: 28 }}>±{seuil}¢</span>
-              </div>
-              {seuil < 5 && <div style={{ color: '#f87171', fontSize: 10, marginTop: 2 }}>⚠ Seuil très strict</div>}
-            </label>
-          </div>
-        </div>
-
-        {/* ── Curseurs segmentation (calibration temporaire) ──────────────────── */}
-        <details style={{ marginBottom: 16 }}>
-          <summary style={{
-            background: COL_SURFACE, borderRadius: 10, padding: '10px 14px',
-            border: `1px solid ${COL_BORDER}`, cursor: 'pointer',
-            fontSize: 11, color: COL_MUTED, fontWeight: 600, listStyle: 'none',
-          }}>
-            ⚙ Réglages segmentation
-          </summary>
-          <div style={{ background: COL_SURFACE, borderRadius: '0 0 10px 10px', padding: '12px 14px 14px', border: `1px solid ${COL_BORDER}`, borderTop: 'none' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-              <label style={{ fontSize: 11, color: COL_MUTED }}>
-                Silence (ms)
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
-                  <input
-                    type="range" min="20" max="300" step="5" value={silenceDurationMs}
-                    onChange={e => setSilenceDurationMs(Number(e.target.value))}
-                    style={{ flex: 1, accentColor: COL_ACCENT }}
-                  />
-                  <span style={{ color: COL_TEXT, fontWeight: 700, minWidth: 34 }}>{silenceDurationMs}</span>
-                </div>
-              </label>
-              <label style={{ fontSize: 11, color: COL_MUTED }}>
-                Saut note (¢)
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
-                  <input
-                    type="range" min="20" max="200" step="5" value={noteJumpCents}
-                    onChange={e => setNoteJumpCents(Number(e.target.value))}
-                    style={{ flex: 1, accentColor: COL_ACCENT }}
-                  />
-                  <span style={{ color: COL_TEXT, fontWeight: 700, minWidth: 28 }}>{noteJumpCents}</span>
-                </div>
-              </label>
-            </div>
-            <div style={{ marginTop: 12 }}>
-              <label style={{ fontSize: 11, color: COL_MUTED }}>
-                Seuil clarté
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
-                  <input
-                    type="range" min="0.5" max="1.0" step="0.01" value={clarityThreshold}
-                    onChange={e => setClarityThreshold(Number(e.target.value))}
-                    style={{ flex: 1, accentColor: COL_ACCENT }}
-                  />
-                  <span style={{ color: COL_TEXT, fontWeight: 700, minWidth: 36 }}>{clarityThreshold.toFixed(2)}</span>
-                </div>
-                <div style={{ color: COL_MUTED2, fontSize: 10, marginTop: 2 }}>
-                  Haut = moins de faux positifs (moins de notes détectées)
-                </div>
-              </label>
-              <label style={{ fontSize: 11, color: COL_MUTED, marginTop: 12, display: 'block' }}>
-                Gate bruit (RMS)
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
-                  <input
-                    type="range" min="0" max="0.15" step="0.005" value={gateLevel}
-                    onChange={e => { const v = Number(e.target.value); setGateLevel(v); gateLevelRef.current = v }}
-                    style={{ flex: 1, accentColor: COL_ACCENT }}
-                  />
-                  <span style={{ color: COL_TEXT, fontWeight: 700, minWidth: 40 }}>{gateLevel.toFixed(3)}</span>
-                </div>
-                <div style={{ color: COL_MUTED2, fontSize: 10, marginTop: 2 }}>
-                  Barre blanche sur le vumètre = seuil gate actuel
-                </div>
-              </label>
-            </div>
-            {phase === 'resultats' && (
-              <div style={{ marginTop: 8, fontSize: 10, color: COL_MUTED2 }}>
-                Modification active le bouton ↻ Recalculer sur la portée.
-              </div>
-            )}
-          </div>
-        </details>
-
-        {/* ── Structures de toniques ───────────────────────────────────────────── */}
+        {/* ── Structures de toniques + Référentiel ─────────────────────────────── */}
         <div style={{ background: COL_SURFACE, borderRadius: 12, padding: 16, marginBottom: 16, border: `1px solid ${COL_BORDER}` }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
             <span style={{ fontWeight: 700, fontSize: 13 }}>Structure de toniques</span>
@@ -897,11 +763,10 @@ export default function AccordeurPage() {
             </Btn>
           </div>
 
-          {/* Sélecteur rapide */}
           <select
             value={structureId ?? ''}
             onChange={e => setStructureId(e.target.value || null)}
-            style={{ width: '100%', background: COL_BG, color: COL_TEXT, border: `1px solid ${COL_BORDER}`, borderRadius: 6, padding: '8px 10px', fontSize: 13 }}
+            style={{ width: '100%', background: COL_BG, color: COL_TEXT, border: `1px solid ${COL_BORDER}`, borderRadius: 6, padding: '8px 10px', fontSize: 13, marginBottom: 12 }}
           >
             <option value="">— Aucune (tempéré simple) —</option>
             <optgroup label="Toniques simples">
@@ -914,9 +779,22 @@ export default function AccordeurPage() {
             )}
           </select>
 
-          {/* URL de partage */}
+          {/* Référentiel */}
+          <div style={{ display: 'flex', gap: 6 }}>
+            {REFERENTIELS.map(r => (
+              <button key={r} onClick={() => setReferentiel(r)}
+                style={{
+                  flex: 1, padding: '6px 0', borderRadius: 7, border: 'none', fontWeight: 700,
+                  fontSize: 11, cursor: 'pointer', fontFamily: 'inherit',
+                  background: referentiel === r ? COL_ACCENT2 : COL_BG,
+                  color:      referentiel === r ? '#fff' : COL_MUTED,
+                }}
+              >{r === 'tempere' ? 'Tempéré' : 'Harmonique'}</button>
+            ))}
+          </div>
+
           {urlStructure && (
-            <div style={{ marginTop: 8, display: 'flex', gap: 8, alignItems: 'center' }}>
+            <div style={{ marginTop: 10, display: 'flex', gap: 8, alignItems: 'center' }}>
               <input readOnly value={urlStructure}
                 style={{ flex: 1, background: COL_BG, color: COL_MUTED2, border: `1px solid ${COL_BORDER}`, borderRadius: 6, padding: '4px 8px', fontSize: 10 }}
               />
@@ -927,10 +805,8 @@ export default function AccordeurPage() {
             </div>
           )}
 
-          {/* Gestionnaire structures */}
           {showStructMgr && (
             <div style={{ marginTop: 14, borderTop: `1px solid ${COL_BORDER}`, paddingTop: 14 }}>
-              {/* Liste existantes */}
               {structures.map(s => (
                 <div key={s.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6, fontSize: 12 }}>
                   <span style={{ color: structureId === s.id ? COL_ACCENT : COL_TEXT }}>{s.nom}</span>
@@ -940,8 +816,6 @@ export default function AccordeurPage() {
                   </div>
                 </div>
               ))}
-
-              {/* Nouvelle structure */}
               <div style={{ marginTop: 12, background: COL_BG, borderRadius: 8, padding: 12 }}>
                 <div style={{ fontSize: 11, color: COL_MUTED, marginBottom: 8, fontWeight: 600 }}>Nouvelle structure</div>
                 <input
@@ -982,6 +856,123 @@ export default function AccordeurPage() {
             </div>
           )}
         </div>
+
+        {/* ── Réglages accord ──────────────────────────────────────────────────── */}
+        <details style={{ marginBottom: 16 }}>
+          <summary style={{
+            background: COL_SURFACE, borderRadius: 10, padding: '10px 14px',
+            border: `1px solid ${COL_BORDER}`, cursor: 'pointer',
+            fontSize: 11, color: COL_MUTED, fontWeight: 600, listStyle: 'none',
+          }}>
+            🎵 Réglages accord
+          </summary>
+          <div style={{ background: COL_SURFACE, borderRadius: '0 0 10px 10px', padding: '12px 14px 14px', border: `1px solid ${COL_BORDER}`, borderTop: 'none' }}>
+            <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end' }}>
+              <label style={{ fontSize: 11, color: COL_MUTED, flex: '0 0 auto' }}>
+                Diapason
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 4 }}>
+                  <input
+                    type="number" min="400" max="480" step="0.1" value={diapason}
+                    onChange={e => { const v = parseFloat(e.target.value); if (!isNaN(v)) setDiapason(v) }}
+                    style={{ width: 68, background: COL_BG, color: COL_TEXT, border: `1px solid ${COL_BORDER}`, borderRadius: 6, padding: '6px 8px', fontSize: 13, fontWeight: 700, fontFamily: 'inherit' }}
+                  />
+                  <span style={{ color: COL_MUTED2, fontSize: 11 }}>Hz</span>
+                </div>
+              </label>
+              <label style={{ fontSize: 11, color: COL_MUTED, flex: '1 1 auto' }}>
+                Transposition
+                <select
+                  value={transpoKey}
+                  onChange={e => setTranspoKey(e.target.value)}
+                  style={{ display: 'block', marginTop: 4, width: '100%', background: COL_BG, color: COL_TEXT, border: `1px solid ${COL_BORDER}`, borderRadius: 6, padding: '6px 8px', fontSize: 12 }}
+                >
+                  {Object.entries(TRANSPOSITIONS).map(([k, v]) => (
+                    <option key={k} value={k}>{v.label}</option>
+                  ))}
+                </select>
+              </label>
+              <label style={{ fontSize: 11, color: COL_MUTED, flex: '0 0 auto' }}>
+                Seuil justesse
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 4 }}>
+                  <input
+                    type="number" min="1" max="50" step="1" value={seuil}
+                    onChange={e => { const v = parseInt(e.target.value); if (!isNaN(v)) setSeuil(v) }}
+                    style={{ width: 48, background: COL_BG, color: COL_TEXT, border: `1px solid ${COL_BORDER}`, borderRadius: 6, padding: '6px 8px', fontSize: 13, fontWeight: 700, fontFamily: 'inherit' }}
+                  />
+                  <span style={{ color: COL_MUTED2, fontSize: 11 }}>¢</span>
+                </div>
+              </label>
+            </div>
+          </div>
+        </details>
+
+        {/* ── Réglages segmentation ────────────────────────────────────────────── */}
+        <details style={{ marginBottom: 16 }}>
+          <summary style={{
+            background: COL_SURFACE, borderRadius: 10, padding: '10px 14px',
+            border: `1px solid ${COL_BORDER}`, cursor: 'pointer',
+            fontSize: 11, color: COL_MUTED, fontWeight: 600, listStyle: 'none',
+          }}>
+            ⚙ Réglages segmentation
+          </summary>
+          <div style={{ background: COL_SURFACE, borderRadius: '0 0 10px 10px', padding: '12px 14px 14px', border: `1px solid ${COL_BORDER}`, borderTop: 'none' }}>
+            {/* Ligne 1 : champs numériques */}
+            <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end', marginBottom: 12 }}>
+              <label style={{ fontSize: 11, color: COL_MUTED, flex: 1 }}>
+                Silence
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 4 }}>
+                  <input
+                    type="number" min="20" max="300" step="5" value={silenceDurationMs}
+                    onChange={e => { const v = parseInt(e.target.value); if (!isNaN(v)) setSilenceDurationMs(v) }}
+                    style={{ width: '100%', background: COL_BG, color: COL_TEXT, border: `1px solid ${COL_BORDER}`, borderRadius: 6, padding: '6px 8px', fontSize: 13, fontWeight: 700, fontFamily: 'inherit' }}
+                  />
+                  <span style={{ color: COL_MUTED2, fontSize: 11, whiteSpace: 'nowrap' }}>ms</span>
+                </div>
+              </label>
+              <label style={{ fontSize: 11, color: COL_MUTED, flex: 1 }}>
+                Saut note
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 4 }}>
+                  <input
+                    type="number" min="20" max="200" step="5" value={noteJumpCents}
+                    onChange={e => { const v = parseInt(e.target.value); if (!isNaN(v)) setNoteJumpCents(v) }}
+                    style={{ width: '100%', background: COL_BG, color: COL_TEXT, border: `1px solid ${COL_BORDER}`, borderRadius: 6, padding: '6px 8px', fontSize: 13, fontWeight: 700, fontFamily: 'inherit' }}
+                  />
+                  <span style={{ color: COL_MUTED2, fontSize: 11, whiteSpace: 'nowrap' }}>¢</span>
+                </div>
+              </label>
+              <label style={{ fontSize: 11, color: COL_MUTED, flex: 1 }}>
+                Gate RMS
+                <div style={{ marginTop: 4 }}>
+                  <input
+                    type="number" min="0" max="0.15" step="0.005" value={gateLevel}
+                    onChange={e => { const v = parseFloat(e.target.value); if (!isNaN(v)) { setGateLevel(v); gateLevelRef.current = v } }}
+                    style={{ width: '100%', background: COL_BG, color: COL_TEXT, border: `1px solid ${COL_BORDER}`, borderRadius: 6, padding: '6px 8px', fontSize: 13, fontWeight: 700, fontFamily: 'inherit' }}
+                  />
+                </div>
+              </label>
+            </div>
+            {/* Ligne 2 : seuil clarté slider */}
+            <label style={{ fontSize: 11, color: COL_MUTED }}>
+              Seuil clarté
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
+                <input
+                  type="range" min="0.5" max="1.0" step="0.01" value={clarityThreshold}
+                  onChange={e => setClarityThreshold(Number(e.target.value))}
+                  style={{ flex: 1, accentColor: COL_ACCENT }}
+                />
+                <span style={{ color: COL_TEXT, fontWeight: 700, minWidth: 36 }}>{clarityThreshold.toFixed(2)}</span>
+              </div>
+              <div style={{ color: COL_MUTED2, fontSize: 10, marginTop: 2 }}>
+                Haut = moins de faux positifs
+              </div>
+            </label>
+            {phase === 'resultats' && (
+              <div style={{ marginTop: 8, fontSize: 10, color: COL_MUTED2 }}>
+                Modification active le bouton ↻ Recalculer sur la portée.
+              </div>
+            )}
+          </div>
+        </details>
 
         {/* ── Résultats ────────────────────────────────────────────────────────── */}
         {phase === 'resultats' && notes.length > 0 && (

@@ -33,18 +33,23 @@ function renderSpectreCanvas(canvas, freqData, sampleRate, fundamentalHz, isByte
 
   const bins    = freqData.length
   const nyquist = sampleRate / 2
-  const barW    = Math.max(1, W / bins)
+  const logMin  = Math.log10(HZ_MIN_DISPLAY)
+  const logMax  = Math.log10(HZ_MAX_DISPLAY)
 
-  for (let k = 0; k < bins; k++) {
-    const hz = (k / bins) * nyquist
-    if (hz < HZ_MIN_DISPLAY || hz > HZ_MAX_DISPLAY) continue
-    const x = hzToX(hz, W)
+  // Iterate pixel columns — accumulate max bin amplitude per column
+  for (let px = 0; px < W; px++) {
+    const hzLo = Math.pow(10, logMin + (px / W) * (logMax - logMin))
+    const hzHi = Math.pow(10, logMin + ((px + 1) / W) * (logMax - logMin))
+    const kLo  = Math.max(0, Math.floor((hzLo / nyquist) * bins))
+    const kHi  = Math.min(bins - 1, Math.ceil((hzHi / nyquist) * bins))
+    let maxRaw = 0
+    for (let k = kLo; k <= kHi; k++) maxRaw = Math.max(maxRaw, freqData[k])
     const norm = isBytes
-      ? freqData[k] / 255
-      : Math.max(0, Math.min(1, (freqData[k] - DB_FLOOR) / (DB_CEIL - DB_FLOOR)))
+      ? maxRaw / 255
+      : Math.max(0, Math.min(1, (maxRaw - DB_FLOOR) / (DB_CEIL - DB_FLOOR)))
     if (norm < 0.01) continue
     ctx.fillStyle = ampColor(norm)
-    ctx.fillRect(x, H - norm * H, barW + 0.5, norm * H)
+    ctx.fillRect(px, H - norm * H, 1, norm * H)
   }
 
   // Grille fréquences
