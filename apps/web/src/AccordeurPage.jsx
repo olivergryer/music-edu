@@ -19,8 +19,8 @@ import {
 // ─── Constantes UI ─────────────────────────────────────────────────────────────
 const DIAPASON_DEFAULT        = 442
 const SEUIL_DEFAULT           = 10
-const SILENCE_MS_DEFAULT      = 80
-const NOTE_JUMP_CENTS_DEFAULT = 60
+const SILENCE_MS_DEFAULT      = 50
+const NOTE_JUMP_CENTS_DEFAULT = 30
 const REFERENTIELS            = ['tempere', '5-limite']
 const COL_BG             = '#030712'
 const COL_SURFACE        = '#0a0f1a'
@@ -151,8 +151,8 @@ export default function AccordeurPage() {
   // ── Seuils segmentation + YIN (curseurs de calibration) ─────────────────────
   const [silenceDurationMs, setSilenceDurationMs] = useState(SILENCE_MS_DEFAULT)
   const [noteJumpCents,     setNoteJumpCents]     = useState(NOTE_JUMP_CENTS_DEFAULT)
-  const [clarityThreshold,  setClarityThreshold]  = useState(0.9)
-  const [gateLevel,         setGateLevel]         = useState(0.01)
+  const [clarityThreshold,  setClarityThreshold]  = useState(0.85)
+  const [gateLevel,         setGateLevel]         = useState(0.02)
   const gateLevelRef = useRef(0.01)
 
   // ── Mode live ─────────────────────────────────────────────────────────────────
