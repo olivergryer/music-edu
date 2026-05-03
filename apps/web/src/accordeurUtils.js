@@ -114,8 +114,8 @@ function filtrerIsolés(serie) {
 }
 
 export function analyserBuffer(audioBuffer, opts = {}) {
-  const clarityThreshold = opts.clarityThreshold ?? 0.9
-  const rmsGate   = opts.rmsGate ?? 0.01
+  const clarityThreshold = opts.clarityThreshold ?? 0.85
+  const rmsGate   = opts.rmsGate ?? 0.02
   const sampleRate  = audioBuffer.sampleRate
   const channelData = audioBuffer.getChannelData(0)
 
