@@ -404,21 +404,26 @@ function fftReal(signal) {
   return { real, imag }
 }
 
-// Retourne Float32Array[fftSize/2] de valeurs en dB (moyenne de N fenêtres Hann)
-export function computeAverageSpectrum(audioBuffer, fftSize = 4096) {
+function _spectrumFromSamples(data, fftSize) {
   const N_FRAMES = 8
-  const data     = audioBuffer.getChannelData(0)
   const hann     = hannWindow(fftSize)
   const bins     = fftSize / 2
   const accum    = new Float64Array(bins)
   let   count    = 0
 
-  const step = Math.max(1, Math.floor((data.length - fftSize) / (N_FRAMES - 1)))
+  // Pad if segment shorter than fftSize
+  let src = data
+  if (src.length < fftSize) {
+    src = new Float32Array(fftSize)
+    src.set(data)
+  }
+
+  const step = Math.max(1, Math.floor((src.length - fftSize) / (N_FRAMES - 1)))
   for (let f = 0; f < N_FRAMES; f++) {
-    const start = Math.min(f * step, data.length - fftSize)
+    const start = Math.min(f * step, src.length - fftSize)
     if (start < 0) break
     const windowed = new Float32Array(fftSize)
-    for (let i = 0; i < fftSize; i++) windowed[i] = data[start + i] * hann[i]
+    for (let i = 0; i < fftSize; i++) windowed[i] = src[start + i] * hann[i]
     const { real, imag } = fftReal(windowed)
     for (let k = 0; k < bins; k++) accum[k] += Math.sqrt(real[k] * real[k] + imag[k] * imag[k])
     count++
@@ -430,4 +435,19 @@ export function computeAverageSpectrum(audioBuffer, fftSize = 4096) {
     result[k] = mag > 0 ? 20 * Math.log10(mag) : -120
   }
   return result
+}
+
+export function computeAverageSpectrum(audioBuffer, fftSize = 4096) {
+  return _spectrumFromSamples(audioBuffer.getChannelData(0), fftSize)
+}
+
+// Retourne un tableau de Float32Array, un spectre par note (basé sur debutMs/finMs)
+export function computeSpectreParNote(audioBuffer, notes, fftSize = 4096) {
+  const data = audioBuffer.getChannelData(0)
+  const sr   = audioBuffer.sampleRate
+  return notes.map(note => {
+    const start = Math.max(0, Math.floor((note.debutMs / 1000) * sr))
+    const end   = Math.min(data.length, Math.floor((note.finMs / 1000) * sr))
+    return _spectrumFromSamples(data.slice(start, end), fftSize)
+  })
 }

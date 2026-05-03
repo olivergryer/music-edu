@@ -29,14 +29,12 @@ function bestOctaveShift(midis) {
   return best
 }
 
-// 72px par note + marge clef/armure
-const NOTE_PX = 40
 const STAVE_MARGIN = 140
 
-export default function AccordeurStaff({ notes, seuil = 10, transpoKey = 'C', containerWidth = 500, height = 180 }) {
+export default function AccordeurStaff({ notes, seuil = 10, transpoKey = 'C', containerWidth = 500, height = 180, notePx = 52 }) {
   const ref = useRef(null)
 
-  const staveWidth = Math.max(containerWidth - 4, notes?.length * NOTE_PX + STAVE_MARGIN)
+  const staveWidth = Math.max(containerWidth - 4, notes?.length * notePx + STAVE_MARGIN)
 
   useEffect(() => {
     if (!ref.current || !notes?.length) return

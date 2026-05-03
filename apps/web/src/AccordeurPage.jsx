@@ -9,7 +9,7 @@ import {
   lireStructures, sauvegarderStructure, supprimerStructure,
   lireSessions, sauvegarderSession, supprimerSession,
   structureVersURL, urlVersStructure,
-  transposerNom, computeAverageSpectrum,
+  transposerNom, computeSpectreParNote,
   TRANSPOSITIONS, uuid,
   NOTE_NAMES_FR, DEFAULT_STRUCTURES,
   frameRMS, preEmphasis, HZ_MIN, HZ_MAX,
@@ -169,7 +169,7 @@ export default function AccordeurPage() {
   // ── Spectre FFT ───────────────────────────────────────────────────────────────
   const [showSpectre,    setShowSpectre]    = useState(false)
   const spectreAnalyserRef = useRef(null)   // 2e AnalyserNode live (fftSize=4096)
-  const spectreDataRef     = useRef(null)   // Float32Array post-recording
+  const spectreParNoteRef  = useRef(null)   // Float32Array[] post-recording, un par note
   const liveHzRef          = useRef(null)   // Hz courant pour marqueurs harmoniques
 
   // ── Pipeline ─────────────────────────────────────────────────────────────────
@@ -359,7 +359,7 @@ export default function AccordeurPage() {
 
     audioBufferRef.current = audioBuffer
     serieRef.current = serieCalc
-    spectreDataRef.current = computeAverageSpectrum(audioBuffer)
+    spectreParNoteRef.current = computeSpectreParNote(audioBuffer, notesAv)
     setNotes(notesAv)
     setCourbe(courbeB)
     setScoreP(scorePedagogique(notesAv, seuil))
@@ -1008,7 +1008,7 @@ export default function AccordeurPage() {
             {/* Vue Portée — scroll horizontal */}
             {vue === 'portee' && (
               <div style={{ position: 'relative', background: COL_SURFACE, borderRadius: 12, padding: '16px 8px', marginBottom: 16, border: `1px solid ${COL_BORDER}` }}>
-                <AccordeurStaff notes={notes} seuil={seuil} transpoKey={transpoKey} containerWidth={524} height={180} />
+                <AccordeurStaff notes={notes} seuil={seuil} transpoKey={transpoKey} containerWidth={524} height={180} notePx={window.innerWidth <= 540 ? 26 : 52} />
                 {dirty && (
                   <div style={{ position: 'absolute', inset: 0, borderRadius: 12, background: 'rgba(3,7,18,0.72)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <Btn onClick={recalculer} style={{ fontSize: 13, padding: '10px 28px' }}>↻ Recalculer</Btn>
@@ -1157,9 +1157,11 @@ export default function AccordeurPage() {
         <SpectrePaneau
           mode={modeLive ? 'live' : 'static'}
           spectreAnalyserRef={spectreAnalyserRef}
-          spectreData={spectreDataRef.current}
+          spectreParNote={spectreParNoteRef.current}
+          notes={notes}
           sampleRate={liveAudioCtxRef.current?.sampleRate ?? 44100}
           fundamentalHz={modeLive ? liveHzRef.current : null}
+          muCents={liveNote?.muCents ?? null}
           onClose={() => setShowSpectre(false)}
         />
       )}

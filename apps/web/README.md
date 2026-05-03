@@ -21,7 +21,7 @@ If you are developing a production application, we recommend using TypeScript wi
 cd ..
 cd ..
 git add .
-git commit -m "V2 - Authentification"
+git commit -m "V2 - FFT viewer"
 git push
 cd apps/web
 
@@ -36,3 +36,9 @@ https://github.com/thedotmack/claude-mem
 
 # UI UX Pro Max
 https://github.com/nextlevelbuilder/ui-ux-pro-max-skill
+
+# Marketplace Claude Code
+
+frontend-backend design
+
+figma
