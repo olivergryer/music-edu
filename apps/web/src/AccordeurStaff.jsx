@@ -63,7 +63,7 @@ export default function AccordeurStaff({ notes, seuil = 10, transpoKey = 'C', co
         stave.addClef('treble')
       }
 
-      stave.setStyle({ strokeStyle: '#e5e7eb', fillStyle: '#e5e7eb' })
+      stave.setStyle({ strokeStyle: '#f9fafb', fillStyle: '#f9fafb' })
       stave.setContext(ctx).draw()
 
       // ── StaveNotes ───────────────────────────────────────────────────────────
