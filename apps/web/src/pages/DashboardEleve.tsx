@@ -90,7 +90,7 @@ export default function DashboardEleve() {
     <div style={{
       minHeight: '100dvh', background: '#030712', color: '#f9fafb',
       display: 'flex', flexDirection: 'column', alignItems: 'center',
-      padding: '12px 14px 40px', fontFamily: "'Inter','Segoe UI',sans-serif",
+      padding: '12px 14px 40px', fontFamily: "'Poppins','Inter','Segoe UI',sans-serif",
     }}>
       <div style={{ width: '100%', maxWidth: 540 }}>
 
@@ -103,7 +103,7 @@ export default function DashboardEleve() {
           </div>
         </div>
 
-        <h1 style={{ fontSize: 20, fontWeight: 900, margin: '0 0 20px' }}>Tableau de bord</h1>
+        <h1 style={{ fontSize: 20, fontWeight: 900, margin: '0 0 20px', fontFamily: "'Righteous','Inter',sans-serif" }}>Tableau de bord</h1>
 
         {/* Niveau + XP */}
         <div style={{ background: '#0a0f1a', borderRadius: 16, padding: '20px 18px', marginBottom: 14 }}>

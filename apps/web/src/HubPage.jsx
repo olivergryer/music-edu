@@ -18,10 +18,10 @@ function ModuleCard({ label, desc, active }) {
         padding: '24px 20px',
         opacity: active ? 1 : 0.4,
         cursor: active ? 'pointer' : 'default',
-        transition: 'border-color 0.15s',
+        transition: 'border-color 0.2s, box-shadow 0.2s',
       }}
-      onMouseEnter={e => { if (active) e.currentTarget.style.borderColor = '#7c3aed' }}
-      onMouseLeave={e => { if (active) e.currentTarget.style.borderColor = '#1f2937' }}
+      onMouseEnter={e => { if (active) { e.currentTarget.style.borderColor = '#7c3aed'; e.currentTarget.style.boxShadow = '0 0 16px #7c3aed44' } }}
+      onMouseLeave={e => { if (active) { e.currentTarget.style.borderColor = '#1f2937'; e.currentTarget.style.boxShadow = 'none' } }}
     >
       <div style={{ fontSize: 18, fontWeight: 800, color: '#c084fc', marginBottom: 8 }}>{label}</div>
       <div style={{ fontSize: 11, color: '#4b5563', lineHeight: 1.5 }}>{desc}</div>
@@ -38,9 +38,9 @@ export default function HubPage() {
     <div style={{
       minHeight: '100dvh', background: '#030712', color: '#f9fafb',
       display: 'flex', flexDirection: 'column', alignItems: 'center',
-      padding: '48px 20px', fontFamily: "'Inter','Segoe UI',sans-serif",
+      padding: '48px 20px', fontFamily: "'Poppins','Inter','Segoe UI',sans-serif",
     }}>
-      <h1 style={{ fontSize: 36, fontWeight: 900, color: '#c084fc', margin: '0 0 8px' }}>
+      <h1 style={{ fontSize: 36, fontWeight: 900, color: '#c084fc', margin: '0 0 8px', fontFamily: "'Righteous','Inter',sans-serif" }}>
         Tessitura
       </h1>
       <p style={{ color: '#4b5563', fontSize: 13, marginBottom: 48, margin: '0 0 48px' }}>

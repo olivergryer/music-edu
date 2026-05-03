@@ -1,0 +1,21 @@
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  overscroll-behavior: contain;
+  font-family: 'Poppins', 'Inter', 'Segoe UI', sans-serif;
+}
+
+button, a, [role="button"] {
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+button { min-height: 44px; }
+
+button:focus-visible, a:focus-visible {
+  outline: 2px solid #c084fc;
+  outline-offset: 2px;
+  border-radius: 4px;
+}

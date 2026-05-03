@@ -32,11 +32,18 @@ const MODULE_LABELS: Record<string, string> = {
   general: '⚙️ Général',
 }
 
+const TYPE_ICONS: Record<string, JSX.Element> = {
+  bug: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="4"/><path d="M12 8V4m0 16v-4M8 12H4m16 0h-4M6.3 6.3l-2-2m13.4 13.4-2-2M6.3 17.7l-2 2m13.4-13.4-2 2"/></svg>,
+  idee: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2a7 7 0 0 1 4.9 11.9L15 17H9l-1.9-3.1A7 7 0 0 1 12 2z"/><path d="M9 21h6m-6-3h6"/></svg>,
+  confusion: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><circle cx="12" cy="17" r=".5" fill="currentColor"/></svg>,
+  top: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M7 10v12M15 5.88L14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3 3 0 0 1 3 3.88z"/></svg>,
+}
+
 const TYPES = [
-  { id: 'bug',       icon: '🐛', label: 'Bug' },
-  { id: 'idee',      icon: '💡', label: 'Idée' },
-  { id: 'confusion', icon: '😕', label: 'Confusion' },
-  { id: 'top',       icon: '👍', label: 'Top !' },
+  { id: 'bug',       label: 'Bug' },
+  { id: 'idee',      label: 'Idée' },
+  { id: 'confusion', label: 'Confusion' },
+  { id: 'top',       label: 'Top !' },
 ]
 
 const inp: React.CSSProperties = {
@@ -98,7 +105,7 @@ export default function FeedbackPage() {
     <div style={{
       minHeight: '100dvh', background: '#030712', color: '#f9fafb',
       display: 'flex', flexDirection: 'column', alignItems: 'center',
-      padding: '12px 14px 40px', fontFamily: "'Inter','Segoe UI',sans-serif",
+      padding: '12px 14px 40px', fontFamily: "'Poppins','Inter','Segoe UI',sans-serif",
     }}>
       <div style={{ width: '100%', maxWidth: 520 }}>
 
@@ -192,9 +199,10 @@ export default function FeedbackPage() {
                       outline: type === t.id ? '2px solid #7c3aed' : '1px solid #1f2937',
                       color: type === t.id ? '#c084fc' : '#6b7280',
                       fontSize: 11, fontWeight: 700, textAlign: 'center',
+                      minHeight: 64, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6,
                     }}
                   >
-                    <div style={{ fontSize: 18, marginBottom: 4 }}>{t.icon}</div>
+                    {TYPE_ICONS[t.id]}
                     {t.label}
                   </button>
                 ))}
@@ -223,7 +231,7 @@ export default function FeedbackPage() {
                     key={n}
                     type="button"
                     onClick={() => setNote(note === n ? 0 : n)}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 28, padding: 4, opacity: n <= note ? 1 : 0.3, transition: 'opacity 0.1s' }}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 28, padding: 4, opacity: n <= note ? 1 : 0.3, transition: 'opacity 0.1s', minHeight: 44, minWidth: 44 }}
                   >
                     ⭐
                   </button>

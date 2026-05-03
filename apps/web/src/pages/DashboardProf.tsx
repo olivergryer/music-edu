@@ -83,7 +83,7 @@ export default function DashboardProf() {
     <div style={{
       minHeight: '100dvh', background: '#030712', color: '#f9fafb',
       display: 'flex', flexDirection: 'column', alignItems: 'center',
-      padding: '12px 14px 40px', fontFamily: "'Inter','Segoe UI',sans-serif",
+      padding: '12px 14px 40px', fontFamily: "'Poppins','Inter','Segoe UI',sans-serif",
     }}>
       <div style={{ width: '100%', maxWidth: 600 }}>
 
@@ -113,7 +113,7 @@ export default function DashboardProf() {
           </div>
         )}
 
-        <h1 style={{ fontSize: 20, fontWeight: 900, color: '#f9fafb', margin: '0 0 16px' }}>
+        <h1 style={{ fontSize: 20, fontWeight: 900, color: '#f9fafb', margin: '0 0 16px', fontFamily: "'Righteous','Inter',sans-serif" }}>
           Mes élèves {!loading && `(${eleves.length})`}
         </h1>
 

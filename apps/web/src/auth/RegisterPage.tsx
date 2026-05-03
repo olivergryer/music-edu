@@ -12,7 +12,7 @@ function generateTeacherCode(): string {
 }
 
 const s = {
-  page: { minHeight: '100vh', background: '#030712', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Inter', 'Segoe UI', sans-serif" },
+  page: { minHeight: '100vh', background: '#030712', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Poppins', 'Inter', 'Segoe UI', sans-serif" },
   card: { background: '#0a0f1a', borderRadius: 16, padding: '40px 36px', width: '100%', maxWidth: 400, display: 'flex', flexDirection: 'column' as const, gap: 20 },
   title: { color: '#f9fafb', fontSize: 24, fontWeight: 700, margin: 0 },
   label: { color: '#9ca3af', fontSize: 13, marginBottom: 6, display: 'block' },
