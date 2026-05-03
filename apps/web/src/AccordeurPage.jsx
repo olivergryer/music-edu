@@ -19,7 +19,7 @@ import {
 // ─── Constantes UI ─────────────────────────────────────────────────────────────
 const DIAPASON_DEFAULT        = 442
 const SEUIL_DEFAULT           = 10
-const SILENCE_MS_DEFAULT      = 50
+const SILENCE_MS_DEFAULT      = 40
 const NOTE_JUMP_CENTS_DEFAULT = 30
 const REFERENTIELS            = ['tempere', '5-limite']
 const COL_BG             = '#030712'
@@ -144,14 +144,14 @@ export default function AccordeurPage() {
   // ── Paramètres ──────────────────────────────────────────────────────────────
   const [diapason,     setDiapason]     = useState(DIAPASON_DEFAULT)
   const [transpoKey,   setTranspoKey]   = useState('C')
-  const [referentiel,  setReferentiel]  = useState('tempere')
+  const [referentiel,  setReferentiel]  = useState('5-limite')
   const [seuil,        setSeuil]        = useState(SEUIL_DEFAULT)
   const [structureId,  setStructureId]  = useState(null)
 
   // ── Seuils segmentation + YIN (curseurs de calibration) ─────────────────────
   const [silenceDurationMs, setSilenceDurationMs] = useState(SILENCE_MS_DEFAULT)
   const [noteJumpCents,     setNoteJumpCents]     = useState(NOTE_JUMP_CENTS_DEFAULT)
-  const [clarityThreshold,  setClarityThreshold]  = useState(0.85)
+  const [clarityThreshold,  setClarityThreshold]  = useState(0.82)
   const [gateLevel,         setGateLevel]         = useState(0.02)
   const gateLevelRef = useRef(0.01)
 
@@ -626,7 +626,7 @@ export default function AccordeurPage() {
                   value={diapason}
                   onChange={e => {
                     const v = parseFloat(e.target.value)
-                    if (!isNaN(v) && v >= 400 && v <= 480) setDiapason(v)
+                    if (!isNaN(v)) setDiapason(v)
                   }}
                   style={{
                     width: '100%', background: COL_BG, color: COL_TEXT,
