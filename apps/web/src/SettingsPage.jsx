@@ -36,6 +36,7 @@ function FormulaCard({ formula, selected, onToggle }) {
         height={90}
         showClef={false}
         showTimeSig={false}
+        compact={true}
       />
     </div>
   );

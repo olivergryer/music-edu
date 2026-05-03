@@ -98,33 +98,37 @@ id,nom,groupe,temps,niveau,figures
 bin_q,Noire,binary,1,C1/1,q
 bin_qr,Soupir,binary,1,C1/1,qr
 bin_h,Blanche,binary,2,C1/1,h
-bin_hr,Demi-soupir (2 temps),binary,2,C1/1,hr
+bin_hr,Demi-pause (2 temps),binary,2,C1/1,hr
+bin_hd,Blanche-pointée (3 temps),binary, 3, C1/1,hdr
 bin_ee,Deux croches,binary,1,C1/1,"8,8"
-ter_qd,Noire pointée,ternary,1,C1/1,qd
-ter_eee,Trois croches,ternary,1,C1/1,"8,8,8"
-ter_qe,Noire + croche,ternary,1,C1/1,"q,8"
-ter_eq,Croche + noire,ternary,1,C1/1,"8,q"
 # ── Niveau C1/2 — Noire pointée et rythmes ternaires composés ──────────────────
 bin_qde,Noire pointée + croche,binary,2,C1/2,"qd,8"
 bin_eqd,Croche + noire pointée,binary,2,C1/2,"8,qd"
-ter_ree,Demi-soupir + deux croches,ternary,1,C1/2,"8r,8,8"
-ter_eer,Deux croches + demi-soupir,ternary,1,C1/2,"8,8,8r"
-ter_qde_qde,Deux noires pointées,ternary,2,C1/2,"qd,qd"
+ter_qd,Noire pointée,ternary,1,C1/2,qd
+ter_hd,Blanche pointée,ternary,2,C1/2,hd
+ter_eee,Trois croches,ternary,1,C1/2,"8,8,8"
+ter_qe,Noire + croche,ternary,1,C1/2,"q,8"
 # ── Niveau C1/3 — Triolet ──────────────────────────────────────────────────────
 bin_ttt,Triolet de croches,binary,1,C1/3,"8t,8t,8t"
+bin_eds,Croche-pointée + double,binary,1,C1/3,"8d,16"
+ter_eq,Croche + noire,ternary,1,C1/3,"8,q"
+ter_ree,Demi-soupir + deux croches,ternary,1,C1/3,"8r,8,8"
+ter_eer,Deux croches + demi-soupir,ternary,1,C1/3,"8,8,8r"
 # ── Niveau C1/4 — Doubles croches ──────────────────────────────────────────────
 bin_ssss,Quatre doubles croches,binary,1,C1/4,"16,16,16,16"
 bin_ess,Croche + deux doubles croches,binary,1,C1/4,"8,16,16"
 bin_sse,Deux doubles croches + croche,binary,1,C1/4,"16,16,8"
 bin_sser,Deux doubles croches + demi-soupir,binary,1,C1/4,"16,16,8r"
-# ── Niveau C2/1 — Blanche pointée ──────────────────────────────────────────────
-ter_hd,Blanche pointée,ternary,2,C2/1,hd
+bin_erss,Demi-soupir + deux doubles croches,binary,1,C1/4,"8r,16,16"
+# ── Niveau C2/1 —  ──────────────────────────────────────────────
+bin_ere,Demi-soupir + croche,binary,1,C2/1,"8r,8"
+bin_eer,Croche + demi-soupir,binary,1,C2/1,"8,8r"
+bin_eqe,Syncope croche-noire-croche,binary,2,C2/1,"8,q,8"
+ter_edse,Sicilienne ternaire,ternary,1,C2/1,"8d,16,8"  
 # ── Niveau C2/2 — Syncopes et contretemps ──────────────────────────────────────
-bin_ere,Demi-soupir + croche,binary,1,C2/2,"8r,8"
-bin_eer,Croche + demi-soupir,binary,1,C2/2,"8,8r"
-bin_eqe,Syncope croche-noire-croche,binary,2,C2/2,"8,q,8"
 ter_ere,Croche-demi-soupir-croche,ternary,1,C2/2,"8,8r,8"
+bin_ses,Syncope double-croche-double,binary,1,C2/2,"16,8,16"
+
 # ── Niveaux C2/3, C2/4, C3 — À compléter selon votre progression ───────────────
 # Exemple (décommenter et adapter) :
 # ma_formule,Ma formule,binary,1,C2/3,"8,16,16"
-#bin_ses,Syncope double-croche-double,binary,1,C3,"16,8,16"

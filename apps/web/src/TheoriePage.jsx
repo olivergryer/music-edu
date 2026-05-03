@@ -101,8 +101,11 @@ function buildPool(questions, mode, level, selectedCatIds) {
 }
 
 function getTimeLimit(q) {
-  const base = q.temps_limite ? parseInt(q.temps_limite) : 10
-  return q.type === 'texte' ? base * 2 : base
+  if (q.temps_limite) {
+    const base = parseInt(q.temps_limite)
+    return q.type === 'texte' ? base * 2 : base
+  }
+  return q.type === 'texte' ? 30 : 20
 }
 
 function getChoices(q) {

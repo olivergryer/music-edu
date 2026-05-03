@@ -85,6 +85,7 @@ export default function RythmStaff({
   height       = 150,
   showClef     = true,
   showTimeSig  = true,
+  compact      = false,
 }) {
   const ref         = useRef(null);
   const [renderWidth, setRenderWidth] = useState(null);
@@ -133,8 +134,13 @@ export default function RythmStaff({
       const DECO = "#4b5563";
       const beams = buildBeams(figures, vexNotes, timeSig);
 
-      const noteWidth = stave.getX() + stave.getWidth() - stave.getNoteStartX() - 10;
-      new Formatter().joinVoices([voice]).format([voice], noteWidth);
+      const availableWidth = stave.getX() + stave.getWidth() - stave.getNoteStartX() - 10;
+      // compact = limite la largeur de formatage pour éviter l'étirement des notes
+      const formatWidth = compact
+        ? Math.min(availableWidth, figures.length * 55 + 20)
+        : availableWidth;
+
+      new Formatter().joinVoices([voice]).format([voice], formatWidth);
       voice.draw(ctx, stave);
 
       // ── Dessin des ligatures ──────────────────────────────────────────────────
@@ -176,37 +182,33 @@ export default function RythmStaff({
         svg.style.background = "transparent";
         svg.querySelectorAll("text").forEach(t => { t.style.fill = "#6b7280"; });
 
-        // ── Flèches de décalage temporel ────────────────────────────────────
+        // ── Points d'impact temporel (remplacent les flèches) ────────────────
+        // Dot coloré à gauche de la note = trop tôt, à droite = trop tard
         if (scoreDevs && sessionBpm) {
           const beatMs = 60000 / sessionBpm;
-          vexNotes.forEach((note, i) => {
-            const dev   = scoreDevs[i];
-            const grade = scoreGrades?.[i];
-            if (dev == null || !grade) return;
-            const x     = note.getAbsoluteX();
-            const pct   = Math.round(Math.abs(dev) / beatMs * 100);
-            const capped = Math.min(Math.abs(dev), 420);
-            const size  = 9 + Math.round((capped / 420) * 5);
-            const arrow = dev < 0 ? "←" : "→";
-            const color = DEV_COLORS[grade] ?? "#6b7280";
-            const el    = document.createElementNS("http://www.w3.org/2000/svg", "text");
-            el.setAttribute("x", x);
-            el.setAttribute("y", staveY - 2);
-            el.setAttribute("text-anchor", "middle");
-            el.setAttribute("font-size", size);
-            el.setAttribute("fill", color);
-            el.setAttribute("font-family", "Arial");
-            el.setAttribute("font-weight", "700");
-            el.setAttribute("title", `${dev < 0 ? "Trop tôt" : "Trop tard"} : ${pct}% du temps`);
-            el.textContent = arrow;
-            svg.appendChild(el);
+          vexNotes.forEach((note, idx) => {
+            const dev   = scoreDevs[idx];
+            const grade = scoreGrades?.[idx];
+            if (dev == null || grade == null || grade === "miss") return;
+            const x        = note.getAbsoluteX();
+            const absDev   = Math.abs(dev);
+            const offsetPx = 6 + Math.round(Math.min(absDev, beatMs * 0.5) / (beatMs * 0.5) * 18);
+            const cx       = x + (dev < 0 ? -offsetPx : offsetPx);
+            const color    = DEV_COLORS[grade] ?? "#6b7280";
+            const dot      = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+            dot.setAttribute("cx", cx);
+            dot.setAttribute("cy", staveY - 6);
+            dot.setAttribute("r", "4");
+            dot.style.fill    = color;
+            dot.style.opacity = "0.9";
+            svg.appendChild(dot);
           });
         }
       }
     } catch (err) {
       console.warn("VexFlow:", err.message ?? err);
     }
-  }, [figures, timeSig, activeIdx, scoreGrades, scoreDevs, sessionBpm, renderWidth, height, showClef, showTimeSig]);
+  }, [figures, timeSig, activeIdx, scoreGrades, scoreDevs, sessionBpm, renderWidth, height, showClef, showTimeSig, compact]);
 
   return <div ref={ref} style={{ width:"100%", maxWidth:width, overflow:"hidden" }} />;
 }

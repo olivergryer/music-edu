@@ -54,23 +54,24 @@ export const FORMULA_CATALOG = [
 ];
 
 // ─── Formules introduites à chaque niveau ─────────────────────────────────────
-export const LEVEL_ORDER = ["C1/1","C1/2","C1/3","C1/4","C2/1","C2/2","C2/3","C2/4","C3"];
+export const LEVEL_ORDER = [
+  "Apprenti", "Musicien", "Instrumentiste", "Soliste",
+  "Concertiste", "Virtuose", "Maestro",
+];
 
 export const LEVEL_FORMULA_IDS = {
-  "C1/1": ["bin_q","bin_qr","bin_h","bin_hr","bin_ee",
-           "ter_qd","ter_eee","ter_qe","ter_eq"],
-  "C1/2": ["bin_qde","bin_eqd","ter_ree","ter_eer","ter_qde_qde"],
-  "C1/3": ["bin_ttt"],
-  "C1/4": ["bin_ssss","bin_ess","bin_sse","bin_sser"],
-  "C2/1": ["ter_hd"],
-  "C2/2": ["bin_ere","bin_eer","bin_eqe","ter_ere"],
-  "C2/3": [],
-  "C2/4": [],
-  "C3":   [],
+  "Apprenti":      ["bin_q","bin_qr","bin_h","bin_hr","bin_ee",
+                    "ter_qd","ter_eee","ter_qe","ter_eq"],
+  "Musicien":      ["bin_qde","bin_eqd","ter_ree","ter_eer","ter_qde_qde"],
+  "Instrumentiste":["bin_ttt"],
+  "Soliste":       ["bin_ssss","bin_ess","bin_sse","bin_sser"],
+  "Concertiste":   ["ter_hd"],
+  "Virtuose":      ["bin_ere","bin_eer","bin_eqe","ter_ere"],
+  "Maestro":       [],
 };
 
-// Formules actives par défaut : C1/1
-const DEFAULT_SELECTED = new Set(LEVEL_FORMULA_IDS["C1/1"]);
+// Formules actives par défaut : Apprenti
+const DEFAULT_SELECTED = new Set(LEVEL_FORMULA_IDS["Apprenti"]);
 
 // ─── Générateur aléatoire temps par temps ────────────────────────────────────
 function generateMeasure(timeSig, formulaPool) {
@@ -209,8 +210,6 @@ function figDur(fig) {
 
 function toTimestamps(figs, bpm, timeSig) {
   const isCompound = ["12/8", "6/8", "9/8"].includes(timeSig);
-  // BPM = beats/min. Binary beat = quarter; ternary beat = dotted quarter = 1.5 quarters.
-  // figDur() returns value in quarters, so normalize to ms-per-quarter.
   const quarterMs = isCompound ? (60000 / bpm) / 1.5 : 60000 / bpm;
   const ts = []; let t = 0;
   figs.forEach(fig => { ts.push(t); t += figDur(fig) * quarterMs; });
@@ -218,14 +217,19 @@ function toTimestamps(figs, bpm, timeSig) {
 }
 
 // ─── Scoring ──────────────────────────────────────────────────────────────────
-const TOL = { perfect:80, good:160, ok:280 };
-function scoreTap(actual, expected) {
+// TOL.ok conservé uniquement pour la fenêtre d'anticipation dans handleTap
+const TOL = { ok:280 };
+// Tolérances en % du beat — plus strict à tempo élevé
+function scoreTap(actual, expected, beatMs) {
   const dev = actual - expected; // + = tard, - = tôt
-  const d = Math.abs(dev);
-  if (d <= TOL.perfect) return { label:"Parfait ✦", pts:100, grade:"perfect", dev };
-  if (d <= TOL.good)    return { label:"Bien ✓",    pts:70,  grade:"good",    dev };
-  if (d <= TOL.ok)      return { label:"Moyen",     pts:40,  grade:"ok",      dev };
-  return                       { label:"Raté ✕",    pts:0,   grade:"miss",    dev };
+  const d   = Math.abs(dev);
+  const pf  = beatMs * 0.10;
+  const gd  = beatMs * 0.18;
+  const ok  = beatMs * 0.30;
+  if (d <= pf) return { label:"Parfait ✦", pts:100, grade:"perfect", dev };
+  if (d <= gd) return { label:"Bien ✓",    pts:70,  grade:"good",    dev };
+  if (d <= ok) return { label:"Moyen",     pts:40,  grade:"ok",      dev };
+  return             { label:"Raté ✕",    pts:0,   grade:"miss",    dev };
 }
 const GRADE_COLOR = { perfect:"#a78bfa", good:"#34d399", ok:"#fbbf24", miss:"#f87171" };
 
@@ -241,46 +245,6 @@ const ACTIVITIES   = [
   { id:3, label:"Reconnaître écrit" },
   { id:4, label:"Reconnaître joué" },
 ];
-
-// ─── Slider double extrémité ─────────────────────────────────────────────────
-function DualRangeSlider({ lo, hi, setLo, setHi, disabled }) {
-  const maxIdx = TEMPI.length - 1;
-  const loIdx  = closestTempoIdx(lo);
-  const hiIdx  = closestTempoIdx(hi);
-  const minI   = Math.min(loIdx, hiIdx);
-  const maxI   = Math.max(loIdx, hiIdx);
-  // Le pouce lo prend le dessus quand il est dans la moitié haute (évite le blocage)
-  const loZ = loIdx > maxIdx / 2 ? 3 : 2;
-  const hiZ = loIdx > maxIdx / 2 ? 2 : 3;
-  return (
-    <div style={{ position:"relative", width:"100%", height:20 }}>
-      {/* Track fond */}
-      <div style={{
-        position:"absolute", top:"50%", transform:"translateY(-50%)",
-        left:0, right:0, height:4, background:"#1f2937", borderRadius:2, pointerEvents:"none",
-      }}>
-        <div style={{
-          position:"absolute",
-          left:`${(minI / maxIdx) * 100}%`,
-          width:`${((maxI - minI) / maxIdx) * 100}%`,
-          height:"100%", background:"#7c3aed", borderRadius:2,
-        }}/>
-      </div>
-      <input type="range" min={0} max={maxIdx} value={loIdx}
-        onChange={e => setLo(TEMPI[+e.target.value])}
-        disabled={disabled}
-        style={{ position:"absolute", width:"100%", height:"100%",
-          opacity:0, cursor:disabled?"not-allowed":"pointer", margin:0, padding:0, zIndex:loZ }}
-      />
-      <input type="range" min={0} max={maxIdx} value={hiIdx}
-        onChange={e => setHi(TEMPI[+e.target.value])}
-        disabled={disabled}
-        style={{ position:"absolute", width:"100%", height:"100%",
-          opacity:0, cursor:disabled?"not-allowed":"pointer", margin:0, padding:0, zIndex:hiZ }}
-      />
-    </div>
-  );
-}
 
 // ─── Métronome visuel ────────────────────────────────────────────────────────
 function MetronomeViz({ flash }) {
@@ -408,7 +372,10 @@ export default function RythmApp() {
   const {
     formulaCatalog, levelOrder, levelFormulaIds,
     sheetId, sheetStatus, sheetError, setSheetId, resetToDefault,
-  } = useSheetData({ formulaCatalog: FORMULA_CATALOG, levelOrder: LEVEL_ORDER, levelFormulaIds: LEVEL_FORMULA_IDS });
+  } = useSheetData(
+    { formulaCatalog: FORMULA_CATALOG, levelOrder: LEVEL_ORDER, levelFormulaIds: LEVEL_FORMULA_IDS },
+    "/formules-rythme-template.csv"
+  );
 
   const [currentPage,     setCurrentPage]     = useState("home");
   const [selectedFormulas,setSelectedFormulas] = useState(DEFAULT_SELECTED);
@@ -439,8 +406,8 @@ export default function RythmApp() {
   const [beatFlash,    setBeatFlash]    = useState(false);
   const [beatStrong,   setBeatStrong]   = useState(false);
   const [metroDotFlash,setMetroDotFlash]= useState(false);
-  const [flashOffsetMs,setFlashOffsetMs]= useState(-50);
-  const [lives,        setLives]        = useState(3);
+  const [flashOffsetMs,   setFlashOffsetMs]   = useState(-50);
+  const [detectedOffset,  setDetectedOffset]  = useState(null);
   const [rhythmSoundOn, setRhythmSoundOn] = useState(true);
   const [tapSoundOn,    setTapSoundOn]    = useState(true);
   const rhythmSoundRef = useRef(true);
@@ -674,7 +641,17 @@ export default function RythmApp() {
         setPhase("countdown"); setCountdownN(3);
         pulse(false);
         tid(() => { setCountdownN(4); pulse(false); }, beatMs);
-        tid(() => { setPhase("playing"); playPatternAudio(pat, bpm); }, 2 * beatMs);
+        tid(() => {
+          setPhase("playing");
+          playPatternAudio(pat, bpm);
+          // Flash bordures des 4 réponses sur chaque beat
+          for (let k = 0; k < 4; k++) {
+            tid(() => {
+              setBeatFlash(true);
+              setTimeout(() => setBeatFlash(false), 110);
+            }, k * beatMs);
+          }
+        }, 2 * beatMs);
       } else {
         // Act 4 : pas de décompte, directement playing
         setPhase("playing");
@@ -810,7 +787,6 @@ export default function RythmApp() {
     const pts = correct ? 100 : 0;
     setEarnedPts(pts);
     setTotalPts(prev => prev + pts);
-    if (!correct) setLives(l => Math.max(0, l - 1));
     setRevealed(true);
     setPhase("results");
   }, [phase, correctIdx]);
@@ -832,14 +808,26 @@ export default function RythmApp() {
   useEffect(() => {
     if (phase !== "results" || !pattern) return;
     if (activity === 3 || activity === 4) return;
+    const beatMs = 60000 / sessionBpm;
     const { timestamps } = toTimestamps(pattern.figs, sessionBpm, pattern.timeSig);
     const playable = pattern.figs
       .map((fig, i) => ({ fig, ts: timestamps[i] }))
       .filter(({ fig }) => !fig.rest);
+
+    // Offset optimal : minimise somme des carrés des écarts (= -moyenne des erreurs)
+    const paired = playable
+      .map(({ ts }, i) => ({ ts, tap: tapTimesRef.current[i] }))
+      .filter(({ tap }) => tap !== undefined);
+    const meanErr = paired.length > 0
+      ? paired.reduce((sum, { tap, ts }) => sum + (tap - ts), 0) / paired.length
+      : 0;
+    const optOffset = Math.max(-200, Math.min(200, -meanErr));
+    setDetectedOffset(Math.round(optOffset));
+
     const s = playable.map(({ ts }, i) => {
       const tap = tapTimesRef.current[i];
       if (tap === undefined) return { label:"Manqué ✕", pts:0, grade:"miss", dev:null };
-      return scoreTap(tap, ts);
+      return scoreTap(tap + optOffset, ts, beatMs);
     });
     setScores(s);
     const raw    = s.reduce((sum, x) => sum + x.pts, 0);
@@ -847,8 +835,6 @@ export default function RythmApp() {
     const earned = Math.round(raw * (1 + bonus));
     setEarnedPts(earned);
     setTotalPts(prev => prev + earned);
-    const pct = playable.length ? Math.round((raw / (playable.length * 100)) * 100) : 0;
-    if (pct < 50) setLives(l => Math.max(0, l - 1));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, activity]);
 
@@ -1002,22 +988,28 @@ export default function RythmApp() {
             })}
           </div>
 
-          {/* Toggle Exercice seul / Série de 10 */}
-          <div style={{display:"flex",gap:6,marginBottom:14}}>
-            {[["single","Exercice seul"],["series","Série de 10"]].map(([mode,label]) => {
-              const active = seriesMode ? mode==="series" : mode==="single";
-              return (
-                <button key={mode}
-                  onClick={() => setSeriesMode(mode==="series")}
-                  style={{
-                    flex:1,padding:"8px",borderRadius:10,fontSize:12,fontWeight:700,
-                    cursor:"pointer",border:"none",
-                    background:active?"#4f46e5":"#111827",
-                    color:active?"#fff":"#6b7280",
-                  }}
-                >{label}</button>
-              );
-            })}
+          {/* Mode de jeu — Exercice seul / Série de 10 */}
+          <div style={{background:"#0a0f1a",borderRadius:14,padding:"12px 14px",marginBottom:10}}>
+            <div style={{fontSize:10,fontWeight:700,color:"#6b7280",
+              textTransform:"uppercase",letterSpacing:1,marginBottom:8}}>
+              Mode de jeu
+            </div>
+            <div style={{display:"flex",gap:6}}>
+              {[["single","Exercice seul"],["series","Série de 10"]].map(([mode,label]) => {
+                const active = seriesMode ? mode==="series" : mode==="single";
+                return (
+                  <button key={mode}
+                    onClick={() => setSeriesMode(mode==="series")}
+                    style={{
+                      flex:1,padding:"8px",borderRadius:10,fontSize:12,fontWeight:700,
+                      cursor:"pointer",border:"none",
+                      background:active?"#4f46e5":"#111827",
+                      color:active?"#fff":"#6b7280",
+                    }}
+                  >{label}</button>
+                );
+              })}
+            </div>
           </div>
 
           {/* Niveaux */}
@@ -1065,8 +1057,9 @@ export default function RythmApp() {
               textTransform:"uppercase",letterSpacing:1,marginBottom:8}}>
               Tempo
             </div>
-            <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
-              {/* Fixe / Variable */}
+            {/* Ligne 1 : toggle Fixe/Variable + BPM affiché + TAP/MIC */}
+            <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",
+              marginBottom:tempoMode==="range"?8:0}}>
               <div style={{display:"flex",gap:4,flexShrink:0}}>
                 {["fixed","range"].map(mode => (
                   <button key={mode}
@@ -1080,30 +1073,21 @@ export default function RythmApp() {
                   >{mode==="fixed"?"Fixe":"Variable"}</button>
                 ))}
               </div>
-              {/* Slider */}
-              <div style={{flex:1,minWidth:80}}>
-                {tempoMode === "fixed" ? (
+              {tempoMode === "fixed" && (
+                <div style={{flex:1,minWidth:80}}>
                   <input type="range" min={0} max={TEMPI.length-1}
                     value={closestTempoIdx(bpmFixed)}
                     onChange={e => setBpmFixed(TEMPI[+e.target.value])}
                     style={{width:"100%",accentColor:"#7c3aed",display:"block"}}
                   />
-                ) : (
-                  <DualRangeSlider
-                    lo={bpmMin} hi={bpmMax}
-                    setLo={setBpmMin} setHi={setBpmMax}
-                    disabled={false}
-                  />
-                )}
-              </div>
-              {/* BPM affiché */}
+                </div>
+              )}
               <div style={{fontSize:11,color:"#c084fc",fontWeight:700,
                 flexShrink:0,minWidth:54,textAlign:"right"}}>
                 {tempoMode==="fixed"
                   ? `${bpmFixed} BPM`
                   : `${Math.min(bpmMin,bpmMax)}↔${Math.max(bpmMin,bpmMax)}`}
               </div>
-              {/* TAP / MIC — act 1 & 2 seulement */}
               {(activity===1||activity===2) && (
                 <div style={{display:"flex",gap:4,flexShrink:0}}>
                   {[["tap","TAP"],["mic","🎤"]].map(([mode,label]) => (
@@ -1123,6 +1107,31 @@ export default function RythmApp() {
                 </div>
               )}
             </div>
+            {/* Ligne 2 : sliders Min/Max (mode Variable) */}
+            {tempoMode === "range" && (
+              <div style={{display:"flex",flexDirection:"column",gap:4}}>
+                <div style={{display:"flex",alignItems:"center",gap:8}}>
+                  <span style={{fontSize:9,color:"#6b7280",width:24,flexShrink:0}}>Min</span>
+                  <input type="range" min={0} max={TEMPI.length-1}
+                    value={closestTempoIdx(bpmMin)}
+                    onChange={e => setBpmMin(TEMPI[+e.target.value])}
+                    style={{flex:1,accentColor:"#7c3aed"}}
+                  />
+                  <span style={{fontSize:10,color:"#a78bfa",fontWeight:700,
+                    width:38,textAlign:"right",flexShrink:0}}>{bpmMin} BPM</span>
+                </div>
+                <div style={{display:"flex",alignItems:"center",gap:8}}>
+                  <span style={{fontSize:9,color:"#6b7280",width:24,flexShrink:0}}>Max</span>
+                  <input type="range" min={0} max={TEMPI.length-1}
+                    value={closestTempoIdx(bpmMax)}
+                    onChange={e => setBpmMax(TEMPI[+e.target.value])}
+                    style={{flex:1,accentColor:"#7c3aed"}}
+                  />
+                  <span style={{fontSize:10,color:"#a78bfa",fontWeight:700,
+                    width:38,textAlign:"right",flexShrink:0}}>{bpmMax} BPM</span>
+                </div>
+              </div>
+            )}
             {/* Seuil MIC */}
             {inputMode==="mic" && (activity===1||activity===2) && (
               <div style={{marginTop:10,background:"#111827",
@@ -1293,9 +1302,10 @@ export default function RythmApp() {
     }
   });
 
-  const vexFigs   = pattern?.figs ?? [];
-  const canStart  = phase === "idle" || phase === "results";
-  const isPlaying = phase === "playing";
+  const vexFigs    = pattern?.figs ?? [];
+  const canStart   = phase === "idle" || phase === "results";
+  const isPlaying  = phase === "playing";
+  const choiceCols = typeof window !== "undefined" && window.innerWidth < 380 ? 1 : 2;
 
   const formulaCount = selectedFormulas.size;
 
@@ -1324,9 +1334,6 @@ export default function RythmApp() {
           </div>
         </div>
         <div style={{display:"flex",gap:8,alignItems:"center"}}>
-          {[0,1,2].map(i => (
-            <span key={i} style={{fontSize:20,color:i<lives?"#c084fc":"#1f2937"}}>♩</span>
-          ))}
           <div style={{
             background:"#111827",border:"1px solid #1f2937",
             borderRadius:999,padding:"3px 10px",fontSize:12,color:"#e7e5e4",fontWeight:700,
@@ -1509,6 +1516,11 @@ export default function RythmApp() {
                   </div>
                 ))}
               </div>
+              {detectedOffset !== null && Math.abs(detectedOffset) > 15 && (
+                <div style={{fontSize:9,color:"#4b5563",marginTop:8}}>
+                  Décalage compensé : {detectedOffset > 0 ? "+" : ""}{detectedOffset} ms
+                </div>
+              )}
             </div>
           )}
           {/* GRILLE act 3 — 4 portées */}
@@ -1531,10 +1543,12 @@ export default function RythmApp() {
                   </>
                 )}
               </div>
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,
-                opacity: phase==="countdown" ? 0.45 : 1, transition:"opacity 0.3s"}}>
+              <div style={{display:"grid",
+                gridTemplateColumns: choiceCols === 1 ? "1fr" : "1fr 1fr",
+                gap:8, opacity: phase==="countdown" ? 0.45 : 1, transition:"opacity 0.3s"}}>
                 {choices.map((c, i) => {
                   let borderColor = "#1e293b";
+                  if (phase === "playing" && beatFlash) borderColor = "#4f46e5";
                   if (phase === "results") {
                     if (i === correctIdx) borderColor = "#34d399";
                     else if (i === selectedIdx) borderColor = "#f87171";
@@ -1550,17 +1564,19 @@ export default function RythmApp() {
                         border:`2px solid ${borderColor}`,
                         background:"#0a0f1a",
                         padding:"8px 6px 4px",
-                        transition:"border-color 0.2s",
+                        transition: phase === "results" ? "border-color 0.2s" : "none",
+                        boxShadow: phase === "playing" && beatFlash
+                          ? "0 0 8px rgba(79,70,229,0.4)" : "none",
                       }}
                     >
                       <RythmStaff
                         figures={c.figs}
                         timeSig={c.timeSig}
                         activeIdx={-1}
-                        width={240}
+                        width={choiceCols === 1 ? 480 : 240}
                         height={90}
                         showClef={false}
-                        showTimeSig={false}
+                        showTimeSig={true}
                       />
                     </div>
                   );
@@ -1663,6 +1679,21 @@ export default function RythmApp() {
 
       {/* ── BOUTON TAP / MIC / START ── */}
       <div style={{width:"100%",maxWidth:540,marginTop:14}}>
+        {/* Bouton SON TAP visible pendant la correction (act 1 & 2) */}
+        {(activity===1||activity===2) && phase==="results" && (
+          <div style={{display:"flex",justifyContent:"flex-end",marginBottom:8}}>
+            <button
+              onClick={() => setTapSoundOn(v => !v)}
+              style={{
+                background:tapSoundOn?"rgba(124,58,237,0.25)":"rgba(31,41,55,0.7)",
+                border:"1px solid rgba(255,255,255,0.08)",
+                borderRadius:99,padding:"3px 12px",
+                color:tapSoundOn?"#c084fc":"#4b5563",
+                fontSize:11,fontWeight:700,cursor:"pointer",height:28,lineHeight:1,
+              }}
+            >{tapSoundOn?"🥁 Son TAP":"🔕 Son TAP"}</button>
+          </div>
+        )}
 
         {/* Entrée pendant le jeu */}
         {(phase === "playing" || (phase === "countdown" && (activity === 1 || activity === 2)) || (phase === "listening" && activity === 2)) && inputMode==="tap" && (activity === 1 || activity === 2) && (
@@ -1765,7 +1796,7 @@ export default function RythmApp() {
             {phase==="idle"
               ? (seriesMode ? "▶ Commencer la série" : "▶ Commencer")
               : seriesMode
-                ? `➜ Exercice ${seriesIdx + 2}/10`
+                ? (seriesIdx >= 9 ? "📊 Bilan de ta série" : `➜ Exercice ${seriesIdx + 2}/10`)
                 : "🔄 Exercice suivant"}
           </button>
         )}

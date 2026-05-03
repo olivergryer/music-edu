@@ -76,7 +76,7 @@ function parseSheetCSV(csvText) {
   return { formulaCatalog, levelOrder, levelFormulaIds };
 }
 
-export default function useSheetData(defaultCatalog) {
+export default function useSheetData(defaultCatalog, localCsvPath) {
   const [sheetId, setSheetIdState] = useState(() => {
     const params = new URLSearchParams(window.location.search);
     return params.get("sheet") ?? localStorage.getItem(LS_KEY) ?? "";
@@ -84,6 +84,18 @@ export default function useSheetData(defaultCatalog) {
   const [status,   setStatus]   = useState("idle");
   const [errorMsg, setErrorMsg] = useState("");
   const [catalog,  setCatalog]  = useState(defaultCatalog);
+
+  const loadLocalCsv = useCallback(async () => {
+    if (!localCsvPath) return;
+    try {
+      const res = await fetch(localCsvPath);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const csv = await res.text();
+      setCatalog(parseSheetCSV(csv));
+    } catch (_) {
+      // garde le catalog hardcodé en fallback silencieux
+    }
+  }, [localCsvPath]);
 
   const loadSheet = useCallback(async (raw) => {
     if (!raw) return;
@@ -106,6 +118,7 @@ export default function useSheetData(defaultCatalog) {
 
   useEffect(() => {
     if (sheetId) loadSheet(sheetId);
+    else loadLocalCsv();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -118,10 +131,11 @@ export default function useSheetData(defaultCatalog) {
   const resetToDefault = useCallback(() => {
     localStorage.removeItem(LS_KEY);
     setSheetIdState("");
-    setCatalog(defaultCatalog);
     setStatus("idle");
     setErrorMsg("");
-  }, [defaultCatalog]);
+    if (localCsvPath) loadLocalCsv();
+    else setCatalog(defaultCatalog);
+  }, [defaultCatalog, localCsvPath, loadLocalCsv]);
 
   return {
     ...catalog,
