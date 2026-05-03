@@ -156,7 +156,7 @@ export default function AccordeurPage() {
   const gateLevelRef = useRef(0.01)
 
   // ── Mode live ─────────────────────────────────────────────────────────────────
-  const [modeLive,    setModeLive]   = useState(false)
+  const [modeLive,    setModeLive]   = useState(true)
   const [liveNote,    setLiveNote]   = useState(null)   // { nom, octave, muCents } | null
   const [liveActive,  setLiveActive] = useState(false)
   const liveStreamRef   = useRef(null)
@@ -254,6 +254,9 @@ export default function AccordeurPage() {
       tonikMidi: struct ? (NOTE_NAMES_FR.indexOf(struct.toniques[0]?.tonique ?? 'Do') + 60) : null,
     }
   }, [diapason, referentiel, clarityThreshold, gateLevel, structureId, structures])
+
+  // ── Autostart live au montage ─────────────────────────────────────────────────
+  useEffect(() => { demarrerLive() }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ─── Enregistrement ──────────────────────────────────────────────────────────
 
@@ -399,10 +402,10 @@ export default function AccordeurPage() {
         analyser.getFloatTimeDomainData(buf)
         const { diapason: d, referentiel: r, clarityThreshold: ct, gateLevel: gl, tonikMidi } = liveParamsRef.current
         const rms = frameRMS(buf)
-        if (rms < gl) { setLiveNote(null); return }
+        if (rms < gl) return
         const emp = preEmphasis(buf)
         const [hz, clarity] = liveDetectorRef.current.findPitch(emp, audioCtx.sampleRate)
-        if (clarity < ct || hz < HZ_MIN || hz > HZ_MAX) { setLiveNote(null); return }
+        if (clarity < ct || hz < HZ_MIN || hz > HZ_MAX) return
         const midi = Math.round(hzToMidi(hz, d))
         const { name: nom, octave } = midiToNoteName(midi)
         const muCents = (r === '5-limite' && tonikMidi !== null)
@@ -613,6 +616,133 @@ export default function AccordeurPage() {
               )}
           </div>
         )}
+
+        {/* ── Zone enregistrement / Live ───────────────────────────────────────── */}
+        <div style={{ background: COL_SURFACE, borderRadius: 16, padding: 24, marginBottom: 16, border: `1px solid ${COL_BORDER}`, textAlign: 'center' }}>
+          {/* Toggle Enregistrer / Live */}
+          <div style={{ display: 'flex', gap: 6, marginBottom: 20 }}>
+            {[['rec', '● Enregistrer'], ['live', '♩ Live']].map(([v, label]) => (
+              <button key={v} onClick={() => basculerMode(v === 'live')}
+                style={{
+                  flex: 1, padding: '8px 0', borderRadius: 8, border: 'none',
+                  fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit',
+                  background: modeLive === (v === 'live') ? COL_ACCENT2 : COL_BG,
+                  color:      modeLive === (v === 'live') ? '#fff' : COL_MUTED,
+                }}
+              >{label}</button>
+            ))}
+            {(modeLive || phase === 'resultats') && (
+              <button
+                onClick={() => setShowSpectre(v => !v)}
+                style={{
+                  padding: '8px 12px', borderRadius: 8,
+                  border: `1px solid ${showSpectre ? COL_ACCENT : COL_BORDER}`,
+                  background: showSpectre ? 'rgba(192,132,252,0.12)' : COL_BG,
+                  color: showSpectre ? COL_ACCENT : COL_MUTED2,
+                  fontWeight: 700, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit',
+                  whiteSpace: 'nowrap',
+                }}
+              >◈ Spectre</button>
+            )}
+          </div>
+          {/* ── Accordeur live ───────────────────────────────────────────────── */}
+          {modeLive && (() => {
+            const liveDisplay = liveNote
+              ? transposerNom(liveNote.nom, liveNote.octave, transpoKey)
+              : null
+            const liveCouleur = liveNote ? couleurJustesse(liveNote.muCents, seuil) : COL_MUTED
+            const needlePct   = liveNote ? Math.max(0, Math.min(100, 50 + (liveNote.muCents / 50) * 50)) : 50
+            const centsLabel  = liveNote
+              ? `${liveNote.muCents >= 0 ? '+' : ''}${liveNote.muCents.toFixed(1)}¢`
+              : '—'
+            return (
+              <>
+                {!liveActive
+                  ? <Btn onClick={demarrerLive} style={{ fontSize: 15, padding: '12px 36px' }}>▶ Démarrer</Btn>
+                  : <Btn variant="secondary" onClick={arreterLive} style={{ fontSize: 13 }}>■ Arrêter</Btn>
+                }
+                <div style={{ marginTop: 28, marginBottom: 8 }}>
+                  <div style={{ fontSize: 56, fontWeight: 900, letterSpacing: 2, color: liveCouleur, lineHeight: 1 }}>
+                    {liveDisplay ? `${liveDisplay.nom}` : '—'}
+                    <span style={{ fontSize: 24, fontWeight: 400, color: COL_MUTED, marginLeft: 6 }}>
+                      {liveDisplay ? liveDisplay.octave : ''}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: 22, fontWeight: 700, color: liveCouleur, marginTop: 6 }}>
+                    {centsLabel}
+                  </div>
+                </div>
+                {/* Needle */}
+                <div style={{ margin: '16px 0 4px', position: 'relative', height: 12, background: COL_BG, borderRadius: 6 }}>
+                  <div style={{ position: 'absolute', left: '50%', top: -4, bottom: -4, width: 1, background: COL_MUTED, transform: 'translateX(-50%)' }} />
+                  <div style={{
+                    position: 'absolute', top: 0, bottom: 0,
+                    left: `${needlePct}%`, width: 4, borderRadius: 2,
+                    background: liveCouleur,
+                    transform: 'translateX(-50%)',
+                    transition: 'left 0.08s ease, background 0.15s',
+                  }} />
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: COL_MUTED, padding: '0 2px' }}>
+                  <span>-50¢</span><span>0</span><span>+50¢</span>
+                </div>
+              </>
+            )
+          })()}
+
+          {/* ── Mode enregistrement ──────────────────────────────────────────── */}
+          {!modeLive && phase === 'pret' && (
+            <>
+              <div style={{ color: COL_MUTED, fontSize: 13, marginBottom: 20 }}>
+                Prêt à enregistrer
+              </div>
+              <Btn onClick={demarrerEnregistrement} style={{ fontSize: 16, padding: '14px 40px' }}>
+                ● Enregistrer
+              </Btn>
+              <div style={{ marginTop: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                <span style={{ color: COL_MUTED, fontSize: 11 }}>ou</span>
+                <label style={{
+                  cursor: 'pointer', fontSize: 12, color: COL_MUTED2, fontWeight: 600,
+                  padding: '6px 14px', borderRadius: 8, border: `1px solid ${COL_BORDER}`,
+                  background: COL_BG,
+                }}>
+                  Charger un fichier audio
+                  <input
+                    type="file" accept="audio/*" style={{ display: 'none' }}
+                    onChange={e => chargerFichier(e.target.files?.[0])}
+                  />
+                </label>
+              </div>
+            </>
+          )}
+
+          {!modeLive && phase === 'enregistrement' && (
+            <>
+              <div style={{ color: '#f87171', fontWeight: 700, fontSize: 13, marginBottom: 12 }}>
+                ● Enregistrement en cours…
+              </div>
+              <canvas ref={vuRef} width={360} height={20}
+                style={{ borderRadius: 10, marginBottom: 20, display: 'block', margin: '0 auto 20px' }} />
+              <Btn onClick={arreterEnregistrement} variant="secondary" style={{ fontSize: 15, padding: '12px 32px' }}>
+                ■ Arrêter
+              </Btn>
+            </>
+          )}
+
+          {!modeLive && phase === 'analyse' && (
+            <div style={{ color: COL_MUTED, fontSize: 14, padding: '20px 0' }}>
+              Analyse en cours…
+            </div>
+          )}
+
+          {!modeLive && phase === 'resultats' && (
+            <Btn variant="secondary" onClick={() => { setPhase('pret'); setNotes([]); setCourbe([]); serieRef.current = []; audioBufferRef.current = null }} style={{ fontSize: 13 }}>
+              ↺ Nouveau
+            </Btn>
+          )}
+
+          {erreur && <div style={{ color: '#f87171', fontSize: 12, marginTop: 12 }}>{erreur}</div>}
+        </div>
 
         {/* ── Paramètres ──────────────────────────────────────────────────────── */}
         <div style={{ background: COL_SURFACE, borderRadius: 12, padding: 16, marginBottom: 16, border: `1px solid ${COL_BORDER}` }}>
@@ -851,135 +981,6 @@ export default function AccordeurPage() {
               </div>
             </div>
           )}
-        </div>
-
-        {/* ── Zone enregistrement ──────────────────────────────────────────────── */}
-        <div style={{ background: COL_SURFACE, borderRadius: 16, padding: 24, marginBottom: 16, border: `1px solid ${COL_BORDER}`, textAlign: 'center' }}>
-          {/* Toggle Enregistrer / Live */}
-          <div style={{ display: 'flex', gap: 6, marginBottom: 20 }}>
-            {[['rec', '● Enregistrer'], ['live', '♩ Live']].map(([v, label]) => (
-              <button key={v} onClick={() => basculerMode(v === 'live')}
-                style={{
-                  flex: 1, padding: '8px 0', borderRadius: 8, border: 'none',
-                  fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit',
-                  background: modeLive === (v === 'live') ? COL_ACCENT2 : COL_BG,
-                  color:      modeLive === (v === 'live') ? '#fff' : COL_MUTED,
-                }}
-              >{label}</button>
-            ))}
-            {(modeLive || phase === 'resultats') && (
-              <button
-                onClick={() => setShowSpectre(v => !v)}
-                style={{
-                  padding: '8px 12px', borderRadius: 8,
-                  border: `1px solid ${showSpectre ? COL_ACCENT : COL_BORDER}`,
-                  background: showSpectre ? 'rgba(192,132,252,0.12)' : COL_BG,
-                  color: showSpectre ? COL_ACCENT : COL_MUTED2,
-                  fontWeight: 700, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit',
-                  whiteSpace: 'nowrap',
-                }}
-              >◈ Spectre</button>
-            )}
-          </div>
-          {/* ── Accordeur live ───────────────────────────────────────────────── */}
-          {modeLive && (() => {
-            const liveDisplay = liveNote
-              ? transposerNom(liveNote.nom, liveNote.octave, transpoKey)
-              : null
-            const liveCouleur = liveNote ? couleurJustesse(liveNote.muCents, seuil) : COL_MUTED
-            const needlePct   = liveNote ? Math.max(0, Math.min(100, 50 + (liveNote.muCents / 50) * 50)) : 50
-            const centsLabel  = liveNote
-              ? `${liveNote.muCents >= 0 ? '+' : ''}${liveNote.muCents.toFixed(1)}¢`
-              : '—'
-            return (
-              <>
-                {!liveActive
-                  ? <Btn onClick={demarrerLive} style={{ fontSize: 15, padding: '12px 36px' }}>▶ Démarrer</Btn>
-                  : <Btn variant="secondary" onClick={arreterLive} style={{ fontSize: 13 }}>■ Arrêter</Btn>
-                }
-                <div style={{ marginTop: 28, marginBottom: 8 }}>
-                  <div style={{ fontSize: 56, fontWeight: 900, letterSpacing: 2, color: liveCouleur, lineHeight: 1 }}>
-                    {liveDisplay ? `${liveDisplay.nom}` : '—'}
-                    <span style={{ fontSize: 24, fontWeight: 400, color: COL_MUTED, marginLeft: 6 }}>
-                      {liveDisplay ? liveDisplay.octave : ''}
-                    </span>
-                  </div>
-                  <div style={{ fontSize: 22, fontWeight: 700, color: liveCouleur, marginTop: 6 }}>
-                    {centsLabel}
-                  </div>
-                </div>
-                {/* Needle */}
-                <div style={{ margin: '16px 0 4px', position: 'relative', height: 12, background: COL_BG, borderRadius: 6 }}>
-                  {/* Graduation 0 */}
-                  <div style={{ position: 'absolute', left: '50%', top: -4, bottom: -4, width: 1, background: COL_MUTED, transform: 'translateX(-50%)' }} />
-                  {/* Curseur */}
-                  <div style={{
-                    position: 'absolute', top: 0, bottom: 0,
-                    left: `${needlePct}%`, width: 4, borderRadius: 2,
-                    background: liveCouleur,
-                    transform: 'translateX(-50%)',
-                    transition: 'left 0.08s ease, background 0.15s',
-                  }} />
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: COL_MUTED, padding: '0 2px' }}>
-                  <span>-50¢</span><span>0</span><span>+50¢</span>
-                </div>
-              </>
-            )
-          })()}
-
-          {/* ── Mode enregistrement ──────────────────────────────────────────── */}
-          {!modeLive && phase === 'pret' && (
-            <>
-              <div style={{ color: COL_MUTED, fontSize: 13, marginBottom: 20 }}>
-                Prêt à enregistrer
-              </div>
-              <Btn onClick={demarrerEnregistrement} style={{ fontSize: 16, padding: '14px 40px' }}>
-                ● Enregistrer
-              </Btn>
-              <div style={{ marginTop: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-                <span style={{ color: COL_MUTED, fontSize: 11 }}>ou</span>
-                <label style={{
-                  cursor: 'pointer', fontSize: 12, color: COL_MUTED2, fontWeight: 600,
-                  padding: '6px 14px', borderRadius: 8, border: `1px solid ${COL_BORDER}`,
-                  background: COL_BG,
-                }}>
-                  Charger un fichier audio
-                  <input
-                    type="file" accept="audio/*" style={{ display: 'none' }}
-                    onChange={e => chargerFichier(e.target.files?.[0])}
-                  />
-                </label>
-              </div>
-            </>
-          )}
-
-          {!modeLive && phase === 'enregistrement' && (
-            <>
-              <div style={{ color: '#f87171', fontWeight: 700, fontSize: 13, marginBottom: 12 }}>
-                ● Enregistrement en cours…
-              </div>
-              <canvas ref={vuRef} width={360} height={20}
-                style={{ borderRadius: 10, marginBottom: 20, display: 'block', margin: '0 auto 20px' }} />
-              <Btn onClick={arreterEnregistrement} variant="secondary" style={{ fontSize: 15, padding: '12px 32px' }}>
-                ■ Arrêter
-              </Btn>
-            </>
-          )}
-
-          {!modeLive && phase === 'analyse' && (
-            <div style={{ color: COL_MUTED, fontSize: 14, padding: '20px 0' }}>
-              Analyse en cours…
-            </div>
-          )}
-
-          {!modeLive && phase === 'resultats' && (
-            <Btn variant="secondary" onClick={() => { setPhase('pret'); setNotes([]); setCourbe([]); serieRef.current = []; audioBufferRef.current = null }} style={{ fontSize: 13 }}>
-              ↺ Nouveau
-            </Btn>
-          )}
-
-          {erreur && <div style={{ color: '#f87171', fontSize: 12, marginTop: 12 }}>{erreur}</div>}
         </div>
 
         {/* ── Résultats ────────────────────────────────────────────────────────── */}
