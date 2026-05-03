@@ -7,7 +7,7 @@ const NOTE_JUMP_CENTS        = 30     // saut > 60¢ en < 50ms → changement de
 const NOTE_JUMP_WINDOW_MS    = 50
 
 // ─── Noms de notes (concert Do) ───────────────────────────────────────────────
-export const NOTE_NAMES_FR = ['Do', 'Do#', 'Ré', 'Ré#', 'Mi', 'Fa', 'Fa#', 'Sol', 'Sol#', 'La', 'La#', 'Si']
+export const NOTE_NAMES_FR = ['Do', 'Réb', 'Ré', 'Mib', 'Mi', 'Fa', 'Fa#', 'Sol', 'Sol#', 'La', 'Sib', 'Si']
 
 // ─── Structures par défaut (une par tonique, non modifiables) ─────────────────
 export const DEFAULT_STRUCTURES = NOTE_NAMES_FR.map((nom, i) => ({

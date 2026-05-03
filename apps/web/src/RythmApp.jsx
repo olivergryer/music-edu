@@ -1308,6 +1308,28 @@ export default function RythmApp() {
   const isPlaying  = phase === "playing";
   const choiceCols = typeof window !== "undefined" && window.innerWidth < 380 ? 1 : 2;
 
+  const handleNext = () => {
+    if (!canStart) return;
+    if (seriesMode && phase === "results") {
+      const nextIdx = seriesIdx + 1;
+      const updatedXpLog  = [...seriesXpLog, earnedPts];
+      const updatedMedals = [...seriesMedals, medal];
+      if (nextIdx >= 10) {
+        setSeriesXpLog(updatedXpLog);
+        setSeriesMedals(updatedMedals);
+        setCurrentPage("series-end");
+      } else {
+        setSeriesXpLog(updatedXpLog);
+        setSeriesMedals(updatedMedals);
+        setSeriesIdx(nextIdx);
+        seriesIdxRef.current = nextIdx;
+        startGame();
+      }
+    } else {
+      startGame();
+    }
+  };
+
   const formulaCount = selectedFormulas.size;
 
   // ── Rendu jeu ──────────────────────────────────────────────────────────────
@@ -1441,11 +1463,14 @@ export default function RythmApp() {
 
               {/* Portée — toujours présente */}
               {revealed ? (
-                <div style={{
+                <div
+                  onClick={phase === "results" ? handleNext : undefined}
+                  style={{
                   position:"relative",
                   background:"#0f172a",
                   border: (activity === 1 ? metroDotFlash : beatFlash) ? "2px solid #7c3aed" : "2px solid #1e293b",
-                  borderRadius:14,padding:"10px 6px 6px",overflow:"hidden"}}>
+                  borderRadius:14,padding:"10px 6px 6px",overflow:"hidden",
+                  cursor: phase === "results" ? "pointer" : "default"}}>
                   {/* Bouton son Rythme — top-left de la portée */}
                   <button
                     onClick={() => setRhythmSoundOn(v => !v)}
@@ -1765,27 +1790,7 @@ export default function RythmApp() {
         )}
         {canStart && (
           <button
-            onClick={() => {
-              if (seriesMode && phase === "results") {
-                const nextIdx = seriesIdx + 1;
-                const updatedXpLog    = [...seriesXpLog, earnedPts];
-                const updatedMedals   = [...seriesMedals, medal];
-                if (nextIdx >= 10) {
-                  // Fin de série
-                  setSeriesXpLog(updatedXpLog);
-                  setSeriesMedals(updatedMedals);
-                  setCurrentPage("series-end");
-                } else {
-                  setSeriesXpLog(updatedXpLog);
-                  setSeriesMedals(updatedMedals);
-                  setSeriesIdx(nextIdx);
-                  seriesIdxRef.current = nextIdx;
-                  startGame();
-                }
-              } else {
-                startGame();
-              }
-            }}
+            onClick={handleNext}
             style={{
               width:"100%",padding:"18px 0",
               background:"linear-gradient(135deg,#7c3aed,#6d28d9)",

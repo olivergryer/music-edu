@@ -555,6 +555,15 @@ export default function AccordeurPage() {
   const muMoyen    = notes.length ? (notes.reduce((a, n) => a + n.muCents, 0) / notes.length).toFixed(1) : null
   const sigmaMoyen = notes.length ? (notes.reduce((a, n) => a + n.sigmaCents, 0) / notes.length).toFixed(1) : null
 
+  // ─── Helper : transpose un nom de note concert selon transpoKey ──────────────
+  const transpoNom = (nom) => {
+    const idx = NOTE_NAMES_FR.indexOf(nom)
+    if (idx === -1) return nom
+    const offset = TRANSPOSITIONS[transpoKey]?.offset ?? 0
+    if (offset === 0) return nom
+    return NOTE_NAMES_FR[((idx + offset) % 12 + 12) % 12]
+  }
+
   // ─── URL partage structure ────────────────────────────────────────────────────
 
   const _selectedStruct = structureId
@@ -754,6 +763,147 @@ export default function AccordeurPage() {
           {erreur && <div style={{ color: '#f87171', fontSize: 12, marginTop: 12 }}>{erreur}</div>}
         </div>
 
+        {/* ── Résultats ────────────────────────────────────────────────────────── */}
+        {phase === 'resultats' && notes.length > 0 && (
+          <>
+            {/* Toggle Portée / Tableau */}
+            <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
+              {[['portee', 'Portée'], ['tableau', 'Tableau']].map(([v, label]) => (
+                <button key={v} onClick={() => setVue(v)}
+                  style={{
+                    padding: '7px 16px', borderRadius: 8, border: 'none', fontWeight: 700,
+                    fontSize: 12, cursor: 'pointer', fontFamily: 'inherit',
+                    background: vue === v ? COL_ACCENT2 : COL_SURFACE,
+                    color:      vue === v ? '#fff' : COL_MUTED,
+                    border:     `1px solid ${vue === v ? COL_ACCENT2 : COL_BORDER}`,
+                  }}
+                >{label}</button>
+              ))}
+              <span style={{ marginLeft: 'auto', color: COL_MUTED, fontSize: 11, alignSelf: 'center' }}>
+                μ <strong style={{ color: COL_TEXT }}>{muMoyen}¢</strong>
+                &nbsp;&nbsp;σ <strong style={{ color: COL_TEXT }}>{sigmaMoyen}¢</strong>
+              </span>
+            </div>
+
+            {vue === 'portee' && (
+              <div style={{ position: 'relative', background: COL_SURFACE, borderRadius: 12, padding: '16px 8px', marginBottom: 16, border: `1px solid ${COL_BORDER}` }}>
+                <AccordeurStaff notes={notes} seuil={seuil} transpoKey={transpoKey} containerWidth={524} height={180} notePx={window.innerWidth <= 540 ? 26 : 52} />
+                {dirty && (
+                  <div style={{ position: 'absolute', inset: 0, borderRadius: 12, background: 'rgba(3,7,18,0.72)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Btn onClick={recalculer} style={{ fontSize: 13, padding: '10px 28px' }}>↻ Recalculer</Btn>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {vue === 'tableau' && (
+              <div style={{ position: 'relative', background: COL_SURFACE, borderRadius: 12, padding: 16, marginBottom: 16, border: `1px solid ${COL_BORDER}` }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+                  <thead>
+                    <tr style={{ color: COL_MUTED, borderBottom: `1px solid ${COL_BORDER}` }}>
+                      <th style={{ padding: '4px 8px', textAlign: 'left', fontWeight: 600 }}>Note</th>
+                      <th style={{ padding: '4px 8px', textAlign: 'right', fontWeight: 600 }}>μ (¢)</th>
+                      <th style={{ padding: '4px 8px', textAlign: 'right', fontWeight: 600 }}>σ (¢)</th>
+                      <th style={{ padding: '4px 8px', textAlign: 'left', fontWeight: 600 }}>Écart</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {notes.map((note, i) => {
+                      const couleur  = couleurJustesse(note.muCents, seuil)
+                      const barScale = Math.min(Math.abs(note.muCents) / 30, 1)
+                      const label    = labelsX[i]
+                      return (
+                        <tr key={i} style={{ borderBottom: `1px solid ${COL_BORDER}` }}>
+                          <td style={{ padding: '8px 8px', fontWeight: 700, color: couleur }}>{label}</td>
+                          <td style={{ padding: '8px 8px', textAlign: 'right', color: couleur, fontWeight: 700 }}>
+                            {note.muCents >= 0 ? '+' : ''}{note.muCents.toFixed(1)}
+                          </td>
+                          <td style={{ padding: '8px 8px', textAlign: 'right', color: COL_MUTED2 }}>
+                            {note.sigmaCents.toFixed(1)}
+                          </td>
+                          <td style={{ padding: '8px 8px', width: 120 }}>
+                            <div style={{ position: 'relative', height: 8, background: COL_BG, borderRadius: 4 }}>
+                              <div style={{
+                                position: 'absolute',
+                                left:   note.muCents < 0 ? `${(0.5 - barScale / 2) * 100}%` : '50%',
+                                width:  `${barScale * 50}%`,
+                                height: '100%',
+                                background: couleur, borderRadius: 4, opacity: 0.8,
+                              }} />
+                              <div style={{ position: 'absolute', left: '50%', top: 0, width: 1, height: '100%', background: COL_MUTED }} />
+                            </div>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+                {dirty && (
+                  <div style={{ position: 'absolute', inset: 0, borderRadius: 12, background: 'rgba(3,7,18,0.72)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Btn onClick={recalculer} style={{ fontSize: 13, padding: '10px 28px' }}>↻ Recalculer</Btn>
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
+              <div style={{ background: COL_SURFACE, borderRadius: 12, padding: 16, border: `1px solid ${COL_BORDER}`, textAlign: 'center' }}>
+                <div style={{ fontSize: 11, color: COL_MUTED, marginBottom: 4 }}>Notes justes</div>
+                <div style={{ fontSize: 28, fontWeight: 900, color: '#34d399' }}>{scoreP?.label}</div>
+                <div style={{ fontSize: 10, color: COL_MUTED }}>seuil ±{seuil}¢</div>
+              </div>
+              <div style={{ background: COL_SURFACE, borderRadius: 12, padding: 16, border: `1px solid ${COL_BORDER}`, textAlign: 'center' }}>
+                <div style={{ fontSize: 11, color: COL_MUTED, marginBottom: 4 }}>Score qualité</div>
+                <div style={{ fontSize: 28, fontWeight: 900, color: COL_ACCENT }}>{scoreQ}%</div>
+                <div style={{ fontSize: 10, color: COL_MUTED }}>précision + stabilité</div>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
+              {[
+                { key: 'courbe', label: 'Courbe brute', val: showCourbe, set: setShowCourbe },
+                { key: 'barres', label: 'μ par note',   val: showBarres, set: setShowBarres },
+                { key: 'sigma',  label: 'σ par note',   val: showSigma,  set: setShowSigma  },
+              ].map(({ key, label, val, set }) => (
+                <button key={key} onClick={() => set(v => !v)}
+                  style={{
+                    padding: '6px 12px', borderRadius: 8, border: 'none', fontSize: 11, fontWeight: 700,
+                    cursor: 'pointer', fontFamily: 'inherit',
+                    background: val ? COL_ACCENT2 : COL_BG,
+                    color:      val ? '#fff' : COL_MUTED,
+                  }}
+                >{label}</button>
+              ))}
+            </div>
+
+            {showCourbe && courbe.length > 0 && (
+              <div style={{ marginBottom: 12 }}>
+                <GrapheCents data={dataCourbe} couleurs={[COL_ACCENT]} width={500} height={90} title="Écart continu (¢)" />
+              </div>
+            )}
+            {showBarres && (
+              <div style={{ marginBottom: 12 }}>
+                <GrapheCents data={dataBarres} couleurs={couleurs} labelX={labelsX} width={500} height={100} title="Écart moyen μ par note (¢)" />
+              </div>
+            )}
+            {showSigma && (
+              <div style={{ marginBottom: 12 }}>
+                <GrapheCents data={dataSigma} couleurs={couleurs} labelX={labelsX} width={500} height={100} title="Déviation σ par note (¢)" />
+              </div>
+            )}
+
+            <div style={{ textAlign: 'center', paddingTop: 8 }}>
+              <Btn onClick={sauvegarderResultats}>Sauvegarder cette session</Btn>
+            </div>
+          </>
+        )}
+
+        {phase === 'resultats' && notes.length === 0 && (
+          <div style={{ color: COL_MUTED, fontSize: 13, textAlign: 'center', padding: '20px 0' }}>
+            Aucune note détectée. Enregistre un extrait plus long ou vérifie le microphone.
+          </div>
+        )}
+
         {/* ── Structures de toniques + Référentiel ─────────────────────────────── */}
         <div style={{ background: COL_SURFACE, borderRadius: 12, padding: 16, marginBottom: 16, border: `1px solid ${COL_BORDER}` }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
@@ -770,7 +920,7 @@ export default function AccordeurPage() {
           >
             <option value="">— Aucune (tempéré simple) —</option>
             <optgroup label="Toniques simples">
-              {DEFAULT_STRUCTURES.map(s => <option key={s.id} value={s.id}>{s.nom}</option>)}
+              {DEFAULT_STRUCTURES.map(s => <option key={s.id} value={s.id}>{transpoNom(s.nom)}</option>)}
             </optgroup>
             {structures.length > 0 && (
               <optgroup label="Mes structures">
@@ -974,174 +1124,6 @@ export default function AccordeurPage() {
           </div>
         </details>
 
-        {/* ── Résultats ────────────────────────────────────────────────────────── */}
-        {phase === 'resultats' && notes.length > 0 && (
-          <>
-            {/* Toggle Portée / Tableau */}
-            <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
-              {[['portee', 'Portée'], ['tableau', 'Tableau']].map(([v, label]) => (
-                <button key={v} onClick={() => setVue(v)}
-                  style={{
-                    padding: '7px 16px', borderRadius: 8, border: 'none', fontWeight: 700,
-                    fontSize: 12, cursor: 'pointer', fontFamily: 'inherit',
-                    background: vue === v ? COL_ACCENT2 : COL_SURFACE,
-                    color:      vue === v ? '#fff' : COL_MUTED,
-                    border:     `1px solid ${vue === v ? COL_ACCENT2 : COL_BORDER}`,
-                  }}
-                >{label}</button>
-              ))}
-              {/* Résumé phrase toujours visible */}
-              <span style={{ marginLeft: 'auto', color: COL_MUTED, fontSize: 11, alignSelf: 'center' }}>
-                μ <strong style={{ color: COL_TEXT }}>{muMoyen}¢</strong>
-                &nbsp;&nbsp;σ <strong style={{ color: COL_TEXT }}>{sigmaMoyen}¢</strong>
-              </span>
-            </div>
-
-            {/* Vue Portée — scroll horizontal */}
-            {vue === 'portee' && (
-              <div style={{ position: 'relative', background: COL_SURFACE, borderRadius: 12, padding: '16px 8px', marginBottom: 16, border: `1px solid ${COL_BORDER}` }}>
-                <AccordeurStaff notes={notes} seuil={seuil} transpoKey={transpoKey} containerWidth={524} height={180} notePx={window.innerWidth <= 540 ? 26 : 52} />
-                {dirty && (
-                  <div style={{ position: 'absolute', inset: 0, borderRadius: 12, background: 'rgba(3,7,18,0.72)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <Btn onClick={recalculer} style={{ fontSize: 13, padding: '10px 28px' }}>↻ Recalculer</Btn>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Vue Tableau */}
-            {vue === 'tableau' && (
-              <div style={{ position: 'relative', background: COL_SURFACE, borderRadius: 12, padding: 16, marginBottom: 16, border: `1px solid ${COL_BORDER}` }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
-                  <thead>
-                    <tr style={{ color: COL_MUTED, borderBottom: `1px solid ${COL_BORDER}` }}>
-                      <th style={{ padding: '4px 8px', textAlign: 'left', fontWeight: 600 }}>Note</th>
-                      <th style={{ padding: '4px 8px', textAlign: 'right', fontWeight: 600 }}>μ (¢)</th>
-                      <th style={{ padding: '4px 8px', textAlign: 'right', fontWeight: 600 }}>σ (¢)</th>
-                      <th style={{ padding: '4px 8px', textAlign: 'left', fontWeight: 600 }}>Écart</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {notes.map((note, i) => {
-                      const couleur  = couleurJustesse(note.muCents, seuil)
-                      const barScale = Math.min(Math.abs(note.muCents) / 30, 1)
-                      const label    = labelsX[i]
-                      return (
-                        <tr key={i} style={{ borderBottom: `1px solid ${COL_BORDER}` }}>
-                          <td style={{ padding: '8px 8px', fontWeight: 700, color: couleur }}>{label}</td>
-                          <td style={{ padding: '8px 8px', textAlign: 'right', color: couleur, fontWeight: 700 }}>
-                            {note.muCents >= 0 ? '+' : ''}{note.muCents.toFixed(1)}
-                          </td>
-                          <td style={{ padding: '8px 8px', textAlign: 'right', color: COL_MUTED2 }}>
-                            {note.sigmaCents.toFixed(1)}
-                          </td>
-                          <td style={{ padding: '8px 8px', width: 120 }}>
-                            {/* Barre d'écart centrée */}
-                            <div style={{ position: 'relative', height: 8, background: COL_BG, borderRadius: 4 }}>
-                              <div style={{
-                                position: 'absolute',
-                                left:   note.muCents < 0 ? `${(0.5 - barScale / 2) * 100}%` : '50%',
-                                width:  `${barScale * 50}%`,
-                                height: '100%',
-                                background: couleur,
-                                borderRadius: 4,
-                                opacity: 0.8,
-                              }} />
-                              {/* Ligne centrale */}
-                              <div style={{ position: 'absolute', left: '50%', top: 0, width: 1, height: '100%', background: COL_MUTED }} />
-                            </div>
-                          </td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
-                {dirty && (
-                  <div style={{ position: 'absolute', inset: 0, borderRadius: 12, background: 'rgba(3,7,18,0.72)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <Btn onClick={recalculer} style={{ fontSize: 13, padding: '10px 28px' }}>↻ Recalculer</Btn>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Scores */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
-              <div style={{ background: COL_SURFACE, borderRadius: 12, padding: 16, border: `1px solid ${COL_BORDER}`, textAlign: 'center' }}>
-                <div style={{ fontSize: 11, color: COL_MUTED, marginBottom: 4 }}>Notes justes</div>
-                <div style={{ fontSize: 28, fontWeight: 900, color: '#34d399' }}>{scoreP?.label}</div>
-                <div style={{ fontSize: 10, color: COL_MUTED }}>seuil ±{seuil}¢</div>
-              </div>
-              <div style={{ background: COL_SURFACE, borderRadius: 12, padding: 16, border: `1px solid ${COL_BORDER}`, textAlign: 'center' }}>
-                <div style={{ fontSize: 11, color: COL_MUTED, marginBottom: 4 }}>Score qualité</div>
-                <div style={{ fontSize: 28, fontWeight: 900, color: COL_ACCENT }}>{scoreQ}%</div>
-                <div style={{ fontSize: 10, color: COL_MUTED }}>précision + stabilité</div>
-              </div>
-            </div>
-
-            {/* Toggles graphes */}
-            <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
-              {[
-                { key: 'courbe', label: 'Courbe brute', val: showCourbe, set: setShowCourbe },
-                { key: 'barres', label: 'μ par note',   val: showBarres, set: setShowBarres },
-                { key: 'sigma',  label: 'σ par note',   val: showSigma,  set: setShowSigma  },
-              ].map(({ key, label, val, set }) => (
-                <button key={key} onClick={() => set(v => !v)}
-                  style={{
-                    padding: '6px 12px', borderRadius: 8, border: 'none', fontSize: 11, fontWeight: 700,
-                    cursor: 'pointer', fontFamily: 'inherit',
-                    background: val ? COL_ACCENT2 : COL_BG,
-                    color:      val ? '#fff' : COL_MUTED,
-                  }}
-                >{label}</button>
-              ))}
-            </div>
-
-            {/* Graphes */}
-            {showCourbe && courbe.length > 0 && (
-              <div style={{ marginBottom: 12 }}>
-                <GrapheCents
-                  data={dataCourbe}
-                  couleurs={[COL_ACCENT]}
-                  width={500} height={90}
-                  title="Écart continu (¢)"
-                />
-              </div>
-            )}
-            {showBarres && (
-              <div style={{ marginBottom: 12 }}>
-                <GrapheCents
-                  data={dataBarres}
-                  couleurs={couleurs}
-                  labelX={labelsX}
-                  width={500} height={100}
-                  title="Écart moyen μ par note (¢)"
-                />
-              </div>
-            )}
-            {showSigma && (
-              <div style={{ marginBottom: 12 }}>
-                <GrapheCents
-                  data={dataSigma}
-                  couleurs={couleurs}
-                  labelX={labelsX}
-                  width={500} height={100}
-                  title="Déviation σ par note (¢)"
-                />
-              </div>
-            )}
-
-            {/* Bouton sauvegarder */}
-            <div style={{ textAlign: 'center', paddingTop: 8 }}>
-              <Btn onClick={sauvegarderResultats}>Sauvegarder cette session</Btn>
-            </div>
-          </>
-        )}
-
-        {phase === 'resultats' && notes.length === 0 && (
-          <div style={{ color: COL_MUTED, fontSize: 13, textAlign: 'center', padding: '20px 0' }}>
-            Aucune note détectée. Enregistre un extrait plus long ou vérifie le microphone.
-          </div>
-        )}
 
       </div>
 

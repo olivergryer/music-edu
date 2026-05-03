@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react'
 import { Renderer, Stave, StaveNote, Voice, Formatter, Annotation, Accidental } from 'vexflow'
 import { couleurJustesse, transposerMidi } from './accordeurUtils'
 
-const NOTE_NAMES_VEX = ['c', 'c#', 'd', 'd#', 'e', 'f', 'f#', 'g', 'g#', 'a', 'a#', 'b']
+const NOTE_NAMES_VEX = ['c', 'db', 'd', 'eb', 'e', 'f', 'f#', 'g', 'g#', 'a', 'bb', 'b']
 
 function midiToVexKey(midi) {
   const name   = NOTE_NAMES_VEX[((midi % 12) + 12) % 12]
@@ -63,23 +63,37 @@ export default function AccordeurStaff({ notes, seuil = 10, transpoKey = 'C', co
         stave.addClef('treble')
       }
 
-      stave.setStyle({ strokeStyle: '#9ca3af', fillStyle: '#9ca3af' })
+      stave.setStyle({ strokeStyle: '#e5e7eb', fillStyle: '#e5e7eb' })
       stave.setContext(ctx).draw()
 
       // ── StaveNotes ───────────────────────────────────────────────────────────
+      const accTracker = {}
       const vexNotes = notes.map(note => {
         const midiDisplay = transposerMidi(note.midiCible, transpoKey) + octaveShift
         const key         = midiToVexKey(midiDisplay)
         const couleur     = couleurJustesse(note.muCents, seuil)
+        const vexPart     = key.split('/')[0]
+        const hasSharp    = vexPart.includes('#')
+        const hasFlat     = vexPart.length > 1 && !hasSharp
+        const letter      = hasSharp || hasFlat ? vexPart[0] : vexPart
 
         const sn = new StaveNote({ keys: [key], duration: 'q' })
         sn.setStyle({ fillStyle: couleur, strokeStyle: couleur })
 
-        if (key.includes('#')) {
+        if (hasSharp) {
           const acc = new Accidental('#')
           acc.setStyle({ fillStyle: couleur, strokeStyle: couleur })
           sn.addModifier(acc, 0)
+        } else if (hasFlat) {
+          const acc = new Accidental('b')
+          acc.setStyle({ fillStyle: couleur, strokeStyle: couleur })
+          sn.addModifier(acc, 0)
+        } else if (accTracker[letter]) {
+          const acc = new Accidental('n')
+          acc.setStyle({ fillStyle: couleur, strokeStyle: couleur })
+          sn.addModifier(acc, 0)
         }
+        accTracker[letter] = hasSharp || hasFlat
 
         const centsLabel = (note.muCents >= 0 ? '+' : '') + note.muCents.toFixed(1) + '¢'
         const ann = new Annotation(centsLabel)
@@ -103,7 +117,6 @@ export default function AccordeurStaff({ notes, seuil = 10, transpoKey = 'C', co
       const svg = ref.current.querySelector('svg')
       if (svg) {
         svg.style.background = 'transparent'
-        svg.querySelectorAll('text').forEach(t => { t.style.fill = '#6b7280' })
 
         vexNotes.forEach((sn, i) => {
           const note    = notes[i]
