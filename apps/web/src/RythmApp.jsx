@@ -988,6 +988,48 @@ export default function RythmApp() {
             })}
           </div>
 
+          {/* CTA Commencer */}
+          <button
+            onClick={() => {
+              // Init série
+              if (seriesMode) {
+                const baseBpm = tempoMode === "fixed" ? bpmFixed : Math.round((bpmMin + bpmMax) / 2);
+                seriesBaseBpmRef.current = baseBpm;
+                seriesIdxRef.current = 0;
+              } else {
+                seriesBaseBpmRef.current = null;
+                seriesIdxRef.current = 0;
+              }
+              setSeriesIdx(0);
+              setSeriesXpLog([]);
+              setSeriesMedals([]);
+              setSeriesResult(null);
+              setCurrentPage("game");
+              setPhase("idle");
+              setPattern(null);
+              setScores([]);
+              setEarnedPts(0);
+              setProgress(0);
+              setActiveIdx(-1);
+              setRevealed(false);
+              setChoices([]);
+              setSelectedIdx(null);
+              setPendingIdx(null);
+              setBeatFlash(false);
+              setMetroDotFlash(false);
+              setCountdownN(1);
+              startGame();
+            }}
+            style={{
+              width:"100%",padding:"18px 0",
+              background:"linear-gradient(135deg,#7c3aed,#6d28d9)",
+              border:"none",borderRadius:20,cursor:"pointer",
+              color:"#fff",fontSize:16,fontWeight:700,
+              boxShadow:"0 8px 32px rgba(109,40,217,0.4)",
+              marginBottom:18,
+            }}
+          >{seriesMode ? "▶ Commencer la série" : "▶ Commencer"}</button>
+
           {/* Mode de jeu — Exercice seul / Série de 10 */}
           <div style={{background:"#0a0f1a",borderRadius:14,padding:"12px 14px",marginBottom:10}}>
             <div style={{fontSize:10,fontWeight:700,color:"#6b7280",
@@ -1184,47 +1226,6 @@ export default function RythmApp() {
             </div>
           )}
 
-          {/* CTA Commencer */}
-          <button
-            onClick={() => {
-              // Init série
-              if (seriesMode) {
-                const baseBpm = tempoMode === "fixed" ? bpmFixed : Math.round((bpmMin + bpmMax) / 2);
-                seriesBaseBpmRef.current = baseBpm;
-                seriesIdxRef.current = 0;
-              } else {
-                seriesBaseBpmRef.current = null;
-                seriesIdxRef.current = 0;
-              }
-              setSeriesIdx(0);
-              setSeriesXpLog([]);
-              setSeriesMedals([]);
-              setSeriesResult(null);
-              setCurrentPage("game");
-              setPhase("idle");
-              setPattern(null);
-              setScores([]);
-              setEarnedPts(0);
-              setProgress(0);
-              setActiveIdx(-1);
-              setRevealed(false);
-              setChoices([]);
-              setSelectedIdx(null);
-              setPendingIdx(null);
-              setBeatFlash(false);
-              setMetroDotFlash(false);
-              setCountdownN(1);
-              startGame();
-            }}
-            style={{
-              width:"100%",padding:"18px 0",
-              background:"linear-gradient(135deg,#7c3aed,#6d28d9)",
-              border:"none",borderRadius:20,cursor:"pointer",
-              color:"#fff",fontSize:16,fontWeight:700,
-              boxShadow:"0 8px 32px rgba(109,40,217,0.4)",
-              marginTop:8,
-            }}
-          >{seriesMode ? "▶ Commencer la série" : "▶ Commencer"}</button>
         </div>
       </div>
     );

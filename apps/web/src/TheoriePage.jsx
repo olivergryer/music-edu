@@ -392,7 +392,6 @@ function SetupScreen({ mode, questions, onStart, onBack }) {
 
   return (
     <div>
-      <button style={{ ...S.btnOutline, fontSize: 12, marginBottom: 16 }} onClick={onBack}>← Retour</button>
       <h2 style={S.h2}>Configuration</h2>
 
       <div style={S.card}>
@@ -734,7 +733,22 @@ export default function TheoriePage() {
   return (
     <div style={S.page}>
       <div style={S.inner}>
-        <Link to="/" style={S.back}>← Tessitura</Link>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+          <Link to="/" style={S.back}>← Tessitura</Link>
+          {screen !== 'home' && (
+            <button
+              onClick={() => { setScreen('home'); setMode(null); setSession(null) }}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6b7280', padding: 6, display: 'flex', alignItems: 'center' }}
+              title="Retour à l'accueil"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="12" r="3"/>
+                <path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/>
+                <path d="M12 2v2m0 16v2M2 12h2m16 0h2"/>
+              </svg>
+            </button>
+          )}
+        </div>
 
         {screen === 'home' && (
           <HomeScreen

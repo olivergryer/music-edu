@@ -4,12 +4,12 @@ const STORAGE_KEY = "tess_progress";
 
 export const XP_LEVELS = [
   { id: "Apprenti",      xp: 0 },
-  { id: "Musicien",      xp: 500 },
-  { id: "Instrumentiste",xp: 1200 },
-  { id: "Soliste",       xp: 2500 },
-  { id: "Concertiste",   xp: 4500 },
-  { id: "Virtuose",      xp: 8000 },
-  { id: "Maestro",       xp: 14000 },
+  { id: "Musicien",      xp: 2500 },
+  { id: "Instrumentiste",xp: 6000 },
+  { id: "Soliste",       xp: 12500 },
+  { id: "Concertiste",   xp: 45000 },
+  { id: "Virtuose",      xp: 80000 },
+  { id: "Maestro",       xp: 140000 },
 ];
 
 export function getLevel(xp) {

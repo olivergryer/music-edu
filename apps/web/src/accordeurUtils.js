@@ -2,8 +2,8 @@ import { PitchDetector } from 'pitchy'
 
 // ─── Constantes segmentation ──────────────────────────────────────────────────
 const SILENCE_CONFIDENCE_MIN = 0.85   // en-dessous = silence (YIN renvoie null)
-const SILENCE_DURATION_MS    = 80     // silence ≥ 80ms → nouvelle note
-const NOTE_JUMP_CENTS        = 60     // saut > 60¢ en < 50ms → changement de note
+const SILENCE_DURATION_MS    = 50     // silence ≥ 80ms → nouvelle note
+const NOTE_JUMP_CENTS        = 30     // saut > 60¢ en < 50ms → changement de note
 const NOTE_JUMP_WINDOW_MS    = 50
 
 // ─── Noms de notes (concert Do) ───────────────────────────────────────────────
@@ -76,7 +76,7 @@ export function centsCinqLimite(hz, tonikMidi, diapason = 442) {
   const justCents     = JUST_RATIOS_CENTS[semitoneFromC]
   const temperedCents = semitoneFromC * 100
   const correction    = justCents - temperedCents   // correction à appliquer
-  return centsTempere(hz, diapason) + correction
+  return centsTempere(hz, diapason) - correction
 }
 
 // ─── Analyse audio ────────────────────────────────────────────────────────────
