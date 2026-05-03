@@ -2,13 +2,14 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { PitchDetector } from 'pitchy'
 import AccordeurStaff from './AccordeurStaff'
+import SpectrePaneau from './SpectrePaneau'
 import {
   analyserBuffer, segmenter, calculerEcarts, courbebrute,
   scorePedagogique, scoreQualite, couleurJustesse,
   lireStructures, sauvegarderStructure, supprimerStructure,
   lireSessions, sauvegarderSession, supprimerSession,
   structureVersURL, urlVersStructure,
-  transposerNom,
+  transposerNom, computeAverageSpectrum,
   TRANSPOSITIONS, uuid,
   NOTE_NAMES_FR, DEFAULT_STRUCTURES,
   frameRMS, preEmphasis, HZ_MIN, HZ_MAX,
@@ -164,6 +165,12 @@ export default function AccordeurPage() {
   const liveRafRef      = useRef(null)
   const liveDetectorRef = useRef(null)
   const liveParamsRef   = useRef({})
+
+  // ── Spectre FFT ───────────────────────────────────────────────────────────────
+  const [showSpectre,    setShowSpectre]    = useState(false)
+  const spectreAnalyserRef = useRef(null)   // 2e AnalyserNode live (fftSize=4096)
+  const spectreDataRef     = useRef(null)   // Float32Array post-recording
+  const liveHzRef          = useRef(null)   // Hz courant pour marqueurs harmoniques
 
   // ── Pipeline ─────────────────────────────────────────────────────────────────
   // phase : 'pret' | 'enregistrement' | 'analyse' | 'resultats'
@@ -352,6 +359,7 @@ export default function AccordeurPage() {
 
     audioBufferRef.current = audioBuffer
     serieRef.current = serieCalc
+    spectreDataRef.current = computeAverageSpectrum(audioBuffer)
     setNotes(notesAv)
     setCourbe(courbeB)
     setScoreP(scorePedagogique(notesAv, seuil))
@@ -376,6 +384,11 @@ export default function AccordeurPage() {
       liveAnalyserRef.current = analyser
       liveDetectorRef.current = PitchDetector.forFloat32Array(2048)
 
+      const spectreAnalyser = audioCtx.createAnalyser()
+      spectreAnalyser.fftSize = 4096
+      source.connect(spectreAnalyser)
+      spectreAnalyserRef.current = spectreAnalyser
+
       const buf = new Float32Array(2048)
       let lastUpdate = 0
       const loop = () => {
@@ -395,6 +408,7 @@ export default function AccordeurPage() {
         const muCents = (r === '5-limite' && tonikMidi !== null)
           ? centsCinqLimite(hz, tonikMidi, d)
           : centsTempere(hz, d)
+        liveHzRef.current = hz
         setLiveNote({ nom, octave, muCents })
       }
       loop()
@@ -408,6 +422,8 @@ export default function AccordeurPage() {
     cancelAnimationFrame(liveRafRef.current)
     liveStreamRef.current?.getTracks().forEach(t => t.stop())
     liveAudioCtxRef.current?.close()
+    spectreAnalyserRef.current = null
+    liveHzRef.current = null
     setLiveActive(false)
     setLiveNote(null)
   }, [])
@@ -851,6 +867,19 @@ export default function AccordeurPage() {
                 }}
               >{label}</button>
             ))}
+            {(modeLive || phase === 'resultats') && (
+              <button
+                onClick={() => setShowSpectre(v => !v)}
+                style={{
+                  padding: '8px 12px', borderRadius: 8,
+                  border: `1px solid ${showSpectre ? COL_ACCENT : COL_BORDER}`,
+                  background: showSpectre ? 'rgba(192,132,252,0.12)' : COL_BG,
+                  color: showSpectre ? COL_ACCENT : COL_MUTED2,
+                  fontWeight: 700, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit',
+                  whiteSpace: 'nowrap',
+                }}
+              >◈ Spectre</button>
+            )}
           </div>
           {/* ── Accordeur live ───────────────────────────────────────────────── */}
           {modeLive && (() => {
@@ -1123,6 +1152,17 @@ export default function AccordeurPage() {
         )}
 
       </div>
+
+      {showSpectre && (
+        <SpectrePaneau
+          mode={modeLive ? 'live' : 'static'}
+          spectreAnalyserRef={spectreAnalyserRef}
+          spectreData={spectreDataRef.current}
+          sampleRate={liveAudioCtxRef.current?.sampleRate ?? 44100}
+          fundamentalHz={modeLive ? liveHzRef.current : null}
+          onClose={() => setShowSpectre(false)}
+        />
+      )}
     </div>
   )
 }

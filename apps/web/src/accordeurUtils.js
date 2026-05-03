@@ -357,3 +357,77 @@ export function urlVersStructure(str) {
   }
   return { id: uuid(), nom, toniques, createdAt: new Date().toISOString(), public: true }
 }
+
+// ─── Analyse spectrale (FFT Cooley-Tukey radix-2) ────────────────────────────
+
+function hannWindow(size) {
+  const w = new Float32Array(size)
+  for (let i = 0; i < size; i++) w[i] = 0.5 * (1 - Math.cos(2 * Math.PI * i / (size - 1)))
+  return w
+}
+
+function fftReal(signal) {
+  const n = signal.length
+  const real = new Float64Array(signal)
+  const imag = new Float64Array(n)
+  // bit-reversal permutation
+  let j = 0
+  for (let i = 1; i < n; i++) {
+    let bit = n >> 1
+    for (; j & bit; bit >>= 1) j ^= bit
+    j ^= bit
+    if (i < j) {
+      ;[real[i], real[j]] = [real[j], real[i]]
+      ;[imag[i], imag[j]] = [imag[j], imag[i]]
+    }
+  }
+  // Cooley-Tukey iterative
+  for (let len = 2; len <= n; len <<= 1) {
+    const ang = -2 * Math.PI / len
+    const wRe = Math.cos(ang), wIm = Math.sin(ang)
+    for (let i = 0; i < n; i += len) {
+      let uRe = 1, uIm = 0
+      for (let k = 0; k < len / 2; k++) {
+        const eRe = real[i + k], eIm = imag[i + k]
+        const oRe = real[i + k + len / 2] * uRe - imag[i + k + len / 2] * uIm
+        const oIm = real[i + k + len / 2] * uIm + imag[i + k + len / 2] * uRe
+        real[i + k]           = eRe + oRe
+        imag[i + k]           = eIm + oIm
+        real[i + k + len / 2] = eRe - oRe
+        imag[i + k + len / 2] = eIm - oIm
+        const newURe = uRe * wRe - uIm * wIm
+        uIm = uRe * wIm + uIm * wRe
+        uRe = newURe
+      }
+    }
+  }
+  return { real, imag }
+}
+
+// Retourne Float32Array[fftSize/2] de valeurs en dB (moyenne de N fenêtres Hann)
+export function computeAverageSpectrum(audioBuffer, fftSize = 4096) {
+  const N_FRAMES = 8
+  const data     = audioBuffer.getChannelData(0)
+  const hann     = hannWindow(fftSize)
+  const bins     = fftSize / 2
+  const accum    = new Float64Array(bins)
+  let   count    = 0
+
+  const step = Math.max(1, Math.floor((data.length - fftSize) / (N_FRAMES - 1)))
+  for (let f = 0; f < N_FRAMES; f++) {
+    const start = Math.min(f * step, data.length - fftSize)
+    if (start < 0) break
+    const windowed = new Float32Array(fftSize)
+    for (let i = 0; i < fftSize; i++) windowed[i] = data[start + i] * hann[i]
+    const { real, imag } = fftReal(windowed)
+    for (let k = 0; k < bins; k++) accum[k] += Math.sqrt(real[k] * real[k] + imag[k] * imag[k])
+    count++
+  }
+
+  const result = new Float32Array(bins)
+  for (let k = 0; k < bins; k++) {
+    const mag = accum[k] / (count * fftSize)
+    result[k] = mag > 0 ? 20 * Math.log10(mag) : -120
+  }
+  return result
+}
