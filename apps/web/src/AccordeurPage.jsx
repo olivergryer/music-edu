@@ -3,6 +3,8 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { PitchDetector } from 'pitchy'
 import AccordeurStaff from './AccordeurStaff'
 import SpectrePaneau from './SpectrePaneau'
+import GenerateurAccord from './GenerateurAccord'
+import JeuGamme from './JeuGamme'
 import {
   analyserBuffer, segmenter, calculerEcarts, courbebrute,
   scorePedagogique, scoreQualite, couleurJustesse,
@@ -166,6 +168,10 @@ export default function AccordeurPage() {
   const liveRafRef      = useRef(null)
   const liveDetectorRef = useRef(null)
   const liveParamsRef   = useRef({})
+
+  // ── Outils pédagogiques ───────────────────────────────────────────────────────
+  const [ouvertPanel,     setOuvertPanel]     = useState(null) // 'accord' | 'gamme' | null
+  const generatorPcsRef = useRef(new Set())
 
   // ── Spectre FFT ───────────────────────────────────────────────────────────────
   const [showSpectre,    setShowSpectre]    = useState(false)
@@ -424,6 +430,9 @@ export default function AccordeurPage() {
         const [hz, clarity] = liveDetectorRef.current.findPitch(emp, audioCtx.sampleRate)
         if (clarity < ct || hz < HZ_MIN || hz > HZ_MAX) return
         const midi        = Math.round(hzToMidi(hz, d))
+        // Ignore notes played by the chord generator
+        const pcRaw = ((midi % 12) + 12) % 12
+        if (generatorPcsRef.current?.size && generatorPcsRef.current.has(pcRaw)) return
         const midiDisplay = midi + (tOff ?? 0)
         const pc          = ((midiDisplay % 12) + 12) % 12
         const octave      = Math.floor(midiDisplay / 12) - 1
@@ -1143,6 +1152,75 @@ export default function AccordeurPage() {
           </div>
         </details>
 
+        {/* ── Outils pédagogiques ─────────────────────────────────────────────── */}
+        {[
+          {
+            id: 'accord',
+            titre: 'Générateur d\'accord',
+            icone: (
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="12" r="3"/><circle cx="5" cy="7" r="2"/><circle cx="19" cy="7" r="2"/><circle cx="5" cy="17" r="2"/><circle cx="19" cy="17" r="2"/>
+                <line x1="7" y1="7" x2="10" y2="11"/><line x1="17" y1="7" x2="14" y2="11"/><line x1="7" y1="17" x2="10" y2="13"/><line x1="17" y1="17" x2="14" y2="13"/>
+              </svg>
+            ),
+            content: (
+              <GenerateurAccord
+                transpoKey={transpoKey}
+                referentiel={referentiel}
+                diapason={diapason}
+                seuil={seuil}
+                liveNote={liveNote}
+                onGeneratorPcsChange={pcs => { generatorPcsRef.current = pcs }}
+              />
+            ),
+          },
+          {
+            id: 'gamme',
+            titre: 'Jeu de gamme',
+            icone: (
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <line x1="3" y1="18" x2="3" y2="6"/><line x1="8" y1="18" x2="8" y2="9"/><line x1="13" y1="18" x2="13" y2="5"/><line x1="18" y1="18" x2="18" y2="11"/><line x1="21" y1="18" x2="1" y2="18"/>
+              </svg>
+            ),
+            content: (
+              <JeuGamme
+                transpoKey={transpoKey}
+                referentiel={referentiel}
+                diapason={diapason}
+                seuil={seuil}
+                silenceDurationMs={silenceDurationMs}
+                noteJumpCents={noteJumpCents}
+                clarityThreshold={clarityThreshold}
+                gateLevel={gateLevel}
+              />
+            ),
+          },
+        ].map(({ id, titre, icone, content }) => (
+          <div key={id} style={{ marginTop: 8, border: `1px solid ${COL_BORDER}`, borderRadius: 12, overflow: 'hidden' }}>
+            <button
+              onClick={() => setOuvertPanel(p => p === id ? null : id)}
+              style={{
+                width: '100%', display: 'flex', alignItems: 'center', gap: 10,
+                background: COL_SURFACE, border: 'none', padding: '12px 16px',
+                cursor: 'pointer', color: COL_TEXT,
+                fontFamily: "'Inter','Segoe UI',sans-serif", fontSize: 13, fontWeight: 600,
+                textAlign: 'left',
+              }}
+            >
+              <span style={{ color: COL_ACCENT }}>{icone}</span>
+              <span style={{ flex: 1 }}>{titre}</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={COL_MUTED2} strokeWidth="2.5"
+                style={{ transform: ouvertPanel === id ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>
+                <polyline points="6 9 12 15 18 9"/>
+              </svg>
+            </button>
+            {ouvertPanel === id && (
+              <div style={{ padding: '16px', background: COL_BG, borderTop: `1px solid ${COL_BORDER}` }}>
+                {content}
+              </div>
+            )}
+          </div>
+        ))}
 
       </div>
 

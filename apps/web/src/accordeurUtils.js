@@ -529,6 +529,54 @@ export function computeAverageSpectrum(audioBuffer, fftSize = 4096) {
   return _spectrumFromSamples(audioBuffer.getChannelData(0), fftSize)
 }
 
+// ─── Outils pédagogiques ───────────────────────────────────────────────────
+
+export const ALL_ROOTS = [
+  'Do','Do#','Réb','Ré','Ré#','Mib','Mi','Fa','Fa#','Solb','Sol','Sol#','Lab','La','La#','Sib','Si',
+]
+
+export const CHORD_TYPES = {
+  'maj':   { label: 'Majeur',            intervals: [0, 4, 7] },
+  'min':   { label: 'Mineur',            intervals: [0, 3, 7] },
+  'dim':   { label: 'Diminué',           intervals: [0, 3, 6] },
+  'dom7':  { label: '7e de dominante',   intervals: [0, 4, 7, 10] },
+  'maj7':  { label: 'Majeur 7',          intervals: [0, 4, 7, 11] },
+  'min7':  { label: 'Mineur 7',          intervals: [0, 3, 7, 10] },
+  'hdim7': { label: 'Demi-diminuée',     intervals: [0, 3, 6, 10] },
+  'dim7':  { label: 'Diminuée',          intervals: [0, 3, 6, 9] },
+}
+
+// Ascending close-position chord. inversion = index of bass note in original interval list.
+export function buildChordMidis(rootName, type, inversion = 0, baseOctave = 4) {
+  const rootPC = noteNameToPC(rootName)
+  const ivals  = CHORD_TYPES[type].intervals
+  const n      = ivals.length
+  const rot    = [...ivals.slice(inversion), ...ivals.slice(0, inversion)]
+  const baseMidi = rootPC + (baseOctave + 1) * 12 + rot[0]
+  let prev = baseMidi
+  return rot.map((iv, i) => {
+    if (i === 0) return baseMidi
+    let midi = rootPC + (baseOctave + 1) * 12 + iv
+    while (midi <= prev) midi += 12
+    prev = midi
+    return midi
+  })
+}
+
+export const SCALE_TYPES = {
+  'major':      { label: 'Majeure',              intervals: [0, 2, 4, 5, 7, 9, 11] },
+  'nat_minor':  { label: 'Mineure naturelle',     intervals: [0, 2, 3, 5, 7, 8, 10] },
+  'harm_minor': { label: 'Mineure harmonique',    intervals: [0, 2, 3, 5, 7, 8, 11] },
+  'mel_asc':    { label: 'Mélodique ascendante',  intervals: [0, 2, 3, 5, 7, 9, 11] },
+  'mel_desc':   { label: 'Mélodique descendante', intervals: [0, 2, 3, 5, 7, 8, 10] },
+}
+
+export function buildScaleMidis(rootName, type, octave = 4) {
+  const rootPC   = noteNameToPC(rootName)
+  const rootMidi = rootPC + (octave + 1) * 12
+  return SCALE_TYPES[type].intervals.map(iv => rootMidi + iv)
+}
+
 // Retourne un tableau de Float32Array, un spectre par note (basé sur debutMs/finMs)
 export function computeSpectreParNote(audioBuffer, notes, fftSize = 4096) {
   const data = audioBuffer.getChannelData(0)
