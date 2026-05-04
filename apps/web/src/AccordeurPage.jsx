@@ -14,7 +14,7 @@ import {
   NOTE_NAMES_FR, DEFAULT_STRUCTURES,
   frameRMS, preEmphasis, HZ_MIN, HZ_MAX,
   hzToMidi, midiToNoteName, centsTempere, centsCinqLimite,
-  buildEnharmonicScale,
+  buildEnharmonicScale, noteNameToPC,
 } from './accordeurUtils'
 
 // ─── Constantes UI ─────────────────────────────────────────────────────────────
@@ -226,7 +226,7 @@ export default function AccordeurPage() {
     serieRef.current = s
     const struct    = [...DEFAULT_STRUCTURES, ...structures].find(x => x.id === structureId)
     const tonikMidi = struct
-      ? (NOTE_NAMES_FR.indexOf(struct.toniques[0]?.tonique ?? 'Do') + 60)
+      ? (noteNameToPC(struct.toniques[0]?.tonique ?? 'Do') + 60)
       : 60
     const segs      = segmenter(s, diapason, { silenceDurationMs, noteJumpCents })
     const notesCalc = calculerEcarts(segs, referentiel, tonikMidi, diapason)
@@ -248,7 +248,7 @@ export default function AccordeurPage() {
   useEffect(() => {
     const struct = [...DEFAULT_STRUCTURES, ...structures].find(x => x.id === structureId)
     const tonicConcertName = struct?.toniques?.[0]?.tonique ?? 'Do'
-    const tonicConcertPC   = NOTE_NAMES_FR.indexOf(tonicConcertName)
+    const tonicConcertPC   = noteNameToPC(tonicConcertName)
     const transpoOffset    = TRANSPOSITIONS[transpoKey]?.offset ?? 0
     const tonicDisplayPC   = ((tonicConcertPC + transpoOffset) % 12 + 12) % 12
     liveParamsRef.current = {
@@ -370,7 +370,7 @@ export default function AccordeurPage() {
     const serieCalc = analyserBuffer(audioBuffer, { clarityThreshold, rmsGate: gateLevel })
     const struct    = [...DEFAULT_STRUCTURES, ...structures].find(s => s.id === structureId)
     const tonikMidi = struct
-      ? (NOTE_NAMES_FR.indexOf(struct.toniques[0]?.tonique ?? 'Do') + 60)
+      ? (noteNameToPC(struct.toniques[0]?.tonique ?? 'Do') + 60)
       : 60
 
     const segments = segmenter(serieCalc, diapason, { silenceDurationMs, noteJumpCents })
@@ -478,7 +478,7 @@ export default function AccordeurPage() {
 
       const struct    = [...DEFAULT_STRUCTURES, ...structures].find(s => s.id === structureId)
       const tonikMidi = struct
-        ? (NOTE_NAMES_FR.indexOf(struct.toniques[0]?.tonique ?? 'Do') + 60)
+        ? (noteNameToPC(struct.toniques[0]?.tonique ?? 'Do') + 60)
         : 60
 
       const serieCalc = analyserBuffer(audioBuffer, { clarityThreshold, rmsGate: gateLevel })
@@ -555,7 +555,7 @@ export default function AccordeurPage() {
 
   const _tonicStruct      = structureId ? [...DEFAULT_STRUCTURES, ...structures].find(s => s.id === structureId) : null
   const _tonicConcertName = _tonicStruct?.toniques?.[0]?.tonique ?? 'Do'
-  const _tonicConcertPC   = NOTE_NAMES_FR.indexOf(_tonicConcertName)
+  const _tonicConcertPC   = noteNameToPC(_tonicConcertName)
   const _transpoOffset    = TRANSPOSITIONS[transpoKey]?.offset ?? 0
   const _tonicDisplayPC   = ((_tonicConcertPC + _transpoOffset) % 12 + 12) % 12
   const _tonicDisplayName = NOTE_NAMES_FR[_tonicDisplayPC]
@@ -579,8 +579,7 @@ export default function AccordeurPage() {
 
   // ─── Helper : transpose un nom de note concert selon transpoKey ──────────────
   const transpoNom = (nom) => {
-    const idx = NOTE_NAMES_FR.indexOf(nom)
-    if (idx === -1) return nom
+    const idx = noteNameToPC(nom)
     const offset = TRANSPOSITIONS[transpoKey]?.offset ?? 0
     if (offset === 0) return nom
     return NOTE_NAMES_FR[((idx + offset) % 12 + 12) % 12]

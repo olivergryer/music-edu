@@ -9,6 +9,25 @@ const NOTE_JUMP_WINDOW_MS    = 50
 // ─── Noms de notes (concert Do) ───────────────────────────────────────────────
 export const NOTE_NAMES_FR = ['Do', 'Réb', 'Ré', 'Mib', 'Mi', 'Fa', 'Fa#', 'Sol', 'Sol#', 'La', 'Sib', 'Si']
 
+// ─── Mapping complet nom → classe de hauteur (inclut enharmoniques) ──────────
+const _ALL_PC = {
+  'Do': 0, 'Do#': 1, 'Dob': 11,
+  'Réb': 1, 'Ré': 2, 'Ré#': 3,
+  'Mib': 3, 'Mi': 4, 'Mi#': 5,
+  'Fab': 4, 'Fa': 5, 'Fa#': 6,
+  'Solb': 6, 'Sol': 7, 'Sol#': 8,
+  'Lab': 8, 'La': 9, 'La#': 10,
+  'Sib': 10, 'Si': 11, 'Si#': 0,
+}
+
+// Retourne la classe de hauteur (0–11) pour n'importe quel nom de note FR
+export function noteNameToPC(name) {
+  const pc = _ALL_PC[name]
+  if (pc !== undefined) return pc
+  const idx = NOTE_NAMES_FR.indexOf(name)
+  return idx >= 0 ? idx : 0
+}
+
 // ─── Gamme chromatique enharmonique relative à une tonique ────────────────────
 // Règle : +n demi-tons depuis T = lettre (T + degré_diatonique) + altération ad hoc
 // Degrés diatoniques : [0,1,1,2,2,3,3,4,4,5,6,6] pour les offsets 0–11
@@ -28,40 +47,65 @@ function _lidx(nom) {
   return 0
 }
 
+// Retourne tableau[12] indexé par classe de hauteur.
+// null aux positions où l'altération serait double (rare, toniques altérées).
 function _buildScale(tonicName, letters) {
-  const tonicPC = NOTE_NAMES_FR.indexOf(tonicName)
-  if (tonicPC === -1) return null
+  const tonicPC = noteNameToPC(tonicName)
   const tL  = _lidx(tonicName)
   const out = new Array(12)
   for (let off = 0; off < 12; off++) {
     const lIdx   = (tL + _STEP[off]) % 7
     const natInt = (_LPC[lIdx] - tonicPC + 12) % 12
-    const acc    = off - natInt
-    const l      = letters[lIdx]
-    out[(tonicPC + off) % 12] = acc === 0 ? l : acc === 1 ? l + '#' : acc === -1 ? l + 'b' : l
+    let acc = off - natInt
+    // Normaliser dans [-6, 5] pour couvrir le cas tonique♯ (acc peut être -11)
+    if (acc > 6)  acc -= 12
+    if (acc < -6) acc += 12
+    const l = letters[lIdx]
+    out[(tonicPC + off) % 12] =
+      acc === 0  ? l :
+      acc === 1  ? l + '#' :
+      acc === -1 ? l + 'b' :
+      null  // double altération → le caller substituera le fallback
   }
   return out
 }
 
+const _DEFAULT_VEX = ['c', 'db', 'd', 'eb', 'e', 'f', 'f#', 'g', 'g#', 'a', 'bb', 'b']
+
 // Retourne tableau[12] de noms français indexé par classe de hauteur (0=Do)
 export function buildEnharmonicScale(tonicName) {
-  return _buildScale(tonicName, _LFR) ?? [...NOTE_NAMES_FR]
+  const res = _buildScale(tonicName, _LFR)
+  // Remplace les nulls (double altération) par le nom C-base
+  return res.map((n, pc) => n ?? NOTE_NAMES_FR[pc])
 }
 
 // Même chose, notation VexFlow (lettres minuscules, '#'/'b')
 export function buildEnharmonicVexScale(tonicName) {
-  return _buildScale(tonicName, _LVEX) ?? ['c', 'db', 'd', 'eb', 'e', 'f', 'f#', 'g', 'g#', 'a', 'bb', 'b']
+  const res = _buildScale(tonicName, _LVEX)
+  return res.map((n, pc) => n ?? _DEFAULT_VEX[pc])
 }
 
-// ─── Structures par défaut (une par tonique, non modifiables) ─────────────────
-export const DEFAULT_STRUCTURES = NOTE_NAMES_FR.map((nom, i) => ({
-  id:        `default-${i}`,
-  nom,
-  toniques:  [{ indexNote: 1, tonique: nom }],
-  createdAt: '2026-01-01T00:00:00Z',
-  public:    false,
-  readOnly:  true,
-}))
+// ─── Structures par défaut (une par tonique + enharmoniques) ──────────────────
+const _ENH_EXTRAS = [
+  { nom: 'Do#',  id: 'default-enh-1'  },
+  { nom: 'Ré#',  id: 'default-enh-3'  },
+  { nom: 'Solb', id: 'default-enh-6'  },
+  { nom: 'Lab',  id: 'default-enh-8'  },
+  { nom: 'La#',  id: 'default-enh-10' },
+]
+
+export const DEFAULT_STRUCTURES = [
+  ...NOTE_NAMES_FR.map((nom, i) => ({
+    id: `default-${i}`, nom,
+    toniques:  [{ indexNote: 1, tonique: nom }],
+    createdAt: '2026-01-01T00:00:00Z', public: false, readOnly: true,
+  })),
+  ..._ENH_EXTRAS.map(({ nom, id }) => ({
+    id, nom,
+    toniques:  [{ indexNote: 1, tonique: nom }],
+    createdAt: '2026-01-01T00:00:00Z', public: false, readOnly: true,
+  })),
+]
 
 // ─── Ratios 5-limite par demi-ton depuis tonique ──────────────────────────────
 const JUST_RATIOS_CENTS = [
