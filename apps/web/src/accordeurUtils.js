@@ -9,6 +9,50 @@ const NOTE_JUMP_WINDOW_MS    = 50
 // ─── Noms de notes (concert Do) ───────────────────────────────────────────────
 export const NOTE_NAMES_FR = ['Do', 'Réb', 'Ré', 'Mib', 'Mi', 'Fa', 'Fa#', 'Sol', 'Sol#', 'La', 'Sib', 'Si']
 
+// ─── Gamme chromatique enharmonique relative à une tonique ────────────────────
+// Règle : +n demi-tons depuis T = lettre (T + degré_diatonique) + altération ad hoc
+// Degrés diatoniques : [0,1,1,2,2,3,3,4,4,5,6,6] pour les offsets 0–11
+const _LFR  = ['Do', 'Ré', 'Mi', 'Fa', 'Sol', 'La', 'Si']
+const _LVEX = ['c',  'd',  'e',  'f',  'g',   'a',  'b' ]
+const _LPC  = [0, 2, 4, 5, 7, 9, 11]          // demi-tons naturels (C…B)
+const _STEP = [0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 6, 6]
+
+function _lidx(nom) {
+  if (nom.startsWith('Sol')) return 4
+  if (nom.startsWith('Si'))  return 6
+  if (nom.startsWith('Do'))  return 0
+  if (nom.startsWith('Ré'))  return 1
+  if (nom.startsWith('Mi'))  return 2
+  if (nom.startsWith('Fa'))  return 3
+  if (nom.startsWith('La'))  return 5
+  return 0
+}
+
+function _buildScale(tonicName, letters) {
+  const tonicPC = NOTE_NAMES_FR.indexOf(tonicName)
+  if (tonicPC === -1) return null
+  const tL  = _lidx(tonicName)
+  const out = new Array(12)
+  for (let off = 0; off < 12; off++) {
+    const lIdx   = (tL + _STEP[off]) % 7
+    const natInt = (_LPC[lIdx] - tonicPC + 12) % 12
+    const acc    = off - natInt
+    const l      = letters[lIdx]
+    out[(tonicPC + off) % 12] = acc === 0 ? l : acc === 1 ? l + '#' : acc === -1 ? l + 'b' : l
+  }
+  return out
+}
+
+// Retourne tableau[12] de noms français indexé par classe de hauteur (0=Do)
+export function buildEnharmonicScale(tonicName) {
+  return _buildScale(tonicName, _LFR) ?? [...NOTE_NAMES_FR]
+}
+
+// Même chose, notation VexFlow (lettres minuscules, '#'/'b')
+export function buildEnharmonicVexScale(tonicName) {
+  return _buildScale(tonicName, _LVEX) ?? ['c', 'db', 'd', 'eb', 'e', 'f', 'f#', 'g', 'g#', 'a', 'bb', 'b']
+}
+
 // ─── Structures par défaut (une par tonique, non modifiables) ─────────────────
 export const DEFAULT_STRUCTURES = NOTE_NAMES_FR.map((nom, i) => ({
   id:        `default-${i}`,

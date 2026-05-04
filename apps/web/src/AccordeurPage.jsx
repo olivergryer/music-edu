@@ -14,6 +14,7 @@ import {
   NOTE_NAMES_FR, DEFAULT_STRUCTURES,
   frameRMS, preEmphasis, HZ_MIN, HZ_MAX,
   hzToMidi, midiToNoteName, centsTempere, centsCinqLimite,
+  buildEnharmonicScale,
 } from './accordeurUtils'
 
 // ─── Constantes UI ─────────────────────────────────────────────────────────────
@@ -246,14 +247,20 @@ export default function AccordeurPage() {
   // ── Sync params live (accessibles dans la RAF loop via ref) ──────────────────
   useEffect(() => {
     const struct = [...DEFAULT_STRUCTURES, ...structures].find(x => x.id === structureId)
+    const tonicConcertName = struct?.toniques?.[0]?.tonique ?? 'Do'
+    const tonicConcertPC   = NOTE_NAMES_FR.indexOf(tonicConcertName)
+    const transpoOffset    = TRANSPOSITIONS[transpoKey]?.offset ?? 0
+    const tonicDisplayPC   = ((tonicConcertPC + transpoOffset) % 12 + 12) % 12
     liveParamsRef.current = {
       diapason,
       referentiel,
       clarityThreshold,
       gateLevel,
-      tonikMidi: struct ? (NOTE_NAMES_FR.indexOf(struct.toniques[0]?.tonique ?? 'Do') + 60) : null,
+      transpoOffset,
+      enharmonicScale: buildEnharmonicScale(NOTE_NAMES_FR[tonicDisplayPC]),
+      tonikMidi: struct ? (tonicConcertPC + 60) : null,
     }
-  }, [diapason, referentiel, clarityThreshold, gateLevel, structureId, structures])
+  }, [diapason, referentiel, clarityThreshold, gateLevel, structureId, structures, transpoKey])
 
   // ── Persist réglages localStorage ───────────────────────────────────────────
   useEffect(() => { localStorage.setItem('acc_diapason', diapason) }, [diapason])
@@ -410,14 +417,17 @@ export default function AccordeurPage() {
         if (now - lastUpdate < 250) return
         lastUpdate = now
         analyser.getFloatTimeDomainData(buf)
-        const { diapason: d, referentiel: r, clarityThreshold: ct, gateLevel: gl, tonikMidi } = liveParamsRef.current
+        const { diapason: d, referentiel: r, clarityThreshold: ct, gateLevel: gl, tonikMidi, transpoOffset: tOff, enharmonicScale: scale } = liveParamsRef.current
         const rms = frameRMS(buf)
         if (rms < gl) return
         const emp = preEmphasis(buf)
         const [hz, clarity] = liveDetectorRef.current.findPitch(emp, audioCtx.sampleRate)
         if (clarity < ct || hz < HZ_MIN || hz > HZ_MAX) return
-        const midi = Math.round(hzToMidi(hz, d))
-        const { name: nom, octave } = midiToNoteName(midi)
+        const midi        = Math.round(hzToMidi(hz, d))
+        const midiDisplay = midi + (tOff ?? 0)
+        const pc          = ((midiDisplay % 12) + 12) % 12
+        const octave      = Math.floor(midiDisplay / 12) - 1
+        const nom         = scale?.[pc] ?? midiToNoteName(midi).name
         const muCents = (r === '5-limite' && tonikMidi !== null)
           ? centsCinqLimite(hz, tonikMidi, d)
           : centsTempere(hz, d)
@@ -541,12 +551,24 @@ export default function AccordeurPage() {
     if (structureId === id) setStructureId(null)
   }, [structureId])
 
+  // ─── Gamme enharmonique d'affichage (tonique transposée) ─────────────────────
+
+  const _tonicStruct      = structureId ? [...DEFAULT_STRUCTURES, ...structures].find(s => s.id === structureId) : null
+  const _tonicConcertName = _tonicStruct?.toniques?.[0]?.tonique ?? 'Do'
+  const _tonicConcertPC   = NOTE_NAMES_FR.indexOf(_tonicConcertName)
+  const _transpoOffset    = TRANSPOSITIONS[transpoKey]?.offset ?? 0
+  const _tonicDisplayPC   = ((_tonicConcertPC + _transpoOffset) % 12 + 12) % 12
+  const _tonicDisplayName = NOTE_NAMES_FR[_tonicDisplayPC]
+  const enharmonicScale   = buildEnharmonicScale(_tonicDisplayName)
+
   // ─── Données graphes ──────────────────────────────────────────────────────────
 
   const couleurs  = notes.map(n => couleurJustesse(n.muCents, seuil))
   const labelsX   = notes.map(n => {
-    const { nom, octave } = transposerNom(n.nom, n.octave, transpoKey)
-    return `${nom}${octave}`
+    const midiDisp = n.midiCible + _transpoOffset
+    const pc       = ((midiDisp % 12) + 12) % 12
+    const oct      = Math.floor(midiDisp / 12) - 1
+    return `${enharmonicScale[pc]}${oct}`
   })
   const dataBarres = notes.map((n, i) => ({ value: n.muCents, label: labelsX[i] }))
   const dataSigma  = notes.map((n, i) => ({ value: n.sigmaCents, label: labelsX[i] }))
@@ -666,9 +688,7 @@ export default function AccordeurPage() {
           </div>
           {/* ── Accordeur live ───────────────────────────────────────────────── */}
           {modeLive && (() => {
-            const liveDisplay = liveNote
-              ? transposerNom(liveNote.nom, liveNote.octave, transpoKey)
-              : null
+            const liveDisplay = liveNote  // nom/octave déjà transposés + enharmoniques
             const liveCouleur = liveNote ? couleurJustesse(liveNote.muCents, seuil) : COL_MUTED
             const needlePct   = liveNote ? Math.max(0, Math.min(100, 50 + (liveNote.muCents / 50) * 50)) : 50
             const centsLabel  = liveNote
@@ -787,7 +807,7 @@ export default function AccordeurPage() {
 
             {vue === 'portee' && (
               <div style={{ position: 'relative', background: COL_SURFACE, borderRadius: 12, padding: '16px 8px', marginBottom: 16, border: `1px solid ${COL_BORDER}` }}>
-                <AccordeurStaff notes={notes} seuil={seuil} transpoKey={transpoKey} containerWidth={524} height={180} notePx={window.innerWidth <= 540 ? 26 : 52} />
+                <AccordeurStaff notes={notes} seuil={seuil} transpoKey={transpoKey} tonicName={_tonicDisplayName} containerWidth={524} height={180} notePx={window.innerWidth <= 540 ? 26 : 52} />
                 {dirty && (
                   <div style={{ position: 'absolute', inset: 0, borderRadius: 12, background: 'rgba(3,7,18,0.72)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <Btn onClick={recalculer} style={{ fontSize: 13, padding: '10px 28px' }}>↻ Recalculer</Btn>

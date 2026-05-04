@@ -1,11 +1,9 @@
 import { useEffect, useRef } from 'react'
 import { Renderer, Stave, StaveNote, Voice, Formatter, Annotation, Accidental } from 'vexflow'
-import { couleurJustesse, transposerMidi } from './accordeurUtils'
+import { couleurJustesse, transposerMidi, buildEnharmonicVexScale } from './accordeurUtils'
 
-const NOTE_NAMES_VEX = ['c', 'db', 'd', 'eb', 'e', 'f', 'f#', 'g', 'g#', 'a', 'bb', 'b']
-
-function midiToVexKey(midi) {
-  const name   = NOTE_NAMES_VEX[((midi % 12) + 12) % 12]
+function midiToVexKey(midi, vexScale) {
+  const name   = vexScale[((midi % 12) + 12) % 12] ?? 'c'
   const octave = Math.floor(midi / 12) - 1
   return `${name}/${octave}`
 }
@@ -31,7 +29,7 @@ function bestOctaveShift(midis) {
 
 const STAVE_MARGIN = 140
 
-export default function AccordeurStaff({ notes, seuil = 10, transpoKey = 'C', containerWidth = 500, height = 180, notePx = 52 }) {
+export default function AccordeurStaff({ notes, seuil = 10, transpoKey = 'C', tonicName = 'Do', containerWidth = 500, height = 180, notePx = 52 }) {
   const ref = useRef(null)
 
   const staveWidth = Math.max(containerWidth - 4, notes?.length * notePx + STAVE_MARGIN)
@@ -45,6 +43,9 @@ export default function AccordeurStaff({ notes, seuil = 10, transpoKey = 'C', co
       renderer.resize(staveWidth, height)
       const ctx = renderer.getContext()
       ctx.setFont('Arial', 9)
+
+      // ── Gamme enharmonique selon tonique transposée ──────────────────────────
+      const vexScale = buildEnharmonicVexScale(tonicName)
 
       // ── Octave-fit ───────────────────────────────────────────────────────────
       const midisTranspo = notes.map(n => transposerMidi(n.midiCible, transpoKey))
@@ -71,7 +72,7 @@ export default function AccordeurStaff({ notes, seuil = 10, transpoKey = 'C', co
       const accTracker = {}
       const vexNotes = notes.map(note => {
         const midiDisplay = transposerMidi(note.midiCible, transpoKey) + octaveShift
-        const key         = midiToVexKey(midiDisplay)
+        const key         = midiToVexKey(midiDisplay, vexScale)
         const couleur     = couleurJustesse(note.muCents, seuil)
         const vexPart     = key.split('/')[0]
         const hasSharp    = vexPart.includes('#')
@@ -150,7 +151,7 @@ export default function AccordeurStaff({ notes, seuil = 10, transpoKey = 'C', co
     } catch (err) {
       console.warn('AccordeurStaff VexFlow:', err.message ?? err)
     }
-  }, [notes, seuil, transpoKey, staveWidth, height])
+  }, [notes, seuil, transpoKey, tonicName, staveWidth, height])
 
   return (
     <div style={{ width: '100%', maxWidth: containerWidth, overflowX: 'auto', overflowY: 'hidden' }}>
