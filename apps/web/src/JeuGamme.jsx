@@ -4,7 +4,7 @@ import {
   ALL_ROOTS, SCALE_TYPES, buildScaleMidis,
   buildEnharmonicScale, noteNameToPC, TRANSPOSITIONS, NOTE_NAMES_FR,
   analyserBuffer, segmenter, calculerEcarts, courbebrute,
-  scorePedagogique, scoreQualite, couleurJustesse,
+  scorePedagogique, scoreQualite, couleurJustesse, midiToHzReferentiel,
 } from './accordeurUtils'
 
 const COL_BG      = '#030712'
@@ -29,31 +29,59 @@ function Btn({ children, onClick, disabled, variant = 'primary', style = {} }) {
   return <button style={{ ...base, ...variants[variant] }} onClick={onClick} disabled={disabled}>{children}</button>
 }
 
-// Convert scale midis to AccordeurStaff-compatible note objects (neutral display)
-function scaleMidisToStaffNotes(midis, tonicName) {
-  return midis.map(midiCible => ({
-    midiCible,
-    muCents:    0,
-    sigmaCents: 0,
-  }))
-}
-
+// Fix: for offset=0, return rootName directly; otherwise prefer matching accidental character
 function transposedRootName(rootName, transpoKey) {
   const offset = TRANSPOSITIONS[transpoKey]?.offset ?? 0
-  const pc     = ((noteNameToPC(rootName) + offset) % 12 + 12) % 12
+  if (offset === 0) return rootName
+  const pc = ((noteNameToPC(rootName) + offset) % 12 + 12) % 12
   return NOTE_NAMES_FR[pc]
 }
 
+function scaleMidisToStaffNotes(midis) {
+  return midis.map(midiCible => ({ midiCible, muCents: 0, sigmaCents: 0 }))
+}
+
+// Play scale as quarter notes at 60 BPM using Web Audio OscillatorNodes
+async function playScaleAudio(midis, tonikMidi, referentiel, diapason) {
+  const ctx       = new (window.AudioContext || window.webkitAudioContext)()
+  const bpm       = 60
+  const noteDur   = 60 / bpm          // 1 second per beat
+  const attackT   = 0.01
+  const releaseT  = 0.08
+
+  for (let i = 0; i < midis.length; i++) {
+    const hz   = midiToHzReferentiel(midis[i], tonikMidi, referentiel, diapason)
+    const t    = ctx.currentTime + i * noteDur
+    const gain = ctx.createGain()
+    gain.gain.setValueAtTime(0, t)
+    gain.gain.linearRampToValueAtTime(0.35, t + attackT)
+    gain.gain.setValueAtTime(0.35, t + noteDur - releaseT)
+    gain.gain.linearRampToValueAtTime(0, t + noteDur)
+    gain.connect(ctx.destination)
+    const osc = ctx.createOscillator()
+    osc.type = 'sine'
+    osc.frequency.value = hz
+    osc.connect(gain)
+    osc.start(t)
+    osc.stop(t + noteDur)
+  }
+
+  // Auto-close after all notes finish
+  const totalDur = midis.length * noteDur + 0.3
+  setTimeout(() => { try { ctx.close() } catch {} }, totalDur * 1000)
+}
+
 export default function JeuGamme({ transpoKey, referentiel, diapason, seuil, silenceDurationMs, noteJumpCents, clarityThreshold, gateLevel }) {
-  const [root,      setRoot]      = useState('Do')
-  const [scaleType, setScaleType] = useState('major')
-  const [phase,     setPhase]     = useState('pret') // 'pret' | 'enregistrement' | 'analyse' | 'resultats'
-  const [notes,     setNotes]     = useState([])
-  const [courbe,    setCourbe]    = useState([])
-  const [scoreP,    setScoreP]    = useState(null)
-  const [scoreQ,    setScoreQ]    = useState(null)
-  const [erreur,    setErreur]    = useState(null)
-  const [vue,       setVue]       = useState('portee')
+  const [root,       setRoot]       = useState('Do')
+  const [scaleType,  setScaleType]  = useState('major')
+  const [baseOctave, setBaseOctave] = useState(4)
+  const [phase,      setPhase]      = useState('pret')
+  const [notes,      setNotes]      = useState([])
+  const [scoreP,     setScoreP]     = useState(null)
+  const [scoreQ,     setScoreQ]     = useState(null)
+  const [erreur,     setErreur]     = useState(null)
+  const [vue,        setVue]        = useState('portee')
+  const [playing,    setPlaying]    = useState(false)
 
   const mediaRecorderRef = useRef(null)
   const chunksRef        = useRef([])
@@ -62,14 +90,12 @@ export default function JeuGamme({ transpoKey, referentiel, diapason, seuil, sil
   const animRef          = useRef(null)
   const vuRef            = useRef(null)
 
-  const scaleMidis   = buildScaleMidis(root, scaleType)
+  const scaleMidis   = buildScaleMidis(root, scaleType, baseOctave)
   const dispRootName = transposedRootName(root, transpoKey)
   const enharmoScale = buildEnharmonicScale(dispRootName)
-  const staffNotes   = scaleMidisToStaffNotes(scaleMidis, root)
+  const staffNotes   = scaleMidisToStaffNotes(scaleMidis)
+  const tonikMidi    = noteNameToPC(root) + (baseOctave + 1) * 12
 
-  const tonikMidi = noteNameToPC(root) + 60
-
-  // ─── Labels for results table
   const _transpoOffset = TRANSPOSITIONS[transpoKey]?.offset ?? 0
   const labelsX = notes.map(n => {
     const midiDisp = n.midiCible + _transpoOffset
@@ -77,9 +103,16 @@ export default function JeuGamme({ transpoKey, referentiel, diapason, seuil, sil
     const oct      = Math.floor(midiDisp / 12) - 1
     return `${enharmoScale[pc]}${oct}`
   })
-  const couleurs  = notes.map(n => couleurJustesse(n.muCents, seuil))
-  const muMoyen   = notes.length ? (notes.reduce((a, n) => a + n.muCents, 0) / notes.length).toFixed(1) : null
+  const muMoyen    = notes.length ? (notes.reduce((a, n) => a + n.muCents, 0) / notes.length).toFixed(1) : null
   const sigmaMoyen = notes.length ? (notes.reduce((a, n) => a + n.sigmaCents, 0) / notes.length).toFixed(1) : null
+
+  const handlePlay = async () => {
+    if (playing) return
+    setPlaying(true)
+    await playScaleAudio(scaleMidis, tonikMidi, referentiel, diapason)
+    // Delay reset slightly so last note finishes
+    setTimeout(() => setPlaying(false), (scaleMidis.length + 0.3) * 1000)
+  }
 
   const demarrer = useCallback(async () => {
     setErreur(null)
@@ -168,32 +201,31 @@ export default function JeuGamme({ transpoKey, referentiel, diapason, seuil, sil
     const serieCalc = analyserBuffer(audioBuffer, { clarityThreshold, rmsGate: gateLevel })
     const segments  = segmenter(serieCalc, diapason, { silenceDurationMs, noteJumpCents })
     const notesAv   = calculerEcarts(segments, referentiel, tonikMidi, diapason)
-    const courbeB   = courbebrute(serieCalc, referentiel, tonikMidi, diapason)
 
     setNotes(notesAv)
-    setCourbe(courbeB)
     setScoreP(scorePedagogique(notesAv, seuil))
     setScoreQ(scoreQualite(notesAv))
     setPhase('resultats')
   }, [clarityThreshold, gateLevel, diapason, silenceDurationMs, noteJumpCents, referentiel, tonikMidi, seuil])
 
   const reinitialiser = () => {
-    setPhase('pret')
-    setNotes([])
-    setCourbe([])
-    setScoreP(null)
-    setScoreQ(null)
-    setErreur(null)
+    setPhase('pret'); setNotes([]); setScoreP(null); setScoreQ(null); setErreur(null)
   }
 
   const selectStyle = {
-    background: COL_SURFACE, color: COL_TEXT, border: `1px solid ${COL_BORDER}`,
+    background: COL_BG, color: COL_TEXT, border: `1px solid ${COL_BORDER}`,
     borderRadius: 8, padding: '6px 10px', fontSize: 14, cursor: 'pointer',
+    fontFamily: "'Inter','Segoe UI',sans-serif",
+  }
+  const numBtnStyle = {
+    background: COL_BG, color: COL_TEXT, border: `1px solid ${COL_BORDER}`,
+    borderRadius: 6, width: 28, height: 28, cursor: 'pointer', fontSize: 14,
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
     fontFamily: "'Inter','Segoe UI',sans-serif",
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       {/* Sélecteurs */}
       {phase !== 'enregistrement' && phase !== 'analyse' && (
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
@@ -205,6 +237,37 @@ export default function JeuGamme({ transpoKey, referentiel, diapason, seuil, sil
               <option key={k} value={k}>{v.label}</option>
             ))}
           </select>
+
+          {/* Octave */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ fontSize: 12, color: COL_MUTED2 }}>Octave</span>
+            <button style={numBtnStyle} onClick={() => setBaseOctave(o => Math.max(2, o - 1))}>
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="6 15 12 9 18 15"/></svg>
+            </button>
+            <span style={{ color: COL_TEXT, fontWeight: 700, fontSize: 14, minWidth: 14, textAlign: 'center' }}>{baseOctave}</span>
+            <button style={numBtnStyle} onClick={() => setBaseOctave(o => Math.min(6, o + 1))}>
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+          </div>
+
+          {/* Play scale button */}
+          <button
+            onClick={handlePlay}
+            disabled={playing}
+            title="Jouer la gamme (♩ = 60)"
+            style={{
+              background: playing ? COL_MUTED : COL_SURFACE,
+              border: `1px solid ${playing ? COL_MUTED : COL_ACCENT}`,
+              borderRadius: 8, padding: '6px 12px', cursor: playing ? 'not-allowed' : 'pointer',
+              color: playing ? COL_MUTED2 : COL_ACCENT, display: 'flex', alignItems: 'center', gap: 6,
+              fontFamily: "'Inter','Segoe UI',sans-serif", fontSize: 13,
+            }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill={playing ? COL_MUTED2 : COL_ACCENT} stroke="none">
+              <polygon points="5,3 19,12 5,21"/>
+            </svg>
+            {playing ? 'Lecture…' : 'Écouter'}
+          </button>
         </div>
       )}
 
@@ -255,11 +318,10 @@ export default function JeuGamme({ transpoKey, referentiel, diapason, seuil, sil
       {/* Résultats */}
       {phase === 'resultats' && notes.length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {/* Toggle portée / tableau */}
           <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
             {[['portee', 'Portée'], ['tableau', 'Tableau']].map(([v, label]) => (
               <button key={v} onClick={() => setVue(v)} style={{
-                padding: '6px 14px', borderRadius: 8, border: 'none', fontSize: 12, fontWeight: 700,
+                padding: '6px 14px', borderRadius: 8, fontSize: 12, fontWeight: 700,
                 cursor: 'pointer', fontFamily: 'inherit',
                 background: vue === v ? COL_ACCENT2 : COL_BG,
                 color:      vue === v ? '#fff' : COL_MUTED,
@@ -325,7 +387,6 @@ export default function JeuGamme({ transpoKey, referentiel, diapason, seuil, sil
             </div>
           )}
 
-          {/* Scores */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div style={{ background: COL_SURFACE, borderRadius: 12, padding: 16, border: `1px solid ${COL_BORDER}`, textAlign: 'center' }}>
               <div style={{ fontSize: 11, color: COL_MUTED, marginBottom: 4 }}>Notes justes</div>

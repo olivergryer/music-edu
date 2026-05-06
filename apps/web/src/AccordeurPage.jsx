@@ -51,9 +51,13 @@ function Btn({ children, onClick, disabled, variant = 'primary', style = {} }) {
   return <button style={{ ...base, ...variants[variant] }} onClick={onClick} disabled={disabled}>{children}</button>
 }
 
+const COL_TRITONE = '#f59e0b'
+
 // ─── Graphe canvas centré sur 0 ────────────────────────────────────────────────
-function GrapheCents({ data, labelX, couleurs, width = 460, height = 90, title }) {
+function GrapheCents({ data, labelX, couleurs, tritoneMask, width = 460, height = 90, title }) {
   const ref = useRef(null)
+  const [tooltip, setTooltip] = useState(null)
+
   useEffect(() => {
     const canvas = ref.current
     if (!canvas || !data?.length) return
@@ -102,6 +106,15 @@ function GrapheCents({ data, labelX, couleurs, width = 460, height = 90, title }
         ctx2.roundRect?.(x - barW / 2, y, barW, barH || 1, 3) ?? ctx2.rect(x - barW / 2, y, barW, barH || 1)
         ctx2.fill()
 
+        // Marqueur triton
+        if (tritoneMask?.[i]) {
+          ctx2.fillStyle = COL_TRITONE
+          ctx2.font      = 'bold 11px Inter,sans-serif'
+          ctx2.textAlign = 'center'
+          const markerY  = pt.value >= 0 ? H / 2 - barH - 10 : H / 2 + barH + 12
+          ctx2.fillText('?', x, Math.max(12, Math.min(H - 4, markerY)))
+        }
+
         // Label note
         if (labelX?.[i]) {
           ctx2.fillStyle = COL_MUTED2
@@ -135,9 +148,40 @@ function GrapheCents({ data, labelX, couleurs, width = 460, height = 90, title }
       ctx2.textAlign  = 'right'
       ctx2.fillText(`${c > 0 ? '+' : ''}${c}¢`, W - 2, y - 1)
     })
-  }, [data, couleurs, labelX, width, height, title])
+  }, [data, couleurs, labelX, tritoneMask, width, height, title])
 
-  return <canvas ref={ref} width={width} height={height} style={{ borderRadius: 8, display: 'block' }} />
+  const handleMouseMove = (e) => {
+    if (!tritoneMask?.some(Boolean) || !data?.length) { setTooltip(null); return }
+    const rect = ref.current.getBoundingClientRect()
+    const mouseX = (e.clientX - rect.left) * (width / rect.width)
+    const idx = Math.floor(mouseX / (width / data.length))
+    if (idx >= 0 && idx < data.length && tritoneMask[idx]) {
+      setTooltip({ x: e.clientX - rect.left, y: e.clientY - rect.top })
+    } else {
+      setTooltip(null)
+    }
+  }
+
+  return (
+    <div style={{ position: 'relative', display: 'inline-block' }}>
+      <canvas
+        ref={ref} width={width} height={height}
+        style={{ borderRadius: 8, display: 'block' }}
+        onMouseMove={handleMouseMove}
+        onMouseLeave={() => setTooltip(null)}
+      />
+      {tooltip && (
+        <div style={{
+          position: 'absolute', left: tooltip.x + 10, top: Math.max(0, tooltip.y - 38),
+          background: '#1f2937', color: '#f9fafb', fontSize: 10, padding: '5px 8px',
+          borderRadius: 6, pointerEvents: 'none', maxWidth: 210, zIndex: 10,
+          border: '1px solid #374151', lineHeight: 1.4,
+        }}>
+          Intervalle ambigu en intonation pure — deux valeurs possibles (±9.8 ¢)
+        </div>
+      )}
+    </div>
+  )
 }
 
 // ─── Composant principal ───────────────────────────────────────────────────────
@@ -572,7 +616,8 @@ export default function AccordeurPage() {
 
   // ─── Données graphes ──────────────────────────────────────────────────────────
 
-  const couleurs  = notes.map(n => couleurJustesse(n.muCents, seuil))
+  const couleurs     = notes.map(n => n.isTritone ? COL_TRITONE : couleurJustesse(n.muCents, seuil))
+  const tritoneMask  = notes.map(n => !!n.isTritone)
   const labelsX   = notes.map(n => {
     const midiDisp = n.midiCible + _transpoOffset
     const pc       = ((midiDisp % 12) + 12) % 12
@@ -837,17 +882,26 @@ export default function AccordeurPage() {
                   </thead>
                   <tbody>
                     {notes.map((note, i) => {
-                      const couleur  = couleurJustesse(note.muCents, seuil)
+                      const couleur  = note.isTritone ? COL_TRITONE : couleurJustesse(note.muCents, seuil)
                       const barScale = Math.min(Math.abs(note.muCents) / 30, 1)
                       const label    = labelsX[i]
                       return (
                         <tr key={i} style={{ borderBottom: `1px solid ${COL_BORDER}` }}>
-                          <td style={{ padding: '8px 8px', fontWeight: 700, color: couleur }}>{label}</td>
+                          <td style={{ padding: '8px 8px', fontWeight: 700, color: couleur }}>
+                            {label}
+                            {note.isTritone && (
+                              <span title="Intervalle ambigu en intonation pure — deux valeurs possibles (±9.8 ¢)"
+                                style={{ marginLeft: 4, fontSize: 10, background: COL_TRITONE, color: '#000',
+                                  borderRadius: 3, padding: '1px 4px', fontWeight: 700, cursor: 'help' }}>
+                                ~
+                              </span>
+                            )}
+                          </td>
                           <td style={{ padding: '8px 8px', textAlign: 'right', color: couleur, fontWeight: 700 }}>
-                            {note.muCents >= 0 ? '+' : ''}{note.muCents.toFixed(1)}
+                            {note.isTritone ? '—' : `${note.muCents >= 0 ? '+' : ''}${note.muCents.toFixed(1)}`}
                           </td>
                           <td style={{ padding: '8px 8px', textAlign: 'right', color: COL_MUTED2 }}>
-                            {note.sigmaCents.toFixed(1)}
+                            {note.isTritone ? '—' : note.sigmaCents.toFixed(1)}
                           </td>
                           <td style={{ padding: '8px 8px', width: 120 }}>
                             <div style={{ position: 'relative', height: 8, background: COL_BG, borderRadius: 4 }}>
@@ -887,6 +941,22 @@ export default function AccordeurPage() {
               </div>
             </div>
 
+            {referentiel === '5-limite' && (
+              <div style={{
+                background: '#0c1220', border: '1px solid #1e3a5f', borderRadius: 10,
+                padding: '12px 14px', marginBottom: 16, fontSize: 11, color: '#93c5fd', lineHeight: 1.55,
+              }}>
+                <div style={{ fontWeight: 700, marginBottom: 6, color: '#60a5fa' }}>
+                  Limitation du modèle d'intonation pure
+                </div>
+                En intonation juste 5-limite, certaines notes possèdent deux valeurs pures légitimes selon leur rôle harmonique — notamment <strong>La</strong> et <strong>Ré</strong>. L'écart entre ces deux valeurs est de 21,5 cents (comma syntonique 81:80).
+                <br /><br />
+                Cet outil utilise une gamme de référence 5-limite diatonique fixe. Il ne réalise pas d'analyse harmonique contextuelle note-par-note. La correction appliquée à ces notes est donc une valeur de référence cohérente, pas nécessairement la valeur pure absolue pour chaque contexte harmonique.
+                <br /><br />
+                <em>En pratique : si votre phrase contient un La dans un contexte de IIe degré (accord de Ré mineur), la référence affichée peut différer de l'intonation pure idéale de ~21 cents. Cette limitation est inhérente à tout système d'intonation fixe sans analyse harmonique complète.</em>
+              </div>
+            )}
+
             <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
               {[
                 { key: 'courbe', label: 'Courbe brute', val: showCourbe, set: setShowCourbe },
@@ -911,12 +981,12 @@ export default function AccordeurPage() {
             )}
             {showBarres && (
               <div style={{ marginBottom: 12 }}>
-                <GrapheCents data={dataBarres} couleurs={couleurs} labelX={labelsX} width={500} height={100} title="Écart moyen μ par note (¢)" />
+                <GrapheCents data={dataBarres} couleurs={couleurs} tritoneMask={tritoneMask} labelX={labelsX} width={500} height={100} title="Écart moyen μ par note (¢)" />
               </div>
             )}
             {showSigma && (
               <div style={{ marginBottom: 12 }}>
-                <GrapheCents data={dataSigma} couleurs={couleurs} labelX={labelsX} width={500} height={100} title="Déviation σ par note (¢)" />
+                <GrapheCents data={dataSigma} couleurs={couleurs} tritoneMask={tritoneMask} labelX={labelsX} width={500} height={100} title="Déviation σ par note (¢)" />
               </div>
             )}
 
