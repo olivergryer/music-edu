@@ -152,73 +152,59 @@ export default function SpectrePaneau({
   })()
 
   return (
-    <div style={{
-      position: 'fixed', top: 0, right: 0, height: '100vh',
-      width: panelW, background: COL_BG,
-      borderLeft: `1px solid ${COL_BORDER}`,
-      zIndex: 100, display: 'flex', flexDirection: 'column',
-      fontFamily: "'Inter','Segoe UI',sans-serif",
-      boxShadow: '-4px 0 24px rgba(0,0,0,0.5)',
-      overflowY: 'auto',
-    }}>
+    <div
+      className="fixed top-0 right-0 h-screen flex flex-col overflow-y-auto z-[100]"
+      style={{ width: panelW, background: COL_BG, borderLeft: `1px solid ${COL_BORDER}`, boxShadow: '-4px 0 24px rgba(0,0,0,0.5)' }}
+    >
       {/* En-tête */}
-      <div style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '16px 16px 12px', borderBottom: `1px solid ${COL_BORDER}`,
-        flexShrink: 0,
-      }}>
-        <span style={{ color: COL_TEXT, fontWeight: 700, fontSize: 14 }}>◈ Spectre harmonique</span>
-        <button onClick={onClose} style={{
-          background: 'none', border: 'none', color: COL_MUTED2,
-          fontSize: 18, cursor: 'pointer', lineHeight: 1, padding: 4,
-        }}>✕</button>
+      <div className="flex items-center justify-between px-4 pt-4 pb-3 flex-shrink-0" style={{ borderBottom: `1px solid ${COL_BORDER}` }}>
+        <span className="text-sm font-bold" style={{ color: COL_TEXT }}>◈ Spectre harmonique</span>
+        <button onClick={onClose} className="bg-transparent border-none text-lg cursor-pointer leading-none p-1" style={{ color: COL_MUTED2 }}>✕</button>
       </div>
 
       {/* Canvas */}
-      <div style={{ padding: '16px 16px 8px', flexShrink: 0 }}>
+      <div className="px-4 pt-4 pb-2 flex-shrink-0">
         <canvas
           ref={canvasRef}
           width={canvasW}
           height={220}
-          style={{ display: 'block', borderRadius: 8, border: `1px solid ${COL_BORDER}` }}
+          className="block rounded-lg"
+          style={{ border: `1px solid ${COL_BORDER}` }}
         />
       </div>
 
       {/* Légende note courante */}
       {noteLabel && (
-        <div style={{ padding: '0 16px 12px', flexShrink: 0 }}>
-          <div style={{
-            background: '#0d1424', borderRadius: 8, padding: '8px 12px',
-            border: `1px solid ${COL_BORDER}`, display: 'flex', gap: 12, alignItems: 'center',
-          }}>
-            <span style={{ color: COL_ACCENT, fontWeight: 900, fontSize: 18 }}>{noteLabel.name}</span>
-            <span style={{ color: COL_MUTED2, fontSize: 12 }}>{noteLabel.hz} Hz</span>
+        <div className="px-4 pb-3 flex-shrink-0">
+          <div className="flex gap-3 items-center rounded-lg px-3 py-2" style={{ background: '#0d1424', border: `1px solid ${COL_BORDER}` }}>
+            <span className="text-lg font-black" style={{ color: COL_ACCENT }}>{noteLabel.name}</span>
+            <span className="text-xs" style={{ color: COL_MUTED2 }}>{noteLabel.hz} Hz</span>
             {noteLabel.cents != null && (
-              <span style={{
-                fontSize: 12, fontWeight: 700,
+              <span className="text-xs font-bold" style={{
                 color: Math.abs(noteLabel.cents) <= 10 ? '#34d399' : Math.abs(noteLabel.cents) <= 20 ? '#fbbf24' : '#f87171',
               }}>
                 {noteLabel.cents >= 0 ? '+' : ''}{noteLabel.cents.toFixed(1)}¢
               </span>
             )}
-            <span style={{ color: COL_MUTED2, fontSize: 11, marginLeft: 'auto' }}>f1</span>
+            <span className="text-[11px] ml-auto" style={{ color: COL_MUTED2 }}>f1</span>
           </div>
         </div>
       )}
 
       {/* Liste notes cliquables (mode static) */}
       {mode === 'static' && notes?.length > 0 && (
-        <div style={{ padding: '0 16px 12px', flexShrink: 0 }}>
-          <div style={{ color: COL_MUTED2, fontSize: 10, marginBottom: 6 }}>Note</div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+        <div className="px-4 pb-3 flex-shrink-0">
+          <div className="text-[10px] mb-1.5" style={{ color: COL_MUTED2 }}>Note</div>
+          <div className="flex flex-wrap gap-1.5">
             {notes.map((note, i) => (
-              <button key={i} onClick={() => setSelectedIdx(i)} style={{
-                padding: '5px 10px', borderRadius: 6,
-                border: `1px solid ${i === selectedIdx ? COL_ACCENT : COL_BORDER}`,
-                background: i === selectedIdx ? 'rgba(192,132,252,0.15)' : COL_BG,
-                color: i === selectedIdx ? COL_ACCENT : COL_MUTED2,
-                fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
-              }}>
+              <button key={i} onClick={() => setSelectedIdx(i)}
+                className="px-2.5 py-1 rounded-md text-xs font-bold cursor-pointer"
+                style={{
+                  border: `1px solid ${i === selectedIdx ? COL_ACCENT : COL_BORDER}`,
+                  background: i === selectedIdx ? 'rgba(192,132,252,0.15)' : COL_BG,
+                  color: i === selectedIdx ? COL_ACCENT : COL_MUTED2,
+                }}
+              >
                 {note.nom}{note.octave}
               </button>
             ))}
@@ -227,15 +213,12 @@ export default function SpectrePaneau({
       )}
 
       {/* Gradient légende */}
-      <div style={{ padding: '0 16px 16px', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <div style={{
-            width: 80, height: 8, borderRadius: 4,
-            background: 'linear-gradient(to right, hsl(220,90%,55%), hsl(30,90%,55%))',
-          }} />
-          <span style={{ color: COL_MUTED2, fontSize: 11 }}>faible → fort</span>
+      <div className="px-4 pb-4 flex-shrink-0 flex flex-col gap-1.5">
+        <div className="flex items-center gap-2">
+          <div className="w-20 h-2 rounded" style={{ background: 'linear-gradient(to right, hsl(220,90%,55%), hsl(30,90%,55%))' }} />
+          <span className="text-[11px]" style={{ color: COL_MUTED2 }}>faible → fort</span>
         </div>
-        <div style={{ color: COL_MUTED2, fontSize: 11 }}>
+        <div className="text-[11px]" style={{ color: COL_MUTED2 }}>
           {mode === 'live' ? '● temps réel' : '◼ spectre moyen par note'}
         </div>
       </div>

@@ -1,31 +1,20 @@
 import { useState } from "react";
 import RythmStaff from "./RythmStaff";
 
-// ─── Carte d'une formule ──────────────────────────────────────────────────────
 function FormulaCard({ formula, selected, onToggle }) {
-  // On affiche uniquement les notes de la formule, sans rembourrage ni chiffrage
   const timeSig = formula.group === "ternary" ? "12/8" : "4/4";
-
   return (
     <div
       role="button"
       onClick={() => onToggle(formula.id)}
+      className="rounded-xl border-2 transition-all duration-150 select-none cursor-pointer pb-0 p-1.5"
       style={{
-        cursor:"pointer",
-        borderRadius:12,
-        border:`2px solid ${selected ? "#7c3aed" : "#1f2937"}`,
-        background:selected ? "#1a0d3a" : "#0a0f1a",
-        padding:"6px 6px 0",
-        opacity:selected ? 1 : 0.5,
-        transition:"all 0.15s",
-        userSelect:"none",
+        borderColor: selected ? "#4A6CF7" : "var(--border-c)",
+        background: selected ? "#0f1e4a" : "var(--surface)",
+        opacity: selected ? 1 : 0.5,
       }}
     >
-      <div style={{
-        fontSize:9, fontWeight:700, textAlign:"center",
-        color:selected ? "#c084fc" : "#4b5563",
-        marginBottom:2, letterSpacing:0.3,
-      }}>
+      <div className="text-[9px] font-bold text-center mb-0.5 tracking-tight" style={{ color: selected ? "#4A6CF7" : "var(--text-muted)" }}>
         {formula.name}
       </div>
       <RythmStaff
@@ -42,82 +31,54 @@ function FormulaCard({ formula, selected, onToggle }) {
   );
 }
 
-// ─── Section source Google Sheets ────────────────────────────────────────────
 function SheetSourceSection({ sheetId, sheetStatus, sheetError, onSheetLoad, onSheetReset }) {
-  const [inputVal,  setInputVal]  = useState(sheetId ?? "");
-  const [copied,    setCopied]    = useState(false);
-
+  const [inputVal, setInputVal] = useState(sheetId ?? "");
+  const [copied, setCopied] = useState(false);
   const shareUrl = sheetStatus === "loaded" && sheetId
     ? `${window.location.origin}${window.location.pathname}?sheet=${encodeURIComponent(sheetId)}`
     : null;
-
   const copyShareUrl = () => {
-    navigator.clipboard.writeText(shareUrl).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    });
+    navigator.clipboard.writeText(shareUrl).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000) });
   };
-
-  const statusBadge = {
-    idle:    <span style={{color:"#6b7280"}}>● Données par défaut</span>,
-    loading: <span style={{color:"#fbbf24"}}>⟳ Chargement…</span>,
-    loaded:  <span style={{color:"#34d399"}}>✓ Sheet chargé</span>,
-    error:   <span style={{color:"#f87171"}}>✕ {sheetError}</span>,
+  const statusEl = {
+    idle:    <span className="text-app-muted">● Données par défaut</span>,
+    loading: <span className="text-yellow-400">⟳ Chargement…</span>,
+    loaded:  <span className="text-success">✓ Sheet chargé</span>,
+    error:   <span className="text-red-400">✕ {sheetError}</span>,
   }[sheetStatus] ?? null;
 
   return (
-    <div style={{width:"100%",maxWidth:540,marginBottom:20,
-      background:"#0a0f1a",borderRadius:14,padding:"12px 14px"}}>
-      <div style={{fontSize:10,fontWeight:700,color:"#6b7280",
-        textTransform:"uppercase",letterSpacing:1,marginBottom:10}}>
-        Source des formules
-      </div>
-      <div style={{display:"flex",gap:8,marginBottom:8}}>
+    <div className="w-full max-w-xl mb-5 bg-surface border border-app rounded-xl px-4 py-3">
+      <div className="text-[10px] font-bold text-app-muted uppercase tracking-widest mb-2.5">Source des formules</div>
+      <div className="flex gap-2 mb-2">
         <input
           type="text"
           value={inputVal}
           onChange={e => setInputVal(e.target.value)}
           onKeyDown={e => e.key === "Enter" && onSheetLoad(inputVal)}
           placeholder="URL publiée ou ID Google Sheet"
-          style={{
-            flex:1,background:"#111827",border:"1px solid #1f2937",
-            borderRadius:8,padding:"6px 10px",color:"#f9fafb",fontSize:11,
-            outline:"none",
-          }}
+          className="flex-1 bg-(--input-bg) border border-app rounded-lg px-2.5 py-1.5 text-app text-xs outline-none"
         />
         <button
           onClick={() => onSheetLoad(inputVal)}
           disabled={sheetStatus === "loading"}
-          style={{
-            background:"#4f46e5",border:"none",borderRadius:8,
-            padding:"6px 14px",color:"#fff",fontSize:11,fontWeight:700,
-            cursor:"pointer",flexShrink:0,
-          }}
+          className="rounded-lg px-3.5 py-1.5 text-white text-xs font-bold border-none flex-shrink-0 disabled:opacity-50"
+          style={{ background: '#4A6CF7' }}
         >
           Charger
         </button>
       </div>
-      <div style={{fontSize:10,marginBottom:8}}>{statusBadge}</div>
+      <div className="text-[10px] mb-2">{statusEl}</div>
 
       {shareUrl && (
-        <div style={{marginBottom:8,padding:"8px 10px",background:"#0f172a",
-          borderRadius:8,border:"1px solid #1e293b"}}>
-          <div style={{fontSize:9,color:"#6b7280",marginBottom:4}}>
-            Lien de partage (URL encodée)
-          </div>
-          <div style={{display:"flex",gap:6,alignItems:"center"}}>
-            <div style={{flex:1,fontSize:9,color:"#9ca3af",
-              wordBreak:"break-all",lineHeight:1.4}}>
-              {shareUrl}
-            </div>
+        <div className="mb-2 p-2.5 bg-app border border-app rounded-lg">
+          <div className="text-[9px] text-app-muted mb-1">Lien de partage (URL encodée)</div>
+          <div className="flex gap-1.5 items-center">
+            <div className="flex-1 text-[9px] text-app-muted break-all leading-snug">{shareUrl}</div>
             <button
               onClick={copyShareUrl}
-              style={{
-                background: copied ? "#065f46" : "#1f2937",
-                border:"none",borderRadius:6,
-                padding:"4px 10px",color: copied ? "#34d399" : "#9ca3af",
-                fontSize:10,fontWeight:700,cursor:"pointer",flexShrink:0,
-              }}
+              className="rounded border-none px-2.5 py-1 text-[10px] font-bold flex-shrink-0"
+              style={{ background: copied ? '#064e3b' : 'var(--surface-2)', color: copied ? '#22C55E' : 'var(--text-muted)' }}
             >
               {copied ? "Copié !" : "Copier"}
             </button>
@@ -128,28 +89,18 @@ function SheetSourceSection({ sheetId, sheetStatus, sheetError, onSheetLoad, onS
       {sheetStatus !== "idle" && (
         <button
           onClick={() => { setInputVal(""); onSheetReset(); }}
-          style={{
-            background:"none",border:"1px solid #374151",borderRadius:8,
-            padding:"4px 12px",color:"#6b7280",fontSize:10,fontWeight:600,
-            cursor:"pointer",marginBottom:8,display:"block",
-          }}
+          className="bg-transparent border border-app rounded-lg px-3 py-1 text-app-muted text-[10px] font-semibold mb-2 block"
+          style={{ minHeight: 'auto' }}
         >
           ↺ Réinitialiser (formules par défaut)
         </button>
       )}
-      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",
-        marginTop:6,gap:8,flexWrap:"wrap"}}>
-        <div style={{fontSize:9,color:"#374151",lineHeight:1.5}}>
-          Publier le sheet : Fichier → Partager → Publier sur le web → CSV
-        </div>
+      <div className="flex items-center justify-between mt-1.5 gap-2 flex-wrap">
+        <div className="text-[9px] text-app-muted leading-relaxed">Publier le sheet : Fichier → Partager → Publier sur le web → CSV</div>
         <a
           href="/formules-rythme-template.csv"
           download="formules-rythme-template.csv"
-          style={{
-            background:"#111827",border:"1px solid #1f2937",borderRadius:8,
-            padding:"4px 12px",color:"#9ca3af",fontSize:10,fontWeight:600,
-            textDecoration:"none",flexShrink:0,whiteSpace:"nowrap",
-          }}
+          className="bg-surface-2 border border-app rounded-lg px-3 py-1 text-app-muted text-[10px] font-semibold no-underline flex-shrink-0 whitespace-nowrap"
         >
           ↓ Télécharger le modèle CSV
         </a>
@@ -158,41 +109,19 @@ function SheetSourceSection({ sheetId, sheetStatus, sheetError, onSheetLoad, onS
   );
 }
 
-// ─── Page réglages ────────────────────────────────────────────────────────────
 export default function SettingsPage({
-  formulaCatalog,
-  levelOrder,
-  levelFormulaIds,
-  selectedFormulas,
-  onToggle,
-  onLevelSelect,
-  onClose,
-  sheetId,
-  sheetStatus,
-  sheetError,
-  onSheetLoad,
-  onSheetReset,
-  flashOffsetMs,
-  onFlashOffsetChange,
-  revealBeat,
-  onRevealBeatChange,
-  activity,
-  tempoMode,
-  onTempoModeChange,
-  bpmFixed,
-  onBpmFixedChange,
-  bpmMin,
-  onBpmMinChange,
-  bpmMax,
-  onBpmMaxChange,
+  formulaCatalog, levelOrder, levelFormulaIds,
+  selectedFormulas, onToggle, onLevelSelect, onClose,
+  sheetId, sheetStatus, sheetError, onSheetLoad, onSheetReset,
+  flashOffsetMs, onFlashOffsetChange,
+  revealBeat, onRevealBeatChange,
+  activity, tempoMode, onTempoModeChange,
+  bpmFixed, onBpmFixedChange, bpmMin, onBpmMinChange, bpmMax, onBpmMaxChange,
 }) {
   const binaryFormulas  = formulaCatalog.filter(f => f.group === "binary");
   const ternaryFormulas = formulaCatalog.filter(f => f.group === "ternary");
 
-  // Niveau actif = le plus haut niveau dont TOUTES les formules sont sélectionnées
-  // (pour colorer le bouton de niveau)
   function isLevelActive(level) {
-    // Toutes les formules de C1/1 jusqu'à ce niveau doivent être sélectionnées
     const cumIds = [];
     for (const lv of levelOrder) {
       (levelFormulaIds[lv] ?? []).forEach(id => cumIds.push(id));
@@ -202,120 +131,71 @@ export default function SettingsPage({
   }
 
   const selectedCount = selectedFormulas.size;
+  const sectionCls = "w-full max-w-xl mb-5 bg-surface border border-app rounded-xl px-4 py-3";
+  const labelCls = "text-[10px] font-bold text-app-muted uppercase tracking-widest mb-2.5 block";
 
   return (
-    <div style={{
-      minHeight:"100dvh", background:"#030712", color:"#f9fafb",
-      display:"flex", flexDirection:"column", alignItems:"center",
-      padding:"12px 14px 32px",
-      fontFamily:"'Inter','Segoe UI',sans-serif",
-      overflowY:"auto",
-    }}>
+    <div className="bg-app min-h-dvh flex flex-col items-center px-4 py-3 pb-8 overflow-y-auto">
 
-      {/* ── HEADER ── */}
-      <div style={{width:"100%",maxWidth:540,display:"flex",
-        alignItems:"center",gap:10,marginBottom:20}}>
-        <button
-          onClick={onClose}
-          style={{
-            background:"#111827",border:"1px solid #1f2937",
-            borderRadius:10,color:"#c084fc",fontWeight:700,
-            fontSize:13,padding:"6px 14px",cursor:"pointer",
-          }}
-        >
+      {/* Header */}
+      <div className="w-full max-w-xl flex items-center gap-2.5 mb-5">
+        <button onClick={onClose} className="bg-surface border border-app rounded-xl px-3.5 py-1.5 font-bold text-sm text-app">
           ← Retour
         </button>
-        <div style={{flex:1,fontSize:16,fontWeight:700,color:"#c084fc"}}>
-          Réglages
-        </div>
-        <div style={{fontSize:11,color:"#6b7280"}}>
-          {selectedCount} formule{selectedCount!==1?"s":""}
-        </div>
+        <div className="flex-1 text-base font-bold text-app">Réglages</div>
+        <div className="text-xs text-app-muted">{selectedCount} formule{selectedCount !== 1 ? "s" : ""}</div>
       </div>
 
-      {/* ── TEMPO ── */}
+      {/* Tempo */}
       {onTempoModeChange && (
-        <div style={{width:"100%",maxWidth:540,marginBottom:20,
-          background:"#0a0f1a",borderRadius:14,padding:"12px 14px"}}>
-          <div style={{fontSize:10,fontWeight:700,color:"#6b7280",
-            textTransform:"uppercase",letterSpacing:1,marginBottom:10}}>
-            Tempo
-          </div>
-          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom: tempoMode==="range"?10:0}}>
-            <div style={{display:"flex",gap:4,flexShrink:0}}>
-              {["fixed","range"].map(mode => (
-                <button key={mode}
-                  onClick={() => onTempoModeChange(mode)}
-                  style={{
-                    padding:"4px 8px",borderRadius:8,fontSize:10,fontWeight:600,
-                    cursor:"pointer",border:"none",
-                    background:tempoMode===mode?"#4f46e5":"#111827",
-                    color:tempoMode===mode?"#fff":"#6b7280",
-                  }}
-                >{mode==="fixed"?"Fixe":"Variable"}</button>
+        <div className={sectionCls}>
+          <span className={labelCls}>Tempo</span>
+          <div className="flex items-center gap-2" style={{ marginBottom: tempoMode === "range" ? 10 : 0 }}>
+            <div className="flex gap-1 flex-shrink-0">
+              {["fixed", "range"].map(mode => (
+                <button key={mode} onClick={() => onTempoModeChange(mode)}
+                  className="px-2 py-1 rounded-lg text-[10px] font-semibold border-none cursor-pointer"
+                  style={{ background: tempoMode === mode ? '#4A6CF7' : 'var(--surface-2)', color: tempoMode === mode ? '#fff' : 'var(--text-muted)' }}
+                >
+                  {mode === "fixed" ? "Fixe" : "Variable"}
+                </button>
               ))}
             </div>
-            {tempoMode==="fixed" && (
+            {tempoMode === "fixed" && (
               <>
-                <div style={{flex:1}}>
-                  <input type="range" min={50} max={220} step={2}
-                    value={bpmFixed}
+                <div className="flex-1">
+                  <input type="range" min={50} max={220} step={2} value={bpmFixed}
                     onChange={e => onBpmFixedChange(+e.target.value)}
-                    style={{width:"100%",accentColor:"#7c3aed",display:"block"}}
+                    className="w-full block" style={{ accentColor: "#4A6CF7" }}
                   />
                 </div>
-                <div style={{fontSize:11,color:"#c084fc",fontWeight:700,flexShrink:0,minWidth:54,textAlign:"right"}}>
-                  {bpmFixed} BPM
-                </div>
+                <div className="text-xs font-bold flex-shrink-0 min-w-14 text-right" style={{ color: '#4A6CF7' }}>{bpmFixed} BPM</div>
               </>
             )}
           </div>
-          {tempoMode==="range" && (
-            <div style={{display:"flex",flexDirection:"column",gap:6}}>
-              <div style={{display:"flex",alignItems:"center",gap:8}}>
-                <div style={{fontSize:10,color:"#6b7280",flexShrink:0,minWidth:36}}>Min</div>
-                <input type="range" min={50} max={220} step={2}
-                  value={bpmMin}
-                  onChange={e => onBpmMinChange(+e.target.value)}
-                  style={{flex:1,accentColor:"#7c3aed"}}
-                />
-                <div style={{fontSize:11,color:"#c084fc",fontWeight:700,flexShrink:0,minWidth:54,textAlign:"right"}}>
-                  {bpmMin} BPM
+          {tempoMode === "range" && (
+            <div className="flex flex-col gap-1.5">
+              {[{ label: "Min", val: bpmMin, set: onBpmMinChange }, { label: "Max", val: bpmMax, set: onBpmMaxChange }].map(({ label, val, set }) => (
+                <div key={label} className="flex items-center gap-2">
+                  <div className="text-[10px] text-app-muted flex-shrink-0 min-w-9">{label}</div>
+                  <input type="range" min={50} max={220} step={2} value={val}
+                    onChange={e => set(+e.target.value)} className="flex-1" style={{ accentColor: "#4A6CF7" }}
+                  />
+                  <div className="text-xs font-bold flex-shrink-0 min-w-14 text-right" style={{ color: '#4A6CF7' }}>{val} BPM</div>
                 </div>
-              </div>
-              <div style={{display:"flex",alignItems:"center",gap:8}}>
-                <div style={{fontSize:10,color:"#6b7280",flexShrink:0,minWidth:36}}>Max</div>
-                <input type="range" min={50} max={220} step={2}
-                  value={bpmMax}
-                  onChange={e => onBpmMaxChange(+e.target.value)}
-                  style={{flex:1,accentColor:"#7c3aed"}}
-                />
-                <div style={{fontSize:11,color:"#c084fc",fontWeight:700,flexShrink:0,minWidth:54,textAlign:"right"}}>
-                  {bpmMax} BPM
-                </div>
-              </div>
+              ))}
             </div>
           )}
         </div>
       )}
 
-      {/* ── SOURCE SHEET ── */}
-      <SheetSourceSection
-        sheetId={sheetId}
-        sheetStatus={sheetStatus}
-        sheetError={sheetError}
-        onSheetLoad={onSheetLoad}
-        onSheetReset={onSheetReset}
-      />
+      {/* Source sheet */}
+      <SheetSourceSection sheetId={sheetId} sheetStatus={sheetStatus} sheetError={sheetError} onSheetLoad={onSheetLoad} onSheetReset={onSheetReset} />
 
-      {/* ── NIVEAUX ── */}
-      <div style={{width:"100%",maxWidth:540,marginBottom:20,
-        background:"#0a0f1a",borderRadius:14,padding:"12px 14px"}}>
-        <div style={{fontSize:10,fontWeight:700,color:"#6b7280",
-          textTransform:"uppercase",letterSpacing:1,marginBottom:10}}>
-          Sélection par niveau
-        </div>
-        <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+      {/* Niveaux */}
+      <div className={sectionCls}>
+        <span className={labelCls}>Sélection par niveau</span>
+        <div className="flex flex-wrap gap-1.5">
           {levelOrder.map(level => {
             const active = isLevelActive(level);
             const hasFormulas = (levelFormulaIds[level] ?? []).length > 0;
@@ -324,146 +204,85 @@ export default function SettingsPage({
                 key={level}
                 onClick={() => onLevelSelect(level)}
                 disabled={!hasFormulas}
+                className="px-3.5 py-1.5 rounded-full text-xs font-bold border-none transition-all duration-150"
                 style={{
-                  padding:"5px 14px",borderRadius:999,fontSize:11,fontWeight:700,
-                  cursor:hasFormulas?"pointer":"default",border:"none",
-                  background:active?"#7c3aed":hasFormulas?"#1f2937":"#111827",
-                  color:active?"#fff":hasFormulas?"#9ca3af":"#374151",
-                  boxShadow:active?"0 0 10px rgba(124,58,237,0.4)":"none",
-                  transition:"all 0.15s",
+                  background: active ? '#4A6CF7' : hasFormulas ? 'var(--surface-2)' : 'var(--surface-2)',
+                  color: active ? '#fff' : hasFormulas ? 'var(--text-muted)' : 'var(--border-c)',
+                  cursor: hasFormulas ? 'pointer' : 'default',
+                  boxShadow: active ? '0 0 10px rgba(74,108,247,0.4)' : 'none',
                 }}
-              >
-                {level}
-              </button>
+              >{level}</button>
             );
           })}
         </div>
-        <div style={{fontSize:10,color:"#4b5563",marginTop:8}}>
-          Cliquer sur un niveau sélectionne toutes les formules jusqu'à ce niveau.
-        </div>
+        <div className="text-[10px] text-app-muted mt-2">Cliquer sur un niveau sélectionne toutes les formules jusqu'à ce niveau.</div>
       </div>
 
-      {/* ── REVEAL BEAT (activité 1 seulement) ── */}
+      {/* Reveal beat (activité 1) */}
       {activity === 1 && onRevealBeatChange && (
-        <div style={{width:"100%",maxWidth:540,marginBottom:20,
-          background:"#0a0f1a",borderRadius:14,padding:"12px 14px"}}>
-          <div style={{fontSize:10,fontWeight:700,color:"#6b7280",
-            textTransform:"uppercase",letterSpacing:1,marginBottom:10}}>
-            Voir le rythme au temps…
-          </div>
-          <div style={{display:"flex",gap:5}}>
-            {[1,2,3,4].map(beat => (
-              <button key={beat}
-                onClick={() => onRevealBeatChange(beat)}
-                style={{
-                  flex:1,padding:"6px 4px",borderRadius:10,
-                  fontSize:11,fontWeight:700,cursor:"pointer",border:"none",
-                  background:revealBeat===beat?"#7c3aed":"#111827",
-                  color:revealBeat===beat?"#fff":"#6b7280",
-                }}
+        <div className={sectionCls}>
+          <span className={labelCls}>Voir le rythme au temps…</span>
+          <div className="flex gap-1.5">
+            {[1, 2, 3, 4].map(beat => (
+              <button key={beat} onClick={() => onRevealBeatChange(beat)}
+                className="flex-1 py-1.5 rounded-xl text-xs font-bold border-none cursor-pointer"
+                style={{ background: revealBeat === beat ? '#4A6CF7' : 'var(--surface-2)', color: revealBeat === beat ? '#fff' : 'var(--text-muted)' }}
               >
                 {beat}
-                <div style={{fontSize:9,fontWeight:400,marginTop:1,
-                  color:revealBeat===beat?"#ddd8fe":"#4b5563"}}>
-                  {beat===1?"pas de bonus":beat===2?"+10%":beat===3?"+20%":"+50%"}
+                <div className="text-[9px] font-normal mt-0.5" style={{ color: revealBeat === beat ? '#ddd8fe' : 'var(--text-muted)' }}>
+                  {beat === 1 ? "pas de bonus" : beat === 2 ? "+10%" : beat === 3 ? "+20%" : "+50%"}
                 </div>
               </button>
             ))}
           </div>
-          <div style={{fontSize:9,color:"#374151",marginTop:6,lineHeight:1.5}}>
-            Plus tard vous révélez le rythme, plus le bonus de score est élevé.
-          </div>
+          <div className="text-[9px] text-app-muted mt-1.5 leading-relaxed">Plus tard vous révélez le rythme, plus le bonus de score est élevé.</div>
         </div>
       )}
 
-      {/* ── FORMULES BINAIRES ── */}
-      <div style={{width:"100%",maxWidth:540,marginBottom:16}}>
-        <div style={{
-          fontSize:10,fontWeight:700,color:"#6b7280",
-          textTransform:"uppercase",letterSpacing:1,marginBottom:8,
-        }}>
-          Formules binaires
-        </div>
-        <div style={{
-          display:"grid",
-          gridTemplateColumns:"repeat(2, 1fr)",
-          gap:8,
-        }}>
+      {/* Formules binaires */}
+      <div className="w-full max-w-xl mb-4">
+        <span className={labelCls}>Formules binaires</span>
+        <div className="grid grid-cols-2 gap-2">
           {binaryFormulas.map(f => (
-            <FormulaCard
-              key={f.id}
-              formula={f}
-              selected={selectedFormulas.has(f.id)}
-              onToggle={onToggle}
-            />
+            <FormulaCard key={f.id} formula={f} selected={selectedFormulas.has(f.id)} onToggle={onToggle} />
           ))}
         </div>
       </div>
 
-      {/* ── FORMULES TERNAIRES ── */}
-      <div style={{width:"100%",maxWidth:540,marginBottom:16}}>
-        <div style={{
-          fontSize:10,fontWeight:700,color:"#6b7280",
-          textTransform:"uppercase",letterSpacing:1,marginBottom:8,
-        }}>
-          Formules ternaires
-        </div>
-        <div style={{
-          display:"grid",
-          gridTemplateColumns:"repeat(2, 1fr)",
-          gap:8,
-        }}>
+      {/* Formules ternaires */}
+      <div className="w-full max-w-xl mb-4">
+        <span className={labelCls}>Formules ternaires</span>
+        <div className="grid grid-cols-2 gap-2">
           {ternaryFormulas.map(f => (
-            <FormulaCard
-              key={f.id}
-              formula={f}
-              selected={selectedFormulas.has(f.id)}
-              onToggle={onToggle}
-            />
+            <FormulaCard key={f.id} formula={f} selected={selectedFormulas.has(f.id)} onToggle={onToggle} />
           ))}
         </div>
       </div>
 
-      {/* ── OFFSET FLASH BORDURE ── */}
+      {/* Offset flash */}
       {onFlashOffsetChange && (
-        <div style={{width:"100%",maxWidth:540,marginBottom:20,
-          background:"#0a0f1a",borderRadius:14,padding:"12px 14px"}}>
-          <div style={{fontSize:10,fontWeight:700,color:"#6b7280",
-            textTransform:"uppercase",letterSpacing:1,marginBottom:10}}>
-            Synchronisation bordure
-          </div>
-          <div style={{display:"flex",alignItems:"center",gap:10}}>
-            <div style={{flex:1}}>
-              <input type="range" min={-200} max={200} step={5}
-                value={flashOffsetMs}
+        <div className={sectionCls}>
+          <span className={labelCls}>Synchronisation bordure</span>
+          <div className="flex items-center gap-2.5">
+            <div className="flex-1">
+              <input type="range" min={-200} max={200} step={5} value={flashOffsetMs}
                 onChange={e => onFlashOffsetChange(+e.target.value)}
-                style={{width:"100%",accentColor:"#7c3aed",display:"block"}}
+                className="w-full block" style={{ accentColor: "#4A6CF7" }}
               />
             </div>
-            <div style={{fontSize:11,color:"#c084fc",fontWeight:700,
-              flexShrink:0,minWidth:52,textAlign:"right"}}>
-              {flashOffsetMs} ms
-            </div>
+            <div className="text-xs font-bold flex-shrink-0 min-w-14 text-right" style={{ color: '#4A6CF7' }}>{flashOffsetMs} ms</div>
           </div>
-          <div style={{fontSize:9,color:"#374151",marginTop:6,lineHeight:1.5}}>
-            Ajuste l'avance du flash de bordure par rapport aux beats. Négatif = plus tôt.
-          </div>
+          <div className="text-[9px] text-app-muted mt-1.5 leading-relaxed">Ajuste l'avance du flash de bordure par rapport aux beats. Négatif = plus tôt.</div>
         </div>
       )}
 
-      {/* ── BOUTON RETOUR BAS DE PAGE ── */}
+      {/* Bouton retour bas */}
       <button
         onClick={onClose}
-        style={{
-          marginTop:8,width:"100%",maxWidth:540,
-          padding:"16px 0",
-          background:"linear-gradient(135deg,#7c3aed,#6d28d9)",
-          border:"none",borderRadius:20,cursor:"pointer",
-          color:"#fff",fontSize:15,fontWeight:700,
-          boxShadow:"0 8px 32px rgba(109,40,217,0.4)",
-        }}
+        className="mt-2 w-full max-w-xl py-4 rounded-2xl border-none cursor-pointer text-base font-bold text-white"
+        style={{ background: 'linear-gradient(135deg,#4A6CF7,#8B5CF6)', boxShadow: '0 8px 32px rgba(74,108,247,0.3)' }}
       >
-        ✓ Valider ({selectedCount} formule{selectedCount!==1?"s":""})
+        ✓ Valider ({selectedCount} formule{selectedCount !== 1 ? "s" : ""})
       </button>
     </div>
   );

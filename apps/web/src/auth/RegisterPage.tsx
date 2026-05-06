@@ -1,6 +1,6 @@
 import { useState, FormEvent } from 'react'
 import { createUserWithEmailAndPassword } from 'firebase/auth'
-import { doc, setDoc, collection, addDoc } from 'firebase/firestore'
+import { doc, setDoc } from 'firebase/firestore'
 import { useNavigate, Link } from 'react-router-dom'
 import { auth, db } from '../lib/firebase'
 
@@ -9,23 +9,6 @@ function generateTeacherCode(): string {
   const l = Array.from({ length: 4 }, () => letters[Math.floor(Math.random() * letters.length)]).join('')
   const n = String(Math.floor(Math.random() * 90) + 10)
   return `${l}-${n}`
-}
-
-const s = {
-  page: { minHeight: '100vh', background: '#030712', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Poppins', 'Inter', 'Segoe UI', sans-serif" },
-  card: { background: '#0a0f1a', borderRadius: 16, padding: '40px 36px', width: '100%', maxWidth: 400, display: 'flex', flexDirection: 'column' as const, gap: 20 },
-  title: { color: '#f9fafb', fontSize: 24, fontWeight: 700, margin: 0 },
-  label: { color: '#9ca3af', fontSize: 13, marginBottom: 6, display: 'block' },
-  input: { width: '100%', background: '#111827', border: '1px solid #1f2937', borderRadius: 8, padding: '10px 14px', color: '#f9fafb', fontSize: 15, outline: 'none', boxSizing: 'border-box' as const },
-  btn: { background: '#7c3aed', color: '#fff', border: 'none', borderRadius: 8, padding: '12px 0', fontSize: 16, fontWeight: 600, cursor: 'pointer', width: '100%' },
-  roleRow: { display: 'flex', gap: 12 },
-  roleBtn: (active: boolean) => ({
-    flex: 1, padding: '10px 0', borderRadius: 8, border: `2px solid ${active ? '#c084fc' : '#1f2937'}`,
-    background: active ? '#1e1033' : '#111827', color: active ? '#c084fc' : '#6b7280',
-    fontWeight: 600, fontSize: 15, cursor: 'pointer',
-  }),
-  error: { color: '#f87171', fontSize: 14, textAlign: 'center' as const },
-  link: { color: '#c084fc', textAlign: 'center' as const, fontSize: 14 },
 }
 
 export default function RegisterPage() {
@@ -64,38 +47,62 @@ export default function RegisterPage() {
     }
   }
 
+  const inputCls = "w-full rounded-lg px-3.5 py-2.5 text-sm text-app border border-app bg-(--input-bg) outline-none focus:border-rhythm transition-colors"
+
   return (
-    <div style={s.page}>
-      <div style={s.card}>
-        <h1 style={s.title}>Créer un compte</h1>
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+    <div className="bg-app min-h-screen flex items-center justify-center px-5">
+      <div className="bg-surface rounded-2xl p-10 w-full max-w-sm flex flex-col gap-5 shadow-sm border border-app">
+        <h1 className="text-2xl font-bold text-app m-0">Créer un compte</h1>
+
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div>
-            <label style={s.label}>Prénom ou pseudo</label>
-            <input style={s.input} type="text" value={displayName} onChange={e => setDisplayName(e.target.value)} required />
+            <label className="text-app-muted text-sm mb-1.5 block font-medium">Prénom ou pseudo</label>
+            <input className={inputCls} type="text" value={displayName} onChange={e => setDisplayName(e.target.value)} required />
           </div>
           <div>
-            <label style={s.label}>Email</label>
-            <input style={s.input} type="email" value={email} onChange={e => setEmail(e.target.value)} required autoComplete="email" />
+            <label className="text-app-muted text-sm mb-1.5 block font-medium">Email</label>
+            <input className={inputCls} type="email" value={email} onChange={e => setEmail(e.target.value)} required autoComplete="email" />
           </div>
           <div>
-            <label style={s.label}>Mot de passe</label>
-            <input style={s.input} type="password" value={password} onChange={e => setPassword(e.target.value)} required autoComplete="new-password" />
+            <label className="text-app-muted text-sm mb-1.5 block font-medium">Mot de passe</label>
+            <input className={inputCls} type="password" value={password} onChange={e => setPassword(e.target.value)} required autoComplete="new-password" />
           </div>
           <div>
-            <label style={s.label}>Je suis…</label>
-            <div style={s.roleRow}>
-              <button type="button" style={s.roleBtn(role === 'eleve')} onClick={() => setRole('eleve')}>Élève</button>
-              <button type="button" style={s.roleBtn(role === 'prof')} onClick={() => setRole('prof')}>Professeur</button>
+            <label className="text-app-muted text-sm mb-2 block font-medium">Je suis…</label>
+            <div className="flex gap-3">
+              {(['eleve', 'prof'] as const).map(r => (
+                <button
+                  key={r}
+                  type="button"
+                  onClick={() => setRole(r)}
+                  className="flex-1 py-2.5 rounded-lg border-2 font-semibold text-sm transition-all"
+                  style={{
+                    borderColor: role === r ? '#4A6CF7' : 'var(--border-c)',
+                    background:  role === r ? '#4A6CF720' : 'var(--input-bg)',
+                    color:       role === r ? '#4A6CF7' : 'var(--text-muted)',
+                  }}
+                >
+                  {r === 'eleve' ? 'Élève' : 'Professeur'}
+                </button>
+              ))}
             </div>
           </div>
-          {error && <p style={s.error}>{error}</p>}
-          <button style={s.btn} type="submit" disabled={loading}>
+          {error && <p className="text-red-500 text-sm text-center m-0">{error}</p>}
+          <button
+            className="w-full rounded-lg py-3 text-base font-semibold text-white border-none transition-opacity disabled:opacity-50"
+            style={{ background: '#4A6CF7' }}
+            type="submit"
+            disabled={loading}
+          >
             {loading ? 'Création…' : 'Créer mon compte'}
           </button>
         </form>
-        <p style={s.link}>
+
+        <p className="text-center text-sm text-app-muted m-0">
           Déjà un compte ?{' '}
-          <Link to="/login" style={{ color: '#c084fc' }}>Se connecter</Link>
+          <Link to="/login" className="font-semibold no-underline" style={{ color: '#4A6CF7' }}>
+            Se connecter
+          </Link>
         </p>
       </div>
     </div>

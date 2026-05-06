@@ -17,16 +17,19 @@ const COL_MUTED   = '#4b5563'
 const COL_MUTED2  = '#6b7280'
 
 function Btn({ children, onClick, disabled, variant = 'primary', style = {} }) {
-  const base = {
-    border: 'none', borderRadius: 10, fontWeight: 700, cursor: disabled ? 'not-allowed' : 'pointer',
-    fontFamily: "'Inter','Segoe UI',sans-serif", transition: 'opacity 0.15s',
-    opacity: disabled ? 0.4 : 1, fontSize: 14, padding: '12px 20px', ...style,
+  const baseStyle = { transition: 'opacity 0.15s', opacity: disabled ? 0.4 : 1, ...style }
+  const variantStyle = {
+    primary:   { background: '#FF8B3D', color: '#fff' },
+    secondary: { background: 'var(--surface-2)', color: '#FF8B3D', border: '1px solid var(--border-c)' },
   }
-  const variants = {
-    primary:   { background: COL_ACCENT2, color: '#fff' },
-    secondary: { background: COL_SURFACE, color: COL_ACCENT, border: `1px solid ${COL_BORDER}` },
-  }
-  return <button style={{ ...base, ...variants[variant] }} onClick={onClick} disabled={disabled}>{children}</button>
+  return (
+    <button
+      className="border-none rounded-xl font-bold text-sm px-5 py-3 cursor-pointer"
+      style={{ ...baseStyle, ...variantStyle[variant], cursor: disabled ? 'not-allowed' : 'pointer' }}
+      onClick={onClick}
+      disabled={disabled}
+    >{children}</button>
+  )
 }
 
 // Fix: for offset=0, return rootName directly; otherwise prefer matching accidental character

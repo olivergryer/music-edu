@@ -3,29 +3,30 @@ import useProgressFirebase from './hooks/useProgressFirebase'
 import { useAuth } from './auth/AuthProvider'
 
 const MODULES = [
-  { id: 'rythme',    label: 'Rythme',    desc: 'Lecture et reproduction rythmique', to: '/rythme',  active: true  },
-  { id: 'theorie',   label: 'Théorie',   desc: 'Intervalles, accords, armures',     to: '/theorie', active: true  },
-  { id: 'accordeur', label: 'Accordeur', desc: 'Accordeur chromatique',             to: '/accordeur', active: true  },
+  { id: 'rythme',    label: 'Rythme',    desc: 'Lecture et reproduction rythmique', to: '/rythme',    active: true, color: '#4A6CF7' },
+  { id: 'theorie',   label: 'Théorie',   desc: 'Intervalles, accords, armures',     to: '/theorie',   active: true, color: '#8B5CF6' },
+  { id: 'accordeur', label: 'Accordeur', desc: 'Accordeur chromatique',             to: '/accordeur', active: true, color: '#FF8B3D' },
 ]
 
-function ModuleCard({ label, desc, active }) {
+function ModuleCard({ label, desc, active, color }) {
   return (
     <div
-      style={{
-        background: active ? '#0a0f1a' : '#060b14',
-        border: `2px solid ${active ? '#1f2937' : '#0f172a'}`,
-        borderRadius: 16,
-        padding: '24px 20px',
-        opacity: active ? 1 : 0.4,
-        cursor: active ? 'pointer' : 'default',
-        transition: 'border-color 0.2s, box-shadow 0.2s',
-      }}
-      onMouseEnter={e => { if (active) { e.currentTarget.style.borderColor = '#7c3aed'; e.currentTarget.style.boxShadow = '0 0 16px #7c3aed44' } }}
-      onMouseLeave={e => { if (active) { e.currentTarget.style.borderColor = '#1f2937'; e.currentTarget.style.boxShadow = 'none' } }}
+      className="bg-surface rounded-2xl p-6 border border-app transition-all duration-200 hover:shadow-lg group"
+      style={{ opacity: active ? 1 : 0.4, cursor: active ? 'pointer' : 'default' }}
     >
-      <div style={{ fontSize: 18, fontWeight: 800, color: '#c084fc', marginBottom: 8 }}>{label}</div>
-      <div style={{ fontSize: 11, color: '#4b5563', lineHeight: 1.5 }}>{desc}</div>
-      {!active && <div style={{ marginTop: 10, fontSize: 10, color: '#374151', fontWeight: 700 }}>Bientôt</div>}
+      <div
+        className="w-10 h-10 rounded-xl mb-4 flex items-center justify-center"
+        style={{ background: color + '20' }}
+      >
+        <div className="w-4 h-4 rounded-full" style={{ background: color }} />
+      </div>
+      <div className="text-base font-bold text-app mb-1 group-hover:opacity-80 transition-opacity" style={{ color }}>
+        {label}
+      </div>
+      <div className="text-sm text-app-muted leading-relaxed">{desc}</div>
+      {!active && (
+        <div className="mt-2 text-xs font-bold text-app-muted">Bientôt</div>
+      )}
     </div>
   )
 }
@@ -35,56 +36,63 @@ export default function HubPage() {
   const { user, profile } = useAuth()
 
   return (
-    <div style={{
-      minHeight: '100dvh', background: '#030712', color: '#f9fafb',
-      display: 'flex', flexDirection: 'column', alignItems: 'center',
-      padding: '48px 20px', fontFamily: "'Poppins','Inter','Segoe UI',sans-serif",
-    }}>
-      <h1 style={{ fontSize: 36, fontWeight: 900, color: '#c084fc', margin: '0 0 8px', fontFamily: "'Righteous','Inter',sans-serif" }}>
-        Tessitura
-      </h1>
-      <p style={{ color: '#4b5563', fontSize: 13, marginBottom: 48, margin: '0 0 48px' }}>
-        Outils pédagogiques pour la musique
-      </p>
+    <div className="bg-app min-h-dvh flex flex-col items-center px-5 py-12">
 
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-        gap: 16,
-        width: '100%',
-        maxWidth: 680,
-      }}>
-        {MODULES.map(m => m.active
-          ? <Link key={m.id} to={m.to} style={{ textDecoration: 'none' }}>
-              <ModuleCard {...m} />
+      <div className="w-full max-w-2xl">
+        <div className="mb-12 text-center">
+          <h1 className="text-4xl font-black text-app mb-2 tracking-tight">Tessitura</h1>
+          <p className="text-app-muted text-sm">Outils pédagogiques pour la musique</p>
+        </div>
+
+        <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))' }}>
+          {MODULES.map(m => m.active
+            ? <Link key={m.id} to={m.to} className="no-underline">
+                <ModuleCard {...m} />
+              </Link>
+            : <ModuleCard key={m.id} {...m} />
+          )}
+        </div>
+
+        {/* Barre progression utilisateur */}
+        <div className="mt-8 flex gap-3 items-center justify-center flex-wrap text-sm text-app-muted">
+          {user ? (
+            <>
+              {streak.current > 0 && (
+                <span className="flex items-center gap-1">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="#FF8B3D"><path d="M12 2C8 8 4 11 4 15a8 8 0 0016 0c0-4-4-7-8-13z"/></svg>
+                  {streak.current} jour{streak.current > 1 ? 's' : ''}
+                </span>
+              )}
+              {xp > 0 && <span className="font-semibold text-app">{xp} XP</span>}
+              {xp > 0 && (
+                <span className="font-bold text-sm px-2 py-0.5 rounded-full" style={{ background: '#8B5CF620', color: '#8B5CF6' }}>
+                  {level.id}
+                </span>
+              )}
+              {trophies.length > 0 && <span className="text-app-muted">{trophies.length} trophées</span>}
+              <Link
+                to={profile?.role === 'prof' ? '/dashboard/prof' : '/dashboard/eleve'}
+                className="font-bold no-underline text-sm px-3 py-1 rounded-full border border-app transition-colors hover:bg-surface"
+                style={{ color: '#4A6CF7' }}
+              >
+                {profile?.displayName ?? 'Mon compte'} →
+              </Link>
+              <Link to="/profil" className="text-app-muted no-underline text-xs hover:text-app transition-colors">
+                Profil
+              </Link>
+            </>
+          ) : (
+            <Link to="/login" className="font-bold no-underline text-sm" style={{ color: '#4A6CF7' }}>
+              Se connecter →
             </Link>
-          : <ModuleCard key={m.id} {...m} />
-        )}
+          )}
+          <Link to="/feedback" className="text-app-muted no-underline text-xs hover:text-app transition-colors">
+            Retours
+          </Link>
+        </div>
       </div>
 
-      <div style={{
-        marginTop: 32, display: 'flex', gap: 12, alignItems: 'center',
-        justifyContent: 'center', flexWrap: 'wrap',
-        fontSize: 12, color: '#6b7280',
-      }}>
-        {user ? (
-          <>
-            {streak.current > 0 && <span>🔥 {streak.current} jour{streak.current > 1 ? 's' : ''}</span>}
-            {xp > 0 && <span>⭐ {xp} XP</span>}
-            {xp > 0 && <span style={{ color: '#c084fc', fontWeight: 700 }}>{level.id}</span>}
-            {trophies.length > 0 && <span>{trophies.length} 🏅</span>}
-            <Link to={profile?.role === 'prof' ? '/dashboard/prof' : '/dashboard/eleve'} style={{ color: '#fbbf24', fontWeight: 700, textDecoration: 'none', fontSize: 11 }}>
-              {profile?.displayName ?? 'Mon compte'} →
-            </Link>
-            <Link to="/profil" style={{ color: '#7c3aed', fontWeight: 700, textDecoration: 'none', fontSize: 11 }}>Profil</Link>
-          </>
-        ) : (
-          <Link to="/login" style={{ color: '#c084fc', fontWeight: 700, textDecoration: 'none', fontSize: 12 }}>Se connecter →</Link>
-        )}
-        <Link to="/feedback" style={{ color: '#4b5563', fontWeight: 600, textDecoration: 'none', fontSize: 11 }}>💬 Retours</Link>
-      </div>
-
-      <footer style={{ marginTop: 'auto', paddingTop: 48, color: '#1f2937', fontSize: 10 }}>
+      <footer className="mt-auto pt-12 text-xs text-app-muted opacity-40">
         Tessitura
       </footer>
     </div>

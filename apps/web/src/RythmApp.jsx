@@ -282,59 +282,47 @@ function SeriesEndScreen({ xpLog, medals, totalXp, dominantMedal, perfectSeries,
   }, []);
 
   return (
-    <div style={{
-      minHeight:"100dvh", background:"#030712", color:"#f9fafb",
-      display:"flex", flexDirection:"column", alignItems:"center",
-      padding:"20px 14px 32px", fontFamily:"'Inter','Segoe UI',sans-serif",
-    }}>
-      <div style={{width:"100%",maxWidth:540}}>
-        <div style={{textAlign:"center",marginBottom:24}}>
-          <div style={{fontSize:52,marginBottom:8}}>{dominantMedal}</div>
-          <div style={{fontSize:26,fontWeight:900,color:"#c084fc"}}>Série terminée !</div>
-          <div style={{fontSize:14,color:"#6b7280",marginTop:4}}>
+    <div className="bg-app text-app min-h-dvh flex flex-col items-center px-3.5 py-5 pb-8">
+      <div className="w-full max-w-xl">
+        <div className="text-center mb-6">
+          <div className="text-5xl mb-2">{dominantMedal}</div>
+          <div className="text-2xl font-black" style={{ color: '#4A6CF7' }}>Série terminée !</div>
+          <div className="text-sm text-app-muted mt-1">
             {perfectSeries ? "Série parfaite — incroyable !" : `Score total : +${totalXp} XP`}
           </div>
         </div>
 
         {/* Grille des 10 exercices */}
-        <div style={{background:"#0a0f1a",borderRadius:14,padding:"14px",marginBottom:16}}>
-          <div style={{fontSize:10,fontWeight:700,color:"#6b7280",
-            textTransform:"uppercase",letterSpacing:1,marginBottom:10}}>
+        <div className="bg-surface rounded-2xl p-3.5 mb-4">
+          <div className="text-[10px] font-bold text-app-muted uppercase tracking-wider mb-2.5">
             Détail de la série
           </div>
-          <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:6}}>
+          <div className="grid grid-cols-5 gap-1.5">
             {medals.map((m, i) => (
-              <div key={i} style={{
-                background:"#111827",borderRadius:10,padding:"8px 4px",
-                textAlign:"center",
-              }}>
-                <div style={{fontSize:18}}>{m}</div>
-                <div style={{fontSize:9,color:"#6b7280",marginTop:2}}>+{xpLog[i] ?? 0}</div>
+              <div key={i} className="bg-surface-2 rounded-xl p-2 text-center">
+                <div className="text-lg">{m}</div>
+                <div className="text-[9px] text-app-muted mt-0.5">+{xpLog[i] ?? 0}</div>
               </div>
             ))}
           </div>
         </div>
 
         {/* XP total */}
-        <div style={{background:"#0a0f1a",borderRadius:14,padding:"14px",marginBottom:16,
-          display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-          <span style={{fontSize:13,color:"#9ca3af"}}>XP gagné</span>
-          <span style={{fontSize:20,fontWeight:900,color:"#c084fc"}}>+{totalXp} ⭐</span>
+        <div className="bg-surface rounded-2xl p-3.5 mb-4 flex justify-between items-center">
+          <span className="text-sm text-app-muted">XP gagné</span>
+          <span className="text-xl font-black" style={{ color: '#4A6CF7' }}>+{totalXp} ⭐</span>
         </div>
 
         {/* Trophées débloqués */}
         {result?.newTrophies?.length > 0 && (
-          <div style={{background:"#1a0d3a",border:"1px solid #7c3aed",
-            borderRadius:14,padding:"14px",marginBottom:16}}>
-            <div style={{fontSize:11,fontWeight:700,color:"#c084fc",marginBottom:8}}>
+          <div className="rounded-2xl p-3.5 mb-4 border" style={{ background: 'rgba(74,108,247,0.08)', borderColor: '#4A6CF7' }}>
+            <div className="text-[11px] font-bold mb-2" style={{ color: '#4A6CF7' }}>
               🏅 Trophée{result.newTrophies.length > 1 ? "s" : ""} débloqué{result.newTrophies.length > 1 ? "s" : ""} !
             </div>
             {result.newTrophies.map(id => {
               const t = TROPHIES_IMPORT.find(x => x.id === id);
               return t ? (
-                <div key={id} style={{fontSize:13,color:"#e9d5ff",marginBottom:4}}>
-                  {t.icon} {t.label}
-                </div>
+                <div key={id} className="text-sm text-app mb-1">{t.icon} {t.label}</div>
               ) : null;
             })}
           </div>
@@ -342,25 +330,19 @@ function SeriesEndScreen({ xpLog, medals, totalXp, dominantMedal, perfectSeries,
 
         {/* Level-up */}
         {result?.leveledUp && (
-          <div style={{background:"#1a0d3a",border:"1px solid #c084fc",
-            borderRadius:14,padding:"14px",marginBottom:16,textAlign:"center"}}>
-            <div style={{fontSize:22,marginBottom:4}}>🎉</div>
-            <div style={{fontSize:14,fontWeight:700,color:"#c084fc"}}>Niveau supérieur !</div>
+          <div className="rounded-2xl p-3.5 mb-4 text-center border" style={{ background: 'rgba(74,108,247,0.08)', borderColor: '#4A6CF7' }}>
+            <div className="text-2xl mb-1">🎉</div>
+            <div className="text-sm font-bold" style={{ color: '#4A6CF7' }}>Niveau supérieur !</div>
           </div>
         )}
 
-        <div style={{display:"flex",gap:10,marginTop:8}}>
-          <button onClick={onBack} style={{
-            flex:1,padding:"14px",borderRadius:16,cursor:"pointer",
-            background:"#111827",border:"1px solid #1f2937",
-            color:"#9ca3af",fontSize:13,fontWeight:700,
-          }}>← Activités</button>
-          <button onClick={onReplay} style={{
-            flex:2,padding:"14px",borderRadius:16,cursor:"pointer",
-            background:"linear-gradient(135deg,#7c3aed,#6d28d9)",border:"none",
-            color:"#fff",fontSize:13,fontWeight:700,
-            boxShadow:"0 8px 32px rgba(109,40,217,0.4)",
-          }}>🔄 Rejouer la série</button>
+        <div className="flex gap-2.5 mt-2">
+          <button onClick={onBack} className="flex-1 py-3.5 rounded-2xl cursor-pointer bg-surface-2 border border-app text-app-muted text-sm font-bold">
+            ← Activités
+          </button>
+          <button onClick={onReplay} className="flex-[2] py-3.5 rounded-2xl cursor-pointer text-white text-sm font-bold border-none" style={{ background: 'linear-gradient(135deg,#4A6CF7,#8B5CF6)', boxShadow: '0 8px 32px rgba(74,108,247,0.4)' }}>
+            🔄 Rejouer la série
+          </button>
         </div>
       </div>
     </div>
@@ -922,64 +904,43 @@ export default function RythmApp() {
       return cumIds.length > 0 && cumIds.every(id => selectedFormulas.has(id));
     };
 
-    const styleBackHub = {
-      background:"#111827", border:"1px solid #1f2937", borderRadius:8,
-      color:"#c084fc", fontWeight:700, fontSize:12, padding:"4px 10px",
-      cursor:"pointer", textDecoration:"none",
-    };
-
     return (
-      <div style={{
-        minHeight:"100dvh", background:"#030712", color:"#f9fafb",
-        display:"flex", flexDirection:"column", alignItems:"center",
-        padding:"12px 14px 32px",
-        fontFamily:"'Inter','Segoe UI',sans-serif", userSelect:"none",
-      }}>
+      <div className="bg-app text-app min-h-dvh flex flex-col items-center px-3.5 py-3 pb-8 select-none">
         {/* Header */}
-        <div style={{width:"100%",maxWidth:540,display:"flex",
-          justifyContent:"space-between",alignItems:"center",marginBottom:18}}>
-          <Link to="/" style={styleBackHub}>← Tessitura</Link>
+        <div className="w-full max-w-xl flex justify-between items-center mb-4">
+          <Link to="/" className="bg-surface-2 border border-app rounded-lg px-2.5 py-1 font-bold text-xs no-underline" style={{ color: '#4A6CF7' }}>← Tessitura</Link>
           <button
             onClick={() => setCurrentPage("settings")}
-            style={{
-              background:"#111827",border:"1px solid #1f2937",borderRadius:10,
-              color:"#9ca3af",fontSize:18,cursor:"pointer",
-              padding:"2px 8px",lineHeight:1,
-            }}
+            className="bg-surface-2 border border-app rounded-xl text-app-muted text-lg cursor-pointer px-2 py-0.5 leading-none"
             title="Réglages avancés"
           >⚙</button>
         </div>
 
-        <div style={{width:"100%",maxWidth:540}}>
-          <div style={{fontSize:28,fontWeight:900,color:"#c084fc",marginBottom:18}}>
-            Rythme
-          </div>
+        <div className="w-full max-w-xl">
+          <div className="text-3xl font-black mb-4" style={{ color: '#4A6CF7' }}>Rythme</div>
 
           {/* 4 cartes activités */}
-          <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:18}}>
+          <div className="flex flex-col gap-2 mb-4">
             {ACTIVITIES.map(a => {
               const sel = activity === a.id;
               return (
                 <div key={a.id}
                   role="button"
                   onClick={() => setActivity(a.id)}
+                  className="rounded-2xl cursor-pointer flex items-center gap-3.5 px-4 py-3 transition-all duration-150 border-2"
                   style={{
-                    borderRadius:14,border:`2px solid ${sel?"#7c3aed":"#1f2937"}`,
-                    background:sel?"#1a0d3a":"#0a0f1a",
-                    padding:"12px 16px",cursor:"pointer",
-                    display:"flex",alignItems:"center",gap:14,
-                    transition:"all 0.12s",
+                    borderColor: sel ? '#4A6CF7' : 'var(--border-c)',
+                    background: sel ? 'rgba(74,108,247,0.08)' : 'var(--surface)',
                   }}
                 >
-                  <div style={{
-                    fontSize:22,fontWeight:900,color:sel?"#c084fc":"#374151",
-                    minWidth:28,textAlign:"center",flexShrink:0,
-                  }}>{a.id}</div>
+                  <div className="text-xl font-black min-w-7 text-center flex-shrink-0" style={{ color: sel ? '#4A6CF7' : 'var(--border-c)' }}>
+                    {a.id}
+                  </div>
                   <div>
-                    <div style={{fontSize:14,fontWeight:700,color:sel?"#f9fafb":"#9ca3af"}}>
+                    <div className="text-sm font-bold" style={{ color: sel ? 'var(--text)' : 'var(--text-muted)' }}>
                       {a.label}
                     </div>
-                    <div style={{fontSize:11,color:sel?"#a78bfa":"#4b5563",marginTop:2}}>
+                    <div className="text-[11px] mt-0.5" style={{ color: sel ? '#4A6CF7' : 'var(--text-muted)' }}>
                       {ACTIVITY_DESCS[a.id]}
                     </div>
                   </div>
@@ -1020,34 +981,23 @@ export default function RythmApp() {
               setCountdownN(1);
               startGame();
             }}
-            style={{
-              width:"100%",padding:"18px 0",
-              background:"linear-gradient(135deg,#7c3aed,#6d28d9)",
-              border:"none",borderRadius:20,cursor:"pointer",
-              color:"#fff",fontSize:16,fontWeight:700,
-              boxShadow:"0 8px 32px rgba(109,40,217,0.4)",
-              marginBottom:18,
-            }}
+            className="w-full border-none rounded-2xl cursor-pointer text-white text-base font-bold mb-4"
+            style={{ padding: '18px 0', background: 'linear-gradient(135deg,#4A6CF7,#8B5CF6)', boxShadow: '0 8px 32px rgba(74,108,247,0.4)' }}
           >{seriesMode ? "▶ Commencer la série" : "▶ Commencer"}</button>
 
           {/* Mode de jeu — Exercice seul / Série de 10 */}
-          <div style={{background:"#0a0f1a",borderRadius:14,padding:"12px 14px",marginBottom:10}}>
-            <div style={{fontSize:10,fontWeight:700,color:"#6b7280",
-              textTransform:"uppercase",letterSpacing:1,marginBottom:8}}>
+          <div className="bg-surface rounded-2xl px-3.5 py-3 mb-2.5">
+            <div className="text-[10px] font-bold text-app-muted uppercase tracking-wider mb-2">
               Mode de jeu
             </div>
-            <div style={{display:"flex",gap:6}}>
+            <div className="flex gap-1.5">
               {[["single","Exercice seul"],["series","Série de 10"]].map(([mode,label]) => {
                 const active = seriesMode ? mode==="series" : mode==="single";
                 return (
                   <button key={mode}
                     onClick={() => setSeriesMode(mode==="series")}
-                    style={{
-                      flex:1,padding:"8px",borderRadius:10,fontSize:12,fontWeight:700,
-                      cursor:"pointer",border:"none",
-                      background:active?"#4f46e5":"#111827",
-                      color:active?"#fff":"#6b7280",
-                    }}
+                    className="flex-1 py-2 rounded-xl text-xs font-bold cursor-pointer border-none"
+                    style={{ background: active ? '#4A6CF7' : 'var(--surface-2)', color: active ? '#fff' : 'var(--text-muted)' }}
                   >{label}</button>
                 );
               })}
@@ -1055,12 +1005,11 @@ export default function RythmApp() {
           </div>
 
           {/* Niveaux */}
-          <div style={{background:"#0a0f1a",borderRadius:14,padding:"12px 14px",marginBottom:10}}>
-            <div style={{fontSize:10,fontWeight:700,color:"#6b7280",
-              textTransform:"uppercase",letterSpacing:1,marginBottom:8}}>
+          <div className="bg-surface rounded-2xl px-3.5 py-3 mb-2.5">
+            <div className="text-[10px] font-bold text-app-muted uppercase tracking-wider mb-2">
               Niveau
             </div>
-            <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:6}}>
+            <div className="flex flex-wrap gap-1.5 mb-1.5">
               {levelOrder.map(level => {
                 const active = isLevelActiveHome(level);
                 const hasFormulas = (levelFormulaIds[level] ?? []).length > 0;
@@ -1068,82 +1017,68 @@ export default function RythmApp() {
                   <button key={level}
                     onClick={() => selectLevel(level)}
                     disabled={!hasFormulas}
+                    className="px-3.5 py-1 rounded-full text-[11px] font-bold border-none transition-all duration-150"
                     style={{
-                      padding:"5px 14px",borderRadius:999,fontSize:11,fontWeight:700,
-                      cursor:hasFormulas?"pointer":"default",border:"none",
-                      background:active?"#7c3aed":hasFormulas?"#1f2937":"#111827",
-                      color:active?"#fff":hasFormulas?"#9ca3af":"#374151",
-                      transition:"all 0.15s",
+                      cursor: hasFormulas ? 'pointer' : 'default',
+                      background: active ? '#4A6CF7' : 'var(--surface-2)',
+                      color: active ? '#fff' : hasFormulas ? 'var(--text-muted)' : 'var(--border-c)',
                     }}
                   >{level}</button>
                 );
               })}
             </div>
-            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-              <div style={{fontSize:11,color:"#6b7280"}}>
+            <div className="flex items-center justify-between">
+              <div className="text-[11px] text-app-muted">
                 {formulaCountHome} formule{formulaCountHome!==1?"s":""} sélectionnée{formulaCountHome!==1?"s":""}
               </div>
               <button
                 onClick={() => setCurrentPage("settings")}
-                style={{
-                  background:"none",border:"none",color:"#7c3aed",fontSize:11,
-                  fontWeight:700,cursor:"pointer",padding:0,
-                }}
+                className="bg-transparent border-none text-[11px] font-bold cursor-pointer p-0"
+                style={{ color: '#4A6CF7' }}
               >Voir toutes les formules →</button>
             </div>
           </div>
 
           {/* Tempo + TAP/MIC */}
-          <div style={{background:"#0a0f1a",borderRadius:14,padding:"12px 14px",marginBottom:10}}>
-            <div style={{fontSize:10,fontWeight:700,color:"#6b7280",
-              textTransform:"uppercase",letterSpacing:1,marginBottom:8}}>
+          <div className="bg-surface rounded-2xl px-3.5 py-3 mb-2.5">
+            <div className="text-[10px] font-bold text-app-muted uppercase tracking-wider mb-2">
               Tempo
             </div>
             {/* Ligne 1 : toggle Fixe/Variable + BPM affiché + TAP/MIC */}
-            <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",
-              marginBottom:tempoMode==="range"?8:0}}>
-              <div style={{display:"flex",gap:4,flexShrink:0}}>
+            <div className="flex items-center gap-2 flex-wrap" style={{ marginBottom: tempoMode==="range" ? 8 : 0 }}>
+              <div className="flex gap-1 flex-shrink-0">
                 {["fixed","range"].map(mode => (
                   <button key={mode}
                     onClick={() => setTempoMode(mode)}
-                    style={{
-                      padding:"4px 8px",borderRadius:8,fontSize:10,fontWeight:600,
-                      cursor:"pointer",border:"none",
-                      background:tempoMode===mode?"#4f46e5":"#111827",
-                      color:tempoMode===mode?"#fff":"#6b7280",
-                    }}
+                    className="px-2 py-1 rounded-lg text-[10px] font-semibold cursor-pointer border-none"
+                    style={{ background: tempoMode===mode ? '#4A6CF7' : 'var(--surface-2)', color: tempoMode===mode ? '#fff' : 'var(--text-muted)' }}
                   >{mode==="fixed"?"Fixe":"Variable"}</button>
                 ))}
               </div>
               {tempoMode === "fixed" && (
-                <div style={{flex:1,minWidth:80}}>
+                <div className="flex-1" style={{ minWidth: 80 }}>
                   <input type="range" min={0} max={TEMPI.length-1}
                     value={closestTempoIdx(bpmFixed)}
                     onChange={e => setBpmFixed(TEMPI[+e.target.value])}
-                    style={{width:"100%",accentColor:"#7c3aed",display:"block"}}
+                    className="w-full block" style={{ accentColor: '#4A6CF7' }}
                   />
                 </div>
               )}
-              <div style={{fontSize:11,color:"#c084fc",fontWeight:700,
-                flexShrink:0,minWidth:54,textAlign:"right"}}>
+              <div className="text-[11px] font-bold flex-shrink-0 text-right" style={{ minWidth: 54, color: '#4A6CF7' }}>
                 {tempoMode==="fixed"
                   ? `${bpmFixed} BPM`
                   : `${Math.min(bpmMin,bpmMax)}↔${Math.max(bpmMin,bpmMax)}`}
               </div>
               {(activity===1||activity===2) && (
-                <div style={{display:"flex",gap:4,flexShrink:0}}>
+                <div className="flex gap-1 flex-shrink-0">
                   {[["tap","TAP"],["mic","🎤"]].map(([mode,label]) => (
                     <button key={mode}
                       onClick={() => {
                         if (mode==="mic") { setInputMode("mic"); startMic(); }
                         else { setInputMode("tap"); stopMic(); }
                       }}
-                      style={{
-                        padding:"4px 8px",borderRadius:8,fontSize:10,fontWeight:700,
-                        cursor:"pointer",border:"none",
-                        background:inputMode===mode?"#7c3aed":"#111827",
-                        color:inputMode===mode?"#fff":"#6b7280",
-                      }}
+                      className="px-2 py-1 rounded-lg text-[10px] font-bold cursor-pointer border-none"
+                      style={{ background: inputMode===mode ? '#4A6CF7' : 'var(--surface-2)', color: inputMode===mode ? '#fff' : 'var(--text-muted)' }}
                     >{label}</button>
                   ))}
                 </div>
@@ -1151,73 +1086,61 @@ export default function RythmApp() {
             </div>
             {/* Ligne 2 : sliders Min/Max (mode Variable) */}
             {tempoMode === "range" && (
-              <div style={{display:"flex",flexDirection:"column",gap:4}}>
-                <div style={{display:"flex",alignItems:"center",gap:8}}>
-                  <span style={{fontSize:9,color:"#6b7280",width:24,flexShrink:0}}>Min</span>
+              <div className="flex flex-col gap-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-[9px] text-app-muted flex-shrink-0 w-6">Min</span>
                   <input type="range" min={0} max={TEMPI.length-1}
                     value={closestTempoIdx(bpmMin)}
                     onChange={e => setBpmMin(TEMPI[+e.target.value])}
-                    style={{flex:1,accentColor:"#7c3aed"}}
+                    className="flex-1" style={{ accentColor: '#4A6CF7' }}
                   />
-                  <span style={{fontSize:10,color:"#a78bfa",fontWeight:700,
-                    width:38,textAlign:"right",flexShrink:0}}>{bpmMin} BPM</span>
+                  <span className="text-[10px] font-bold flex-shrink-0 text-right w-[38px]" style={{ color: '#4A6CF7' }}>{bpmMin} BPM</span>
                 </div>
-                <div style={{display:"flex",alignItems:"center",gap:8}}>
-                  <span style={{fontSize:9,color:"#6b7280",width:24,flexShrink:0}}>Max</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-[9px] text-app-muted flex-shrink-0 w-6">Max</span>
                   <input type="range" min={0} max={TEMPI.length-1}
                     value={closestTempoIdx(bpmMax)}
                     onChange={e => setBpmMax(TEMPI[+e.target.value])}
-                    style={{flex:1,accentColor:"#7c3aed"}}
+                    className="flex-1" style={{ accentColor: '#4A6CF7' }}
                   />
-                  <span style={{fontSize:10,color:"#a78bfa",fontWeight:700,
-                    width:38,textAlign:"right",flexShrink:0}}>{bpmMax} BPM</span>
+                  <span className="text-[10px] font-bold flex-shrink-0 text-right w-[38px]" style={{ color: '#4A6CF7' }}>{bpmMax} BPM</span>
                 </div>
               </div>
             )}
             {/* Seuil MIC */}
             {inputMode==="mic" && (activity===1||activity===2) && (
-              <div style={{marginTop:10,background:"#111827",
-                borderRadius:10,padding:"8px 12px"}}>
-                <div style={{display:"flex",justifyContent:"space-between",
-                  fontSize:10,color:"#6b7280",marginBottom:3}}>
+              <div className="mt-2.5 bg-surface-2 rounded-xl px-3 py-2">
+                <div className="flex justify-between text-[10px] text-app-muted mb-0.5">
                   <span>Seuil détection</span>
-                  <span style={{color:"#c084fc",fontWeight:700}}>{micThreshold.toFixed(3)}</span>
+                  <span className="font-bold" style={{ color: '#4A6CF7' }}>{micThreshold.toFixed(3)}</span>
                 </div>
                 <input type="range" min={5} max={500} step={5}
                   value={Math.round(micThreshold*1000)}
                   onChange={e => setMicThreshold(+e.target.value/1000)}
-                  style={{width:"100%",accentColor:"#7c3aed"}}
+                  className="w-full" style={{ accentColor: '#4A6CF7' }}
                 />
               </div>
             )}
             {micError && (
-              <div style={{fontSize:10,color:"#f87171",marginTop:6,textAlign:"center"}}>
-                {micError}
-              </div>
+              <div className="text-[10px] text-red-400 mt-1.5 text-center">{micError}</div>
             )}
           </div>
 
           {/* Reveal beat — act 1 seulement */}
           {activity===1 && (
-            <div style={{background:"#0a0f1a",borderRadius:14,padding:"12px 14px",marginBottom:10}}>
-              <div style={{fontSize:10,fontWeight:700,color:"#6b7280",
-                textTransform:"uppercase",letterSpacing:1,marginBottom:8}}>
+            <div className="bg-surface rounded-2xl px-3.5 py-3 mb-2.5">
+              <div className="text-[10px] font-bold text-app-muted uppercase tracking-wider mb-2">
                 Voir le rythme au temps…
               </div>
-              <div style={{display:"flex",gap:5}}>
+              <div className="flex gap-1.5">
                 {[1,2,3,4].map(beat => (
                   <button key={beat}
                     onClick={() => setRevealBeat(beat)}
-                    style={{
-                      flex:1,padding:"6px 4px",borderRadius:10,
-                      fontSize:11,fontWeight:700,cursor:"pointer",border:"none",
-                      background:revealBeat===beat?"#7c3aed":"#111827",
-                      color:revealBeat===beat?"#fff":"#6b7280",
-                    }}
+                    className="flex-1 py-1.5 rounded-xl text-[11px] font-bold cursor-pointer border-none"
+                    style={{ background: revealBeat===beat ? '#4A6CF7' : 'var(--surface-2)', color: revealBeat===beat ? '#fff' : 'var(--text-muted)' }}
                   >
                     {beat}
-                    <div style={{fontSize:9,fontWeight:400,marginTop:1,
-                      color:revealBeat===beat?"#ddd8fe":"#4b5563"}}>
+                    <div className="text-[9px] font-normal mt-0.5" style={{ color: revealBeat===beat ? '#ddd8fe' : 'var(--text-muted)' }}>
                       {beat===1?"pas de bonus":beat===2?"+10%":beat===3?"+20%":"+50%"}
                     </div>
                   </button>
@@ -1334,40 +1257,26 @@ export default function RythmApp() {
 
   // ── Rendu jeu ──────────────────────────────────────────────────────────────
   return (
-    <div style={{
-      minHeight:"100dvh", background:"#030712", color:"#f9fafb",
-      display:"flex", flexDirection:"column", alignItems:"center",
-      padding:"12px 14px 24px",
-      fontFamily:"'Inter','Segoe UI',sans-serif", userSelect:"none",
-    }}>
+    <div className="bg-app text-app min-h-dvh flex flex-col items-center px-3.5 py-3 pb-6 select-none">
 
       {/* ── HEADER ── */}
-      <div style={{width:"100%",maxWidth:540,display:"flex",
-        justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+      <div className="w-full max-w-xl flex justify-between items-center mb-2.5">
         <div>
-          <div style={{fontSize:17,fontWeight:700,color:"#c084fc"}}>🎵 App Rythme</div>
-          <div style={{fontSize:10,color:"#6b7280",display:"flex",alignItems:"center",gap:5}}>
-            <div style={{
-              width:7,height:7,borderRadius:"50%",flexShrink:0,
-              background: beatFlash ? (beatStrong ? "#c084fc" : "#7c3aed") : "#1f2937",
-              boxShadow: beatFlash ? "0 0 6px #c084fc" : "none",
-              transition:"background 0.04s, box-shadow 0.04s",
+          <div className="text-[17px] font-bold" style={{ color: '#4A6CF7' }}>🎵 App Rythme</div>
+          <div className="text-[10px] text-app-muted flex items-center gap-1.5">
+            <div className="w-[7px] h-[7px] rounded-full flex-shrink-0" style={{
+              background: beatFlash ? (beatStrong ? "#4A6CF7" : "#3B5CF0") : 'var(--border-c)',
+              boxShadow: beatFlash ? "0 0 6px #4A6CF7" : "none",
+              transition: "background 0.04s, box-shadow 0.04s",
             }}/>
             {sessionBpm} BPM · {formulaCount} formule{formulaCount>1?"s":""}
           </div>
         </div>
-        <div style={{display:"flex",gap:8,alignItems:"center"}}>
-          <div style={{
-            background:"#111827",border:"1px solid #1f2937",
-            borderRadius:999,padding:"3px 10px",fontSize:12,color:"#e7e5e4",fontWeight:700,
-          }}>⭐ {totalPts}</div>
+        <div className="flex gap-2 items-center">
+          <div className="bg-surface-2 border border-app rounded-full px-2.5 py-0.5 text-xs text-app font-bold">⭐ {totalPts}</div>
           <button
             onClick={() => { if (canStart) setCurrentPage("settings"); }}
-            style={{
-              background:"#111827",border:"1px solid #1f2937",borderRadius:10,
-              color:"#9ca3af",fontSize:18,cursor:"pointer",
-              padding:"2px 8px",lineHeight:1,
-            }}
+            className="bg-surface-2 border border-app rounded-xl text-app-muted text-lg cursor-pointer px-2 py-0.5 leading-none"
             title="Réglages"
           >⚙</button>
           <button
@@ -1386,41 +1295,38 @@ export default function RythmApp() {
               setPhase("idle");
               setPattern(null);
             }}
-            style={{
-              background:"#111827",border:"1px solid #1f2937",borderRadius:8,
-              color:"#c084fc",fontWeight:700,fontSize:12,padding:"4px 10px",
-              cursor:"pointer",
-            }}
+            className="bg-surface-2 border border-app rounded-lg font-bold text-xs cursor-pointer px-2.5 py-1"
+            style={{ color: '#4A6CF7' }}
           >← Activités</button>
         </div>
       </div>
 
 
       {/* ── ZONE PRINCIPALE ── */}
-      <div style={{flex:1,width:"100%",maxWidth:540,display:"flex",gap:10,alignItems:"stretch"}}>
+      <div className="flex-1 w-full max-w-xl flex gap-2.5 items-stretch">
 
         {/* Contenu central */}
-        <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",
-          justifyContent:"center",gap:16,minWidth:0}}>
+        <div className="flex-1 flex flex-col items-center justify-center gap-4 min-w-0">
 
           {/* IDLE */}
           {phase==="idle" && (
-            <div style={{textAlign:"center",padding:"0 20px"}}>
-              <div style={{fontSize:52,marginBottom:10}}>
+            <div className="text-center px-5">
+              <div className="text-5xl mb-2.5">
                 {activity===1?"🥁":activity===2?"👂":activity===3?"🎵":"🎼"}
               </div>
-              <p style={{color:"#6b7280",fontSize:13,lineHeight:1.7,maxWidth:300}}>
+              <p className="text-app-muted text-sm leading-relaxed" style={{ maxWidth: 300 }}>
                 {activity===1 && "Un rythme aléatoire s'affiche sur la portée. Reproduis-le en tapant sur le bouton au bon moment."}
                 {activity===2 && "Écoute le rythme et reproduis-le en tapant. La portée reste cachée pendant le jeu."}
                 {activity===3 && "Écoute le rythme joué et identifie la bonne portée parmi 4 propositions."}
                 {activity===4 && "Observe la portée et identifie parmi 4 lectures audio celle qui correspond."}
               </p>
-              <p style={{color:"#4b5563",fontSize:11,marginTop:6}}>
+              <p className="text-[11px] text-app-muted mt-1.5">
                 {formulaCount} formule{formulaCount>1?"s":""} sélectionnée{formulaCount>1?"s":""}
                 {" · "}
                 <span
                   onClick={() => setCurrentPage("settings")}
-                  style={{color:"#7c3aed",cursor:"pointer",textDecoration:"underline"}}
+                  className="cursor-pointer underline"
+                  style={{ color: '#4A6CF7' }}
                 >
                   modifier
                 </span>
@@ -1430,30 +1336,29 @@ export default function RythmApp() {
 
           {/* DÉCOMPTE + JEU + RÉSULTATS — activités 1 & 2 */}
           {(activity === 1 || activity === 2) && phase !== "idle" && pattern && (
-            <div style={{width:"100%"}}>
+            <div className="w-full">
               {/* En-tête hauteur fixe : chiffre du décompte OU info timeSig */}
-              <div style={{height:96,display:"flex",flexDirection:"column",
-                alignItems:"center",justifyContent:"center",marginBottom:8}}>
+              <div className="h-24 flex flex-col items-center justify-center mb-2">
                 {(phase==="countdown" || phase==="listening") ? (
                   <>
-                    <div style={{fontSize:72,fontWeight:900,color:"#c084fc",lineHeight:1}}>
+                    <div className="text-[72px] font-black leading-none" style={{ color: '#4A6CF7' }}>
                       {countdownN ?? ""}
                     </div>
-                    <p style={{color:"#6b7280",fontSize:12,marginTop:4}}>
+                    <p className="text-app-muted text-xs mt-1">
                       {activity===1 && (revealed ? "Mémorise le rythme…" : "Prépare-toi…")}
                       {activity===2 && phase==="countdown" && (countdownN ? "Prépare-toi…" : "")}
                       {activity===2 && phase==="listening" && "Écoute le rythme…"}
                     </p>
                   </>
                 ) : phase==="playing" && activity===2 ? (
-                  <div style={{textAlign:"center",fontSize:16,fontWeight:700,color:"#c084fc"}}>
+                  <div className="text-center text-base font-bold" style={{ color: '#4A6CF7' }}>
                     À toi de jouer !
                   </div>
                 ) : (
-                  <div style={{textAlign:"center",fontSize:11,color:"#6b7280"}}>
+                  <div className="text-center text-[11px] text-app-muted">
                     {pattern.timeSig} · {sessionBpm} BPM
                     {activity===1 && phase==="results" && REVEAL_BONUS[revealBeat]>0 &&
-                      <span style={{color:"#fbbf24",marginLeft:8}}>
+                      <span className="text-yellow-400 ml-2">
                         +{REVEAL_BONUS[revealBeat]}% bonus
                       </span>
                     }
@@ -1465,23 +1370,19 @@ export default function RythmApp() {
               {revealed ? (
                 <div
                   onClick={phase === "results" ? handleNext : undefined}
+                  className="relative rounded-2xl overflow-hidden"
                   style={{
-                  position:"relative",
-                  background:"#0f172a",
-                  border: (activity === 1 ? metroDotFlash : beatFlash) ? "2px solid #7c3aed" : "2px solid #1e293b",
-                  borderRadius:14,padding:"10px 6px 6px",overflow:"hidden",
-                  cursor: phase === "results" ? "pointer" : "default"}}>
+                    background: 'var(--surface)',
+                    border: (activity === 1 ? metroDotFlash : beatFlash) ? '2px solid #4A6CF7' : '2px solid var(--border-c)',
+                    padding: '10px 6px 6px',
+                    cursor: phase === "results" ? "pointer" : "default",
+                  }}
+                >
                   {/* Bouton son Rythme — top-left de la portée */}
                   <button
                     onClick={() => setRhythmSoundOn(v => !v)}
-                    style={{
-                      position:"absolute",top:6,left:6,zIndex:10,
-                      background:rhythmSoundOn?"rgba(124,58,237,0.25)":"rgba(31,41,55,0.7)",
-                      border:"1px solid rgba(255,255,255,0.08)",
-                      borderRadius:99,padding:"3px 9px",
-                      color:rhythmSoundOn?"#c084fc":"#4b5563",
-                      fontSize:11,fontWeight:700,cursor:"pointer",height:28,lineHeight:1,
-                    }}
+                    className="absolute top-1.5 left-1.5 z-10 rounded-full px-2.5 border-0 text-[11px] font-bold cursor-pointer h-7 leading-none"
+                    style={{ background: rhythmSoundOn ? 'rgba(74,108,247,0.18)' : 'rgba(0,0,0,0.25)', color: rhythmSoundOn ? '#4A6CF7' : 'var(--text-muted)' }}
                   >{rhythmSoundOn?"🔊":"🔇"}</button>
                   <RythmStaff
                     figures={vexFigs}
@@ -1493,26 +1394,28 @@ export default function RythmApp() {
                   />
                 </div>
               ) : (
-                <div style={{background:"#0f172a",
-                  border: (activity === 2 && beatFlash) ? "2px solid #7c3aed" : "1px dashed #374151",
-                  borderRadius:14,padding:"20px",textAlign:"center",
-                  fontSize:28,color:"#374151",letterSpacing:8,
-                  transition:"border-color 0.04s"}}>
+                <div
+                  className="rounded-2xl p-5 text-center text-3xl tracking-[8px] transition-colors duration-75"
+                  style={{
+                    background: 'var(--surface)',
+                    border: (activity === 2 && beatFlash) ? '2px solid #4A6CF7' : '1px dashed var(--border-c)',
+                    color: 'var(--border-c)',
+                  }}
+                >
                   ? ? ? ?
                 </div>
               )}
 
               {/* Barre de progression — hauteur réservée pour éviter les sauts */}
-              <div style={{marginTop:8,height:22}}>
+              <div className="mt-2 h-[22px]">
                 {isPlaying && (
                   <>
-                    <div style={{width:"100%",height:3,background:"#1f2937",
-                      borderRadius:99,overflow:"hidden"}}>
-                      <div style={{width:`${progress*100}%`,height:"100%",
-                        background:"linear-gradient(90deg,#7c3aed,#c084fc)",
-                        transition:"width 0.1s linear",borderRadius:99}}/>
+                    <div className="w-full h-[3px] bg-surface-2 rounded-full overflow-hidden">
+                      <div className="h-full rounded-full transition-[width] duration-100 ease-linear"
+                        style={{ width: `${progress*100}%`, background: 'linear-gradient(90deg,#4A6CF7,#8B5CF6)' }}
+                      />
                     </div>
-                    <div style={{textAlign:"right",fontSize:10,color:"#4b5563",marginTop:3}}>
+                    <div className="text-right text-[10px] text-app-muted mt-0.5">
                       {tapTimes.length} / {playableCount} taps
                     </div>
                   </>
@@ -1523,76 +1426,68 @@ export default function RythmApp() {
 
           {/* BILAN act 1 & 2 */}
           {(activity === 1 || activity === 2) && phase==="results" && scores.length>0 && (
-            <div style={{width:"100%",background:"#0f172a",
-              border:"1px solid #1e293b",borderRadius:14,padding:16,textAlign:"center"}}>
-              <div style={{fontSize:36}}>{medal}</div>
-              <div style={{fontSize:32,fontWeight:900,marginTop:2}}>{pct}%</div>
-              <div style={{fontSize:12,color:"#6b7280",marginBottom:10}}>
-                {earnedPts} / {maxPts} pts
-              </div>
-              <div style={{display:"flex",flexWrap:"wrap",gap:5,justifyContent:"center"}}>
+            <div className="w-full bg-surface border border-app rounded-2xl p-4 text-center">
+              <div className="text-4xl">{medal}</div>
+              <div className="text-3xl font-black mt-0.5">{pct}%</div>
+              <div className="text-xs text-app-muted mb-2.5">{earnedPts} / {maxPts} pts</div>
+              <div className="flex flex-wrap gap-1.5 justify-center">
                 {scores.map((s,i) => (
-                  <div key={i} style={{
-                    background:"#1e293b",borderRadius:999,
-                    padding:"2px 9px",fontSize:10,fontWeight:600,
-                    color:GRADE_COLOR[s.grade],
-                    border:`1px solid ${GRADE_COLOR[s.grade]}33`,
-                  }}>
+                  <div key={i} className="rounded-full px-2.5 py-0.5 text-[10px] font-semibold bg-surface-2"
+                    style={{ color: GRADE_COLOR[s.grade], border: `1px solid ${GRADE_COLOR[s.grade]}33` }}>
                     {i+1} · {s.label}
                   </div>
                 ))}
               </div>
               {detectedOffset !== null && Math.abs(detectedOffset) > 15 && (
-                <div style={{fontSize:9,color:"#4b5563",marginTop:8}}>
+                <div className="text-[9px] text-app-muted mt-2">
                   Décalage compensé : {detectedOffset > 0 ? "+" : ""}{detectedOffset} ms
                 </div>
               )}
             </div>
           )}
+
           {/* GRILLE act 3 — 4 portées */}
           {activity === 3 && phase !== "idle" && choices.length > 0 && (
-            <div style={{width:"100%"}}>
-              <div style={{textAlign:"center",fontSize:11,color:"#6b7280",marginBottom:10,
-                display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
+            <div className="w-full">
+              <div className="text-center text-[11px] text-app-muted mb-2.5 flex items-center justify-center gap-2">
                 {phase==="countdown" ? (
-                  <span style={{fontSize:40,fontWeight:900,color:"#c084fc",lineHeight:1}}>{countdownN}</span>
+                  <span className="text-[40px] font-black leading-none" style={{ color: '#4A6CF7' }}>{countdownN}</span>
                 ) : (
                   <>
                     <span>{phase==="playing" ? "Quelle portée ?" : "Résultat"} · {sessionBpm} BPM</span>
                     <button
                       onClick={() => playPatternAudio(choices[correctIdx], sessionBpm)}
-                      style={{
-                        background:"#4f46e5",border:"none",borderRadius:6,
-                        padding:"3px 10px",color:"#fff",fontSize:10,fontWeight:700,cursor:"pointer",
-                      }}
+                      className="rounded border-none px-2.5 py-0.5 text-white text-[10px] font-bold cursor-pointer"
+                      style={{ background: '#4A6CF7' }}
                     >▶ Rejouer</button>
                   </>
                 )}
               </div>
-              <div style={{display:"grid",
-                gridTemplateColumns: choiceCols === 1 ? "1fr" : "1fr 1fr",
-                gap:8, opacity: phase==="countdown" ? 0.45 : 1, transition:"opacity 0.3s"}}>
+              <div
+                className="grid gap-2 transition-opacity duration-300"
+                style={{
+                  gridTemplateColumns: choiceCols === 1 ? "1fr" : "1fr 1fr",
+                  opacity: phase==="countdown" ? 0.45 : 1,
+                }}
+              >
                 {choices.map((c, i) => {
-                  let borderColor = "#1e293b";
-                  if (phase === "playing" && beatFlash) borderColor = "#4f46e5";
+                  let borderColor = 'var(--border-c)';
+                  if (phase === "playing" && beatFlash) borderColor = '#4A6CF7';
                   if (phase === "results") {
-                    if (i === correctIdx) borderColor = "#34d399";
-                    else if (i === selectedIdx) borderColor = "#f87171";
+                    if (i === correctIdx) borderColor = '#22C55E';
+                    else if (i === selectedIdx) borderColor = '#f87171';
                   }
                   return (
                     <div
                       key={i}
                       role="button"
                       onClick={() => { if (phase === "playing") handleChoice(i); }}
+                      className="rounded-xl bg-surface"
                       style={{
                         cursor: phase === "playing" ? "pointer" : "default",
-                        borderRadius:12,
-                        border:`2px solid ${borderColor}`,
-                        background:"#0a0f1a",
-                        padding:"8px 6px 4px",
-                        transition: phase === "results" ? "border-color 0.2s" : "none",
-                        boxShadow: phase === "playing" && beatFlash
-                          ? "0 0 8px rgba(79,70,229,0.4)" : "none",
+                        border: `2px solid ${borderColor}`,
+                        padding: '8px 6px 4px',
+                        boxShadow: phase === "playing" && beatFlash ? '0 0 8px rgba(74,108,247,0.4)' : 'none',
                       }}
                     >
                       <RythmStaff
@@ -1609,10 +1504,8 @@ export default function RythmApp() {
                 })}
               </div>
               {phase === "results" && (
-                <div style={{
-                  marginTop:12,textAlign:"center",fontSize:13,fontWeight:700,
-                  color: selectedIdx === correctIdx ? "#34d399" : "#f87171",
-                }}>
+                <div className="mt-3 text-center text-sm font-bold"
+                  style={{ color: selectedIdx === correctIdx ? '#22C55E' : '#f87171' }}>
                   {selectedIdx === correctIdx ? "✓ Bonne réponse ! +100 pts" : "✕ Mauvaise réponse."}
                 </div>
               )}
@@ -1621,29 +1514,30 @@ export default function RythmApp() {
 
           {/* act 4 — portée cible + 4 boutons audio */}
           {activity === 4 && phase !== "idle" && pattern && (
-            <div style={{width:"100%"}}>
-              <div style={{textAlign:"center",fontSize:11,color:"#6b7280",marginBottom:6,
-                display:"flex",alignItems:"center",justifyContent:"center",gap:10}}>
+            <div className="w-full">
+              <div className="text-center text-[11px] text-app-muted mb-1.5 flex items-center justify-center gap-2.5">
                 <span>{phase==="playing" ? "Quelle lecture ?" : "Résultat"} · {sessionBpm} BPM</span>
                 {act4CountN !== null && (
-                  <span style={{fontSize:28,fontWeight:900,color:"#c084fc",lineHeight:1}}>{act4CountN}</span>
+                  <span className="text-[28px] font-black leading-none" style={{ color: '#4A6CF7' }}>{act4CountN}</span>
                 )}
               </div>
-              <div style={{
-                background:"#0f172a",
-                border:`2px solid ${phase==="results" ? (selectedIdx===correctIdx ? "#34d399" : "#f87171") : "#1e293b"}`,
-                borderRadius:14,padding:"10px 6px 6px",overflow:"hidden",marginBottom:12,
-                transition:"border-color 0.2s",
-              }}>
+              <div
+                className="rounded-2xl overflow-hidden mb-3 transition-colors duration-200"
+                style={{
+                  background: 'var(--surface)',
+                  padding: '10px 6px 6px',
+                  border: `2px solid ${phase==="results" ? (selectedIdx===correctIdx ? '#22C55E' : '#f87171') : 'var(--border-c)'}`,
+                }}
+              >
                 <RythmStaff figures={pattern.figs} timeSig={pattern.timeSig} activeIdx={-1} />
               </div>
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:10}}>
+              <div className="grid grid-cols-2 gap-2 mb-2.5">
                 {choices.map((c, i) => {
-                  let bg = "#1f2937"; let col = "#9ca3af";
-                  if (pendingIdx === i) { bg = "#4c1d95"; col = "#c084fc"; }
+                  let bg = 'var(--surface-2)'; let col = 'var(--text-muted)';
+                  if (pendingIdx === i) { bg = 'rgba(74,108,247,0.15)'; col = '#4A6CF7'; }
                   if (phase === "results") {
-                    if (i === correctIdx) { bg = "#064e3b"; col = "#34d399"; }
-                    else if (i === selectedIdx && i !== correctIdx) { bg = "#7f1d1d"; col = "#f87171"; }
+                    if (i === correctIdx) { bg = '#064e3b'; col = '#22C55E'; }
+                    else if (i === selectedIdx && i !== correctIdx) { bg = '#7f1d1d'; col = '#f87171'; }
                   }
                   return (
                     <button key={i}
@@ -1661,12 +1555,8 @@ export default function RythmApp() {
                         const endId = setTimeout(() => setAct4CountN(null), 4 * bMs + 200);
                         audioTidsRef.current.push(endId);
                       }}
-                      style={{
-                        background:bg,border:"none",borderRadius:10,
-                        padding:"10px 0",color:col,fontSize:13,fontWeight:700,
-                        cursor: phase==="playing" ? "pointer" : "default",
-                        transition:"all 0.15s",
-                      }}
+                      className="border-none rounded-xl py-2.5 text-sm font-bold"
+                      style={{ background: bg, color: col, cursor: phase==="playing" ? "pointer" : "default", transition: "all 0.15s" }}
                     >▶ {String.fromCharCode(65+i)}</button>
                   );
                 })}
@@ -1675,22 +1565,20 @@ export default function RythmApp() {
                 <button
                   onClick={() => handleChoice(pendingIdx)}
                   disabled={pendingIdx === null}
+                  className="w-full border-none rounded-2xl text-sm font-bold disabled:cursor-default cursor-pointer"
                   style={{
-                    width:"100%",padding:"12px 0",
-                    background: pendingIdx !== null ? "linear-gradient(135deg,#7c3aed,#6d28d9)" : "#1f2937",
-                    border:"none",borderRadius:14,
-                    color: pendingIdx !== null ? "#fff" : "#4b5563",
-                    fontSize:14,fontWeight:700,
-                    cursor: pendingIdx !== null ? "pointer" : "default",
-                    transition:"all 0.2s",
+                    padding: '12px 0',
+                    background: pendingIdx !== null ? 'linear-gradient(135deg,#4A6CF7,#8B5CF6)' : 'var(--surface-2)',
+                    color: pendingIdx !== null ? '#fff' : 'var(--text-muted)',
+                    transition: "all 0.2s",
                   }}
                 >
                   {pendingIdx !== null ? `Valider : ${String.fromCharCode(65+pendingIdx)}` : "Écoute puis valide"}
                 </button>
               )}
               {phase === "results" && (
-                <div style={{textAlign:"center",fontSize:13,fontWeight:700,
-                  color: selectedIdx === correctIdx ? "#34d399" : "#f87171"}}>
+                <div className="text-center text-sm font-bold"
+                  style={{ color: selectedIdx === correctIdx ? '#22C55E' : '#f87171' }}>
                   {selectedIdx === correctIdx
                     ? "✓ Bonne réponse ! +100 pts"
                     : `✕ Mauvaise réponse. La bonne réponse était ${String.fromCharCode(65+correctIdx)}.`}
@@ -1704,18 +1592,17 @@ export default function RythmApp() {
       </div>
 
       {/* ── BOUTON TAP / MIC / START ── */}
-      <div style={{width:"100%",maxWidth:540,marginTop:14}}>
+      <div className="w-full max-w-xl mt-3.5">
         {/* Bouton SON TAP visible pendant la correction (act 1 & 2) */}
         {(activity===1||activity===2) && phase==="results" && (
-          <div style={{display:"flex",justifyContent:"flex-end",marginBottom:8}}>
+          <div className="flex justify-end mb-2">
             <button
               onClick={() => setTapSoundOn(v => !v)}
+              className="rounded-full px-3 text-[11px] font-bold cursor-pointer h-7 leading-none border"
               style={{
-                background:tapSoundOn?"rgba(124,58,237,0.25)":"rgba(31,41,55,0.7)",
-                border:"1px solid rgba(255,255,255,0.08)",
-                borderRadius:99,padding:"3px 12px",
-                color:tapSoundOn?"#c084fc":"#4b5563",
-                fontSize:11,fontWeight:700,cursor:"pointer",height:28,lineHeight:1,
+                background: tapSoundOn ? 'rgba(74,108,247,0.18)' : 'rgba(0,0,0,0.12)',
+                borderColor: 'rgba(0,0,0,0.08)',
+                color: tapSoundOn ? '#4A6CF7' : 'var(--text-muted)',
               }}
             >{tapSoundOn?"🥁 Son TAP":"🔕 Son TAP"}</button>
           </div>
@@ -1723,34 +1610,33 @@ export default function RythmApp() {
 
         {/* Entrée pendant le jeu */}
         {(phase === "playing" || (phase === "countdown" && (activity === 1 || activity === 2)) || (phase === "listening" && activity === 2)) && inputMode==="tap" && (activity === 1 || activity === 2) && (
-          <button onPointerDown={handleTap} style={{
-            position:"relative",
-            width:"100%",height:130,
-            background:tapFlash
-              ?"linear-gradient(135deg,#9333ea,#ec4899)"
-              : (phase==="countdown" || (phase==="listening" && activity===2))
-                ?"linear-gradient(135deg,#4c1d95,#3b0764)"
-                :"linear-gradient(135deg,#7c3aed,#6d28d9)",
-            border:"none",borderRadius:20,cursor:"pointer",
-            color: (phase==="countdown" || (phase==="listening" && activity===2)) ? "#6b21a8" : "#fff",
-            fontSize:26,fontWeight:900,letterSpacing:3,
-            boxShadow: (phase==="countdown" || (phase==="listening" && activity===2))
-              ?"0 8px 32px rgba(109,40,217,0.2)"
-              :"0 8px 32px rgba(109,40,217,0.5)",
-            transform:tapFlash?"scale(0.96)":"scale(1)",
-            transition:"transform 0.06s,background 0.06s,color 0.06s",touchAction:"none",
-          }}>
+          <button onPointerDown={handleTap}
+            className="relative w-full border-none rounded-2xl cursor-pointer text-[26px] font-black tracking-[3px]"
+            style={{
+              height: 130,
+              background: tapFlash
+                ? "linear-gradient(135deg,#9333ea,#ec4899)"
+                : (phase==="countdown" || (phase==="listening" && activity===2))
+                  ? "linear-gradient(135deg,#3b4fd4,#2040b5)"
+                  : "linear-gradient(135deg,#4A6CF7,#8B5CF6)",
+              color: (phase==="countdown" || (phase==="listening" && activity===2)) ? 'rgba(74,108,247,0.4)' : '#fff',
+              boxShadow: (phase==="countdown" || (phase==="listening" && activity===2))
+                ? "0 8px 32px rgba(74,108,247,0.2)"
+                : "0 8px 32px rgba(74,108,247,0.5)",
+              transform: tapFlash ? "scale(0.96)" : "scale(1)",
+              transition: "transform 0.06s,background 0.06s,color 0.06s",
+              touchAction: "none",
+            }}
+          >
             {/* Bouton son TAP — top-left de la zone TAP */}
             <button
               onPointerDown={e => e.stopPropagation()}
               onClick={e => { e.stopPropagation(); setTapSoundOn(v => !v); }}
+              className="absolute top-2 left-2.5 z-10 rounded-full px-2.5 border text-[11px] font-bold cursor-pointer h-7 leading-none"
               style={{
-                position:"absolute",top:8,left:10,zIndex:10,
-                background:tapSoundOn?"rgba(124,58,237,0.35)":"rgba(0,0,0,0.45)",
-                border:"1px solid rgba(255,255,255,0.1)",
-                borderRadius:99,padding:"3px 9px",
-                color:tapSoundOn?"#e9d5ff":"#6b7280",
-                fontSize:11,fontWeight:700,cursor:"pointer",height:28,lineHeight:1,
+                background: tapSoundOn ? 'rgba(74,108,247,0.3)' : 'rgba(0,0,0,0.4)',
+                borderColor: 'rgba(255,255,255,0.12)',
+                color: tapSoundOn ? '#e9d5ff' : 'var(--text-muted)',
               }}
             >{tapSoundOn?"🥁":"🔕"}</button>
             TAP
@@ -1758,46 +1644,37 @@ export default function RythmApp() {
         )}
 
         {(phase === "playing" || (phase === "countdown" && (activity === 1 || activity === 2)) || (phase === "listening" && activity === 2)) && inputMode==="mic" && (activity === 1 || activity === 2) && (
-          <div style={{
-            width:"100%",height:130,borderRadius:20,overflow:"hidden",
-            background: tapFlash ? "#4c1d95" : "#0a0f1a",
-            border: tapFlash ? "2px solid #c084fc" : "2px solid #1e293b",
-            display:"flex",flexDirection:"column",
-            alignItems:"center",justifyContent:"center",gap:10,
-            transition:"background 0.06s,border-color 0.06s",
-          }}>
-            <div style={{fontSize:13,color: micActive ? "#c084fc" : "#4b5563",fontWeight:700}}>
+          <div
+            className="w-full rounded-2xl overflow-hidden flex flex-col items-center justify-center gap-2.5"
+            style={{
+              height: 130,
+              background: tapFlash ? 'rgba(74,108,247,0.15)' : 'var(--surface)',
+              border: tapFlash ? '2px solid #4A6CF7' : '2px solid var(--border-c)',
+              transition: "background 0.06s,border-color 0.06s",
+            }}
+          >
+            <div className="text-sm font-bold" style={{ color: micActive ? '#4A6CF7' : 'var(--text-muted)' }}>
               {micActive ? "🎤 Écoute…" : "🎤 Micro inactif"}
             </div>
             {/* Barre de niveau */}
-            <div style={{width:"80%",height:8,background:"#1e293b",borderRadius:99,overflow:"hidden"}}>
-              <div style={{
-                height:"100%",borderRadius:99,
-                width:`${Math.min(micLevel / (micThreshold * 3), 1) * 100}%`,
-                background: micLevel > micThreshold ? "#c084fc" : "#374151",
-                transition:"width 0.05s",
+            <div className="w-4/5 h-2 bg-surface-2 rounded-full overflow-hidden">
+              <div className="h-full rounded-full" style={{
+                width: `${Math.min(micLevel / (micThreshold * 3), 1) * 100}%`,
+                background: micLevel > micThreshold ? '#4A6CF7' : 'var(--border-c)',
+                transition: "width 0.05s",
               }}/>
             </div>
             {/* Marqueur seuil */}
-            <div style={{width:"80%",position:"relative",height:4}}>
-              <div style={{
-                position:"absolute",
-                left:`${Math.min(1/3, 1) * 100}%`,
-                top:0,width:2,height:4,background:"#7c3aed",borderRadius:1,
-              }}/>
+            <div className="w-4/5 relative h-1">
+              <div className="absolute top-0 w-0.5 h-1 rounded-sm" style={{ left: `${Math.min(1/3, 1) * 100}%`, background: '#4A6CF7' }}/>
             </div>
           </div>
         )}
         {canStart && (
           <button
             onClick={handleNext}
-            style={{
-              width:"100%",padding:"18px 0",
-              background:"linear-gradient(135deg,#7c3aed,#6d28d9)",
-              border:"none",borderRadius:20,cursor:"pointer",
-              color:"#fff",fontSize:16,fontWeight:700,
-              boxShadow:"0 8px 32px rgba(109,40,217,0.4)",
-            }}
+            className="w-full border-none rounded-2xl cursor-pointer text-white text-base font-bold"
+            style={{ padding: '18px 0', background: 'linear-gradient(135deg,#4A6CF7,#8B5CF6)', boxShadow: '0 8px 32px rgba(74,108,247,0.4)' }}
           >
             {phase==="idle"
               ? (seriesMode ? "▶ Commencer la série" : "▶ Commencer")

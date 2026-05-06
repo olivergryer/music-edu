@@ -42,5 +42,5 @@ export default function IntervalleStaff({ notes, width = 260, height = 110 }) {
     }
   }, [notes, width, height])
 
-  return <div ref={ref} style={{ width: '100%', maxWidth: width, margin: '0 auto 8px' }} />
+  return <div ref={ref} className="w-full mx-auto mb-2" style={{ maxWidth: width }} />
 }

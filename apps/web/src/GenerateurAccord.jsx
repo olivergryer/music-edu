@@ -147,33 +147,24 @@ export default function GenerateurAccord({ transpoKey, referentiel, diapason, se
     if (removedIdx !== null && removedIdx > maxInv) setRemovedIdx(null)
   }
 
-  const selectStyle = {
-    background: COL_BG, color: COL_TEXT, border: `1px solid ${COL_BORDER}`,
-    borderRadius: 8, padding: '6px 10px', fontSize: 14, cursor: 'pointer',
-    fontFamily: "'Inter','Segoe UI',sans-serif",
-  }
-  const numBtnStyle = {
-    background: COL_BG, color: COL_TEXT, border: `1px solid ${COL_BORDER}`,
-    borderRadius: 6, width: 28, height: 28, cursor: 'pointer', fontSize: 14,
-    display: 'flex', alignItems: 'center', justifyContent: 'center',
-    fontFamily: "'Inter','Segoe UI',sans-serif",
-  }
+  const selectCls = "bg-(--input-bg) text-app border border-app rounded-lg px-2.5 py-1.5 text-sm cursor-pointer"
+  const numBtnCls = "bg-(--input-bg) text-app border border-app rounded-md w-7 h-7 cursor-pointer text-sm flex items-center justify-center"
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+    <div className="flex flex-col gap-3.5">
       {/* Row 1: chord selectors */}
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-        <select style={selectStyle} value={root} onChange={e => { setRoot(e.target.value); setRemovedIdx(null) }}>
+      <div className="flex gap-2 flex-wrap items-center">
+        <select className={selectCls} value={root} onChange={e => { setRoot(e.target.value); setRemovedIdx(null) }}>
           {ALL_ROOTS.map(r => <option key={r} value={r}>{r}</option>)}
         </select>
 
-        <select style={selectStyle} value={chordType} onChange={e => handleChordType(e.target.value)}>
+        <select className={selectCls} value={chordType} onChange={e => handleChordType(e.target.value)}>
           {Object.entries(CHORD_TYPES).map(([k, v]) => (
             <option key={k} value={k}>{v.label}</option>
           ))}
         </select>
 
-        <select style={selectStyle} value={inversion} onChange={e => { setInversion(Number(e.target.value)); setRemovedIdx(null) }}>
+        <select className={selectCls} value={inversion} onChange={e => { setInversion(Number(e.target.value)); setRemovedIdx(null) }}>
           {Array.from({ length: maxInversion + 1 }, (_, i) => (
             <option key={i} value={i}>{i === 0 ? 'État fondamental' : `${i}${i === 1 ? 'er' : 'e'} renversement`}</option>
           ))}
@@ -181,33 +172,29 @@ export default function GenerateurAccord({ transpoKey, referentiel, diapason, se
       </div>
 
       {/* Row 2: octave + play */}
-      <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <span style={{ fontSize: 12, color: COL_MUTED2 }}>Octave</span>
-          <button style={numBtnStyle} onClick={() => setBaseOctave(o => Math.max(2, o - 1))}>
+      <div className="flex gap-3 items-center flex-wrap">
+        <div className="flex items-center gap-1.5">
+          <span className="text-xs text-app-muted">Octave</span>
+          <button className={numBtnCls} onClick={() => setBaseOctave(o => Math.max(2, o - 1))}>
             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="6 15 12 9 18 15"/></svg>
           </button>
-          <span style={{ color: COL_TEXT, fontWeight: 700, fontSize: 14, minWidth: 14, textAlign: 'center' }}>{baseOctave}</span>
-          <button style={numBtnStyle} onClick={() => setBaseOctave(o => Math.min(6, o + 1))}>
+          <span className="text-sm font-bold text-app text-center" style={{ minWidth: 14 }}>{baseOctave}</span>
+          <button className={numBtnCls} onClick={() => setBaseOctave(o => Math.min(6, o + 1))}>
             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="6 9 12 15 18 9"/></svg>
           </button>
         </div>
 
         <button
           onClick={togglePlay}
-          style={{
-            background: playing ? '#7f1d1d' : COL_ACCENT2, color: '#fff',
-            border: 'none', borderRadius: 8, padding: '8px 20px',
-            fontSize: 13, fontWeight: 700, cursor: 'pointer',
-            fontFamily: "'Inter','Segoe UI',sans-serif", minWidth: 80,
-          }}
+          className="text-white border-none rounded-lg px-5 py-2 text-sm font-bold cursor-pointer"
+          style={{ background: playing ? '#7f1d1d' : '#FF8B3D', minWidth: 80 }}
         >
           {playing ? 'Stop' : 'Jouer'}
         </button>
       </div>
 
       {/* Note cards */}
-      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+      <div className="flex gap-2.5 flex-wrap">
         {chordMidis.map((midi, i) => {
           const { nom, octave } = midiToDisplayNote(midi, transpoKey, enharmoScale)
           const isRemoved = i === removedIdx
@@ -219,7 +206,7 @@ export default function GenerateurAccord({ transpoKey, referentiel, diapason, se
           const centsVal  = isLive ? liveNote.muCents : null
 
           const borderColor = isRemoved
-            ? (isLive ? couleurJustesse(centsVal, seuil) : COL_BORDER)
+            ? (isLive ? couleurJustesse(centsVal, seuil) : 'var(--border-c)')
             : 'transparent'
 
           return (
@@ -227,25 +214,23 @@ export default function GenerateurAccord({ transpoKey, referentiel, diapason, se
               key={i}
               onClick={() => handleRemove(i)}
               title={isRemoved ? "Restaurer dans l'accord" : 'Retirer (je joue cette note)'}
+              className="rounded-xl px-4 py-2.5 cursor-pointer text-center transition-all duration-150"
               style={{
-                background:   isRemoved ? COL_BG : COL_ACCENT2,
-                border:       `2px solid ${borderColor}`,
-                borderRadius: 10, padding: '10px 16px',
-                color:        isRemoved ? (isLive ? couleurJustesse(centsVal, seuil) : COL_MUTED2) : '#fff',
-                cursor: 'pointer', textAlign: 'center', minWidth: 64,
-                fontFamily: "'Inter','Segoe UI',sans-serif",
-                transition: 'all 0.15s',
+                background: isRemoved ? 'var(--surface-2)' : '#FF8B3D',
+                border: `2px solid ${borderColor}`,
+                minWidth: 64,
+                color: isRemoved ? (isLive ? couleurJustesse(centsVal, seuil) : 'var(--text-muted)') : '#fff',
               }}
             >
-              <div style={{ fontSize: 18, fontWeight: 700 }}>{nom}</div>
-              <div style={{ fontSize: 11, opacity: 0.7 }}>{octave}</div>
+              <div className="text-lg font-bold">{nom}</div>
+              <div className="text-[11px] opacity-70">{octave}</div>
               {isLive && centsVal !== null && (
-                <div style={{ fontSize: 11, marginTop: 2, fontWeight: 600, color: couleurJustesse(centsVal, seuil) }}>
+                <div className="text-[11px] mt-0.5 font-semibold" style={{ color: couleurJustesse(centsVal, seuil) }}>
                   {centsVal >= 0 ? '+' : ''}{centsVal.toFixed(1)}¢
                 </div>
               )}
               {isRemoved && !isLive && (
-                <div style={{ fontSize: 10, marginTop: 3, color: COL_MUTED2 }}>jouer</div>
+                <div className="text-[10px] mt-0.5 text-app-muted">jouer</div>
               )}
             </button>
           )
@@ -253,7 +238,7 @@ export default function GenerateurAccord({ transpoKey, referentiel, diapason, se
       </div>
 
       {removedIdx === null && (
-        <div style={{ fontSize: 12, color: COL_MUTED2 }}>
+        <div className="text-xs text-app-muted">
           Cliquer sur une note pour la retirer de l'accord et la jouer sur votre instrument.
         </div>
       )}

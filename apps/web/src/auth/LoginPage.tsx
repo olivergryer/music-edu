@@ -3,17 +3,6 @@ import { signInWithEmailAndPassword } from 'firebase/auth'
 import { useNavigate, Link } from 'react-router-dom'
 import { auth } from '../lib/firebase'
 
-const s = {
-  page: { minHeight: '100vh', background: '#030712', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Poppins', 'Inter', 'Segoe UI', sans-serif" },
-  card: { background: '#0a0f1a', borderRadius: 16, padding: '40px 36px', width: '100%', maxWidth: 400, display: 'flex', flexDirection: 'column' as const, gap: 20 },
-  title: { color: '#f9fafb', fontSize: 24, fontWeight: 700, margin: 0 },
-  label: { color: '#9ca3af', fontSize: 13, marginBottom: 6, display: 'block' },
-  input: { width: '100%', background: '#111827', border: '1px solid #1f2937', borderRadius: 8, padding: '10px 14px', color: '#f9fafb', fontSize: 15, outline: 'none', boxSizing: 'border-box' as const },
-  btn: { background: '#7c3aed', color: '#fff', border: 'none', borderRadius: 8, padding: '12px 0', fontSize: 16, fontWeight: 600, cursor: 'pointer', width: '100%' },
-  error: { color: '#f87171', fontSize: 14, textAlign: 'center' as const },
-  link: { color: '#c084fc', textAlign: 'center' as const, fontSize: 14 },
-}
-
 export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -36,26 +25,49 @@ export default function LoginPage() {
   }
 
   return (
-    <div style={s.page}>
-      <div style={s.card}>
-        <h1 style={s.title}>Connexion</h1>
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+    <div className="bg-app min-h-screen flex items-center justify-center px-5">
+      <div className="bg-surface rounded-2xl p-10 w-full max-w-sm flex flex-col gap-5 shadow-sm border border-app">
+        <h1 className="text-2xl font-bold text-app m-0">Connexion</h1>
+
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div>
-            <label style={s.label}>Email</label>
-            <input style={s.input} type="email" value={email} onChange={e => setEmail(e.target.value)} required autoComplete="email" />
+            <label className="text-app-muted text-sm mb-1.5 block font-medium">Email</label>
+            <input
+              className="w-full rounded-lg px-3.5 py-2.5 text-sm text-app border border-app bg-(--input-bg) outline-none focus:border-rhythm transition-colors"
+              type="email"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              required
+              autoComplete="email"
+            />
           </div>
           <div>
-            <label style={s.label}>Mot de passe</label>
-            <input style={s.input} type="password" value={password} onChange={e => setPassword(e.target.value)} required autoComplete="current-password" />
+            <label className="text-app-muted text-sm mb-1.5 block font-medium">Mot de passe</label>
+            <input
+              className="w-full rounded-lg px-3.5 py-2.5 text-sm text-app border border-app bg-(--input-bg) outline-none focus:border-rhythm transition-colors"
+              type="password"
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              required
+              autoComplete="current-password"
+            />
           </div>
-          {error && <p style={s.error}>{error}</p>}
-          <button style={s.btn} type="submit" disabled={loading}>
+          {error && <p className="text-red-500 text-sm text-center m-0">{error}</p>}
+          <button
+            className="w-full rounded-lg py-3 text-base font-semibold text-white border-none transition-opacity disabled:opacity-50"
+            style={{ background: '#4A6CF7' }}
+            type="submit"
+            disabled={loading}
+          >
             {loading ? 'Connexion…' : 'Se connecter'}
           </button>
         </form>
-        <p style={s.link}>
+
+        <p className="text-center text-sm text-app-muted m-0">
           Pas encore de compte ?{' '}
-          <Link to="/register" style={{ color: '#c084fc' }}>Créer un compte</Link>
+          <Link to="/register" className="font-semibold no-underline" style={{ color: '#4A6CF7' }}>
+            Créer un compte
+          </Link>
         </p>
       </div>
     </div>

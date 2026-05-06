@@ -154,7 +154,7 @@ export default function AccordeurStaff({ notes, seuil = 10, transpoKey = 'C', to
   }, [notes, seuil, transpoKey, tonicName, staveWidth, height])
 
   return (
-    <div style={{ width: '100%', maxWidth: containerWidth, overflowX: 'auto', overflowY: 'hidden' }}>
+    <div className="w-full overflow-x-auto overflow-y-hidden" style={{ maxWidth: containerWidth }}>
       <div ref={ref} style={{ width: staveWidth, minWidth: staveWidth }} />
     </div>
   )

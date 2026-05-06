@@ -1,10 +1,66 @@
+@import "tailwindcss";
+
+/* ── Tailwind v4 dark mode (class-based) ── */
+@variant dark (&:where(.dark, .dark *));
+
+/* ── Design tokens ── */
+@theme {
+  --color-navy:    #0D1026;
+  --color-cream:   #F4F5F7;
+  --color-rhythm:  #4A6CF7;
+  --color-theory:  #8B5CF6;
+  --color-pitch:   #FF8B3D;
+  --color-success: #22C55E;
+  --color-muted:   #6B7280;
+  --color-border-light: #E5E7EB;
+
+  --font-sans: 'Inter', 'Segoe UI', sans-serif;
+}
+
+/* ── CSS variables par mode ── */
+:root {
+  --bg:         #F4F5F7;
+  --surface:    #FFFFFF;
+  --surface-2:  #F0F1F4;
+  --text:       #0D1026;
+  --text-muted: #6B7280;
+  --border-c:   #E5E7EB;
+  --input-bg:   #F9FAFB;
+  --accent:     #4A6CF7;
+  --shadow:     0 1px 4px rgba(13,16,38,0.08);
+}
+
+.dark {
+  --bg:         #0D1026;
+  --surface:    #131929;
+  --surface-2:  #1a2035;
+  --text:       #F4F5F7;
+  --text-muted: #9CA3AF;
+  --border-c:   #1E293B;
+  --input-bg:   #0f172a;
+  --accent:     #7C6CF7;
+  --shadow:     0 1px 4px rgba(0,0,0,0.4);
+}
+
+/* ── Utilitaires sémantiques ── */
+.bg-app      { background: var(--bg); }
+.bg-surface  { background: var(--surface); }
+.bg-surface-2 { background: var(--surface-2); }
+.text-app    { color: var(--text); }
+.text-app-muted { color: var(--text-muted); }
+.border-app  { border-color: var(--border-c); }
+
+/* ── Reset global ── */
 *, *::before, *::after { box-sizing: border-box; }
 
 html, body {
   margin: 0;
   padding: 0;
   overscroll-behavior: contain;
-  font-family: 'Poppins', 'Inter', 'Segoe UI', sans-serif;
+  font-family: 'Inter', 'Segoe UI', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  transition: background 0.2s, color 0.2s;
 }
 
 button, a, [role="button"] {
@@ -15,7 +71,10 @@ button, a, [role="button"] {
 button { min-height: 44px; }
 
 button:focus-visible, a:focus-visible {
-  outline: 2px solid #c084fc;
+  outline: 2px solid var(--accent);
   outline-offset: 2px;
   border-radius: 4px;
 }
+
+/* ── Surcharges canvas (toujours dark) ── */
+.canvas-dark { background: #0D1026; }
