@@ -362,7 +362,7 @@ function loadSettings() {
 export default function RythmApp() {
   const {
     formulaCatalog, levelOrder, levelFormulaIds,
-    sheetId, sheetStatus, sheetError, setSheetId, resetToDefault,
+    sheetId, sheetStatus, sheetError, setSheetId: _setSheetId, resetToDefault: _resetToDefault,
   } = useSheetData(
     { formulaCatalog: FORMULA_CATALOG, levelOrder: LEVEL_ORDER, levelFormulaIds: LEVEL_FORMULA_IDS },
     "/formules-rythme-template.csv"
@@ -448,6 +448,16 @@ export default function RythmApp() {
   const micRafRef      = useRef(null);
   const lastOnsetRef   = useRef(0);
 
+  const userSheetLoadRef = useRef(false);
+  const setSheetId = useCallback((raw) => {
+    userSheetLoadRef.current = true;
+    _setSheetId(raw);
+  }, [_setSheetId]);
+  const resetToDefault = useCallback(() => {
+    userSheetLoadRef.current = true;
+    _resetToDefault();
+  }, [_resetToDefault]);
+
   const { addSession } = useProgressFirebase();
 
   // ── Persistance réglages ──────────────────────────────────────────────────
@@ -470,10 +480,10 @@ export default function RythmApp() {
     });
   }, []);
 
-  // Quand le catalog change (sheet chargé), reset au premier niveau — skip mount
-  const catalogMountedRef = useRef(false);
+  // Reset formules seulement si l'utilisateur a chargé un sheet manuellement
   useEffect(() => {
-    if (!catalogMountedRef.current) { catalogMountedRef.current = true; return; }
+    if (!userSheetLoadRef.current) return;
+    userSheetLoadRef.current = false;
     if (levelOrder.length > 0) {
       setSelectedFormulas(new Set(levelFormulaIds[levelOrder[0]] ?? []));
     }

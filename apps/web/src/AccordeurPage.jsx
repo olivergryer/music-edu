@@ -336,7 +336,10 @@ export default function AccordeurPage() {
   useEffect(() => { localStorage.setItem('acc_clarity',  clarityThreshold) }, [clarityThreshold])
   useEffect(() => { localStorage.setItem('acc_gate',     gateLevel) }, [gateLevel])
 
-  useEffect(() => { demarrerLive() }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    demarrerLive()
+    return () => arreterLive()
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const demarrerEnregistrement = useCallback(async () => {
     setErreur(null)

@@ -25,7 +25,7 @@ function intonationColor(cents) {
 }
 
 // ─── Knob circulaire ±50¢ ────────────────────────────────────────────────────────
-function Knob({ value, onChange, note, octave }) {
+function Knob({ value, onChange }) {
   const CX = 36, CY = 36, R = 26, SW = 6
   const COLOR = '#FF8B3D'
 
@@ -56,7 +56,6 @@ function Knob({ value, onChange, note, octave }) {
 
   const onPD = (e) => {
     e.preventDefault()
-    e.stopPropagation()
     dragging.current = true
     lastY.current = e.clientY
     e.currentTarget.setPointerCapture(e.pointerId)
@@ -75,12 +74,10 @@ function Knob({ value, onChange, note, octave }) {
 
   return (
     <div className="flex flex-col items-center gap-0.5">
-      <div className="text-sm font-bold text-app leading-tight">
-        {note}<span className="text-[11px] font-normal text-app-muted ml-0.5">{octave}</span>
-      </div>
       <svg
         width={CX * 2} height={CY * 2}
         style={{ cursor: 'ns-resize', touchAction: 'none', userSelect: 'none' }}
+        onClick={e => e.stopPropagation()}
         onPointerDown={onPD} onPointerMove={onPM} onPointerUp={onPU}
       >
         <path d={trackPath} fill="none" stroke="var(--border-c)" strokeWidth={SW} strokeLinecap="round" />
@@ -97,21 +94,23 @@ function Knob({ value, onChange, note, octave }) {
 
 // ─── Page principale ─────────────────────────────────────────────────────────────
 export default function GenerateurAccordPage() {
-  const [diapason]   = useState(() => { const v = parseFloat(localStorage.getItem('acc_diapason')); return isNaN(v) ? 442 : v })
+  const [diapason] = useState(() => { const v = parseFloat(localStorage.getItem('acc_diapason')); return isNaN(v) ? 442 : v })
   const [root,       setRoot]       = useState('Do')
   const [chordType,  setChordType]  = useState('maj')
   const [inversion,  setInversion]  = useState(0)
   const [baseOctave, setBaseOctave] = useState(4)
   const [mode,       setMode]       = useState('tempere')
-  const [noteOffsets, setNoteOffsets] = useState([0, 0, 0])
   const [playing,    setPlaying]    = useState(false)
   const [removedIdx, setRemovedIdx] = useState(null)
   const [liveCents,  setLiveCents]  = useState(null)
+  const [liveError,  setLiveError]  = useState(false)
 
-  const audioCtxRef = useRef(null)
-  const oscsRef     = useRef([])
+  // Two independent offset memories
+  const [tempereOffsets,    setTempereOffsets]    = useState([0, 0, 0])
+  const [harmoniqueOffsets, setHarmoniqueOffsets] = useState([0, 0, 0])
 
-  // Live pitch detection refs
+  const audioCtxRef      = useRef(null)
+  const oscsRef          = useRef([])
   const liveStreamRef    = useRef(null)
   const liveAudioCtxRef  = useRef(null)
   const liveAnalyserRef  = useRef(null)
@@ -119,46 +118,49 @@ export default function GenerateurAccordPage() {
   const liveDetectorRef  = useRef(null)
   const removedMidiRef   = useRef(null)
   const removedOffsetRef = useRef(0)
-  const diapasonRef      = useRef(diapason)
-  useEffect(() => { diapasonRef.current = diapason }, [diapason])
 
   const chordMidis   = buildChordMidis(root, chordType, inversion, baseOctave)
   const maxInversion = CHORD_TYPES[chordType].intervals.length - 1
-  const n = chordMidis.length
-  const offsets = noteOffsets.length === n ? noteOffsets : Array(n).fill(0)
+  const n            = chordMidis.length
+
+  // Current offsets depending on mode
+  const rawTempere    = tempereOffsets.length === n    ? tempereOffsets    : Array(n).fill(0)
+  const rawHarmonique = harmoniqueOffsets.length === n ? harmoniqueOffsets : Array(n).fill(0)
+  const offsets       = mode === 'tempere' ? rawTempere : rawHarmonique
+  const setOffsets    = mode === 'tempere' ? setTempereOffsets : setHarmoniqueOffsets
 
   const enharmoScale = buildEnharmonicScale(root)
   const noteNames = chordMidis.map(midi => ({
-    nom: enharmoScale[((midi % 12) + 12) % 12] ?? '?',
+    nom:    enharmoScale[((midi % 12) + 12) % 12] ?? '?',
     octave: Math.floor(midi / 12) - 1,
   }))
 
-  // Sync offsets when chord structure changes (not on mode change — preserves manual adjustments)
+  // When chord structure changes: reset both memories
   useEffect(() => {
-    if (mode === 'harmonique') {
-      setNoteOffsets(computeHarmonicOffsets(chordType, chordMidis, root))
-    } else {
-      setNoteOffsets(Array(buildChordMidis(root, chordType, inversion, baseOctave).length).fill(0))
-    }
+    const midis = buildChordMidis(root, chordType, inversion, baseOctave)
+    setTempereOffsets(Array(midis.length).fill(0))
+    setHarmoniqueOffsets(computeHarmonicOffsets(chordType, midis, root))
+    setRemovedIdx(null)
   }, [root, chordType, inversion, baseOctave]) // eslint-disable-line
 
-  // Keep removed note refs fresh
+  // Keep removed note refs fresh for the live loop (no stale closure)
   useEffect(() => {
     if (removedIdx !== null) {
       removedMidiRef.current   = chordMidis[removedIdx]
       removedOffsetRef.current = offsets[removedIdx] ?? 0
     }
-  }, [removedIdx, chordMidis, offsets])
+  }) // runs every render — intentional
 
-  // Start / stop live pitch detection based on removedIdx
+  // ─── Live pitch detection ───────────────────────────────────────────────────────
   useEffect(() => {
     if (removedIdx === null) {
       cancelAnimationFrame(liveRafRef.current)
       liveStreamRef.current?.getTracks().forEach(t => t.stop())
-      liveAudioCtxRef.current?.close()
+      try { liveAudioCtxRef.current?.close() } catch {}
       liveAudioCtxRef.current = null
       liveStreamRef.current   = null
       setLiveCents(null)
+      setLiveError(false)
       return
     }
 
@@ -167,53 +169,61 @@ export default function GenerateurAccordPage() {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false })
         if (cancelled) { stream.getTracks().forEach(t => t.stop()); return }
-        liveStreamRef.current = stream
-        const audioCtx = new AudioContext()
+        liveStreamRef.current  = stream
+        const audioCtx         = new (window.AudioContext || window.webkitAudioContext)()
         liveAudioCtxRef.current = audioCtx
-        const source   = audioCtx.createMediaStreamSource(stream)
-        const analyser = audioCtx.createAnalyser()
-        analyser.fftSize = 2048
+        const source           = audioCtx.createMediaStreamSource(stream)
+        const analyser         = audioCtx.createAnalyser()
+        analyser.fftSize       = 2048
         source.connect(analyser)
-        liveAnalyserRef.current  = analyser
-        liveDetectorRef.current  = PitchDetector.forFloat32Array(2048)
+        liveAnalyserRef.current = analyser
+        liveDetectorRef.current = PitchDetector.forFloat32Array(analyser.fftSize)
 
-        const buf = new Float32Array(2048)
+        const buf = new Float32Array(analyser.fftSize)
         let lastUpdate = 0
         const loop = () => {
           liveRafRef.current = requestAnimationFrame(loop)
           const now = performance.now()
           if (now - lastUpdate < 100) return
           lastUpdate = now
+
           analyser.getFloatTimeDomainData(buf)
           const rms = frameRMS(buf)
-          if (rms < 0.02) { setLiveCents(null); return }
+          if (rms < 0.015) { setLiveCents(null); return }
+
           const emp = preEmphasis(buf)
           const [hz, clarity] = liveDetectorRef.current.findPitch(emp, audioCtx.sampleRate)
-          if (clarity < 0.82 || hz < HZ_MIN || hz > HZ_MAX) { setLiveCents(null); return }
+          if (clarity < 0.80 || hz < HZ_MIN || hz > HZ_MAX) { setLiveCents(null); return }
 
-          const detectedMidi = Math.round(hzToMidi(hz, diapasonRef.current))
+          const detectedMidi = Math.round(hzToMidi(hz, diapason))
           const targetMidi   = removedMidiRef.current
-          if (targetMidi === null || Math.abs(detectedMidi - targetMidi) > 1) { setLiveCents(null); return }
+          if (targetMidi === null || Math.abs(detectedMidi - targetMidi) > 1) {
+            setLiveCents(null); return
+          }
 
-          const muCentsET = centsTempere(hz, diapasonRef.current)
-          const muCents   = parseFloat((muCentsET - removedOffsetRef.current).toFixed(1))
+          // deviation from ET, corrected for any JI offset of the target note
+          const centsET   = centsTempere(hz, diapason)
+          const muCents   = parseFloat((centsET - removedOffsetRef.current).toFixed(1))
           setLiveCents(muCents)
         }
         loop()
-      } catch {}
+      } catch {
+        setLiveError(true)
+      }
     })()
 
     return () => {
       cancelled = true
       cancelAnimationFrame(liveRafRef.current)
       liveStreamRef.current?.getTracks().forEach(t => t.stop())
-      liveAudioCtxRef.current?.close()
+      try { liveAudioCtxRef.current?.close() } catch {}
       liveAudioCtxRef.current = null
       liveStreamRef.current   = null
       setLiveCents(null)
     }
-  }, [removedIdx])
+  }, [removedIdx]) // eslint-disable-line
 
+  // ─── Chord oscillators ──────────────────────────────────────────────────────────
   const stopOscs = useCallback(() => {
     if (!audioCtxRef.current) return
     const t = audioCtxRef.current.currentTime
@@ -232,13 +242,13 @@ export default function GenerateurAccordPage() {
     const ctx = audioCtxRef.current
     if (ctx.state === 'suspended') ctx.resume()
     oscsRef.current = midis.map((midi, i) => {
-      const hz = midiToHz(midi, diapason) * Math.pow(2, (offs[i] ?? 0) / 1200)
+      const hz   = midiToHz(midi, diapason) * Math.pow(2, (offs[i] ?? 0) / 1200)
       const gain = ctx.createGain()
       gain.gain.setValueAtTime(0, ctx.currentTime)
       gain.gain.setTargetAtTime(0.25, ctx.currentTime, 0.02)
       gain.connect(ctx.destination)
       const osc = ctx.createOscillator()
-      osc.type = 'sine'
+      osc.type  = 'sine'
       osc.frequency.value = hz
       osc.connect(gain)
       osc.start()
@@ -246,7 +256,7 @@ export default function GenerateurAccordPage() {
     })
   }, [stopOscs, diapason])
 
-  // Restart when chord shape or removedIdx changes while playing
+  // Restart when chord or removedIdx changes while playing
   const prevMidisRef = useRef([])
   useEffect(() => {
     if (!playing) return
@@ -258,17 +268,17 @@ export default function GenerateurAccordPage() {
     }
   }, [root, chordType, inversion, baseOctave, removedIdx, playing]) // eslint-disable-line
 
-  // Smooth freq update on offset change
+  // Smooth freq update when offsets or mode change
   useEffect(() => {
     if (!playing || !audioCtxRef.current) return
     const t = audioCtxRef.current.currentTime
     oscsRef.current.forEach(({ osc, midi }) => {
       const chordIdx = chordMidis.indexOf(midi)
       const offset   = offsets[chordIdx] ?? 0
-      const hz = midiToHz(midi, diapason) * Math.pow(2, offset / 1200)
+      const hz       = midiToHz(midi, diapason) * Math.pow(2, offset / 1200)
       osc.frequency.setTargetAtTime(hz, t, 0.05)
     })
-  }, [offsets, playing, diapason]) // eslint-disable-line
+  }, [offsets, mode, playing, diapason]) // eslint-disable-line
 
   useEffect(() => {
     return () => {
@@ -276,13 +286,15 @@ export default function GenerateurAccordPage() {
       try { audioCtxRef.current?.close() } catch {}
       cancelAnimationFrame(liveRafRef.current)
       liveStreamRef.current?.getTracks().forEach(t => t.stop())
-      liveAudioCtxRef.current?.close()
+      try { liveAudioCtxRef.current?.close() } catch {}
     }
   }, []) // eslint-disable-line
 
+  // ─── Handlers ───────────────────────────────────────────────────────────────────
   const togglePlay = () => {
-    if (playing) { stopOscs(); setPlaying(false) }
-    else {
+    if (playing) {
+      stopOscs(); setPlaying(false)
+    } else {
       const activeMidis   = chordMidis.filter((_, i) => i !== removedIdx)
       const activeOffsets = offsets.filter((_, i) => i !== removedIdx)
       prevMidisRef.current = activeMidis
@@ -292,7 +304,7 @@ export default function GenerateurAccordPage() {
   }
 
   const setOffset = (i, newVal) => {
-    setNoteOffsets(prev => { const next = [...prev]; next[i] = newVal; return next })
+    setOffsets(prev => { const next = [...prev]; next[i] = newVal; return next })
   }
 
   const handleChordType = (t) => {
@@ -304,6 +316,14 @@ export default function GenerateurAccordPage() {
   const handleToggleRemoved = (i) => {
     setRemovedIdx(prev => prev === i ? null : i)
     setLiveCents(null)
+    setLiveError(false)
+  }
+
+  const handleReset = () => setOffsets(Array(n).fill(0))
+
+  const handleApplyHarmonique = () => {
+    setHarmoniqueOffsets(computeHarmonicOffsets(chordType, chordMidis, root))
+    setMode('harmonique')
   }
 
   const selectCls = "bg-(--input-bg) text-app border border-app rounded-lg px-2.5 py-1.5 text-sm cursor-pointer"
@@ -379,15 +399,17 @@ export default function GenerateurAccordPage() {
 
         {/* Knob blocks */}
         <div className="bg-surface border border-app rounded-xl p-4 mb-3">
-          <div className="text-xs text-app-muted font-semibold mb-1">Intonation par note — glisser ↑↓ · cliquer pour jouer</div>
-          <div className="text-[11px] text-app-muted mb-3">Cliquer sur une note pour la retirer de l'accord et mesurer votre intonation.</div>
+          <div className="text-xs text-app-muted font-semibold mb-1">Intonation par note — glisser ↑↓</div>
+          <div className="text-[11px] text-app-muted mb-3">
+            Cliquer sur une note pour la retirer de l'accord et mesurer votre intonation.
+          </div>
           <div className="flex gap-3 flex-wrap justify-center">
             {noteNames.map((note, i) => {
-              const isRemoved  = i === removedIdx
-              const liveCentsI = isRemoved ? liveCents : null
-              const liveColor  = intonationColor(liveCentsI)
-              const bgColor    = isRemoved
-                ? (liveColor ? liveColor + '33' : 'rgba(255,139,61,0.08)')
+              const isRemoved   = i === removedIdx
+              const liveCentsI  = isRemoved ? liveCents : null
+              const liveColor   = intonationColor(liveCentsI)
+              const bgColor     = isRemoved
+                ? (liveColor ? liveColor + '22' : 'rgba(255,139,61,0.07)')
                 : 'var(--bg)'
               const borderColor = isRemoved
                 ? (liveColor ?? '#FF8B3D')
@@ -397,30 +419,42 @@ export default function GenerateurAccordPage() {
                 <div
                   key={i}
                   onClick={() => handleToggleRemoved(i)}
-                  className="rounded-xl px-3 py-3 flex flex-col items-center cursor-pointer transition-all duration-150"
+                  className="rounded-xl px-3 pt-2 pb-3 flex flex-col items-center cursor-pointer transition-all duration-150"
                   style={{ minWidth: 80, background: bgColor, border: `2px solid ${borderColor}` }}
-                  title={isRemoved ? "Restaurer dans l'accord" : 'Retirer (je joue cette note)'}
                 >
-                  <Knob value={offsets[i] ?? 0} onChange={v => setOffset(i, v)} note={note.nom} octave={note.octave} />
-                  {isRemoved && liveCentsI !== null && (
-                    <div className="text-xs font-bold mt-1.5 tabular-nums" style={{ color: liveColor }}>
-                      {liveCentsI >= 0 ? '+' : ''}{liveCentsI.toFixed(1)}¢ live
+                  {/* Note label — clickable area above knob */}
+                  <div className="text-sm font-bold text-app leading-tight mb-0.5">
+                    {note.nom}
+                    <span className="text-[11px] font-normal text-app-muted ml-0.5">{note.octave}</span>
+                  </div>
+
+                  {/* Knob — SVG click stops propagation, drag only */}
+                  <Knob value={offsets[i] ?? 0} onChange={v => setOffset(i, v)} />
+
+                  {/* Live feedback or static hint */}
+                  {isRemoved && !liveError && liveCentsI !== null && (
+                    <div className="text-xs font-bold mt-1 tabular-nums" style={{ color: liveColor }}>
+                      {liveCentsI >= 0 ? '+' : ''}{liveCentsI.toFixed(1)}¢
                     </div>
                   )}
-                  {isRemoved && liveCentsI === null && (
-                    <div className="text-[10px] text-app-muted mt-1.5">jouer…</div>
+                  {isRemoved && !liveError && liveCentsI === null && (
+                    <div className="text-[10px] text-app-muted mt-1">jouez…</div>
+                  )}
+                  {isRemoved && liveError && (
+                    <div className="text-[10px] mt-1" style={{ color: '#f87171' }}>micro ?</div>
                   )}
                 </div>
               )
             })}
           </div>
+
           <div className="flex justify-center mt-3 gap-2">
             <button
-              onClick={() => { setMode('tempere'); setNoteOffsets(Array(n).fill(0)) }}
+              onClick={handleReset}
               className="text-xs text-app-muted bg-app border border-app rounded-lg px-3 py-1.5 cursor-pointer"
             >Réinitialiser</button>
             <button
-              onClick={() => { setMode('harmonique'); setNoteOffsets(computeHarmonicOffsets(chordType, chordMidis, root)) }}
+              onClick={handleApplyHarmonique}
               className="text-xs bg-app border border-app rounded-lg px-3 py-1.5 cursor-pointer font-semibold"
               style={{ color: '#FF8B3D', borderColor: 'rgba(255,139,61,0.4)' }}
             >≈ Harmonique</button>
