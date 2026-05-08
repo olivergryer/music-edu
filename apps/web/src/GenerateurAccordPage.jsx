@@ -197,9 +197,9 @@ export default function GenerateurAccordPage() {
 
           const detectedMidi = Math.round(hzToMidi(hz, diapason))
           const targetMidi   = removedMidiRef.current
-          if (targetMidi === null || Math.abs(detectedMidi - targetMidi) > 1) {
-            setLiveCents(null); return
-          }
+          if (targetMidi === null) { setLiveCents(null); return }
+          const semidiff = ((detectedMidi - targetMidi) % 12 + 12) % 12
+          if (semidiff > 1 && semidiff < 11) { setLiveCents(null); return }
 
           // deviation from ET, corrected for any JI offset of the target note
           const centsET   = centsTempere(hz, diapason)
@@ -319,11 +319,9 @@ export default function GenerateurAccordPage() {
     setLiveError(false)
   }
 
-  const handleReset = () => setOffsets(Array(n).fill(0))
-
-  const handleApplyHarmonique = () => {
-    setHarmoniqueOffsets(computeHarmonicOffsets(chordType, chordMidis, root))
-    setMode('harmonique')
+  const handleReset = () => {
+    if (mode === 'tempere') setTempereOffsets(Array(n).fill(0))
+    else setHarmoniqueOffsets(computeHarmonicOffsets(chordType, chordMidis, root))
   }
 
   const selectCls = "bg-(--input-bg) text-app border border-app rounded-lg px-2.5 py-1.5 text-sm cursor-pointer"
@@ -448,16 +446,11 @@ export default function GenerateurAccordPage() {
             })}
           </div>
 
-          <div className="flex justify-center mt-3 gap-2">
+          <div className="flex justify-center mt-3">
             <button
               onClick={handleReset}
               className="text-xs text-app-muted bg-app border border-app rounded-lg px-3 py-1.5 cursor-pointer"
             >Réinitialiser</button>
-            <button
-              onClick={handleApplyHarmonique}
-              className="text-xs bg-app border border-app rounded-lg px-3 py-1.5 cursor-pointer font-semibold"
-              style={{ color: '#FF8B3D', borderColor: 'rgba(255,139,61,0.4)' }}
-            >≈ Harmonique</button>
           </div>
         </div>
 
