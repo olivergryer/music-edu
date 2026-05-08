@@ -19,7 +19,6 @@ function noteColor(idx, activeIdx, scoreGrades) {
     if (g === "miss")    return "#f87171";
     return "#4b5563";
   }
-  if (activeIdx === idx) return "#c084fc";
   return "#4b5563";
 }
 

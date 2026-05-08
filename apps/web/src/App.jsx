@@ -5,6 +5,7 @@ import HubPage from './HubPage'
 import RythmApp from './RythmApp'
 import TheoriePage from './TheoriePage'
 import AccordeurPage from './AccordeurPage'
+import GenerateurAccordPage from './GenerateurAccordPage'
 import ProfilPage from './ProfilPage'
 import LoginPage from './auth/LoginPage'
 import RegisterPage from './auth/RegisterPage'
@@ -70,6 +71,7 @@ function AppRoutes() {
       <Route path="/rythme" element={<RythmApp />} />
       <Route path="/theorie" element={<TheoriePage />} />
       <Route path="/accordeur" element={<AccordeurPage />} />
+      <Route path="/accordeur/generateur" element={<GenerateurAccordPage />} />
       <Route path="/profil" element={<ProtectedRoute><ProfilPage /></ProtectedRoute>} />
       <Route path="/dashboard/eleve" element={<ProtectedRoute><DashboardEleve /></ProtectedRoute>} />
       <Route path="/dashboard/prof" element={<ProtectedRoute><DashboardProf /></ProtectedRoute>} />

@@ -215,40 +215,31 @@ export default function JeuGamme({ transpoKey, referentiel, diapason, seuil, sil
     setPhase('pret'); setNotes([]); setScoreP(null); setScoreQ(null); setErreur(null)
   }
 
-  const selectStyle = {
-    background: COL_BG, color: COL_TEXT, border: `1px solid ${COL_BORDER}`,
-    borderRadius: 8, padding: '6px 10px', fontSize: 14, cursor: 'pointer',
-    fontFamily: "'Inter','Segoe UI',sans-serif",
-  }
-  const numBtnStyle = {
-    background: COL_BG, color: COL_TEXT, border: `1px solid ${COL_BORDER}`,
-    borderRadius: 6, width: 28, height: 28, cursor: 'pointer', fontSize: 14,
-    display: 'flex', alignItems: 'center', justifyContent: 'center',
-    fontFamily: "'Inter','Segoe UI',sans-serif",
-  }
+  const selectCls = "bg-(--input-bg) text-app border border-app rounded-lg px-2.5 py-1.5 text-sm cursor-pointer"
+  const numBtnCls = "bg-(--input-bg) text-app border border-app rounded-md w-7 h-7 cursor-pointer text-sm flex items-center justify-center"
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+    <div className="flex flex-col gap-3.5">
       {/* Sélecteurs */}
       {phase !== 'enregistrement' && phase !== 'analyse' && (
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-          <select style={selectStyle} value={root} onChange={e => { setRoot(e.target.value); reinitialiser() }}>
+        <div className="flex gap-2 flex-wrap items-center">
+          <select className={selectCls} value={root} onChange={e => { setRoot(e.target.value); reinitialiser() }}>
             {ALL_ROOTS.map(r => <option key={r} value={r}>{r}</option>)}
           </select>
-          <select style={selectStyle} value={scaleType} onChange={e => { setScaleType(e.target.value); reinitialiser() }}>
+          <select className={selectCls} value={scaleType} onChange={e => { setScaleType(e.target.value); reinitialiser() }}>
             {Object.entries(SCALE_TYPES).map(([k, v]) => (
               <option key={k} value={k}>{v.label}</option>
             ))}
           </select>
 
           {/* Octave */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ fontSize: 12, color: COL_MUTED2 }}>Octave</span>
-            <button style={numBtnStyle} onClick={() => setBaseOctave(o => Math.max(2, o - 1))}>
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs text-app-muted">Octave</span>
+            <button className={numBtnCls} onClick={() => setBaseOctave(o => Math.max(2, o - 1))}>
               <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="6 15 12 9 18 15"/></svg>
             </button>
-            <span style={{ color: COL_TEXT, fontWeight: 700, fontSize: 14, minWidth: 14, textAlign: 'center' }}>{baseOctave}</span>
-            <button style={numBtnStyle} onClick={() => setBaseOctave(o => Math.min(6, o + 1))}>
+            <span className="text-sm font-bold text-app text-center" style={{ minWidth: 14 }}>{baseOctave}</span>
+            <button className={numBtnCls} onClick={() => setBaseOctave(o => Math.min(6, o + 1))}>
               <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="6 9 12 15 18 9"/></svg>
             </button>
           </div>
@@ -258,15 +249,15 @@ export default function JeuGamme({ transpoKey, referentiel, diapason, seuil, sil
             onClick={handlePlay}
             disabled={playing}
             title="Jouer la gamme (♩ = 60)"
+            className="rounded-lg px-3 py-1.5 flex items-center gap-1.5 text-sm border"
             style={{
-              background: playing ? COL_MUTED : COL_SURFACE,
-              border: `1px solid ${playing ? COL_MUTED : COL_ACCENT}`,
-              borderRadius: 8, padding: '6px 12px', cursor: playing ? 'not-allowed' : 'pointer',
-              color: playing ? COL_MUTED2 : COL_ACCENT, display: 'flex', alignItems: 'center', gap: 6,
-              fontFamily: "'Inter','Segoe UI',sans-serif", fontSize: 13,
+              background: playing ? 'var(--surface-2)' : 'var(--surface)',
+              borderColor: playing ? 'var(--border-c)' : '#FF8B3D',
+              color: playing ? 'var(--text-muted)' : '#FF8B3D',
+              cursor: playing ? 'not-allowed' : 'pointer',
             }}
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill={playing ? COL_MUTED2 : COL_ACCENT} stroke="none">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill={playing ? 'var(--text-muted)' : '#FF8B3D'} stroke="none">
               <polygon points="5,3 19,12 5,21"/>
             </svg>
             {playing ? 'Lecture…' : 'Écouter'}
@@ -276,8 +267,8 @@ export default function JeuGamme({ transpoKey, referentiel, diapason, seuil, sil
 
       {/* Portée de référence */}
       {(phase === 'pret' || phase === 'resultats') && (
-        <div style={{ background: COL_SURFACE, borderRadius: 12, padding: '12px 8px', border: `1px solid ${COL_BORDER}` }}>
-          <div style={{ fontSize: 11, color: COL_MUTED2, marginBottom: 8, paddingLeft: 8 }}>
+        <div className="bg-surface rounded-xl px-2 py-3 border border-app">
+          <div className="text-[11px] text-app-muted mb-2 pl-2">
             Gamme de référence — {dispRootName} {SCALE_TYPES[scaleType].label}
           </div>
           <AccordeurStaff
@@ -293,7 +284,7 @@ export default function JeuGamme({ transpoKey, referentiel, diapason, seuil, sil
       )}
 
       {erreur && (
-        <div style={{ background: '#1f0a0a', border: '1px solid #7f1d1d', borderRadius: 8, padding: '10px 14px', color: '#fca5a5', fontSize: 13 }}>
+        <div className="rounded-lg px-3.5 py-2.5 text-sm text-red-300" style={{ background: '#1f0a0a', border: '1px solid #7f1d1d' }}>
           {erreur}
         </div>
       )}
@@ -306,8 +297,8 @@ export default function JeuGamme({ transpoKey, referentiel, diapason, seuil, sil
       )}
 
       {phase === 'enregistrement' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <canvas ref={vuRef} width={300} height={18} style={{ borderRadius: 6, display: 'block' }} />
+        <div className="flex flex-col gap-3">
+          <canvas ref={vuRef} width={300} height={18} className="rounded-md block" />
           <Btn onClick={arreter} variant="secondary" style={{ fontSize: 14, padding: '11px 28px', alignSelf: 'flex-start' }}>
             Arrêter
           </Btn>
@@ -315,30 +306,31 @@ export default function JeuGamme({ transpoKey, referentiel, diapason, seuil, sil
       )}
 
       {phase === 'analyse' && (
-        <div style={{ color: COL_MUTED2, fontSize: 14 }}>Analyse en cours…</div>
+        <div className="text-sm text-app-muted">Analyse en cours…</div>
       )}
 
       {/* Résultats */}
       {phase === 'resultats' && notes.length > 0 && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+        <div className="flex flex-col gap-3">
+          <div className="flex gap-1.5 items-center flex-wrap">
             {[['portee', 'Portée'], ['tableau', 'Tableau']].map(([v, label]) => (
-              <button key={v} onClick={() => setVue(v)} style={{
-                padding: '6px 14px', borderRadius: 8, fontSize: 12, fontWeight: 700,
-                cursor: 'pointer', fontFamily: 'inherit',
-                background: vue === v ? COL_ACCENT2 : COL_BG,
-                color:      vue === v ? '#fff' : COL_MUTED,
-                border:     `1px solid ${vue === v ? COL_ACCENT2 : COL_BORDER}`,
-              }}>{label}</button>
+              <button key={v} onClick={() => setVue(v)}
+                className="px-3.5 py-1.5 rounded-lg text-xs font-bold cursor-pointer border"
+                style={{
+                  background: vue === v ? '#FF8B3D' : 'var(--surface-2)',
+                  color: vue === v ? '#fff' : 'var(--text-muted)',
+                  borderColor: vue === v ? '#FF8B3D' : 'var(--border-c)',
+                }}
+              >{label}</button>
             ))}
-            <span style={{ marginLeft: 'auto', color: COL_MUTED, fontSize: 11, alignSelf: 'center' }}>
-              μ <strong style={{ color: COL_TEXT }}>{muMoyen}¢</strong>
-              &nbsp;&nbsp;σ <strong style={{ color: COL_TEXT }}>{sigmaMoyen}¢</strong>
+            <span className="ml-auto text-[11px] text-app-muted self-center">
+              μ <strong className="text-app">{muMoyen}¢</strong>
+              &nbsp;&nbsp;σ <strong className="text-app">{sigmaMoyen}¢</strong>
             </span>
           </div>
 
           {vue === 'portee' && (
-            <div style={{ background: COL_SURFACE, borderRadius: 12, padding: '16px 8px', border: `1px solid ${COL_BORDER}` }}>
+            <div className="bg-surface rounded-xl px-2 py-4 border border-app">
               <AccordeurStaff
                 notes={notes} seuil={seuil} transpoKey={transpoKey} tonicName={dispRootName}
                 containerWidth={524} height={180} notePx={window.innerWidth <= 540 ? 26 : 52}
@@ -347,14 +339,14 @@ export default function JeuGamme({ transpoKey, referentiel, diapason, seuil, sil
           )}
 
           {vue === 'tableau' && (
-            <div style={{ background: COL_SURFACE, borderRadius: 12, padding: 16, border: `1px solid ${COL_BORDER}` }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+            <div className="bg-surface rounded-xl p-4 border border-app">
+              <table className="w-full text-xs" style={{ borderCollapse: 'collapse' }}>
                 <thead>
-                  <tr style={{ color: COL_MUTED, borderBottom: `1px solid ${COL_BORDER}` }}>
-                    <th style={{ padding: '4px 8px', textAlign: 'left',  fontWeight: 600 }}>Note</th>
-                    <th style={{ padding: '4px 8px', textAlign: 'right', fontWeight: 600 }}>μ (¢)</th>
-                    <th style={{ padding: '4px 8px', textAlign: 'right', fontWeight: 600 }}>σ (¢)</th>
-                    <th style={{ padding: '4px 8px', textAlign: 'left',  fontWeight: 600 }}>Écart</th>
+                  <tr className="text-app-muted" style={{ borderBottom: '1px solid var(--border-c)' }}>
+                    <th className="py-1 px-2 text-left font-semibold">Note</th>
+                    <th className="py-1 px-2 text-right font-semibold">μ (¢)</th>
+                    <th className="py-1 px-2 text-right font-semibold">σ (¢)</th>
+                    <th className="py-1 px-2 text-left font-semibold">Écart</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -362,24 +354,22 @@ export default function JeuGamme({ transpoKey, referentiel, diapason, seuil, sil
                     const couleur  = couleurJustesse(note.muCents, seuil)
                     const barScale = Math.min(Math.abs(note.muCents) / 30, 1)
                     return (
-                      <tr key={i} style={{ borderBottom: `1px solid ${COL_BORDER}` }}>
-                        <td style={{ padding: '8px 8px', fontWeight: 700, color: couleur }}>{labelsX[i]}</td>
-                        <td style={{ padding: '8px 8px', textAlign: 'right', color: couleur, fontWeight: 700 }}>
+                      <tr key={i} style={{ borderBottom: '1px solid var(--border-c)' }}>
+                        <td className="py-2 px-2 font-bold" style={{ color: couleur }}>{labelsX[i]}</td>
+                        <td className="py-2 px-2 text-right font-bold" style={{ color: couleur }}>
                           {note.muCents >= 0 ? '+' : ''}{note.muCents.toFixed(1)}
                         </td>
-                        <td style={{ padding: '8px 8px', textAlign: 'right', color: COL_MUTED2 }}>
-                          {note.sigmaCents.toFixed(1)}
-                        </td>
-                        <td style={{ padding: '8px 8px', width: 100 }}>
-                          <div style={{ position: 'relative', height: 8, background: COL_BG, borderRadius: 4 }}>
+                        <td className="py-2 px-2 text-right text-app-muted">{note.sigmaCents.toFixed(1)}</td>
+                        <td className="py-2 px-2 w-[100px]">
+                          <div className="relative h-2 bg-surface-2 rounded" style={{ position: 'relative' }}>
                             <div style={{
                               position: 'absolute',
-                              left:   note.muCents < 0 ? `${(0.5 - barScale / 2) * 100}%` : '50%',
-                              width:  `${barScale * 50}%`,
+                              left: note.muCents < 0 ? `${(0.5 - barScale / 2) * 100}%` : '50%',
+                              width: `${barScale * 50}%`,
                               height: '100%',
                               background: couleur, borderRadius: 4, opacity: 0.8,
                             }} />
-                            <div style={{ position: 'absolute', left: '50%', top: 0, width: 1, height: '100%', background: COL_MUTED }} />
+                            <div className="absolute top-0 w-px h-full bg-app-muted" style={{ left: '50%' }} />
                           </div>
                         </td>
                       </tr>
@@ -390,16 +380,16 @@ export default function JeuGamme({ transpoKey, referentiel, diapason, seuil, sil
             </div>
           )}
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <div style={{ background: COL_SURFACE, borderRadius: 12, padding: 16, border: `1px solid ${COL_BORDER}`, textAlign: 'center' }}>
-              <div style={{ fontSize: 11, color: COL_MUTED, marginBottom: 4 }}>Notes justes</div>
-              <div style={{ fontSize: 26, fontWeight: 900, color: '#34d399' }}>{scoreP?.label}</div>
-              <div style={{ fontSize: 10, color: COL_MUTED }}>seuil ±{seuil}¢</div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="bg-surface rounded-xl p-4 border border-app text-center">
+              <div className="text-[11px] text-app-muted mb-1">Notes justes</div>
+              <div className="text-2xl font-black" style={{ color: '#22C55E' }}>{scoreP?.label}</div>
+              <div className="text-[10px] text-app-muted">seuil ±{seuil}¢</div>
             </div>
-            <div style={{ background: COL_SURFACE, borderRadius: 12, padding: 16, border: `1px solid ${COL_BORDER}`, textAlign: 'center' }}>
-              <div style={{ fontSize: 11, color: COL_MUTED, marginBottom: 4 }}>Score qualité</div>
-              <div style={{ fontSize: 26, fontWeight: 900, color: COL_ACCENT }}>{scoreQ}%</div>
-              <div style={{ fontSize: 10, color: COL_MUTED }}>précision + stabilité</div>
+            <div className="bg-surface rounded-xl p-4 border border-app text-center">
+              <div className="text-[11px] text-app-muted mb-1">Score qualité</div>
+              <div className="text-2xl font-black" style={{ color: '#FF8B3D' }}>{scoreQ}%</div>
+              <div className="text-[10px] text-app-muted">précision + stabilité</div>
             </div>
           </div>
 
@@ -410,8 +400,8 @@ export default function JeuGamme({ transpoKey, referentiel, diapason, seuil, sil
       )}
 
       {phase === 'resultats' && notes.length === 0 && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <div style={{ color: COL_MUTED2, fontSize: 13 }}>Aucune note détectée. Vérifier les réglages de segmentation.</div>
+        <div className="flex flex-col gap-2.5">
+          <div className="text-sm text-app-muted">Aucune note détectée. Vérifier les réglages de segmentation.</div>
           <Btn onClick={reinitialiser} variant="secondary" style={{ fontSize: 13, padding: '10px 20px', alignSelf: 'flex-start' }}>
             ↩ Réessayer
           </Btn>

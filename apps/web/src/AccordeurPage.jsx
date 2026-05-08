@@ -176,6 +176,50 @@ function GrapheCents({ data, labelX, couleurs, tritoneMask, width = 460, height 
   )
 }
 
+// ─── VU-mètre arc SVG ────────────────────────────────────────────────────────────
+function VuMetre({ cents, seuil }) {
+  const CX = 120, CY = 112, R = 90
+  const active = cents !== null && cents !== undefined
+  const couleur = active ? couleurJustesse(cents, seuil) : '#374151'
+  const rotation = active ? (cents / 50) * 90 : 0
+
+  const svgPt = (deg, r) => ({
+    x: CX + r * Math.cos(deg * Math.PI / 180),
+    y: CY + r * Math.sin(deg * Math.PI / 180),
+  })
+
+  // Arc: 180° (left) → 270° (top) → 0° (right), clockwise, sweep=1, large-arc=0
+  const arcPath = `M ${CX - R} ${CY} A ${R} ${R} 0 0 1 ${CX + R} ${CY}`
+
+  const ticks = [-50, -30, -20, -10, 0, 10, 20, 30, 50]
+
+  return (
+    <svg viewBox="0 0 240 130" style={{ width: '100%', maxWidth: 260, display: 'block', margin: '0 auto' }}>
+      <path d={arcPath} fill="none" stroke="#1f2937" strokeWidth="10" strokeLinecap="round" />
+      {ticks.map(c => {
+        // -50¢ → SVG 180°, 0¢ → SVG 270° (top), +50¢ → SVG 0°/360°
+        const angle = (270 + (c / 50) * 90 + 360) % 360
+        const outer = svgPt(angle, R)
+        const inner = svgPt(angle, R - (c === 0 || Math.abs(c) === 50 ? 14 : 8))
+        return (
+          <line key={c}
+            x1={outer.x.toFixed(2)} y1={outer.y.toFixed(2)}
+            x2={inner.x.toFixed(2)} y2={inner.y.toFixed(2)}
+            stroke={c === 0 ? '#6b7280' : '#374151'} strokeWidth={c === 0 ? 1.5 : 1}
+          />
+        )
+      })}
+      <g transform={`rotate(${rotation}, ${CX}, ${CY})`} style={{ transition: 'transform 0.08s ease-out' }}>
+        <line x1={CX} y1={CY} x2={CX} y2={CY - R + 10} stroke={couleur} strokeWidth="2.5" strokeLinecap="round" />
+      </g>
+      <circle cx={CX} cy={CY} r="6" fill="#374151" />
+      <text x={CX - R - 6} y={CY + 16} fontSize="9" fill="#4b5563" textAnchor="middle">-50¢</text>
+      <text x={CX} y={CY - R - 6} fontSize="9" fill="#4b5563" textAnchor="middle">0</text>
+      <text x={CX + R + 6} y={CY + 16} fontSize="9" fill="#4b5563" textAnchor="middle">+50¢</text>
+    </svg>
+  )
+}
+
 // ─── Composant principal ─────────────────────────────────────────────────────────
 export default function AccordeurPage() {
   const [searchParams] = useSearchParams()
@@ -578,7 +622,28 @@ export default function AccordeurPage() {
           <Link to="/" className="bg-surface border border-app rounded-lg px-3 py-1.5 text-xs font-bold no-underline text-app">
             ← Tessitura
           </Link>
-          <h2 className="text-xl font-bold m-0" style={{ color: '#FF8B3D' }}>Accordeur</h2>
+          <div className="flex items-center gap-2">
+            <h2 className="text-xl font-bold m-0" style={{ color: '#FF8B3D' }}>Accordeur</h2>
+            <Link
+              to="/accordeur/generateur"
+              title="Générateur d'accord"
+              className="flex items-center justify-center rounded-lg border border-app bg-surface no-underline"
+              style={{ width: 32, height: 32, color: '#FF8B3D' }}
+            >
+              <svg width="18" height="20" viewBox="0 0 20 22" fill="none">
+                {[3, 8, 13, 18].map(x => (
+                  <line key={x} x1={x} y1="1" x2={x} y2="21" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                ))}
+                {[5, 10, 15, 20].map(y => (
+                  <line key={y} x1="1" y1={y} x2="20" y2={y} stroke="currentColor" strokeWidth="1.5" />
+                ))}
+                <circle cx="3" cy="7.5" r="2.5" fill="currentColor" />
+                <circle cx="8" cy="12.5" r="2.5" fill="currentColor" />
+                <circle cx="13" cy="7.5" r="2.5" fill="currentColor" />
+                <circle cx="18" cy="2.5" r="2.5" fill="currentColor" />
+              </svg>
+            </Link>
+          </div>
           <Btn variant="ghost" onClick={() => setShowSessions(v => !v)}>
             {showSessions ? 'Fermer suivi' : 'Suivi ▾'}
           </Btn>
@@ -656,7 +721,6 @@ export default function AccordeurPage() {
           {/* ── Live ── */}
           {modeLive && (() => {
             const liveCouleur = liveNote ? couleurJustesse(liveNote.muCents, seuil) : 'var(--text-muted)'
-            const needlePct   = liveNote ? Math.max(0, Math.min(100, 50 + (liveNote.muCents / 50) * 50)) : 50
             const centsLabel  = liveNote ? `${liveNote.muCents >= 0 ? '+' : ''}${liveNote.muCents.toFixed(1)}¢` : '—'
             return (
               <>
@@ -673,16 +737,7 @@ export default function AccordeurPage() {
                   </div>
                   <div className="text-2xl font-bold mt-1.5" style={{ color: liveCouleur }}>{centsLabel}</div>
                 </div>
-                <div className="relative h-3 bg-app rounded-full my-4">
-                  <div className="absolute left-1/2 -top-1 -bottom-1 w-px bg-app-muted -translate-x-1/2" />
-                  <div
-                    className="absolute top-0 bottom-0 w-1 rounded-sm transition-all duration-75"
-                    style={{ left: `${needlePct}%`, background: liveCouleur, transform: 'translateX(-50%)' }}
-                  />
-                </div>
-                <div className="flex justify-between text-xs text-app-muted px-0.5">
-                  <span>-50¢</span><span>0</span><span>+50¢</span>
-                </div>
+                <VuMetre cents={liveNote?.muCents ?? null} seuil={seuil} />
               </>
             )
           })()}

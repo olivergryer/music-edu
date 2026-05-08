@@ -223,7 +223,7 @@ const TOL = { ok:280 };
 function scoreTap(actual, expected, beatMs) {
   const dev = actual - expected; // + = tard, - = tôt
   const d   = Math.abs(dev);
-  const pf  = beatMs * 0.10;
+  const pf  = beatMs * 0.05;  // modification manuelle --> ne pas altérer !
   const gd  = beatMs * 0.18;
   const ok  = beatMs * 0.30;
   if (d <= pf) return { label:"Parfait ✦", pts:100, grade:"perfect", dev };
@@ -386,6 +386,7 @@ export default function RythmApp() {
   const [progress,     setProgress]     = useState(0);
   const [tapFlash,     setTapFlash]     = useState(false);
   const [beatFlash,    setBeatFlash]    = useState(false);
+  const [flashBorderOn, setFlashBorderOn] = useState(true);
   const [beatStrong,   setBeatStrong]   = useState(false);
   const [metroDotFlash,setMetroDotFlash]= useState(false);
   const [flashOffsetMs,   setFlashOffsetMs]   = useState(-50);
@@ -1373,7 +1374,7 @@ export default function RythmApp() {
                   className="relative rounded-2xl overflow-hidden"
                   style={{
                     background: 'var(--surface)',
-                    border: (activity === 1 ? metroDotFlash : beatFlash) ? '2px solid #4A6CF7' : '2px solid var(--border-c)',
+                    border: (flashBorderOn && (activity === 1 ? metroDotFlash : beatFlash)) ? '2px solid #4A6CF7' : '2px solid var(--border-c)',
                     padding: '10px 6px 6px',
                     cursor: phase === "results" ? "pointer" : "default",
                   }}
@@ -1384,6 +1385,18 @@ export default function RythmApp() {
                     className="absolute top-1.5 left-1.5 z-10 rounded-full px-2.5 border-0 text-[11px] font-bold cursor-pointer h-7 leading-none"
                     style={{ background: rhythmSoundOn ? 'rgba(74,108,247,0.18)' : 'rgba(0,0,0,0.25)', color: rhythmSoundOn ? '#4A6CF7' : 'var(--text-muted)' }}
                   >{rhythmSoundOn?"🔊":"🔇"}</button>
+                  {/* Toggle flash bordure — top-right de la portée */}
+                  <button
+                    onClick={e => { e.stopPropagation(); setFlashBorderOn(v => !v); }}
+                    className="absolute top-1.5 right-1.5 z-10 rounded-full border-0 cursor-pointer h-7 w-7 flex items-center justify-center"
+                    style={{ background: flashBorderOn ? 'rgba(74,108,247,0.18)' : 'rgba(0,0,0,0.25)' }}
+                    title={flashBorderOn ? "Désactiver flash bordure" : "Activer flash bordure"}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                      <path d="M13 2L4.5 13.5H11L10 22L19.5 10.5H13L13 2Z" fill={flashBorderOn ? "#4A6CF7" : "#6b7280"} />
+                      {!flashBorderOn && <line x1="3" y1="3" x2="21" y2="21" stroke="#f87171" strokeWidth="2.5" strokeLinecap="round"/>}
+                    </svg>
+                  </button>
                   <RythmStaff
                     figures={vexFigs}
                     timeSig={pattern.timeSig}
@@ -1398,7 +1411,7 @@ export default function RythmApp() {
                   className="rounded-2xl p-5 text-center text-3xl tracking-[8px] transition-colors duration-75"
                   style={{
                     background: 'var(--surface)',
-                    border: (activity === 2 && beatFlash) ? '2px solid #4A6CF7' : '1px dashed var(--border-c)',
+                    border: (flashBorderOn && activity === 2 && beatFlash) ? '2px solid #4A6CF7' : '1px dashed var(--border-c)',
                     color: 'var(--border-c)',
                   }}
                 >
@@ -1472,7 +1485,7 @@ export default function RythmApp() {
               >
                 {choices.map((c, i) => {
                   let borderColor = 'var(--border-c)';
-                  if (phase === "playing" && beatFlash) borderColor = '#4A6CF7';
+                  if (phase === "playing" && flashBorderOn && beatFlash) borderColor = '#4A6CF7';
                   if (phase === "results") {
                     if (i === correctIdx) borderColor = '#22C55E';
                     else if (i === selectedIdx) borderColor = '#f87171';
