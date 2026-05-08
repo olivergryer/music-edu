@@ -223,7 +223,7 @@ const TOL = { ok:280 };
 function scoreTap(actual, expected, beatMs) {
   const dev = actual - expected; // + = tard, - = tôt
   const d   = Math.abs(dev);
-  const pf  = beatMs * 0.05;  // modification manuelle --> ne pas altérer !
+  const pf  = beatMs * 0.01;  // modification manuelle --> ne pas altérer !
   const gd  = beatMs * 0.18;
   const ok  = beatMs * 0.30;
   if (d <= pf) return { label:"Parfait ✦", pts:100, grade:"perfect", dev };
