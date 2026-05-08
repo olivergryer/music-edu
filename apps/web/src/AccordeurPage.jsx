@@ -461,7 +461,7 @@ export default function AccordeurPage() {
       const loop = () => {
         liveRafRef.current = requestAnimationFrame(loop)
         const now = performance.now()
-        if (now - lastUpdate < 250) return
+        if (now - lastUpdate < 100) return
         lastUpdate = now
         analyser.getFloatTimeDomainData(buf)
         const { diapason: d, referentiel: r, clarityThreshold: ct, gateLevel: gl, tonikMidi, transpoOffset: tOff, enharmonicScale: scale } = liveParamsRef.current
@@ -1110,12 +1110,8 @@ export default function AccordeurPage() {
         </details>
 
         {/* ── Outils pédagogiques ── */}
+        {/* Jeu de gamme — masqué pour le moment
         {[
-          {
-            id: 'accord', titre: "Générateur d'accord",
-            icone: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3"/><circle cx="5" cy="7" r="2"/><circle cx="19" cy="7" r="2"/><circle cx="5" cy="17" r="2"/><circle cx="19" cy="17" r="2"/><line x1="7" y1="7" x2="10" y2="11"/><line x1="17" y1="7" x2="14" y2="11"/><line x1="7" y1="17" x2="10" y2="13"/><line x1="17" y1="17" x2="14" y2="13"/></svg>,
-            content: <GenerateurAccord transpoKey={transpoKey} referentiel={referentiel} diapason={diapason} seuil={seuil} liveNote={liveNote} onGeneratorPcsChange={pcs => { generatorPcsRef.current = pcs }} />,
-          },
           {
             id: 'gamme', titre: 'Jeu de gamme',
             icone: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="3" y1="18" x2="3" y2="6"/><line x1="8" y1="18" x2="8" y2="9"/><line x1="13" y1="18" x2="13" y2="5"/><line x1="18" y1="18" x2="18" y2="11"/><line x1="21" y1="18" x2="1" y2="18"/></svg>,
@@ -1139,6 +1135,7 @@ export default function AccordeurPage() {
             )}
           </div>
         ))}
+        */}
 
       </div>
 

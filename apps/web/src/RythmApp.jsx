@@ -223,7 +223,7 @@ const TOL = { ok:280 };
 function scoreTap(actual, expected, beatMs) {
   const dev = actual - expected; // + = tard, - = tôt
   const d   = Math.abs(dev);
-  const pf  = beatMs * 0.01;  // modification manuelle --> ne pas altérer !
+  const pf  = beatMs * 0.02;  // modification manuelle --> ne pas altérer !
   const gd  = beatMs * 0.18;
   const ok  = beatMs * 0.30;
   if (d <= pf) return { label:"Parfait ✦", pts:100, grade:"perfect", dev };
@@ -349,6 +349,15 @@ function SeriesEndScreen({ xpLog, medals, totalXp, dominantMedal, perfectSeries,
   );
 }
 
+// ─── Persistance réglages ─────────────────────────────────────────────────────
+const SETTINGS_KEY = "rythm-settings-v1";
+function loadSettings() {
+  try {
+    const raw = localStorage.getItem(SETTINGS_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch { return {}; }
+}
+
 // ─── Composant principal ──────────────────────────────────────────────────────
 export default function RythmApp() {
   const {
@@ -360,18 +369,21 @@ export default function RythmApp() {
   );
 
   const [currentPage,     setCurrentPage]     = useState("home");
-  const [selectedFormulas,setSelectedFormulas] = useState(DEFAULT_SELECTED);
+  const [selectedFormulas,setSelectedFormulas] = useState(() => {
+    const s = loadSettings();
+    return s.selectedFormulas ? new Set(s.selectedFormulas) : DEFAULT_SELECTED;
+  });
   const [activity,        setActivity]        = useState(1);
 
   // Tempo
-  const [tempoMode,    setTempoMode]    = useState("fixed");
-  const [bpmFixed,     setBpmFixed]     = useState(80);
-  const [bpmMin,       setBpmMin]       = useState(60);
-  const [bpmMax,       setBpmMax]       = useState(100);
+  const [tempoMode,    setTempoMode]    = useState(() => loadSettings().tempoMode    ?? "fixed");
+  const [bpmFixed,     setBpmFixed]     = useState(() => loadSettings().bpmFixed     ?? 80);
+  const [bpmMin,       setBpmMin]       = useState(() => loadSettings().bpmMin       ?? 60);
+  const [bpmMax,       setBpmMax]       = useState(() => loadSettings().bpmMax       ?? 100);
   const [sessionBpm,   setSessionBpm]   = useState(80);
 
   // Bonus révélation
-  const [revealBeat,   setRevealBeat]   = useState(1);
+  const [revealBeat,   setRevealBeat]   = useState(() => loadSettings().revealBeat ?? 1);
 
   // Phase de jeu
   const [phase,        setPhase]        = useState("idle");
@@ -416,7 +428,7 @@ export default function RythmApp() {
   const [seriesResult, setSeriesResult] = useState(null);
 
   // Microphone
-  const [inputMode,    setInputMode]    = useState("tap"); // "tap" | "mic"
+  const [inputMode,    setInputMode]    = useState(() => loadSettings().inputMode ?? "tap"); // "tap" | "mic"
   const [micActive,    setMicActive]    = useState(false);
   const [micLevel,     setMicLevel]     = useState(0);
   const [micThreshold, setMicThreshold] = useState(0.05);
@@ -438,6 +450,17 @@ export default function RythmApp() {
 
   const { addSession } = useProgressFirebase();
 
+  // ── Persistance réglages ──────────────────────────────────────────────────
+  useEffect(() => {
+    try {
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify({
+        selectedFormulas: [...selectedFormulas],
+        tempoMode, bpmFixed, bpmMin, bpmMax,
+        revealBeat, inputMode,
+      }));
+    } catch {}
+  }, [selectedFormulas, tempoMode, bpmFixed, bpmMin, bpmMax, revealBeat, inputMode]);
+
   // ── Gestion formules / niveaux ─────────────────────────────────────────────
   const toggleFormula = useCallback(id => {
     setSelectedFormulas(prev => {
@@ -447,8 +470,10 @@ export default function RythmApp() {
     });
   }, []);
 
-  // Quand le catalog change (sheet chargé), reset au premier niveau
+  // Quand le catalog change (sheet chargé), reset au premier niveau — skip mount
+  const catalogMountedRef = useRef(false);
   useEffect(() => {
+    if (!catalogMountedRef.current) { catalogMountedRef.current = true; return; }
     if (levelOrder.length > 0) {
       setSelectedFormulas(new Set(levelFormulaIds[levelOrder[0]] ?? []));
     }
