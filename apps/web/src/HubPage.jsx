@@ -1,6 +1,8 @@
 import { Link } from 'react-router-dom'
 import useProgressFirebase from './hooks/useProgressFirebase'
 import { useAuth } from './auth/AuthProvider'
+import banniereDark from './assets/banniere_dark.svg'
+import banniereLight from './assets/banniere_light.svg'
 
 const MODULES = [
   { id: 'rythme',    label: 'Rythme',    desc: 'Lecture et reproduction rythmique', to: '/rythme',    active: true, color: '#4A6CF7' },
@@ -40,8 +42,10 @@ export default function HubPage() {
 
       <div className="w-full max-w-2xl">
         <div className="mb-12 text-center">
-          <h1 className="text-4xl font-black text-app mb-2 tracking-tight">Tessitura</h1>
-          <p className="text-app-muted text-sm">Outils pédagogiques pour la musique</p>
+          <picture>
+            <source srcSet={banniereLight} media="(prefers-color-scheme: light)" />
+            <img src={banniereDark} alt="Tessitura" style={{ maxWidth: '320px', width: '100%', height: 'auto' }} />
+          </picture>
         </div>
 
         <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))' }}>
