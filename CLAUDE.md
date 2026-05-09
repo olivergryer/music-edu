@@ -12,6 +12,7 @@ Firebase Spark : Firestore + Authentication (email/password).
 | `/rythme` | `RythmApp.jsx` + `RythmStaff.jsx` + `SettingsPage.jsx` | public |
 | `/theorie` | `TheoriePage.jsx` | public |
 | `/accordeur` | `AccordeurPage.jsx` + `AccordeurStaff.jsx` + `accordeurUtils.js` | public |
+| `/accordeur/generateur` | `GenerateurAccordPage.jsx` — accessible uniquement depuis AccordeurPage | public |
 | `/profil` | `ProfilPage.jsx` → redirect dashboard selon rôle | protégée |
 | `/dashboard/eleve` | `pages/DashboardEleve.tsx` | protégée |
 | `/dashboard/prof` | `pages/DashboardProf.tsx` | protégée |
@@ -74,7 +75,7 @@ teacherCodes/{code}
 - `index.css` global : `touch-action: manipulation` (supprime délai 300ms tablette), `cursor: pointer`, focus ring `#c084fc`
 
 ## Conventions
-- **Inline styles** partout — pas de Tailwind, styled-components, CSS modules
+- **Tailwind v4** pour layout/spacing (classes utilitaires) + **inline styles** pour couleurs et valeurs dynamiques — pas de CSS modules ni styled-components
 - **Pas de lib externe** sans demande explicite
 - **Interface 100% français** — labels, feedback, erreurs
 - **Mobile-first** — maxWidth 540px, touch-friendly, min 44px zones cliquables
