@@ -1,0 +1,25 @@
+{
+  "name": "Tessitura",
+  "short_name": "Tessitura",
+  "description": "Apprends la musique. Progresse à ton rythme.",
+  "start_url": "/",
+  "display": "standalone",
+  "theme_color": "#4A6CF7",
+  "background_color": "#F4F5F7",
+  "orientation": "portrait-primary",
+  "categories": ["music", "education"],
+  "icons": [
+    {
+      "src": "/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

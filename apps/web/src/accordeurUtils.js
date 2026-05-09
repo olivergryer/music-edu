@@ -170,10 +170,12 @@ export function centsCinqLimite(hz, tonikMidi, diapason = 442) {
   const midi          = hzToMidi(hz, diapason)
   const midiRounded   = Math.round(midi)
   const semitoneFromC = ((midiRounded - tonikMidi) % 12 + 12) % 12
-  // Triton : intervalle ambigu, pas de correction (retour tempéré pur)
-  if (semitoneFromC === 6) return centsTempere(hz, diapason)
-  // Septième mineure sur tonique : ratio 7:4 (968.825¢) au lieu de 16/9
-  const justCents     = semitoneFromC === 10 ? 968.825 : JUST_RATIOS_CENTS[semitoneFromC]
+  // offset 10 : 7:4 direct depuis tonique (968.825¢)
+  // offset 6  : 7:4 depuis la dominante → correction identique −31.175¢ → ref = 568.825¢
+  const justCents =
+    semitoneFromC === 10 ? 968.825 :
+    semitoneFromC === 6  ? 568.825 :
+    JUST_RATIOS_CENTS[semitoneFromC]
   const temperedCents = semitoneFromC * 100
   const correction    = justCents - temperedCents
   return centsTempere(hz, diapason) - correction
@@ -328,9 +330,6 @@ function _finaliserSegment(seg, diapason) {
  */
 export function calculerEcarts(segments, referentiel, tonikMidi, diapason = 442) {
   return segments.map(seg => {
-    const semitoneFromTonic = tonikMidi != null ? ((seg.midiCible - tonikMidi) % 12 + 12) % 12 : -1
-    const isTritone = referentiel === '5-limite' && semitoneFromTonic === 6
-
     const centsList = seg.frames
       .filter(f => f.hz)
       .map(f => referentiel === '5-limite'
@@ -338,12 +337,12 @@ export function calculerEcarts(segments, referentiel, tonikMidi, diapason = 442)
         : centsTempere(f.hz, diapason)
       )
 
-    if (!centsList.length) return { ...seg, muCents: 0, sigmaCents: 0, isTritone }
+    if (!centsList.length) return { ...seg, muCents: 0, sigmaCents: 0 }
 
     const mu    = centsList.reduce((a, b) => a + b, 0) / centsList.length
     const sigma = Math.sqrt(centsList.reduce((a, b) => a + (b - mu) ** 2, 0) / centsList.length)
 
-    return { ...seg, muCents: mu, sigmaCents: sigma, isTritone }
+    return { ...seg, muCents: mu, sigmaCents: sigma }
   })
 }
 
@@ -363,9 +362,8 @@ export function courbebrute(serie, referentiel, tonikMidi, diapason = 442) {
 // ─── Scores ───────────────────────────────────────────────────────────────────
 
 export function scorePedagogique(notes, seuilCents) {
-  const nonTritone = notes.filter(n => !n.isTritone)
-  const justes = nonTritone.filter(n => Math.abs(n.muCents) <= seuilCents).length
-  return { justes, total: nonTritone.length, label: `${justes}/${nonTritone.length}` }
+  const justes = notes.filter(n => Math.abs(n.muCents) <= seuilCents).length
+  return { justes, total: notes.length, label: `${justes}/${notes.length}` }
 }
 
 export function scoreQualite(notes) {

@@ -587,8 +587,7 @@ export default function AccordeurPage() {
   const _tonicDisplayName = NOTE_NAMES_FR[_tonicDisplayPC]
   const enharmonicScale   = buildEnharmonicScale(_tonicDisplayName)
 
-  const couleurs    = notes.map(n => n.isTritone ? C_TRITONE : couleurJustesse(n.muCents, seuil))
-  const tritoneMask = notes.map(n => !!n.isTritone)
+  const couleurs = notes.map(n => couleurJustesse(n.muCents, seuil))
   const labelsX  = notes.map(n => {
     const midiDisp = n.midiCible + _transpoOffset
     const pc       = ((midiDisp % 12) + 12) % 12
@@ -825,23 +824,18 @@ export default function AccordeurPage() {
                   </thead>
                   <tbody>
                     {notes.map((note, i) => {
-                      const couleur  = note.isTritone ? C_TRITONE : couleurJustesse(note.muCents, seuil)
+                      const couleur  = couleurJustesse(note.muCents, seuil)
                       const barScale = Math.min(Math.abs(note.muCents) / 30, 1)
                       return (
                         <tr key={i} className="border-b border-app">
                           <td className="px-2 py-2 font-bold" style={{ color: couleur }}>
                             {labelsX[i]}
-                            {note.isTritone && (
-                              <span title="Intervalle ambigu en intonation pure — deux valeurs possibles (±9.8 ¢)"
-                                className="ml-1 text-[10px] rounded px-1 font-bold cursor-help"
-                                style={{ background: C_TRITONE, color: '#000' }}>~</span>
-                            )}
                           </td>
                           <td className="px-2 py-2 text-right font-bold" style={{ color: couleur }}>
-                            {note.isTritone ? '—' : `${note.muCents >= 0 ? '+' : ''}${note.muCents.toFixed(1)}`}
+                            {note.muCents >= 0 ? '+' : ''}{note.muCents.toFixed(1)}
                           </td>
                           <td className="px-2 py-2 text-right text-app-muted">
-                            {note.isTritone ? '—' : note.sigmaCents.toFixed(1)}
+                            {note.sigmaCents.toFixed(1)}
                           </td>
                           <td className="px-2 py-2 w-28">
                             <div className="relative h-2 bg-app rounded">
@@ -910,8 +904,8 @@ export default function AccordeurPage() {
             </div>
 
             {showCourbe && courbe.length > 0 && <div className="mb-3"><GrapheCents data={dataCourbe} couleurs={[C_ACCENT]} width={500} height={90} title="Écart continu (¢)" /></div>}
-            {showBarres && <div className="mb-3"><GrapheCents data={dataBarres} couleurs={couleurs} tritoneMask={tritoneMask} labelX={labelsX} width={500} height={100} title="Écart moyen μ par note (¢)" /></div>}
-            {showSigma  && <div className="mb-3"><GrapheCents data={dataSigma} couleurs={couleurs} tritoneMask={tritoneMask} labelX={labelsX} width={500} height={100} title="Déviation σ par note (¢)" /></div>}
+            {showBarres && <div className="mb-3"><GrapheCents data={dataBarres} couleurs={couleurs} labelX={labelsX} width={500} height={100} title="Écart moyen μ par note (¢)" /></div>}
+            {showSigma  && <div className="mb-3"><GrapheCents data={dataSigma} couleurs={couleurs} labelX={labelsX} width={500} height={100} title="Déviation σ par note (¢)" /></div>}
 
             <div className="text-center pt-2">
               <Btn onClick={sauvegarderResultats}>Sauvegarder cette session</Btn>
