@@ -435,6 +435,7 @@ export default function RythmApp() {
   const [micError,     setMicError]     = useState("");
   const [expandedBadge, setExpandedBadge] = useState(null);
 
+  const pointerDownPosRef = useRef(null);
   const startRef       = useRef(null);
   const playStartRef   = useRef(null); // heure absolue estimée du début du jeu
   const tidsRef        = useRef([]);
@@ -564,7 +565,11 @@ export default function RythmApp() {
     const minT = Math.min(0, ...tapTimes);
     tapTimes.forEach(t => {
       const delay = Math.max(0, t - minT);
-      const id = setTimeout(() => tapBeep(), delay);
+      const id = setTimeout(() => {
+        tapBeep();
+        setBeatFlash(true);
+        setTimeout(() => setBeatFlash(false), 110);
+      }, delay);
       audioTidsRef.current.push(id);
     });
   }, [tapTimes, tapBeep]);
@@ -621,7 +626,11 @@ export default function RythmApp() {
     const { timestamps } = toTimestamps(pat.figs, bpmVal, pat.timeSig);
     pat.figs.forEach((fig, i) => {
       if (!fig.rest) {
-        const id = setTimeout(() => rhythmBeep(false), delayMs + timestamps[i]);
+        const id = setTimeout(() => {
+          rhythmBeep(false);
+          setBeatFlash(true);
+          setTimeout(() => setBeatFlash(false), 110);
+        }, delayMs + timestamps[i]);
         audioTidsRef.current.push(id);
       }
     });
@@ -1313,7 +1322,7 @@ export default function RythmApp() {
   return (
     <div
       className="bg-app text-app min-h-dvh flex flex-col items-center px-3.5 py-3 pb-6 select-none"
-      style={{ touchAction: "none" }}
+      style={{ touchAction: phase === 'results' ? 'pan-y' : 'none' }}
       onPointerDown={(e) => {
         const isTapPhase =
           (phase === 'playing' ||
@@ -1321,7 +1330,17 @@ export default function RythmApp() {
            (phase === 'listening' && activity === 2)) &&
           inputMode === 'tap';
         if (isTapPhase) handleTap(e);
-        else if (phase === 'results') handleNext();
+        else if (phase === 'results') {
+          pointerDownPosRef.current = { x: e.clientX, y: e.clientY };
+        }
+      }}
+      onPointerUp={(e) => {
+        if (phase === 'results' && pointerDownPosRef.current) {
+          const dx = e.clientX - pointerDownPosRef.current.x;
+          const dy = e.clientY - pointerDownPosRef.current.y;
+          pointerDownPosRef.current = null;
+          if (Math.sqrt(dx*dx + dy*dy) < 10) handleNext();
+        }
       }}
     >
 
@@ -1714,9 +1733,9 @@ export default function RythmApp() {
         {/* Entrée pendant le jeu */}
         {(phase === "playing" || (phase === "countdown" && (activity === 1 || activity === 2)) || (phase === "listening" && activity === 2)) && inputMode==="tap" && (activity === 1 || activity === 2) && (
           <div
-            className="relative w-full rounded-2xl text-[26px] font-black tracking-[3px] flex items-center justify-center"
+            className="relative w-full rounded-2xl text-[15px] font-black tracking-[2px] flex items-center justify-center"
             style={{
-              height: 130,
+              height: 72,
               background: tapFlash
                 ? "linear-gradient(135deg,#9333ea,#ec4899)"
                 : (phase==="countdown" || (phase==="listening" && activity===2))
@@ -1742,7 +1761,7 @@ export default function RythmApp() {
                 color: tapSoundOn ? '#e9d5ff' : 'var(--text-muted)',
               }}
             >{tapSoundOn?"🥁":"🔕"}</button>
-            TAP
+            Tap anywhere
           </div>
         )}
 
