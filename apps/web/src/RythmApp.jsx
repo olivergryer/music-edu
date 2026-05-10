@@ -433,6 +433,7 @@ export default function RythmApp() {
   const [micLevel,     setMicLevel]     = useState(0);
   const [micThreshold, setMicThreshold] = useState(0.05);
   const [micError,     setMicError]     = useState("");
+  const [expandedBadge, setExpandedBadge] = useState(null);
 
   const startRef       = useRef(null);
   const playStartRef   = useRef(null); // heure absolue estimée du début du jeu
@@ -1285,6 +1286,7 @@ export default function RythmApp() {
 
   const handleNext = () => {
     if (!canStart) return;
+    setExpandedBadge(null);
     if (seriesMode && phase === "results") {
       const nextIdx = seriesIdx + 1;
       const updatedXpLog  = [...seriesXpLog, earnedPts];
@@ -1496,15 +1498,26 @@ export default function RythmApp() {
 
           {/* BILAN act 1 & 2 */}
           {(activity === 1 || activity === 2) && phase==="results" && scores.length>0 && (
-            <div className="w-full bg-surface border border-app rounded-2xl p-4 text-center">
+            <div
+              className="w-full bg-surface border border-app rounded-2xl p-4 text-center"
+              onPointerDown={e => e.stopPropagation()}
+            >
               <div className="text-4xl">{medal}</div>
               <div className="text-3xl font-black mt-0.5">{pct}%</div>
               <div className="text-xs text-app-muted mb-2.5">{earnedPts} / {maxPts} pts</div>
               <div className="flex flex-wrap gap-1.5 justify-center">
                 {scores.map((s,i) => (
-                  <div key={i} className="rounded-full px-2.5 py-0.5 text-[10px] font-semibold bg-surface-2"
-                    style={{ color: GRADE_COLOR[s.grade], border: `1px solid ${GRADE_COLOR[s.grade]}33` }}>
+                  <div key={i}
+                    className="rounded-full px-2.5 py-0.5 text-[10px] font-semibold bg-surface-2 cursor-pointer"
+                    style={{ color: GRADE_COLOR[s.grade], border: `1px solid ${GRADE_COLOR[s.grade]}33` }}
+                    onClick={() => setExpandedBadge(expandedBadge === i ? null : i)}
+                  >
                     {i+1} · {s.label}
+                    {expandedBadge === i && s.dev !== null && s.dev !== undefined && (
+                      <span style={{ marginLeft: 6, color: s.dev > 0 ? '#fbbf24' : '#60a5fa' }}>
+                        {s.dev > 0 ? `+${s.dev}ms` : `${s.dev}ms`}
+                      </span>
+                    )}
                   </div>
                 ))}
               </div>
@@ -1516,11 +1529,13 @@ export default function RythmApp() {
               {tapTimes.length > 0 && (
                 <div className="flex gap-2 justify-center mt-3">
                   <button
+                    onPointerDown={e => e.stopPropagation()}
                     onClick={replayTaps}
                     className="rounded-xl border-none px-3 py-1.5 text-[11px] font-bold cursor-pointer"
                     style={{ background: 'rgba(74,108,247,0.12)', color: '#4A6CF7' }}
-                  >▶ Mes taps</button>
+                  >▶ Réécouter</button>
                   <button
+                    onPointerDown={e => e.stopPropagation()}
                     onClick={() => playPatternAudio(pattern, sessionBpm)}
                     className="rounded-xl border-none px-3 py-1.5 text-[11px] font-bold cursor-pointer"
                     style={{ background: 'rgba(52,211,153,0.12)', color: '#34d399' }}
