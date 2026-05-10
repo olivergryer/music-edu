@@ -1,5 +1,6 @@
 const CACHE_NAME = 'tessitura-v1';
 const ASSET_CACHE = 'tessitura-assets-v1';
+const SAMPLES_CACHE = 'audio-samples-v1';
 
 const PRECACHE_ASSETS = [
   '/',
@@ -22,7 +23,7 @@ self.addEventListener('activate', (event) => {
     caches.keys().then((keys) =>
       Promise.all(
         keys
-          .filter((k) => k !== CACHE_NAME && k !== ASSET_CACHE)
+          .filter((k) => k !== CACHE_NAME && k !== ASSET_CACHE && k !== SAMPLES_CACHE)
           .map((k) => caches.delete(k))
       )
     )
@@ -34,6 +35,20 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
+
+  // R2 audio samples — cache first
+  if (url.href.includes('r2.dev/samples/')) {
+    event.respondWith(
+      caches.open(SAMPLES_CACHE).then(async (cache) => {
+        const cached = await cache.match(request);
+        if (cached) return cached;
+        const response = await fetch(request);
+        if (response.ok) cache.put(request, response.clone());
+        return response;
+      })
+    );
+    return;
+  }
 
   // Skip non-GET and cross-origin (Firebase, Google Fonts, etc.)
   if (request.method !== 'GET' || url.origin !== location.origin) return;

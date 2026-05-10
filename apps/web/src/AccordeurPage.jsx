@@ -5,6 +5,7 @@ import AccordeurStaff from './AccordeurStaff'
 import SpectrePaneau from './SpectrePaneau'
 import GenerateurAccord from './GenerateurAccord'
 import JeuGamme from './JeuGamme'
+import { INSTRUMENTS, loadInstrumentSamples, playPhrase, phraseDurationMs } from './sampleEngine'
 import {
   analyserBuffer, segmenter, calculerEcarts, courbebrute,
   scorePedagogique, scoreQualite, couleurJustesse,
@@ -277,6 +278,20 @@ export default function AccordeurPage() {
   const [sessions,     setSessions]    = useState(() => lireSessions())
   const [showSessions, setShowSessions] = useState(false)
 
+  // ── Samples ──
+  const [instrument,     setInstrument]     = useState(() => localStorage.getItem('accordeur_instrument_preference') || 'flute')
+  const [sampleMap,      setSampleMap]      = useState(null)
+  const [sampleLoadPct,  setSampleLoadPct]  = useState(0)
+  const [sampleLoading,  setSampleLoading]  = useState(false)
+
+  // Enregistrement brut (Blob MediaRecorder, éphémère)
+  const recordingBlobRef    = useRef(null)
+  const reecouteAudioRef    = useRef(null)
+
+  // Version juste
+  const [versionJustePlaying, setVersionJustePlaying] = useState(false)
+  const stopVersionJusteRef   = useRef(null)
+
   const mediaRecorderRef = useRef(null)
   const chunksRef        = useRef([])
   const streamRef        = useRef(null)
@@ -326,6 +341,22 @@ export default function AccordeurPage() {
       tonikMidi: struct ? (tonicConcertPC + 60) : null,
     }
   }, [diapason, referentiel, clarityThreshold, gateLevel, structureId, structures, transpoKey])
+
+  useEffect(() => {
+    localStorage.setItem('accordeur_instrument_preference', instrument)
+    setSampleMap(null)
+    setSampleLoadPct(0)
+    setSampleLoading(true)
+    loadInstrumentSamples(instrument, p => setSampleLoadPct(p))
+      .then(map => { setSampleMap(map); setSampleLoading(false) })
+      .catch(() => setSampleLoading(false))
+  }, [instrument])
+
+  // Stopper version juste si le référentiel change
+  useEffect(() => { stopVersionJusteRef.current?.() }, [referentiel])
+
+  // Cleanup version juste au démontage
+  useEffect(() => () => stopVersionJusteRef.current?.(), [])
 
   useEffect(() => { localStorage.setItem('acc_diapason', diapason) }, [diapason])
   useEffect(() => { localStorage.setItem('acc_transpo',  transpoKey) }, [transpoKey])
@@ -409,6 +440,7 @@ export default function AccordeurPage() {
     audioCtx?.close()
 
     const blob       = new Blob(chunksRef.current, { type: 'audio/webm' })
+    recordingBlobRef.current = blob
     const arrayBuf   = await blob.arrayBuffer()
     const decodeCtx  = new AudioContext()
     let audioBuffer
@@ -772,12 +804,93 @@ export default function AccordeurPage() {
           )}
 
           {!modeLive && phase === 'resultats' && (
-            <Btn variant="secondary" onClick={() => { setPhase('pret'); setNotes([]); setCourbe([]); serieRef.current = []; audioBufferRef.current = null }} className="text-sm">
+            <Btn variant="secondary" onClick={() => {
+              stopVersionJusteRef.current?.()
+              recordingBlobRef.current = null
+              setPhase('pret'); setNotes([]); setCourbe([])
+              serieRef.current = []; audioBufferRef.current = null
+            }} className="text-sm">
               ↺ Nouveau
             </Btn>
           )}
 
           {erreur && <div className="text-red-400 text-xs mt-3">{erreur}</div>}
+
+          {/* ── Instrument + Réécouter + Version juste (mode enregistrement) ── */}
+          {!modeLive && (
+            <div style={{ marginTop: 18, paddingTop: 14, borderTop: '1px solid var(--border-c)' }}>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 10 }}>
+                <span style={{ fontSize: 11, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>Instrument</span>
+                <select
+                  value={instrument}
+                  onChange={e => setInstrument(e.target.value)}
+                  className="flex-1 bg-app text-app border border-app rounded-md px-2 py-1.5 text-xs"
+                >
+                  {Object.entries(INSTRUMENTS).map(([k, v]) => (
+                    <option key={k} value={k}>{v.label}</option>
+                  ))}
+                </select>
+              </div>
+              {sampleLoading && (
+                <div style={{ height: 3, borderRadius: 2, background: 'var(--border-c)', overflow: 'hidden', marginBottom: 10 }}>
+                  <div style={{ height: '100%', width: `${Math.round(sampleLoadPct * 100)}%`, background: '#FF8B3D', borderRadius: 2, transition: 'width 0.15s' }} />
+                </div>
+              )}
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  disabled={!recordingBlobRef.current}
+                  onClick={() => {
+                    if (!recordingBlobRef.current) return
+                    reecouteAudioRef.current?.pause()
+                    const url   = URL.createObjectURL(recordingBlobRef.current)
+                    const audio = new Audio(url)
+                    audio.play()
+                    audio.onended = () => URL.revokeObjectURL(url)
+                    reecouteAudioRef.current = audio
+                  }}
+                  className="flex-1 rounded-xl font-bold text-xs py-2 border border-app cursor-pointer transition-opacity"
+                  style={{ background: 'var(--surface-2)', color: 'var(--text-muted)', opacity: recordingBlobRef.current ? 1 : 0.4 }}
+                >▶ Réécouter</button>
+                <button
+                  disabled={!notes.length || sampleLoading || !sampleMap}
+                  onClick={() => {
+                    if (versionJustePlaying) {
+                      stopVersionJusteRef.current?.()
+                      return
+                    }
+                    if (!sampleMap || !notes.length) return
+                    const struct    = [...DEFAULT_STRUCTURES, ...structures].find(x => x.id === structureId)
+                    const tonikMidi = struct ? (noteNameToPC(struct.toniques[0]?.tonique ?? 'Do') + 60) : 60
+                    const ctx = new AudioContext()
+                    const srcs = playPhrase(ctx, notes, sampleMap, referentiel, tonikMidi, diapason)
+                    setVersionJustePlaying(true)
+                    const totalMs = phraseDurationMs(notes)
+                    const timer = setTimeout(() => {
+                      try { ctx.close() } catch {}
+                      setVersionJustePlaying(false)
+                      stopVersionJusteRef.current = null
+                    }, totalMs + 500)
+                    stopVersionJusteRef.current = () => {
+                      clearTimeout(timer)
+                      srcs.forEach(s => { try { s.stop() } catch {} })
+                      try { ctx.close() } catch {}
+                      setVersionJustePlaying(false)
+                      stopVersionJusteRef.current = null
+                    }
+                  }}
+                  className="flex-1 rounded-xl font-bold text-xs py-2 border-none cursor-pointer transition-opacity"
+                  style={{
+                    background: versionJustePlaying ? '#7f1d1d' : '#FF8B3D',
+                    color: '#fff',
+                    opacity: (!notes.length || sampleLoading || !sampleMap) ? 0.4 : 1,
+                    cursor: (!notes.length || sampleLoading || !sampleMap) ? 'not-allowed' : 'pointer',
+                  }}
+                >
+                  {versionJustePlaying ? '■ Arrêter' : sampleLoading ? 'Chargement…' : '♩ Version juste'}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* ── Résultats ── */}
