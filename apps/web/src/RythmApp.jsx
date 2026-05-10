@@ -460,17 +460,6 @@ export default function RythmApp() {
 
   const { addSession } = useProgressFirebase();
 
-  const replayTaps = useCallback(() => {
-    audioTidsRef.current.forEach(clearTimeout);
-    audioTidsRef.current = [];
-    const minT = Math.min(0, ...tapTimes);
-    tapTimes.forEach(t => {
-      const delay = Math.max(0, t - minT);
-      const id = setTimeout(() => tapBeep(), delay);
-      audioTidsRef.current.push(id);
-    });
-  }, [tapTimes, tapBeep]);
-
   // Son rythme toujours actif pour act 2/3/4 (essentiel à l'écoute)
   useEffect(() => {
     if (activity >= 2) setRhythmSoundOn(true);
@@ -567,6 +556,17 @@ export default function RythmApp() {
       src.start(ac.currentTime);
     } catch(_) {}
   }, [getCtx]);
+
+  const replayTaps = useCallback(() => {
+    audioTidsRef.current.forEach(clearTimeout);
+    audioTidsRef.current = [];
+    const minT = Math.min(0, ...tapTimes);
+    tapTimes.forEach(t => {
+      const delay = Math.max(0, t - minT);
+      const id = setTimeout(() => tapBeep(), delay);
+      audioTidsRef.current.push(id);
+    });
+  }, [tapTimes, tapBeep]);
 
   const pulse = useCallback((strong = false) => {
     beep(strong);
