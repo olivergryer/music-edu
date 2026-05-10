@@ -101,6 +101,11 @@ export default function HubPage() {
 
       <footer className="mt-auto pt-12 text-xs text-app-muted opacity-40">
         Tessitura
+        {__BUILD_DATE__ && (
+          <span style={{ marginLeft: 8 }}>
+            · {new Date(__BUILD_DATE__).toLocaleString('fr-FR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' })}
+          </span>
+        )}
       </footer>
     </div>
   )
