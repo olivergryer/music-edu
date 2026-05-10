@@ -78,3 +78,8 @@ button:focus-visible, a:focus-visible {
 
 /* ── Surcharges canvas (toujours dark) ── */
 .canvas-dark { background: #0D1026; }
+
+@keyframes pulse-hint {
+  0%, 100% { opacity: 0.5; }
+  50%       { opacity: 1; }
+}

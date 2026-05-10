@@ -460,6 +460,22 @@ export default function RythmApp() {
 
   const { addSession } = useProgressFirebase();
 
+  const replayTaps = useCallback(() => {
+    audioTidsRef.current.forEach(clearTimeout);
+    audioTidsRef.current = [];
+    const minT = Math.min(0, ...tapTimes);
+    tapTimes.forEach(t => {
+      const delay = Math.max(0, t - minT);
+      const id = setTimeout(() => tapBeep(), delay);
+      audioTidsRef.current.push(id);
+    });
+  }, [tapTimes, tapBeep]);
+
+  // Son rythme toujours actif pour act 2/3/4 (essentiel à l'écoute)
+  useEffect(() => {
+    if (activity >= 2) setRhythmSoundOn(true);
+  }, [activity]);
+
   // ── Persistance réglages ──────────────────────────────────────────────────
   useEffect(() => {
     try {
@@ -1293,47 +1309,50 @@ export default function RythmApp() {
 
   // ── Rendu jeu ──────────────────────────────────────────────────────────────
   return (
-    <div className="bg-app text-app min-h-dvh flex flex-col items-center px-3.5 py-3 pb-6 select-none">
+    <div
+      className="bg-app text-app min-h-dvh flex flex-col items-center px-3.5 py-3 pb-6 select-none"
+      style={{ touchAction: "none" }}
+      onPointerDown={(e) => {
+        const isTapPhase =
+          (phase === 'playing' ||
+           (phase === 'countdown' && (activity === 1 || activity === 2)) ||
+           (phase === 'listening' && activity === 2)) &&
+          inputMode === 'tap';
+        if (isTapPhase) handleTap(e);
+        else if (phase === 'results') handleNext();
+      }}
+    >
 
       {/* ── HEADER ── */}
       <div className="w-full max-w-xl flex justify-between items-center mb-2.5">
-        <div>
-          <div className="text-[17px] font-bold" style={{ color: '#4A6CF7' }}>🎵 App Rythme</div>
-          <div className="text-[10px] text-app-muted flex items-center gap-1.5">
-            <div className="w-[7px] h-[7px] rounded-full flex-shrink-0" style={{
-              background: beatFlash ? (beatStrong ? "#4A6CF7" : "#3B5CF0") : 'var(--border-c)',
-              boxShadow: beatFlash ? "0 0 6px #4A6CF7" : "none",
-              transition: "background 0.04s, box-shadow 0.04s",
-            }}/>
-            {sessionBpm} BPM · {formulaCount} formule{formulaCount>1?"s":""}
-          </div>
-        </div>
+        <button
+          onClick={() => {
+            clearTids();
+            audioTidsRef.current.forEach(clearTimeout);
+            audioTidsRef.current = [];
+            cancelAnimationFrame(rafRef.current);
+            stopMic();
+            seriesBaseBpmRef.current = null;
+            seriesIdxRef.current = 0;
+            setSeriesIdx(0);
+            setSeriesXpLog([]);
+            setSeriesMedals([]);
+            setCurrentPage("home");
+            setPhase("idle");
+            setPattern(null);
+          }}
+          onPointerDown={e => e.stopPropagation()}
+          className="bg-surface-2 border border-app rounded-lg font-bold text-xs cursor-pointer px-2.5 py-1"
+          style={{ color: '#4A6CF7' }}
+        >← Activités</button>
         <div className="flex gap-2 items-center">
           <div className="bg-surface-2 border border-app rounded-full px-2.5 py-0.5 text-xs text-app font-bold">⭐ {totalPts}</div>
           <button
+            onPointerDown={e => e.stopPropagation()}
             onClick={() => { if (canStart) setCurrentPage("settings"); }}
             className="bg-surface-2 border border-app rounded-xl text-app-muted text-lg cursor-pointer px-2 py-0.5 leading-none"
             title="Réglages"
           >⚙</button>
-          <button
-            onClick={() => {
-              clearTids();
-              audioTidsRef.current.forEach(clearTimeout);
-              audioTidsRef.current = [];
-              cancelAnimationFrame(rafRef.current);
-              stopMic();
-              seriesBaseBpmRef.current = null;
-              seriesIdxRef.current = 0;
-              setSeriesIdx(0);
-              setSeriesXpLog([]);
-              setSeriesMedals([]);
-              setCurrentPage("home");
-              setPhase("idle");
-              setPattern(null);
-            }}
-            className="bg-surface-2 border border-app rounded-lg font-bold text-xs cursor-pointer px-2.5 py-1"
-            style={{ color: '#4A6CF7' }}
-          >← Activités</button>
         </div>
       </div>
 
@@ -1405,7 +1424,6 @@ export default function RythmApp() {
               {/* Portée — toujours présente */}
               {revealed ? (
                 <div
-                  onClick={phase === "results" ? handleNext : undefined}
                   className="relative rounded-2xl overflow-hidden"
                   style={{
                     background: 'var(--surface)',
@@ -1414,14 +1432,18 @@ export default function RythmApp() {
                     cursor: phase === "results" ? "pointer" : "default",
                   }}
                 >
-                  {/* Bouton son Rythme — top-left de la portée */}
-                  <button
-                    onClick={() => setRhythmSoundOn(v => !v)}
-                    className="absolute top-1.5 left-1.5 z-10 rounded-full px-2.5 border-0 text-[11px] font-bold cursor-pointer h-7 leading-none"
-                    style={{ background: rhythmSoundOn ? 'rgba(74,108,247,0.18)' : 'rgba(0,0,0,0.25)', color: rhythmSoundOn ? '#4A6CF7' : 'var(--text-muted)' }}
-                  >{rhythmSoundOn?"🔊":"🔇"}</button>
+                  {/* Bouton son Rythme — top-left, masqué pour act 2 (son toujours requis) */}
+                  {activity === 1 && (
+                    <button
+                      onPointerDown={e => e.stopPropagation()}
+                      onClick={() => setRhythmSoundOn(v => !v)}
+                      className="absolute top-1.5 left-1.5 z-10 rounded-full px-2.5 border-0 text-[11px] font-bold cursor-pointer h-7 leading-none"
+                      style={{ background: rhythmSoundOn ? 'rgba(74,108,247,0.18)' : 'rgba(0,0,0,0.25)', color: rhythmSoundOn ? '#4A6CF7' : 'var(--text-muted)' }}
+                    >{rhythmSoundOn?"🔊":"🔇"}</button>
+                  )}
                   {/* Toggle flash bordure — top-right de la portée */}
                   <button
+                    onPointerDown={e => e.stopPropagation()}
                     onClick={e => { e.stopPropagation(); setFlashBorderOn(v => !v); }}
                     className="absolute top-1.5 right-1.5 z-10 rounded-full border-0 cursor-pointer h-7 w-7 flex items-center justify-center"
                     style={{ background: flashBorderOn ? 'rgba(74,108,247,0.18)' : 'rgba(0,0,0,0.25)' }}
@@ -1491,6 +1513,20 @@ export default function RythmApp() {
                   Décalage compensé : {detectedOffset > 0 ? "+" : ""}{detectedOffset} ms
                 </div>
               )}
+              {tapTimes.length > 0 && (
+                <div className="flex gap-2 justify-center mt-3">
+                  <button
+                    onClick={replayTaps}
+                    className="rounded-xl border-none px-3 py-1.5 text-[11px] font-bold cursor-pointer"
+                    style={{ background: 'rgba(74,108,247,0.12)', color: '#4A6CF7' }}
+                  >▶ Mes taps</button>
+                  <button
+                    onClick={() => playPatternAudio(pattern, sessionBpm)}
+                    className="rounded-xl border-none px-3 py-1.5 text-[11px] font-bold cursor-pointer"
+                    style={{ background: 'rgba(52,211,153,0.12)', color: '#34d399' }}
+                  >▶ Solution</button>
+                </div>
+              )}
             </div>
           )}
 
@@ -1515,7 +1551,7 @@ export default function RythmApp() {
                 className="grid gap-2 transition-opacity duration-300"
                 style={{
                   gridTemplateColumns: choiceCols === 1 ? "1fr" : "1fr 1fr",
-                  opacity: phase==="countdown" ? 0.45 : 1,
+                  opacity: 1,
                 }}
               >
                 {choices.map((c, i) => {
@@ -1529,6 +1565,7 @@ export default function RythmApp() {
                     <div
                       key={i}
                       role="button"
+                      onPointerDown={e => e.stopPropagation()}
                       onClick={() => { if (phase === "playing") handleChoice(i); }}
                       className="rounded-xl bg-surface"
                       style={{
@@ -1589,6 +1626,7 @@ export default function RythmApp() {
                   }
                   return (
                     <button key={i}
+                      onPointerDown={e => e.stopPropagation()}
                       onClick={() => {
                         if (phase !== "playing") return;
                         playPatternAudio(c, sessionBpm);
@@ -1611,6 +1649,7 @@ export default function RythmApp() {
               </div>
               {phase === "playing" && (
                 <button
+                  onPointerDown={e => e.stopPropagation()}
                   onClick={() => handleChoice(pendingIdx)}
                   disabled={pendingIdx === null}
                   className="w-full border-none rounded-2xl text-sm font-bold disabled:cursor-default cursor-pointer"
@@ -1645,6 +1684,7 @@ export default function RythmApp() {
         {(activity===1||activity===2) && phase==="results" && (
           <div className="flex justify-end mb-2">
             <button
+              onPointerDown={e => e.stopPropagation()}
               onClick={() => setTapSoundOn(v => !v)}
               className="rounded-full px-3 text-[11px] font-bold cursor-pointer h-7 leading-none border"
               style={{
@@ -1658,8 +1698,8 @@ export default function RythmApp() {
 
         {/* Entrée pendant le jeu */}
         {(phase === "playing" || (phase === "countdown" && (activity === 1 || activity === 2)) || (phase === "listening" && activity === 2)) && inputMode==="tap" && (activity === 1 || activity === 2) && (
-          <button onPointerDown={handleTap}
-            className="relative w-full border-none rounded-2xl cursor-pointer text-[26px] font-black tracking-[3px]"
+          <div
+            className="relative w-full rounded-2xl text-[26px] font-black tracking-[3px] flex items-center justify-center"
             style={{
               height: 130,
               background: tapFlash
@@ -1673,7 +1713,7 @@ export default function RythmApp() {
                 : "0 8px 32px rgba(74,108,247,0.5)",
               transform: tapFlash ? "scale(0.96)" : "scale(1)",
               transition: "transform 0.06s,background 0.06s,color 0.06s",
-              touchAction: "none",
+              borderRadius: '1rem',
             }}
           >
             {/* Bouton son TAP — top-left de la zone TAP */}
@@ -1688,7 +1728,7 @@ export default function RythmApp() {
               }}
             >{tapSoundOn?"🥁":"🔕"}</button>
             TAP
-          </button>
+          </div>
         )}
 
         {(phase === "playing" || (phase === "countdown" && (activity === 1 || activity === 2)) || (phase === "listening" && activity === 2)) && inputMode==="mic" && (activity === 1 || activity === 2) && (
@@ -1718,17 +1758,22 @@ export default function RythmApp() {
             </div>
           </div>
         )}
-        {canStart && (
+        {phase === 'results' && (
+          <div
+            className="w-full text-center text-sm font-bold"
+            style={{ padding: '20px 0', color: 'var(--text-muted)', animation: 'pulse-hint 1.5s ease-in-out infinite' }}
+          >
+            Tape pour continuer →
+          </div>
+        )}
+        {phase === 'idle' && (
           <button
+            onPointerDown={e => e.stopPropagation()}
             onClick={handleNext}
             className="w-full border-none rounded-2xl cursor-pointer text-white text-base font-bold"
             style={{ padding: '18px 0', background: 'linear-gradient(135deg,#4A6CF7,#8B5CF6)', boxShadow: '0 8px 32px rgba(74,108,247,0.4)' }}
           >
-            {phase==="idle"
-              ? (seriesMode ? "▶ Commencer la série" : "▶ Commencer")
-              : seriesMode
-                ? (seriesIdx >= 9 ? "📊 Bilan de ta série" : `➜ Exercice ${seriesIdx + 2}/10`)
-                : "🔄 Exercice suivant"}
+            {seriesMode ? "▶ Commencer la série" : "▶ Commencer"}
           </button>
         )}
       </div>
