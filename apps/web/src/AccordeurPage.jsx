@@ -440,7 +440,7 @@ export default function AccordeurPage() {
     stream.getTracks().forEach(t => t.stop())
     audioCtx?.close()
 
-    const blob       = new Blob(chunksRef.current, { type: 'audio/webm' })
+    const blob       = new Blob(chunksRef.current, { type: recorder.mimeType || 'audio/webm' })
     recordingBlobRef.current = blob
     setHasRecordingBlob(true)
     const arrayBuf   = await blob.arrayBuffer()

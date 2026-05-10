@@ -113,7 +113,7 @@ export default function RythmStaff({
       const ctx = renderer.getContext();
       ctx.setFont("Arial", 10);
 
-      const staveY = height < 120 ? 8 : 24;
+      const staveY = height < 120 ? Math.max(4, Math.round((height - 40) / 2)) : 24;
       const stave  = new Stave(10, staveY, renderWidth - 20);
       if (showClef)    stave.addClef("treble");
       if (showTimeSig) stave.addTimeSignature(timeSig);

@@ -1495,7 +1495,7 @@ export default function RythmApp() {
                     timeSig={pattern.timeSig}
                     activeIdx={isPlaying ? activeIdx : -1}
                     scoreGrades={phase==="results" ? gradeMap : undefined}
-                    scoreDevs={phase==="results" ? devMap : undefined}
+                    scoreDevs={undefined}
                     sessionBpm={sessionBpm}
                   />
                 </div>
@@ -1549,7 +1549,7 @@ export default function RythmApp() {
                     {i+1} · {s.label}
                     {expandedBadge === i && s.dev !== null && s.dev !== undefined && (
                       <span style={{ marginLeft: 6, color: s.dev > 0 ? '#fbbf24' : '#60a5fa' }}>
-                        {s.dev > 0 ? `+${s.dev}ms` : `${s.dev}ms`}
+                        {`${Math.round(Math.abs(s.dev) / 10) * 10}ms ${s.dev > 0 ? 'trop tard' : 'trop tôt'}`}
                       </span>
                     )}
                   </div>
