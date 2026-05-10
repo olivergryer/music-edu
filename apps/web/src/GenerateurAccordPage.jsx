@@ -190,7 +190,7 @@ export default function GenerateurAccordPage() {
     let cancelled = false
     ;(async () => {
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false })
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false }, video: false })
         if (cancelled) { stream.getTracks().forEach(t => t.stop()); return }
         liveStreamRef.current  = stream
         const audioCtx         = new (window.AudioContext || window.webkitAudioContext)()

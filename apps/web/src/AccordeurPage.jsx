@@ -376,7 +376,7 @@ export default function AccordeurPage() {
   const demarrerEnregistrement = useCallback(async () => {
     setErreur(null)
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false })
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false }, video: false })
       streamRef.current = stream
       const audioCtx  = new AudioContext()
       const source    = audioCtx.createMediaStreamSource(stream)
@@ -477,7 +477,7 @@ export default function AccordeurPage() {
   const demarrerLive = useCallback(async () => {
     setErreur(null)
     try {
-      const stream   = await navigator.mediaDevices.getUserMedia({ audio: true, video: false })
+      const stream   = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false }, video: false })
       liveStreamRef.current = stream
       const audioCtx = new AudioContext()
       liveAudioCtxRef.current = audioCtx
