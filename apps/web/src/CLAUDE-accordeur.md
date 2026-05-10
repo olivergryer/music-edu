@@ -1,10 +1,11 @@
 # Module Accordeur — référence technique
 
 ## Fichiers
-- `AccordeurPage.jsx` — accordeur chromatique V2 (~1160 lignes)
+- `AccordeurPage.jsx` — accordeur chromatique V2 (~1230 lignes)
 - `AccordeurStaff.jsx` — portée VexFlow
 - `accordeurUtils.js` — utilitaires pitch, cents, structures toniques, FFT
 - `SpectrePaneau.jsx` — panneau latéral spectre FFT coulissant
+- `sampleEngine.js` — moteur de samples R2 (chargement, onset, loop, playback accord/phrase)
 - `GenerateurAccordPage.jsx` — page dédiée `/accordeur/generateur`, knobs par note, deux mémoires tempérament
 - `GenerateurAccord.jsx` — ancien composant embarqué (non utilisé en production, conservé)
 - `JeuGamme.jsx` — jeu de gamme (masqué, commenté dans AccordeurPage)
@@ -53,15 +54,98 @@ function computeHarmonicOffsets(chordType, chordMidis, rootName) {
 - SVG arc 270° (SVG 135°→45° clockwise, large-arc=1)
 - Drag vertical : `setPointerCapture` + `dragValue` ref (évite stale closure)
 - `onClick` sur SVG stop propagation → le bloc extérieur reste cliquable pour activer/désactiver la note
-- Oscillateurs : `sine`, `midiToHz(midi, diapason) * Math.pow(2, offset/1200)`, `setTargetAtTime` pour update sans clic
+- Playback : `playChord` / `playChordOscillator` depuis `sampleEngine.js`
+- Smooth update pitch/rate : knob drag pendant lecture → `osc.frequency.setTargetAtTime` (oscillateur) ou `src.playbackRate.setTargetAtTime` (sample), selon instrument actif
 
 ### Détection live (note désactivée)
 Cliquer un bloc knob → retire la note de l'accord + ouvre micro pour mesurer l'intonation de l'utilisateur.
 - Match MIDI par **modulo 12** → accepte n'importe quel octave
 - Déviation = `centsTempere(hz, diapason) − offsetCourant` → relatif à la cible (ET ou JI selon knob)
 - Code couleur fond du bloc : vert ≤±3¢ / orange ≤±10¢ / rouge sinon
+- Volume de l'accord : **stable, non couplé au micro** — détection pitch seulement
 - RAF 100 ms, gate RMS 0.015, clarté 0.80
 - Affiche "micro ?" si `getUserMedia` échoue
+- **Hint détection** : après 30 frames (~3s) sans signal valide → "Plus fort / ou plus près" (amber). `noDetectCountRef` incrémenté à chaque frame infructueuse, reset à la première détection réussie.
+
+## Moteur de samples (`sampleEngine.js`)
+
+### Instruments
+| Clé | Label | Tessiture MIDI | Source R2 |
+|-----|-------|----------------|-----------|
+| `oscillator` | Sinusoïde | 0–127 (virtuel) | — |
+| `flute` | Flûte | 59–97 (B3–Db7) | `flute/Flute.nonvib.ff.[N][O].stereo.aif` |
+| `oboe` | Hautbois | 58–92 (Bb3–Ab6) | `oboe/Oboe.ff.[N][O].stereo.aif` |
+| `clarinet` | Clarinette | 50–95 (D3–B6) | `clarinet/BbClarinet.ff.[N][O].stereo.aif` |
+| `saxophone` | Saxophone alto | 49–80 (Db3–Ab5) | `saxophone/AltoSax.NoVib.ff.[N][O].stereo.aif` |
+| `bassoon` | Basson | 34–74 (Bb1–D5) | `bassoon/Bassoon.ff.[N][O].stereo.aif` |
+
+Noms R2 : bémols uniquement (`Db`, `Eb`, `Gb`, `Ab`, `Bb`). Mapping PC → `R2_PC = ['C','Db','D','Eb','E','F','Gb','G','Ab','A','Bb','B']`.
+
+### Préférence instrument
+Clé localStorage : `accordeur_instrument_preference`. Partagée entre AccordeurPage et GenerateurAccordPage. Défaut : `'flute'`.
+
+### Chargement (`loadInstrumentSamples`)
+- Oscillateur → retourne `new Map()` immédiatement (toujours prêt)
+- Samples → `Promise.all` sur toutes les notes de la tessiture
+- Cache mémoire session : `_memCache` + `_inFlight` (évite double-fetch en StrictMode)
+- SW intercept toutes les URL `r2.dev/samples/` → cache `audio-samples-v1` (offline après 1er chargement)
+- Progression : `onProgress(ratio 0-1)` → barre orange dans l'UI
+
+### Onset et loop
+- Onset : premier frame `|amplitude| > 0.01` (−40 dB)
+- Loop points : passage par zéro positif ~200ms dans le sustain, boucle 400ms
+  - `findPosiZeroCross(data, target, range)` cherche montée 0 dans les 2000 frames suivantes
+  - Stocké dans cache : `{ buffer, onsetMs, loopStart, loopEnd }`
+
+### Fonctions exportées
+| Fonction | Usage |
+|----------|-------|
+| `isOscillatorInstrument(k)` | true si instrument virtuel |
+| `loadInstrumentSamples(instrument, onProgress)` | charge et cache |
+| `playChord(ctx, midis, offsets, sampleMap, diapason)` | accord en boucle infinie, retourne `[{src, midi}]` |
+| `playChordOscillator(ctx, midis, offsets, diapason)` | accord oscillateurs, retourne `[{osc, gain, midi}]` |
+| `playPhrase(ctx, notes, sampleMap, referentiel, tonikMidi, diapason)` | phrase legato, durée mini 200ms |
+| `playPhraseOscillator(ctx, notes, referentiel, tonikMidi, diapason)` | idem via oscillateurs |
+| `phraseDurationMs(notes)` | durée totale phrase (min 200ms/note, max 2000ms/note) |
+
+### playbackRate et diapason
+Samples enregistrés à A4=440 Hz. Correction appliquée via playbackRate :
+- `diapasonCents = 1200 * log2(diapason / 440)`
+- Pour accord : `centsOffset = diapasonCents + knobOffset`
+- Pour phrase tempérée : `centsOffset = diapasonCents`
+- Pour phrase 5-limite : `centsOffset = diapasonCents + correctionCinqLimite(interval)`
+
+## Boutons lecture (AccordeurPage, mode enregistrement)
+Bloc visible en mode enregistrement (phase pret/enregistrement/analyse/resultats) :
+
+| Bouton | Actif si | Action |
+|--------|----------|--------|
+| ▶ Réécouter | `hasRecordingBlob === true` | rejoue le Blob WebM brut via `new Audio(URL.createObjectURL(...))` |
+| ♩ Version juste | `notes.length > 0 && !sampleLoading` | joue la phrase corrigée via samples ou oscillateur |
+
+- `recordingBlobRef` stocke le Blob, `hasRecordingBlob` (state) pilote le disabled (ref seul ne déclenche pas re-render)
+- Blob éphémère : nul si session rouverte depuis tableau suivi
+- Changement de référentiel → `stopVersionJusteRef.current?.()` arrête la lecture en cours
+- Cleanup au démontage : `useEffect(() => () => stopVersionJusteRef.current?.(), [])`
+
+## Correction 5-limite dans accordeurUtils + sampleEngine
+
+### `centsCinqLimite(hz, tonikMidi, diapason)` (accordeurUtils)
+Utilisée pour la mesure (live et enregistrement) :
+```js
+const justCents =
+  semitoneFromC === 10 ? 968.825 :   // min7 : 7:4 direct depuis tonique
+  semitoneFromC === 6  ? 568.825 :   // triton : 7:4 depuis dominante (−31.175¢)
+  JUST_RATIOS_CENTS[semitoneFromC]
+const correction = justCents - temperedCents
+return centsTempere(hz, diapason) - correction
+```
+
+### `_correctionCinqLimite(semitoneFromTonic)` (sampleEngine, interne)
+Miroir exact pour le playback version juste — même logique triton/min7.
+
+### Panneau info 5-limite (AccordeurPage, résultats)
+Bloc bleu visible quand `referentiel === '5-limite'` + résultats : explique limitation modèle fixe (La/Ré, comma syntonique 81:80, 21.5¢).
 
 ## Spectre FFT (`SpectrePaneau.jsx`)
 - Bouton **◈ Spectre** visible en mode live ET phase `resultats`
@@ -77,16 +161,23 @@ Tous persistés dans `localStorage` (clés `acc_*`) :
 - **Accord** (collapsible) : diapason · transposition C/Bb/Eb/F/A · seuil justesse ¢
 - **Segmentation** (collapsible) : silence ms · saut note ¢ · gate RMS · seuil clarté (slider)
 - `GenerateurAccordPage` lit `acc_diapason` en lecture seule (pas de réglages propres)
+- `accordeur_instrument_preference` : préférence instrument partagée (hors préfixe `acc_`)
 
 ## Organisation page AccordeurPage
 1. Header : "← Tessitura" | "Accordeur" + bouton doigtés guitare (→ /accordeur/generateur) | "Suivi ▾"
 2. Tableau sessions (collapsible)
 3. Bloc accordeur (toggle Live/Enregistrer + affichage live/enregistrement)
-4. Résultats (portée ou tableau + graphes) — inséré après bloc accordeur
-5. Bloc structure de tonique + référentiel Tempéré/Harmonique
-6. Réglages accord (collapsible `<details>`)
-7. Réglages segmentation (collapsible `<details>`)
-8. ~~Outils pédagogiques~~ — Générateur d'accord déplacé en page dédiée, Jeu de gamme commenté
+4. **Bloc playback** (mode enregistrement) : sélecteur instrument + barre chargement + boutons Réécouter / Version juste
+5. Résultats (portée ou tableau + graphes) — inséré après bloc accordeur
+6. Bloc structure de tonique + référentiel Tempéré/Harmonique
+7. Réglages accord (collapsible `<details>`)
+8. Réglages segmentation (collapsible `<details>`)
+9. ~~Outils pédagogiques~~ — Générateur d'accord déplacé en page dédiée, Jeu de gamme commenté
+
+## Service Worker (`public/sw.js`)
+- Cache `audio-samples-v1` : intercept `r2.dev/samples/` → cache-first
+- Ajouté à la liste d'exclusion du nettoyage des vieux caches (activate handler)
+- Enregistrement dans `main.jsx` : `navigator.serviceWorker.register('/sw.js')`
 
 ## Enharmoniques — règle diatonique
 Nommage selon degré diatonique depuis la tonique T :

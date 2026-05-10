@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { Renderer, Stave, StaveNote, Voice, Formatter } from 'vexflow'
+import { Renderer, Stave, StaveNote, Voice, Formatter, Accidental } from 'vexflow'
 
 export default function IntervalleStaff({ notes, width = 260, height = 110 }) {
   const ref = useRef(null)
@@ -21,6 +21,8 @@ export default function IntervalleStaff({ notes, width = 260, height = 110 }) {
       const vexNotes = notes.map(key => {
         const note = new StaveNote({ keys: [key], duration: 'q' })
         note.setStyle({ fillStyle: '#c084fc', strokeStyle: '#c084fc' })
+        const accidental = key.split('/')[0].slice(1)
+        if (accidental) note.addModifier(new Accidental(accidental), 0)
         return note
       })
 

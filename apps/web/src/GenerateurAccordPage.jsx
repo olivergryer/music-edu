@@ -7,7 +7,7 @@ import {
   midiToHz, JUST_RATIOS_CENTS,
   centsTempere, hzToMidi, frameRMS, preEmphasis, HZ_MIN, HZ_MAX,
 } from './accordeurUtils'
-import { INSTRUMENTS, loadInstrumentSamples, playChord } from './sampleEngine'
+import { INSTRUMENTS, isOscillatorInstrument, loadInstrumentSamples, playChord, playChordOscillator } from './sampleEngine'
 
 function computeHarmonicOffsets(chordType, chordMidis, rootName) {
   const rootPC = noteNameToPC(rootName)
@@ -115,8 +115,12 @@ export default function GenerateurAccordPage() {
   const [sampleLoadPct, setSampleLoadPct] = useState(0)
   const [sampleLoading, setSampleLoading] = useState(false)
 
-  const audioCtxRef      = useRef(null)
-  const sampleSrcsRef    = useRef([])  // AudioBufferSourceNode[] courants
+  const [showDetectionHint, setShowDetectionHint] = useState(false)
+  const noDetectCountRef = useRef(0)
+
+  const audioCtxRef   = useRef(null)
+  const sampleSrcsRef = useRef([])   // [{src, midi}] depuis playChord
+  const oscSrcsRef    = useRef([])   // [{osc, gain, midi}] depuis playChordOscillator
   const liveStreamRef    = useRef(null)
   const liveAudioCtxRef  = useRef(null)
   const liveAnalyserRef  = useRef(null)
@@ -176,8 +180,10 @@ export default function GenerateurAccordPage() {
       try { liveAudioCtxRef.current?.close() } catch {}
       liveAudioCtxRef.current = null
       liveStreamRef.current   = null
+      noDetectCountRef.current = 0
       setLiveCents(null)
       setLiveError(false)
+      setShowDetectionHint(false)
       return
     }
 
@@ -206,21 +212,37 @@ export default function GenerateurAccordPage() {
 
           analyser.getFloatTimeDomainData(buf)
           const rms = frameRMS(buf)
-          if (rms < 0.015) { setLiveCents(null); return }
+          if (rms < 0.015) {
+            noDetectCountRef.current++
+            if (noDetectCountRef.current === 30) setShowDetectionHint(true)
+            setLiveCents(null); return
+          }
 
           const emp = preEmphasis(buf)
           const [hz, clarity] = liveDetectorRef.current.findPitch(emp, audioCtx.sampleRate)
-          if (clarity < 0.80 || hz < HZ_MIN || hz > HZ_MAX) { setLiveCents(null); return }
+          if (clarity < 0.80 || hz < HZ_MIN || hz > HZ_MAX) {
+            noDetectCountRef.current++
+            if (noDetectCountRef.current === 30) setShowDetectionHint(true)
+            setLiveCents(null); return
+          }
 
           const detectedMidi = Math.round(hzToMidi(hz, diapason))
           const targetMidi   = removedMidiRef.current
           if (targetMidi === null) { setLiveCents(null); return }
           const semidiff = ((detectedMidi - targetMidi) % 12 + 12) % 12
-          if (semidiff > 1 && semidiff < 11) { setLiveCents(null); return }
+          if (semidiff > 1 && semidiff < 11) {
+            noDetectCountRef.current++
+            if (noDetectCountRef.current === 30) setShowDetectionHint(true)
+            setLiveCents(null); return
+          }
 
-          // deviation from ET, corrected for any JI offset of the target note
-          const centsET   = centsTempere(hz, diapason)
-          const muCents   = parseFloat((centsET - removedOffsetRef.current).toFixed(1))
+          // Détection réussie
+          if (noDetectCountRef.current > 0) {
+            noDetectCountRef.current = 0
+            setShowDetectionHint(false)
+          }
+          const centsET = centsTempere(hz, diapason)
+          const muCents = parseFloat((centsET - removedOffsetRef.current).toFixed(1))
           setLiveCents(muCents)
         }
         loop()
@@ -231,6 +253,7 @@ export default function GenerateurAccordPage() {
 
     return () => {
       cancelled = true
+      noDetectCountRef.current = 0
       cancelAnimationFrame(liveRafRef.current)
       liveStreamRef.current?.getTracks().forEach(t => t.stop())
       try { liveAudioCtxRef.current?.close() } catch {}
@@ -240,29 +263,34 @@ export default function GenerateurAccordPage() {
     }
   }, [removedIdx]) // eslint-disable-line
 
-  // ─── Chord playback (samples) ────────────────────────────────────────────────
-  const stopSamples = useCallback(() => {
-    sampleSrcsRef.current.forEach(s => { try { s.stop() } catch {} })
+  // ─── Chord playback ───────────────────────────────────────────────────────────
+  const stopAll = useCallback(() => {
+    sampleSrcsRef.current.forEach(({ src }) => { try { src.stop() } catch {} })
     sampleSrcsRef.current = []
+    const t = audioCtxRef.current?.currentTime ?? 0
+    oscSrcsRef.current.forEach(({ osc, gain }) => {
+      try { gain.gain.setTargetAtTime(0, t, 0.04) } catch {}
+      try { osc.stop(t + 0.1) } catch {}
+    })
+    oscSrcsRef.current = []
     try { audioCtxRef.current?.close() } catch {}
     audioCtxRef.current = null
   }, [])
 
-  const startSamples = useCallback((midis, offs) => {
-    stopSamples()
-    if (!sampleMap) return
+  const startPlayback = useCallback((midis, offs) => {
+    stopAll()
     const ctx = new (window.AudioContext || window.webkitAudioContext)()
     audioCtxRef.current = ctx
     if (ctx.state === 'suspended') ctx.resume()
-    sampleSrcsRef.current = playChord(ctx, midis, offs, sampleMap, diapason)
-    // Stopper automatiquement après 4 s (durée max du sample)
-    setTimeout(() => {
-      if (audioCtxRef.current === ctx) {
-        stopSamples()
-        setPlaying(false)
-      }
-    }, 4100)
-  }, [stopSamples, sampleMap, diapason])
+    if (isOscillatorInstrument(instrument)) {
+      oscSrcsRef.current    = playChordOscillator(ctx, midis, offs, diapason)
+      sampleSrcsRef.current = []
+    } else {
+      if (!sampleMap) return
+      sampleSrcsRef.current = playChord(ctx, midis, offs, sampleMap, diapason)
+      oscSrcsRef.current    = []
+    }
+  }, [stopAll, instrument, sampleMap, diapason])
 
   // Restart when chord or removedIdx changes while playing
   const prevMidisRef = useRef([])
@@ -272,30 +300,36 @@ export default function GenerateurAccordPage() {
     const activeOffsets = offsets.filter((_, i) => i !== removedIdx)
     if (JSON.stringify(activeMidis) !== JSON.stringify(prevMidisRef.current)) {
       prevMidisRef.current = activeMidis
-      startSamples(activeMidis, activeOffsets)
+      startPlayback(activeMidis, activeOffsets)
     }
   }, [root, chordType, inversion, baseOctave, removedIdx, playing]) // eslint-disable-line
 
-  // Smooth playbackRate update when offsets or mode change
+  // Smooth freq/rate update when offsets or mode change
   useEffect(() => {
     if (!playing || !audioCtxRef.current) return
     const ctx = audioCtxRef.current
-    const diapasonCents = 1200 * Math.log2(diapason / 440)
-    sampleSrcsRef.current.forEach((src, srcIdx) => {
-      // srcIdx maps to active (non-removed) midis in order
-      const activeMidis = chordMidis.filter((_, i) => i !== removedIdx)
-      const midi = activeMidis[srcIdx]
-      if (midi === undefined) return
-      const chordIdx = chordMidis.indexOf(midi)
-      const offset   = offsets[chordIdx] ?? 0
-      const rate     = Math.pow(2, (diapasonCents + offset) / 1200)
-      try { src.playbackRate.setTargetAtTime(rate, ctx.currentTime, 0.05) } catch {}
-    })
-  }, [offsets, mode, playing, diapason]) // eslint-disable-line
+    const t   = ctx.currentTime
+    if (isOscillatorInstrument(instrument)) {
+      oscSrcsRef.current.forEach(({ osc, midi }) => {
+        const chordIdx = chordMidis.indexOf(midi)
+        const offset   = offsets[chordIdx] ?? 0
+        const hz = midiToHz(midi, diapason) * Math.pow(2, offset / 1200)
+        try { osc.frequency.setTargetAtTime(hz, t, 0.05) } catch {}
+      })
+    } else {
+      const diapasonCents = 1200 * Math.log2(diapason / 440)
+      sampleSrcsRef.current.forEach(({ src, midi }) => {
+        const chordIdx = chordMidis.indexOf(midi)
+        const offset   = offsets[chordIdx] ?? 0
+        const rate     = Math.pow(2, (diapasonCents + offset) / 1200)
+        try { src.playbackRate.setTargetAtTime(rate, t, 0.05) } catch {}
+      })
+    }
+  }, [offsets, mode, playing, diapason, instrument]) // eslint-disable-line
 
   useEffect(() => {
     return () => {
-      stopSamples()
+      stopAll()
       cancelAnimationFrame(liveRafRef.current)
       liveStreamRef.current?.getTracks().forEach(t => t.stop())
       try { liveAudioCtxRef.current?.close() } catch {}
@@ -305,12 +339,13 @@ export default function GenerateurAccordPage() {
   // ─── Handlers ───────────────────────────────────────────────────────────────────
   const togglePlay = () => {
     if (playing) {
-      stopSamples(); setPlaying(false)
+      stopAll()
+      setPlaying(false)
     } else {
       const activeMidis   = chordMidis.filter((_, i) => i !== removedIdx)
       const activeOffsets = offsets.filter((_, i) => i !== removedIdx)
       prevMidisRef.current = activeMidis
-      startSamples(activeMidis, activeOffsets)
+      startPlayback(activeMidis, activeOffsets)
       setPlaying(true)
     }
   }
@@ -399,15 +434,18 @@ export default function GenerateurAccordPage() {
                 <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="6 9 12 15 18 9"/></svg>
               </button>
             </div>
-            <button
-              onClick={togglePlay}
-              disabled={sampleLoading || !sampleMap}
-              className="text-white border-none rounded-lg px-5 py-2 text-sm font-bold cursor-pointer transition-opacity"
-              style={{
-                background: playing ? '#7f1d1d' : '#FF8B3D', minWidth: 80,
-                opacity: (sampleLoading || !sampleMap) ? 0.4 : 1,
-              }}
-            >{playing ? 'Stop' : sampleLoading ? 'Chargement…' : 'Jouer'}</button>
+            {(() => {
+              const isOsc     = isOscillatorInstrument(instrument)
+              const notReady  = !isOsc && (sampleLoading || !sampleMap)
+              return (
+                <button
+                  onClick={togglePlay}
+                  disabled={notReady}
+                  className="text-white border-none rounded-lg px-5 py-2 text-sm font-bold cursor-pointer transition-opacity"
+                  style={{ background: playing ? '#7f1d1d' : '#FF8B3D', minWidth: 80, opacity: notReady ? 0.4 : 1 }}
+                >{playing ? 'Stop' : sampleLoading && !isOsc ? 'Chargement…' : 'Jouer'}</button>
+              )
+            })()}
           </div>
         </div>
 
@@ -472,8 +510,13 @@ export default function GenerateurAccordPage() {
                       {liveCentsI >= 0 ? '+' : ''}{liveCentsI.toFixed(1)}¢
                     </div>
                   )}
-                  {isRemoved && !liveError && liveCentsI === null && (
+                  {isRemoved && !liveError && liveCentsI === null && !showDetectionHint && (
                     <div className="text-[10px] text-app-muted mt-1">jouez…</div>
+                  )}
+                  {isRemoved && !liveError && liveCentsI === null && showDetectionHint && (
+                    <div className="text-[10px] mt-1 text-center leading-tight" style={{ color: '#fbbf24' }}>
+                      Plus fort<br/>ou plus près
+                    </div>
                   )}
                   {isRemoved && liveError && (
                     <div className="text-[10px] mt-1" style={{ color: '#f87171' }}>micro ?</div>

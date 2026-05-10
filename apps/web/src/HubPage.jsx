@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import useProgressFirebase from './hooks/useProgressFirebase'
 import { useAuth } from './auth/AuthProvider'
+import { useTheme } from './ThemeContext'
 import banniereDark from './assets/banniere_dark.svg'
 import banniereLight from './assets/banniere_light.svg'
 
@@ -36,16 +37,18 @@ function ModuleCard({ label, desc, active, color }) {
 export default function HubPage() {
   const { xp, level, streak, trophies } = useProgressFirebase()
   const { user, profile } = useAuth()
+  const { dark } = useTheme()
 
   return (
     <div className="bg-app min-h-dvh flex flex-col items-center px-5 py-12">
 
       <div className="w-full max-w-2xl">
         <div className="mb-12 text-center">
-          <picture>
-            <source srcSet={banniereLight} media="(prefers-color-scheme: light)" />
-            <img src={banniereDark} alt="Tessitura" style={{ maxWidth: '320px', width: '100%', height: 'auto' }} />
-          </picture>
+          <img
+            src={dark ? banniereDark : banniereLight}
+            alt="Tessitura"
+            style={{ maxWidth: '320px', width: '100%', height: 'auto' }}
+          />
         </div>
 
         <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))' }}>

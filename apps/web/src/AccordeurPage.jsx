@@ -5,7 +5,7 @@ import AccordeurStaff from './AccordeurStaff'
 import SpectrePaneau from './SpectrePaneau'
 import GenerateurAccord from './GenerateurAccord'
 import JeuGamme from './JeuGamme'
-import { INSTRUMENTS, loadInstrumentSamples, playPhrase, phraseDurationMs } from './sampleEngine'
+import { INSTRUMENTS, loadInstrumentSamples, isOscillatorInstrument, playPhrase, playPhraseOscillator, phraseDurationMs } from './sampleEngine'
 import {
   analyserBuffer, segmenter, calculerEcarts, courbebrute,
   scorePedagogique, scoreQualite, couleurJustesse,
@@ -287,6 +287,7 @@ export default function AccordeurPage() {
   // Enregistrement brut (Blob MediaRecorder, éphémère)
   const recordingBlobRef    = useRef(null)
   const reecouteAudioRef    = useRef(null)
+  const [hasRecordingBlob,  setHasRecordingBlob] = useState(false)
 
   // Version juste
   const [versionJustePlaying, setVersionJustePlaying] = useState(false)
@@ -441,6 +442,7 @@ export default function AccordeurPage() {
 
     const blob       = new Blob(chunksRef.current, { type: 'audio/webm' })
     recordingBlobRef.current = blob
+    setHasRecordingBlob(true)
     const arrayBuf   = await blob.arrayBuffer()
     const decodeCtx  = new AudioContext()
     let audioBuffer
@@ -807,6 +809,7 @@ export default function AccordeurPage() {
             <Btn variant="secondary" onClick={() => {
               stopVersionJusteRef.current?.()
               recordingBlobRef.current = null
+              setHasRecordingBlob(false)
               setPhase('pret'); setNotes([]); setCourbe([])
               serieRef.current = []; audioBufferRef.current = null
             }} className="text-sm">
@@ -838,7 +841,7 @@ export default function AccordeurPage() {
               )}
               <div style={{ display: 'flex', gap: 8 }}>
                 <button
-                  disabled={!recordingBlobRef.current}
+                  disabled={!hasRecordingBlob}
                   onClick={() => {
                     if (!recordingBlobRef.current) return
                     reecouteAudioRef.current?.pause()
@@ -849,20 +852,23 @@ export default function AccordeurPage() {
                     reecouteAudioRef.current = audio
                   }}
                   className="flex-1 rounded-xl font-bold text-xs py-2 border border-app cursor-pointer transition-opacity"
-                  style={{ background: 'var(--surface-2)', color: 'var(--text-muted)', opacity: recordingBlobRef.current ? 1 : 0.4 }}
+                  style={{ background: 'var(--surface-2)', color: 'var(--text-muted)', opacity: hasRecordingBlob ? 1 : 0.4 }}
                 >▶ Réécouter</button>
                 <button
-                  disabled={!notes.length || sampleLoading || !sampleMap}
+                  disabled={!notes.length || sampleLoading}
                   onClick={() => {
                     if (versionJustePlaying) {
                       stopVersionJusteRef.current?.()
                       return
                     }
-                    if (!sampleMap || !notes.length) return
+                    if (!notes.length) return
                     const struct    = [...DEFAULT_STRUCTURES, ...structures].find(x => x.id === structureId)
                     const tonikMidi = struct ? (noteNameToPC(struct.toniques[0]?.tonique ?? 'Do') + 60) : 60
                     const ctx = new AudioContext()
-                    const srcs = playPhrase(ctx, notes, sampleMap, referentiel, tonikMidi, diapason)
+                    const isOsc = isOscillatorInstrument(instrument)
+                    const srcs = isOsc
+                      ? playPhraseOscillator(ctx, notes, referentiel, tonikMidi, diapason)
+                      : (sampleMap ? playPhrase(ctx, notes, sampleMap, referentiel, tonikMidi, diapason) : [])
                     setVersionJustePlaying(true)
                     const totalMs = phraseDurationMs(notes)
                     const timer = setTimeout(() => {
@@ -882,8 +888,8 @@ export default function AccordeurPage() {
                   style={{
                     background: versionJustePlaying ? '#7f1d1d' : '#FF8B3D',
                     color: '#fff',
-                    opacity: (!notes.length || sampleLoading || !sampleMap) ? 0.4 : 1,
-                    cursor: (!notes.length || sampleLoading || !sampleMap) ? 'not-allowed' : 'pointer',
+                    opacity: (!notes.length || sampleLoading) ? 0.4 : 1,
+                    cursor: (!notes.length || sampleLoading) ? 'not-allowed' : 'pointer',
                   }}
                 >
                   {versionJustePlaying ? '■ Arrêter' : sampleLoading ? 'Chargement…' : '♩ Version juste'}
