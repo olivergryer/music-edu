@@ -565,14 +565,23 @@ export default function RythmApp() {
     const minT = Math.min(0, ...tapTimes);
     tapTimes.forEach(t => {
       const delay = Math.max(0, t - minT);
-      const id = setTimeout(() => {
-        tapBeep();
-        setBeatFlash(true);
-        setTimeout(() => setBeatFlash(false), 110);
-      }, delay);
+      const id = setTimeout(() => tapBeep(), delay);
       audioTidsRef.current.push(id);
     });
-  }, [tapTimes, tapBeep]);
+    if (pattern && sessionBpm) {
+      const beatMs = 60000 / sessionBpm;
+      const { totalMs } = toTimestamps(pattern.figs, sessionBpm, pattern.timeSig);
+      const nBeats = Math.round(totalMs / beatMs);
+      for (let k = 0; k < nBeats; k++) {
+        const id = setTimeout(() => {
+          setBeatStrong(k === 0);
+          setBeatFlash(true);
+          setTimeout(() => setBeatFlash(false), k === 0 ? 160 : 110);
+        }, k * beatMs);
+        audioTidsRef.current.push(id);
+      }
+    }
+  }, [tapTimes, tapBeep, pattern, sessionBpm]);
 
   const pulse = useCallback((strong = false) => {
     beep(strong);
@@ -623,17 +632,23 @@ export default function RythmApp() {
   const playPatternAudio = useCallback((pat, bpmVal, delayMs = 0) => {
     audioTidsRef.current.forEach(clearTimeout);
     audioTidsRef.current = [];
-    const { timestamps } = toTimestamps(pat.figs, bpmVal, pat.timeSig);
+    const { timestamps, totalMs } = toTimestamps(pat.figs, bpmVal, pat.timeSig);
     pat.figs.forEach((fig, i) => {
       if (!fig.rest) {
-        const id = setTimeout(() => {
-          rhythmBeep(false);
-          setBeatFlash(true);
-          setTimeout(() => setBeatFlash(false), 110);
-        }, delayMs + timestamps[i]);
+        const id = setTimeout(() => rhythmBeep(false), delayMs + timestamps[i]);
         audioTidsRef.current.push(id);
       }
     });
+    const beatMs = 60000 / bpmVal;
+    const nBeats = Math.round(totalMs / beatMs);
+    for (let k = 0; k < nBeats; k++) {
+      const id = setTimeout(() => {
+        setBeatStrong(k === 0);
+        setBeatFlash(true);
+        setTimeout(() => setBeatFlash(false), k === 0 ? 160 : 110);
+      }, delayMs + k * beatMs);
+      audioTidsRef.current.push(id);
+    }
   }, [rhythmBeep]);
 
   const randomPattern = useCallback(() => {
@@ -1605,7 +1620,10 @@ export default function RythmApp() {
                       style={{
                         cursor: phase === "playing" ? "pointer" : "default",
                         border: `2px solid ${borderColor}`,
-                        padding: '8px 6px 4px',
+                        padding: '6px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
                         boxShadow: phase === "playing" && beatFlash ? '0 0 8px rgba(74,108,247,0.4)' : 'none',
                       }}
                     >
