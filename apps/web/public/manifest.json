@@ -8,6 +8,7 @@
   "background_color": "#F4F5F7",
   "orientation": "portrait-primary",
   "categories": ["music", "education"],
+  "permissions": ["microphone"],
   "icons": [
     {
       "src": "/icon-192x192.png",

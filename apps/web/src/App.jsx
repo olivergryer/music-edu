@@ -28,8 +28,8 @@ function ThemeToggle() {
       aria-label={dark ? 'Passer en mode clair' : 'Passer en mode sombre'}
       style={{
         position: 'fixed',
-        top: 14,
-        right: 14,
+        bottom: 24,
+        right: 16,
         zIndex: 9999,
         width: 36,
         height: 36,
