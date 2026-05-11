@@ -142,13 +142,45 @@ export function midiToHz(midi, diapason = 442) {
   return diapason * Math.pow(2, (midi - 69) / 12)
 }
 
-// Hz d'une note MIDI selon le référentiel (5-limite = correction harmonique depuis tonikMidi)
-export function midiToHzReferentiel(midi, tonikMidi, referentiel, diapason = 442) {
-  const hz = midiToHz(midi, diapason)
-  if (referentiel !== '5-limite') return hz
-  const interval        = ((midi - tonikMidi) % 12 + 12) % 12
-  const correctionCents = JUST_RATIOS_CENTS[interval] - interval * 100
-  return hz * Math.pow(2, correctionCents / 1200)
+// Offsets de déviation (¢) par rapport au tempéré pour chaque demi-ton (1-12)
+// Index i = demi-ton i+1 (i=0→m2, i=10→M7, i=11→octave)
+export const HARMONIQUE_OFFSETS = [
+   11.7,   // m2  16/15
+    3.9,   // M2  9/8
+   15.6,   // m3  6/5
+  -13.7,   // M3  5/4
+   -2.0,   // P4  4/3
+  -31.175, // TT  7:4 depuis dominante
+    2.0,   // P5  3/2
+   13.7,   // m6  8/5
+  -15.6,   // M6  5/3
+  -31.175, // m7  7:4 direct
+  -11.7,   // M7  15/8
+    0,     // octave (pure par défaut)
+]
+
+// Hz d'une note MIDI selon le référentiel
+export function midiToHzReferentiel(midi, tonikMidi, referentiel, diapason = 442, userOffsets = null) {
+  const hz       = midiToHz(midi, diapason)
+  const interval = ((midi - tonikMidi) % 12 + 12) % 12
+  if (referentiel === '5-limite') {
+    const correctionCents = JUST_RATIOS_CENTS[interval] - interval * 100
+    return hz * Math.pow(2, correctionCents / 1200)
+  }
+  if (referentiel === 'utilisateur' && userOffsets && interval > 0) {
+    return hz * Math.pow(2, (userOffsets[interval - 1] ?? 0) / 1200)
+  }
+  return hz
+}
+
+/** Écart en cents par rapport au tempérament utilisateur (12 offsets personnalisés) */
+export function centsUtilisateur(hz, tonikMidi, diapason = 442, userOffsets) {
+  const midi          = hzToMidi(hz, diapason)
+  const midiRounded   = Math.round(midi)
+  const semitoneFromC = ((midiRounded - tonikMidi) % 12 + 12) % 12
+  if (semitoneFromC === 0) return centsTempere(hz, diapason)
+  const correction = userOffsets?.[semitoneFromC - 1] ?? 0
+  return centsTempere(hz, diapason) - correction
 }
 
 export function midiToNoteName(midi) {
@@ -325,17 +357,19 @@ function _finaliserSegment(seg, diapason) {
 
 /**
  * Calcule μ et σ en cents pour chaque segment.
- * @param {string} referentiel  'tempere' | '5-limite'
+ * @param {string} referentiel  'tempere' | '5-limite' | 'utilisateur'
  * @param {number} tonikMidi    MIDI de la tonique (concert, ignoré si tempéré)
+ * @param {number[]} [userOffsets]  12 offsets ¢ (requis si referentiel='utilisateur')
  */
-export function calculerEcarts(segments, referentiel, tonikMidi, diapason = 442) {
+export function calculerEcarts(segments, referentiel, tonikMidi, diapason = 442, userOffsets = null) {
   return segments.map(seg => {
     const centsList = seg.frames
       .filter(f => f.hz)
-      .map(f => referentiel === '5-limite'
-        ? centsCinqLimite(f.hz, tonikMidi, diapason)
-        : centsTempere(f.hz, diapason)
-      )
+      .map(f => {
+        if (referentiel === '5-limite') return centsCinqLimite(f.hz, tonikMidi, diapason)
+        if (referentiel === 'utilisateur') return centsUtilisateur(f.hz, tonikMidi, diapason, userOffsets)
+        return centsTempere(f.hz, diapason)
+      })
 
     if (!centsList.length) return { ...seg, muCents: 0, sigmaCents: 0 }
 
@@ -348,14 +382,16 @@ export function calculerEcarts(segments, referentiel, tonikMidi, diapason = 442)
 
 // ─── Courbe brute ──────────────────────────────────────────────────────────────
 
-export function courbebrute(serie, referentiel, tonikMidi, diapason = 442) {
+export function courbebrute(serie, referentiel, tonikMidi, diapason = 442, userOffsets = null) {
   return serie
     .filter(p => p.hz)
     .map(p => ({
       tMs: p.tMs,
       cents: referentiel === '5-limite'
         ? centsCinqLimite(p.hz, tonikMidi, diapason)
-        : centsTempere(p.hz, diapason),
+        : referentiel === 'utilisateur'
+          ? centsUtilisateur(p.hz, tonikMidi, diapason, userOffsets)
+          : centsTempere(p.hz, diapason),
     }))
 }
 

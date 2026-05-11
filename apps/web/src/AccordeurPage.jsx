@@ -16,8 +16,8 @@ import {
   TRANSPOSITIONS, uuid,
   NOTE_NAMES_FR, DEFAULT_STRUCTURES,
   frameRMS, preEmphasis, HZ_MIN, HZ_MAX,
-  hzToMidi, midiToNoteName, centsTempere, centsCinqLimite,
-  buildEnharmonicScale, noteNameToPC,
+  hzToMidi, midiToNoteName, centsTempere, centsCinqLimite, centsUtilisateur,
+  buildEnharmonicScale, noteNameToPC, HARMONIQUE_OFFSETS,
 } from './accordeurUtils'
 
 // ─── Constantes canvas (toujours dark pour les graphes scientifiques) ───────────
@@ -25,7 +25,11 @@ const DIAPASON_DEFAULT        = 442
 const SEUIL_DEFAULT           = 10
 const SILENCE_MS_DEFAULT      = 40
 const NOTE_JUMP_CENTS_DEFAULT = 30
-const REFERENTIELS            = ['tempere', '5-limite']
+const REFERENTIELS            = ['tempere', '5-limite', 'utilisateur']
+const INTERVAL_NAMES          = ['m2','M2','m3','M3','P4','TT','P5','m6','M6','m7','M7','8ve']
+const TEMPERAMENT_TEMPERE     = Array(12).fill(0)
+const USER_TEMP_KEY           = 'acc_temperament_user'
+const USER_PRESETS_KEY        = 'acc_temperament_presets'
 // Canvas colors (dark, used only in canvas 2D API)
 const C_BG      = '#0D1026'
 const C_SURFACE = '#131929'
@@ -276,7 +280,16 @@ export default function AccordeurPage() {
   const [newStructRows, setNewStructRows] = useState([{ indexNote: 1, tonique: 'Do' }])
 
   const [sessions,     setSessions]    = useState(() => lireSessions())
-  const [showSessions, setShowSessions] = useState(false)
+  const [showReglages, setShowReglages] = useState(false)
+
+  const [userTemperament, setUserTemperament] = useState(() => {
+    try { const v = JSON.parse(localStorage.getItem(USER_TEMP_KEY)); return Array.isArray(v) && v.length === 12 ? v : TEMPERAMENT_TEMPERE.slice() } catch { return TEMPERAMENT_TEMPERE.slice() }
+  })
+  const [userPresets, setUserPresets] = useState(() => {
+    try { return JSON.parse(localStorage.getItem(USER_PRESETS_KEY)) || [] } catch { return [] }
+  })
+  const [newPresetNom, setNewPresetNom] = useState('')
+  const [importStr,    setImportStr]    = useState('')
 
   // ── Samples ──
   const [instrument,     setInstrument]     = useState(() => localStorage.getItem('accordeur_instrument_preference') || 'flute')
@@ -309,6 +322,18 @@ export default function AccordeurPage() {
     setStructureId(struct.id)
   }, [])
 
+  useEffect(() => {
+    const t = searchParams.get('t')
+    if (!t) return
+    try {
+      const offsets = JSON.parse(atob(t))
+      if (Array.isArray(offsets) && offsets.length === 12) {
+        setUserTemperament(offsets)
+        setReferentiel('utilisateur')
+      }
+    } catch {}
+  }, [])
+
   const recalculer = useCallback(() => {
     if (!audioBufferRef.current) return
     const s = analyserBuffer(audioBufferRef.current, { clarityThreshold, rmsGate: gateLevel })
@@ -316,19 +341,19 @@ export default function AccordeurPage() {
     const struct    = [...DEFAULT_STRUCTURES, ...structures].find(x => x.id === structureId)
     const tonikMidi = struct ? (noteNameToPC(struct.toniques[0]?.tonique ?? 'Do') + 60) : 60
     const segs      = segmenter(s, diapason, { silenceDurationMs, noteJumpCents })
-    const notesCalc = calculerEcarts(segs, referentiel, tonikMidi, diapason)
-    const courbeB   = courbebrute(s, referentiel, tonikMidi, diapason)
+    const notesCalc = calculerEcarts(segs, referentiel, tonikMidi, diapason, userTemperament)
+    const courbeB   = courbebrute(s, referentiel, tonikMidi, diapason, userTemperament)
     setNotes(notesCalc)
     setCourbe(courbeB)
     setScoreP(scorePedagogique(notesCalc, seuil))
     setScoreQ(scoreQualite(notesCalc))
     setDirty(false)
-  }, [clarityThreshold, gateLevel, referentiel, seuil, silenceDurationMs, noteJumpCents, diapason, structureId, structures])
+  }, [clarityThreshold, gateLevel, referentiel, seuil, silenceDurationMs, noteJumpCents, diapason, structureId, structures, userTemperament])
 
   useEffect(() => {
     if (!audioBufferRef.current) return
     setDirty(true)
-  }, [clarityThreshold, gateLevel, referentiel, seuil, silenceDurationMs, noteJumpCents, diapason, structureId, structures])
+  }, [clarityThreshold, gateLevel, referentiel, seuil, silenceDurationMs, noteJumpCents, diapason, structureId, structures, userTemperament])
 
   useEffect(() => {
     const struct = [...DEFAULT_STRUCTURES, ...structures].find(x => x.id === structureId)
@@ -340,8 +365,9 @@ export default function AccordeurPage() {
       diapason, referentiel, clarityThreshold, gateLevel, transpoOffset,
       enharmonicScale: buildEnharmonicScale(NOTE_NAMES_FR[tonicDisplayPC]),
       tonikMidi: struct ? (tonicConcertPC + 60) : null,
+      userTemperament,
     }
-  }, [diapason, referentiel, clarityThreshold, gateLevel, structureId, structures, transpoKey])
+  }, [diapason, referentiel, clarityThreshold, gateLevel, structureId, structures, transpoKey, userTemperament])
 
   useEffect(() => {
     localStorage.setItem('accordeur_instrument_preference', instrument)
@@ -362,6 +388,8 @@ export default function AccordeurPage() {
   useEffect(() => { localStorage.setItem('acc_diapason', diapason) }, [diapason])
   useEffect(() => { localStorage.setItem('acc_transpo',  transpoKey) }, [transpoKey])
   useEffect(() => { localStorage.setItem('acc_ref',      referentiel) }, [referentiel])
+  useEffect(() => { localStorage.setItem(USER_TEMP_KEY,    JSON.stringify(userTemperament)) }, [userTemperament])
+  useEffect(() => { localStorage.setItem(USER_PRESETS_KEY, JSON.stringify(userPresets)) }, [userPresets])
   useEffect(() => { localStorage.setItem('acc_seuil',    seuil) }, [seuil])
   useEffect(() => { localStorage.setItem('acc_silence',  silenceDurationMs) }, [silenceDurationMs])
   useEffect(() => { localStorage.setItem('acc_noteJump', noteJumpCents) }, [noteJumpCents])
@@ -460,8 +488,8 @@ export default function AccordeurPage() {
     const struct    = [...DEFAULT_STRUCTURES, ...structures].find(s => s.id === structureId)
     const tonikMidi = struct ? (noteNameToPC(struct.toniques[0]?.tonique ?? 'Do') + 60) : 60
     const segments  = segmenter(serieCalc, diapason, { silenceDurationMs, noteJumpCents })
-    const notesAv   = calculerEcarts(segments, referentiel, tonikMidi, diapason)
-    const courbeB   = courbebrute(serieCalc, referentiel, tonikMidi, diapason)
+    const notesAv   = calculerEcarts(segments, referentiel, tonikMidi, diapason, userTemperament)
+    const courbeB   = courbebrute(serieCalc, referentiel, tonikMidi, diapason, userTemperament)
 
     audioBufferRef.current = audioBuffer
     serieRef.current = serieCalc
@@ -501,7 +529,7 @@ export default function AccordeurPage() {
         if (now - lastUpdate < 100) return
         lastUpdate = now
         analyser.getFloatTimeDomainData(buf)
-        const { diapason: d, referentiel: r, clarityThreshold: ct, gateLevel: gl, tonikMidi, transpoOffset: tOff, enharmonicScale: scale } = liveParamsRef.current
+        const { diapason: d, referentiel: r, clarityThreshold: ct, gateLevel: gl, tonikMidi, transpoOffset: tOff, enharmonicScale: scale, userTemperament: uTemp } = liveParamsRef.current
         const rms = frameRMS(buf)
         if (rms < gl) return
         const emp = preEmphasis(buf)
@@ -514,9 +542,11 @@ export default function AccordeurPage() {
         const pc          = ((midiDisplay % 12) + 12) % 12
         const octave      = Math.floor(midiDisplay / 12) - 1
         const nom         = scale?.[pc] ?? midiToNoteName(midi).name
-        const muCents = (r === '5-limite' && tonikMidi !== null)
+        const muCents = tonikMidi !== null && r === '5-limite'
           ? centsCinqLimite(hz, tonikMidi, d)
-          : centsTempere(hz, d)
+          : tonikMidi !== null && r === 'utilisateur'
+            ? centsUtilisateur(hz, tonikMidi, d, uTemp)
+            : centsTempere(hz, d)
         liveHzRef.current = hz
         setLiveNote({ nom, octave, muCents })
       }
@@ -564,8 +594,8 @@ export default function AccordeurPage() {
       const tonikMidi = struct ? (noteNameToPC(struct.toniques[0]?.tonique ?? 'Do') + 60) : 60
       const serieCalc = analyserBuffer(audioBuffer, { clarityThreshold, rmsGate: gateLevel })
       const segments  = segmenter(serieCalc, diapason, { silenceDurationMs, noteJumpCents })
-      const notesAv   = calculerEcarts(segments, referentiel, tonikMidi, diapason)
-      const courbeB   = courbebrute(serieCalc, referentiel, tonikMidi, diapason)
+      const notesAv   = calculerEcarts(segments, referentiel, tonikMidi, diapason, userTemperament)
+      const courbeB   = courbebrute(serieCalc, referentiel, tonikMidi, diapason, userTemperament)
 
       audioBufferRef.current = audioBuffer
       serieRef.current = serieCalc
@@ -680,50 +710,291 @@ export default function AccordeurPage() {
               </svg>
             </Link>
           </div>
-          <Btn variant="ghost" onClick={() => setShowSessions(v => !v)}>
-            {showSessions ? 'Fermer suivi' : 'Suivi ▾'}
-          </Btn>
+          <button
+            onClick={() => setShowReglages(v => !v)}
+            title="Réglages"
+            className="flex items-center justify-center rounded-lg border border-app bg-surface cursor-pointer transition-opacity"
+            style={{ width: 32, height: 32, color: 'var(--text-muted)', background: showReglages ? 'var(--surface-2)' : undefined }}
+          >
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="3"/>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+            </svg>
+          </button>
         </div>
 
-        {/* ── Tableau sessions ── */}
-        {showSessions && (
-          <div className="bg-surface border border-app rounded-xl p-4 mb-5">
-            <div className="font-bold text-sm text-app mb-3">Suivi des sessions</div>
-            {sessions.length === 0
-              ? <p className="text-app-muted text-xs">Aucune session sauvegardée.</p>
-              : (
-                <div className="overflow-x-auto">
-                  <table className="w-full border-collapse text-xs">
-                    <thead>
-                      <tr className="text-app-muted border-b border-app">
-                        {['Date', 'Structure', 'Notes', 'Qualité', 'Réf.', 'Seuil', ''].map(h => (
-                          <th key={h} className="px-1.5 py-1 text-left font-semibold">{h}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {[...sessions].reverse().map(s => (
-                        <tr key={s.id} className="border-b border-app">
-                          <td className="px-1.5 py-1.5 text-app-muted">{new Date(s.date).toLocaleDateString('fr')}</td>
-                          <td className="px-1.5 py-1.5 text-app">{s.structureNom}</td>
-                          <td className="px-1.5 py-1.5 text-success">{s.scoreNotes}</td>
-                          <td className="px-1.5 py-1.5 text-pitch">{s.scoreQualite}%</td>
-                          <td className="px-1.5 py-1.5 text-app-muted">{s.referentiel}</td>
-                          <td className="px-1.5 py-1.5 text-app-muted">±{s.seuilCents}¢</td>
-                          <td className="px-1.5 py-1.5">
-                            <button
-                              onClick={() => { supprimerSession(s.id); setSessions(lireSessions()) }}
-                              className="bg-transparent border-none text-red-400 cursor-pointer text-sm"
-                              style={{ minHeight: 'auto' }}
-                            >×</button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+        {/* ── Drawer Réglages (overlay) ── */}
+        {showReglages && (
+          <>
+            <div
+              onClick={() => setShowReglages(false)}
+              style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 40 }}
+            />
+            <div style={{
+              position: 'fixed', top: 0, right: 0, bottom: 0, zIndex: 50,
+              width: 'min(420px, 94vw)',
+              background: 'var(--bg)', borderLeft: '1px solid var(--border-c)',
+              overflowY: 'auto', padding: '20px 16px',
+            }}>
+              {/* Titre + fermer */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                <span style={{ fontWeight: 700, fontSize: 16, color: 'var(--text)' }}>Réglages</span>
+                <button
+                  onClick={() => setShowReglages(false)}
+                  className="bg-transparent border-none cursor-pointer text-app-muted text-xl"
+                  style={{ lineHeight: 1 }}
+                >✕</button>
+              </div>
+
+              {/* ── Suivi sessions ── */}
+              <details open className="mb-4">
+                <summary className="cursor-pointer text-xs font-semibold text-app-muted mb-2 list-none flex items-center gap-1">
+                  Suivi des sessions
+                </summary>
+                <div className="mt-2">
+                  {sessions.length === 0
+                    ? <p className="text-app-muted text-xs">Aucune session sauvegardée.</p>
+                    : (
+                      <div className="overflow-x-auto">
+                        <table className="w-full border-collapse text-xs">
+                          <thead>
+                            <tr className="text-app-muted border-b border-app">
+                              {['Date', 'Structure', 'Notes', 'Qualité', 'Réf.', 'Seuil', ''].map(h => (
+                                <th key={h} className="px-1 py-1 text-left font-semibold">{h}</th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {[...sessions].reverse().map(s => (
+                              <tr key={s.id} className="border-b border-app">
+                                <td className="px-1 py-1.5 text-app-muted">{new Date(s.date).toLocaleDateString('fr')}</td>
+                                <td className="px-1 py-1.5 text-app">{s.structureNom}</td>
+                                <td className="px-1 py-1.5 text-success">{s.scoreNotes}</td>
+                                <td className="px-1 py-1.5 text-pitch">{s.scoreQualite}%</td>
+                                <td className="px-1 py-1.5 text-app-muted">{s.referentiel}</td>
+                                <td className="px-1 py-1.5 text-app-muted">±{s.seuilCents}¢</td>
+                                <td className="px-1 py-1.5">
+                                  <button onClick={() => { supprimerSession(s.id); setSessions(lireSessions()) }}
+                                    className="bg-transparent border-none text-red-400 cursor-pointer text-sm" style={{ minHeight: 'auto' }}>×</button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
                 </div>
-              )}
-          </div>
+              </details>
+
+              <hr style={{ border: 'none', borderTop: '1px solid var(--border-c)', margin: '16px 0' }} />
+
+              {/* ── Réglages accord ── */}
+              <details className="mb-4">
+                <summary className="cursor-pointer text-xs font-semibold text-app-muted list-none mb-2">Réglages accord</summary>
+                <div className="mt-2">
+                  <div className="flex gap-2.5 items-end">
+                    <label className="text-xs text-app-muted flex-none">
+                      Diapason
+                      <div className="flex items-center gap-1 mt-1">
+                        <input type="number" min="400" max="480" step="0.1" value={diapason}
+                          onChange={e => { const v = parseFloat(e.target.value); if (!isNaN(v)) setDiapason(v) }}
+                          className="w-16 bg-app text-app border border-app rounded-md px-2 py-1.5 text-sm font-bold" />
+                        <span className="text-app-muted text-xs">Hz</span>
+                      </div>
+                    </label>
+                    <label className="text-xs text-app-muted flex-1">
+                      Transposition
+                      <select value={transpoKey} onChange={e => setTranspoKey(e.target.value)}
+                        className="block mt-1 w-full bg-app text-app border border-app rounded-md px-2 py-1.5 text-xs">
+                        {Object.entries(TRANSPOSITIONS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+                      </select>
+                    </label>
+                    <label className="text-xs text-app-muted flex-none">
+                      Seuil justesse
+                      <div className="flex items-center gap-1 mt-1">
+                        <input type="number" min="1" max="50" step="1" value={seuil}
+                          onChange={e => { const v = parseInt(e.target.value); if (!isNaN(v)) setSeuil(v) }}
+                          className="w-12 bg-app text-app border border-app rounded-md px-2 py-1.5 text-sm font-bold" />
+                        <span className="text-app-muted text-xs">¢</span>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+              </details>
+
+              {/* ── Réglages segmentation ── */}
+              <details className="mb-4">
+                <summary className="cursor-pointer text-xs font-semibold text-app-muted list-none mb-2">Réglages segmentation</summary>
+                <div className="mt-2">
+                  <div className="flex gap-2.5 items-end mb-3">
+                    {[
+                      { label: 'Silence', val: silenceDurationMs, set: setSilenceDurationMs, min: 20, max: 300, step: 5, unit: 'ms', type: 'int' },
+                      { label: 'Saut note', val: noteJumpCents, set: setNoteJumpCents, min: 20, max: 200, step: 5, unit: '¢', type: 'int' },
+                      { label: 'Gate RMS', val: gateLevel, set: (v) => { setGateLevel(v); gateLevelRef.current = v }, min: 0, max: 0.15, step: 0.005, unit: '', type: 'float' },
+                    ].map(({ label, val, set, min, max, step, unit, type }) => (
+                      <label key={label} className="text-xs text-app-muted flex-1">
+                        {label}
+                        <div className="flex items-center gap-1 mt-1">
+                          <input type="number" min={min} max={max} step={step} value={val}
+                            onChange={e => { const v = type === 'int' ? parseInt(e.target.value) : parseFloat(e.target.value); if (!isNaN(v)) set(v) }}
+                            className="w-full bg-app text-app border border-app rounded-md px-2 py-1.5 text-sm font-bold" />
+                          {unit && <span className="text-app-muted text-xs whitespace-nowrap">{unit}</span>}
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                  <label className="text-xs text-app-muted">
+                    Seuil clarté
+                    <div className="flex items-center gap-2 mt-1">
+                      <input type="range" min="0.5" max="1.0" step="0.01" value={clarityThreshold}
+                        onChange={e => setClarityThreshold(Number(e.target.value))}
+                        className="flex-1" style={{ accentColor: '#FF8B3D' }} />
+                      <span className="text-app font-bold min-w-9">{clarityThreshold.toFixed(2)}</span>
+                    </div>
+                    <div className="text-app-muted text-[10px] mt-0.5">Haut = moins de faux positifs</div>
+                  </label>
+                  {phase === 'resultats' && (
+                    <div className="mt-2 text-[10px] text-app-muted">Modification active le bouton ↻ Recalculer sur la portée.</div>
+                  )}
+                </div>
+              </details>
+
+              <hr style={{ border: 'none', borderTop: '1px solid var(--border-c)', margin: '16px 0' }} />
+
+              {/* ── Tempérament utilisateur ── */}
+              <div style={{ marginBottom: 8 }}>
+                <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--text)', marginBottom: 12 }}>Tempérament</div>
+
+                {/* Préréglages */}
+                <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
+                  <select
+                    onChange={e => {
+                      const v = e.target.value
+                      if (v === 'tempere') setUserTemperament(TEMPERAMENT_TEMPERE.slice())
+                      else if (v === 'harmonique') setUserTemperament([...HARMONIQUE_OFFSETS])
+                      else {
+                        const p = userPresets.find(x => x.id === v)
+                        if (p) setUserTemperament([...p.offsets])
+                      }
+                    }}
+                    defaultValue=""
+                    className="flex-1 bg-app text-app border border-app rounded-md px-2 py-1.5 text-xs"
+                  >
+                    <option value="" disabled>Charger un préréglage…</option>
+                    <option value="tempere">Tempéré égal</option>
+                    <option value="harmonique">Harmonique (5-limite)</option>
+                    {userPresets.length > 0 && <option disabled>──────────</option>}
+                    {userPresets.map(p => <option key={p.id} value={p.id}>{p.nom}</option>)}
+                  </select>
+                </div>
+
+                {/* 12 sliders */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 12px', marginBottom: 14 }}>
+                  {INTERVAL_NAMES.map((name, i) => (
+                    <label key={i} style={{ fontSize: 10, color: 'var(--text-muted)' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
+                        <span>{name}</span>
+                        <span style={{ fontWeight: 700, color: userTemperament[i] === 0 ? 'var(--text-muted)' : '#FF8B3D', minWidth: 36, textAlign: 'right' }}>
+                          {userTemperament[i] > 0 ? '+' : ''}{userTemperament[i].toFixed(1)}¢
+                        </span>
+                      </div>
+                      <input
+                        type="range" min="-50" max="50" step="0.5"
+                        value={userTemperament[i]}
+                        onChange={e => {
+                          const v = parseFloat(e.target.value)
+                          setUserTemperament(prev => { const next = [...prev]; next[i] = v; return next })
+                        }}
+                        style={{ width: '100%', accentColor: '#FF8B3D' }}
+                      />
+                    </label>
+                  ))}
+                </div>
+
+                {/* Reset */}
+                <button
+                  onClick={() => setUserTemperament(TEMPERAMENT_TEMPERE.slice())}
+                  className="text-xs text-app-muted bg-transparent border border-app rounded-md px-3 py-1.5 cursor-pointer mb-3"
+                >Réinitialiser à 0</button>
+
+                {/* Sauvegarder preset */}
+                <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
+                  <input
+                    value={newPresetNom}
+                    onChange={e => setNewPresetNom(e.target.value)}
+                    placeholder="Nom du tempérament…"
+                    className="flex-1 bg-app text-app border border-app rounded-md px-2 py-1.5 text-xs"
+                  />
+                  <button
+                    disabled={!newPresetNom.trim()}
+                    onClick={() => {
+                      const p = { id: `tp-${Date.now()}`, nom: newPresetNom.trim(), offsets: [...userTemperament] }
+                      setUserPresets(prev => [...prev, p])
+                      setNewPresetNom('')
+                    }}
+                    className="bg-app text-app border border-app rounded-md px-3 py-1.5 text-xs cursor-pointer font-bold"
+                    style={{ opacity: newPresetNom.trim() ? 1 : 0.4 }}
+                  >Sauvegarder</button>
+                </div>
+
+                {/* Gérer presets */}
+                {userPresets.length > 0 && (
+                  <div style={{ marginBottom: 10 }}>
+                    {userPresets.map(p => (
+                      <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4, fontSize: 11 }}>
+                        <span style={{ flex: 1, color: 'var(--text)' }}>{p.nom}</span>
+                        <button
+                          onClick={() => setUserTemperament([...p.offsets])}
+                          className="bg-transparent border border-app rounded px-2 py-0.5 text-[10px] cursor-pointer text-app-muted"
+                        >Charger</button>
+                        <button
+                          onClick={() => setUserPresets(prev => prev.filter(x => x.id !== p.id))}
+                          className="bg-transparent border-none text-red-400 cursor-pointer text-sm"
+                          style={{ minHeight: 'auto' }}
+                        >×</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Export / Import */}
+                <div style={{ borderTop: '1px solid var(--border-c)', paddingTop: 10, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <button
+                    onClick={() => {
+                      const encoded = btoa(JSON.stringify(userTemperament))
+                      const url = `${window.location.origin}/accordeur?t=${encoded}`
+                      navigator.clipboard.writeText(url)
+                    }}
+                    className="text-xs bg-app border border-app rounded-md px-3 py-1.5 cursor-pointer text-app-muted"
+                  >Copier le lien de partage</button>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <input
+                      value={importStr}
+                      onChange={e => setImportStr(e.target.value)}
+                      placeholder="Coller un lien ou code base64…"
+                      className="flex-1 bg-app text-app border border-app rounded-md px-2 py-1.5 text-xs"
+                    />
+                    <button
+                      onClick={() => {
+                        try {
+                          const raw = importStr.includes('?t=') ? importStr.split('?t=')[1].split('&')[0] : importStr.trim()
+                          const offsets = JSON.parse(atob(raw))
+                          if (Array.isArray(offsets) && offsets.length === 12) {
+                            setUserTemperament(offsets)
+                            setImportStr('')
+                          }
+                        } catch {}
+                      }}
+                      disabled={!importStr.trim()}
+                      className="bg-app border border-app rounded-md px-3 py-1.5 text-xs cursor-pointer text-app-muted font-bold"
+                      style={{ opacity: importStr.trim() ? 1 : 0.4 }}
+                    >Importer</button>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </>
         )}
 
         {/* ── Zone enregistrement / Live ── */}
@@ -1071,7 +1342,7 @@ export default function AccordeurPage() {
                   background: referentiel === r ? '#FF8B3D' : 'var(--surface-2)',
                   color:      referentiel === r ? '#fff' : 'var(--text-muted)',
                 }}
-              >{r === 'tempere' ? 'Tempéré' : 'Harmonique'}</button>
+              >{r === 'tempere' ? 'Tempéré' : r === '5-limite' ? 'Harmonique' : 'Utilisateur'}</button>
             ))}
           </div>
 
@@ -1135,95 +1406,6 @@ export default function AccordeurPage() {
             </div>
           )}
         </div>
-
-        {/* ── Réglages accord ── */}
-        <details className="mb-4">
-          <summary className="bg-surface border border-app rounded-xl px-3.5 py-2.5 cursor-pointer text-xs text-app-muted font-semibold list-none">
-            Réglages accord
-          </summary>
-          <div className="bg-surface border border-app border-t-0 rounded-b-xl px-3.5 pb-3.5 pt-3">
-            <div className="flex gap-2.5 items-end">
-              <label className="text-xs text-app-muted flex-none">
-                Diapason
-                <div className="flex items-center gap-1 mt-1">
-                  <input
-                    type="number" min="400" max="480" step="0.1" value={diapason}
-                    onChange={e => { const v = parseFloat(e.target.value); if (!isNaN(v)) setDiapason(v) }}
-                    className="w-16 bg-app text-app border border-app rounded-md px-2 py-1.5 text-sm font-bold"
-                  />
-                  <span className="text-app-muted text-xs">Hz</span>
-                </div>
-              </label>
-              <label className="text-xs text-app-muted flex-1">
-                Transposition
-                <select
-                  value={transpoKey}
-                  onChange={e => setTranspoKey(e.target.value)}
-                  className="block mt-1 w-full bg-app text-app border border-app rounded-md px-2 py-1.5 text-xs"
-                >
-                  {Object.entries(TRANSPOSITIONS).map(([k, v]) => (
-                    <option key={k} value={k}>{v.label}</option>
-                  ))}
-                </select>
-              </label>
-              <label className="text-xs text-app-muted flex-none">
-                Seuil justesse
-                <div className="flex items-center gap-1 mt-1">
-                  <input
-                    type="number" min="1" max="50" step="1" value={seuil}
-                    onChange={e => { const v = parseInt(e.target.value); if (!isNaN(v)) setSeuil(v) }}
-                    className="w-12 bg-app text-app border border-app rounded-md px-2 py-1.5 text-sm font-bold"
-                  />
-                  <span className="text-app-muted text-xs">¢</span>
-                </div>
-              </label>
-            </div>
-          </div>
-        </details>
-
-        {/* ── Réglages segmentation ── */}
-        <details className="mb-4">
-          <summary className="bg-surface border border-app rounded-xl px-3.5 py-2.5 cursor-pointer text-xs text-app-muted font-semibold list-none">
-            Réglages segmentation
-          </summary>
-          <div className="bg-surface border border-app border-t-0 rounded-b-xl px-3.5 pb-3.5 pt-3">
-            <div className="flex gap-2.5 items-end mb-3">
-              {[
-                { label: 'Silence', key: 'silenceDurationMs', val: silenceDurationMs, set: setSilenceDurationMs, min: 20, max: 300, step: 5, unit: 'ms', type: 'int' },
-                { label: 'Saut note', key: 'noteJumpCents', val: noteJumpCents, set: setNoteJumpCents, min: 20, max: 200, step: 5, unit: '¢', type: 'int' },
-                { label: 'Gate RMS', key: 'gateLevel', val: gateLevel, set: (v) => { setGateLevel(v); gateLevelRef.current = v }, min: 0, max: 0.15, step: 0.005, unit: '', type: 'float' },
-              ].map(({ label, val, set, min, max, step, unit, type }) => (
-                <label key={label} className="text-xs text-app-muted flex-1">
-                  {label}
-                  <div className="flex items-center gap-1 mt-1">
-                    <input
-                      type="number" min={min} max={max} step={step} value={val}
-                      onChange={e => { const v = type === 'int' ? parseInt(e.target.value) : parseFloat(e.target.value); if (!isNaN(v)) set(v) }}
-                      className="w-full bg-app text-app border border-app rounded-md px-2 py-1.5 text-sm font-bold"
-                    />
-                    {unit && <span className="text-app-muted text-xs whitespace-nowrap">{unit}</span>}
-                  </div>
-                </label>
-              ))}
-            </div>
-            <label className="text-xs text-app-muted">
-              Seuil clarté
-              <div className="flex items-center gap-2 mt-1">
-                <input
-                  type="range" min="0.5" max="1.0" step="0.01" value={clarityThreshold}
-                  onChange={e => setClarityThreshold(Number(e.target.value))}
-                  className="flex-1"
-                  style={{ accentColor: '#FF8B3D' }}
-                />
-                <span className="text-app font-bold min-w-9">{clarityThreshold.toFixed(2)}</span>
-              </div>
-              <div className="text-app-muted text-[10px] mt-0.5">Haut = moins de faux positifs</div>
-            </label>
-            {phase === 'resultats' && (
-              <div className="mt-2 text-[10px] text-app-muted">Modification active le bouton ↻ Recalculer sur la portée.</div>
-            )}
-          </div>
-        </details>
 
         {/* ── Outils pédagogiques ── */}
         {/* Jeu de gamme — masqué pour le moment

@@ -4,10 +4,19 @@ import { PitchDetector } from 'pitchy'
 import {
   ALL_ROOTS, CHORD_TYPES, buildChordMidis,
   buildEnharmonicScale, noteNameToPC,
-  midiToHz, JUST_RATIOS_CENTS,
+  midiToHz, JUST_RATIOS_CENTS, HARMONIQUE_OFFSETS,
   centsTempere, hzToMidi, frameRMS, preEmphasis, HZ_MIN, HZ_MAX,
 } from './accordeurUtils'
 import { INSTRUMENTS, isOscillatorInstrument, loadInstrumentSamples, playChord, playChordOscillator } from './sampleEngine'
+
+function computeUserOffsets(chordMidis, rootName, userTemperament) {
+  const rootPC = noteNameToPC(rootName)
+  return chordMidis.map(midi => {
+    const interval = ((midi - rootPC) % 12 + 12) % 12
+    if (interval === 0) return 0
+    return parseFloat((userTemperament[interval - 1] ?? 0).toFixed(2))
+  })
+}
 
 function computeHarmonicOffsets(chordType, chordMidis, rootName) {
   const rootPC = noteNameToPC(rootName)
@@ -106,9 +115,14 @@ export default function GenerateurAccordPage() {
   const [liveCents,  setLiveCents]  = useState(null)
   const [liveError,  setLiveError]  = useState(false)
 
-  // Two independent offset memories
+  // Three independent offset memories
   const [tempereOffsets,    setTempereOffsets]    = useState([0, 0, 0])
   const [harmoniqueOffsets, setHarmoniqueOffsets] = useState([0, 0, 0])
+  const [utilisateurOffsets, setUtilisateurOffsets] = useState([0, 0, 0])
+
+  const globalUserTemperament = (() => {
+    try { const v = JSON.parse(localStorage.getItem('acc_temperament_user')); return Array.isArray(v) && v.length === 12 ? v : Array(12).fill(0) } catch { return Array(12).fill(0) }
+  })()
 
   const [instrument,    setInstrument]    = useState(() => localStorage.getItem('accordeur_instrument_preference') || 'flute')
   const [sampleMap,     setSampleMap]     = useState(null)
@@ -134,10 +148,11 @@ export default function GenerateurAccordPage() {
   const n            = chordMidis.length
 
   // Current offsets depending on mode
-  const rawTempere    = tempereOffsets.length === n    ? tempereOffsets    : Array(n).fill(0)
-  const rawHarmonique = harmoniqueOffsets.length === n ? harmoniqueOffsets : Array(n).fill(0)
-  const offsets       = mode === 'tempere' ? rawTempere : rawHarmonique
-  const setOffsets    = mode === 'tempere' ? setTempereOffsets : setHarmoniqueOffsets
+  const rawTempere     = tempereOffsets.length    === n ? tempereOffsets    : Array(n).fill(0)
+  const rawHarmonique  = harmoniqueOffsets.length === n ? harmoniqueOffsets : Array(n).fill(0)
+  const rawUtilisateur = utilisateurOffsets.length === n ? utilisateurOffsets : Array(n).fill(0)
+  const offsets    = mode === 'tempere' ? rawTempere : mode === 'harmonique' ? rawHarmonique : rawUtilisateur
+  const setOffsets = mode === 'tempere' ? setTempereOffsets : mode === 'harmonique' ? setHarmoniqueOffsets : setUtilisateurOffsets
 
   const enharmoScale = buildEnharmonicScale(root)
   const noteNames = chordMidis.map(midi => ({
@@ -150,6 +165,7 @@ export default function GenerateurAccordPage() {
     const midis = buildChordMidis(root, chordType, inversion, baseOctave)
     setTempereOffsets(Array(midis.length).fill(0))
     setHarmoniqueOffsets(computeHarmonicOffsets(chordType, midis, root))
+    setUtilisateurOffsets(computeUserOffsets(midis, root, globalUserTemperament))
     setRemovedIdx(null)
   }, [root, chordType, inversion, baseOctave]) // eslint-disable-line
 
@@ -368,7 +384,8 @@ export default function GenerateurAccordPage() {
 
   const handleReset = () => {
     if (mode === 'tempere') setTempereOffsets(Array(n).fill(0))
-    else setHarmoniqueOffsets(computeHarmonicOffsets(chordType, chordMidis, root))
+    else if (mode === 'harmonique') setHarmoniqueOffsets(computeHarmonicOffsets(chordType, chordMidis, root))
+    else setUtilisateurOffsets(computeUserOffsets(chordMidis, root, globalUserTemperament))
   }
 
   const selectCls = "bg-(--input-bg) text-app border border-app rounded-lg px-2.5 py-1.5 text-sm cursor-pointer"
@@ -453,8 +470,11 @@ export default function GenerateurAccordPage() {
         <div className="bg-surface border border-app rounded-xl p-4 mb-3">
           <div className="text-xs text-app-muted font-semibold mb-2">Tempérament</div>
           <div className="flex gap-1.5">
-            {[['tempere', 'Tempéré'], ['harmonique', 'Harmonique (5-limite)']].map(([k, label]) => (
-              <button key={k} onClick={() => setMode(k)}
+            {[['tempere', 'Tempéré'], ['harmonique', 'Harmonique'], ['utilisateur', 'Utilisateur']].map(([k, label]) => (
+              <button key={k} onClick={() => {
+                if (k === 'utilisateur') setUtilisateurOffsets(computeUserOffsets(chordMidis, root, globalUserTemperament))
+                setMode(k)
+              }}
                 className="flex-1 py-2 rounded-lg border-none font-bold text-sm cursor-pointer"
                 style={{
                   background: mode === k ? '#FF8B3D' : 'var(--surface-2)',
@@ -466,6 +486,11 @@ export default function GenerateurAccordPage() {
           {mode === 'harmonique' && (
             <div className="text-[11px] text-app-muted mt-2 leading-snug">
               Ratios 5-limite. Dom7 : septième 7:4 (−31.2¢). Glisser les knobs pour affiner.
+            </div>
+          )}
+          {mode === 'utilisateur' && (
+            <div className="text-[11px] text-app-muted mt-2 leading-snug">
+              Basé sur votre tempérament (réglages accordeur). Glisser les knobs pour affiner.
             </div>
           )}
         </div>

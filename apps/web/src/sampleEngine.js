@@ -45,6 +45,24 @@ function findPosiZeroCross(data, target, range = 2000) {
   return target
 }
 
+// Crossfade in-place : fond les N derniers samples avant loopEnd
+// dans les N premiers depuis loopStart → saut inaudible
+function applyLoopCrossfade(buffer, loopStartSample, loopEndSample, xfMs = 20) {
+  const sr        = buffer.sampleRate
+  const xfSamples = Math.min(Math.round(xfMs / 1000 * sr), loopEndSample - loopStartSample)
+  for (let ch = 0; ch < buffer.numberOfChannels; ch++) {
+    const data = buffer.getChannelData(ch)
+    for (let i = 0; i < xfSamples; i++) {
+      const alpha    = i / xfSamples
+      const endIdx   = loopEndSample - xfSamples + i
+      const startIdx = loopStartSample + i
+      if (endIdx >= 0 && endIdx < data.length && startIdx < data.length) {
+        data[endIdx] = data[endIdx] * (1 - alpha) + data[startIdx] * alpha
+      }
+    }
+  }
+}
+
 function findLoopPoints(buffer, onsetMs) {
   const sr   = buffer.sampleRate
   const data = buffer.getChannelData(0)
@@ -56,12 +74,12 @@ function findLoopPoints(buffer, onsetMs) {
   const rawEnd   = rawStart + Math.floor(0.4 * sr)
 
   if (rawEnd >= data.length) {
-    // Buffer trop court → boucle simple sur la fin
     return { loopStart: sustainStart / sr, loopEnd: buffer.duration }
   }
 
   const loopStartSample = findPosiZeroCross(data, rawStart)
   const loopEndSample   = findPosiZeroCross(data, rawEnd)
+  applyLoopCrossfade(buffer, loopStartSample, loopEndSample)
   return {
     loopStart: loopStartSample / sr,
     loopEnd:   loopEndSample   / sr,
