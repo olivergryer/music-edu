@@ -1309,7 +1309,7 @@
   },
   {
     "id": "TGM_Sol_alts",
-    "niveau": "C1/2",
+    "niveau": "C1/4",
     "categorie": "tonalites_alterations",
     "type": "qcm",
     "question": "De quelle(s) altération(s) la gamme de Sol majeur est-elle constituée ?",
@@ -1320,7 +1320,7 @@
   },
   {
     "id": "TGM_Ré_alts",
-    "niveau": "C1/2",
+    "niveau": "C2/1",
     "categorie": "tonalites_alterations",
     "type": "qcm",
     "question": "De quelle(s) altération(s) la gamme de Ré majeur est-elle constituée ?",
@@ -1331,7 +1331,7 @@
   },
   {
     "id": "TGM_La_alts",
-    "niveau": "C1/3",
+    "niveau": "C2/3",
     "categorie": "tonalites_alterations",
     "type": "qcm",
     "question": "De quelle(s) altération(s) la gamme de La majeur est-elle constituée ?",
@@ -1342,7 +1342,7 @@
   },
   {
     "id": "TGM_Mi_alts",
-    "niveau": "C1/3",
+    "niveau": "C2/4",
     "categorie": "tonalites_alterations",
     "type": "qcm",
     "question": "De quelle(s) altération(s) la gamme de Mi majeur est-elle constituée ?",
@@ -1353,7 +1353,7 @@
   },
   {
     "id": "TGM_Si_alts",
-    "niveau": "C2/1",
+    "niveau": "C3",
     "categorie": "tonalites_alterations",
     "type": "qcm",
     "question": "De quelle(s) altération(s) la gamme de Si majeur est-elle constituée ?",
@@ -1364,7 +1364,7 @@
   },
   {
     "id": "TGM_Fas_alts",
-    "niveau": "C2/2",
+    "niveau": "C3",
     "categorie": "tonalites_alterations",
     "type": "qcm",
     "question": "De quelle(s) altération(s) la gamme de Fa# majeur est-elle constituée ?",
@@ -1375,7 +1375,7 @@
   },
   {
     "id": "TGM_Dos_alts",
-    "niveau": "C2/3",
+    "niveau": "C3",
     "categorie": "tonalites_alterations",
     "type": "qcm",
     "question": "De quelle(s) altération(s) la gamme de Do# majeur est-elle constituée ?",
@@ -1386,7 +1386,7 @@
   },
   {
     "id": "TGM_Fa_alts",
-    "niveau": "C1/2",
+    "niveau": "C1/4",
     "categorie": "tonalites_alterations",
     "type": "qcm",
     "question": "De quelle(s) altération(s) la gamme de Fa majeur est-elle constituée ?",
@@ -1397,7 +1397,7 @@
   },
   {
     "id": "TGM_Sib_alts",
-    "niveau": "C1/2",
+    "niveau": "C2/1",
     "categorie": "tonalites_alterations",
     "type": "qcm",
     "question": "De quelle(s) altération(s) la gamme de Sib majeur est-elle constituée ?",
@@ -1408,7 +1408,7 @@
   },
   {
     "id": "TGM_Mib_alts",
-    "niveau": "C1/3",
+    "niveau": "C2/3",
     "categorie": "tonalites_alterations",
     "type": "qcm",
     "question": "De quelle(s) altération(s) la gamme de Mib majeur est-elle constituée ?",
@@ -1419,7 +1419,7 @@
   },
   {
     "id": "TGM_Lab_alts",
-    "niveau": "C1/3",
+    "niveau": "C2/4",
     "categorie": "tonalites_alterations",
     "type": "qcm",
     "question": "De quelle(s) altération(s) la gamme de Lab majeur est-elle constituée ?",
@@ -1430,7 +1430,7 @@
   },
   {
     "id": "TGM_Réb_alts",
-    "niveau": "C2/1",
+    "niveau": "C3",
     "categorie": "tonalites_alterations",
     "type": "qcm",
     "question": "De quelle(s) altération(s) la gamme de Réb majeur est-elle constituée ?",
@@ -1441,7 +1441,7 @@
   },
   {
     "id": "TGM_Solb_alts",
-    "niveau": "C2/2",
+    "niveau": "C3",
     "categorie": "tonalites_alterations",
     "type": "qcm",
     "question": "De quelle(s) altération(s) la gamme de Solb majeur est-elle constituée ?",
@@ -1452,7 +1452,7 @@
   },
   {
     "id": "TGM_Dob_alts",
-    "niveau": "C2/3",
+    "niveau": "C3",
     "categorie": "tonalites_alterations",
     "type": "qcm",
     "question": "De quelle(s) altération(s) la gamme de Dob majeur est-elle constituée ?",
@@ -1474,7 +1474,7 @@
   },
   {
     "id": "TGM_1d_which",
-    "niveau": "C1/2",
+    "niveau": "C1/4",
     "categorie": "tonalites_alterations",
     "type": "qcm",
     "question": "Quelle tonalité majeure a 1 dièse à l'armure ?",
@@ -1485,7 +1485,7 @@
   },
   {
     "id": "TGM_2d_which",
-    "niveau": "C1/2",
+    "niveau": "C2/1",
     "categorie": "tonalites_alterations",
     "type": "qcm",
     "question": "Quelle tonalité majeure a 2 dièses à l'armure ?",
@@ -1496,7 +1496,7 @@
   },
   {
     "id": "TGM_3d_which",
-    "niveau": "C1/3",
+    "niveau": "C2/3",
     "categorie": "tonalites_alterations",
     "type": "qcm",
     "question": "Quelle tonalité majeure a 3 dièses à l'armure ?",
@@ -1507,7 +1507,7 @@
   },
   {
     "id": "TGM_4d_which",
-    "niveau": "C1/3",
+    "niveau": "C2/4",
     "categorie": "tonalites_alterations",
     "type": "qcm",
     "question": "Quelle tonalité majeure a 4 dièses à l'armure ?",
@@ -1518,7 +1518,7 @@
   },
   {
     "id": "TGM_5d_which",
-    "niveau": "C2/1",
+    "niveau": "C3",
     "categorie": "tonalites_alterations",
     "type": "qcm",
     "question": "Quelle tonalité majeure a 5 dièses à l'armure ?",
@@ -1529,7 +1529,7 @@
   },
   {
     "id": "TGM_6d_which",
-    "niveau": "C2/2",
+    "niveau": "C3",
     "categorie": "tonalites_alterations",
     "type": "qcm",
     "question": "Quelle tonalité majeure a 6 dièses à l'armure ?",
@@ -1540,7 +1540,7 @@
   },
   {
     "id": "TGM_7d_which",
-    "niveau": "C2/3",
+    "niveau": "C3",
     "categorie": "tonalites_alterations",
     "type": "qcm",
     "question": "Quelle tonalité majeure a 7 dièses à l'armure ?",
@@ -1551,7 +1551,7 @@
   },
   {
     "id": "TGM_1b_which",
-    "niveau": "C1/2",
+    "niveau": "C1/4",
     "categorie": "tonalites_alterations",
     "type": "qcm",
     "question": "Quelle tonalité majeure a 1 bémol à l'armure ?",
@@ -1562,7 +1562,7 @@
   },
   {
     "id": "TGM_2b_which",
-    "niveau": "C1/2",
+    "niveau": "C2/1",
     "categorie": "tonalites_alterations",
     "type": "qcm",
     "question": "Quelle tonalité majeure a 2 bémols à l'armure ?",
@@ -1573,7 +1573,7 @@
   },
   {
     "id": "TGM_3b_which",
-    "niveau": "C1/3",
+    "niveau": "C2/3",
     "categorie": "tonalites_alterations",
     "type": "qcm",
     "question": "Quelle tonalité majeure a 3 bémols à l'armure ?",
@@ -1584,7 +1584,7 @@
   },
   {
     "id": "TGM_4b_which",
-    "niveau": "C1/3",
+    "niveau": "C2/4",
     "categorie": "tonalites_alterations",
     "type": "qcm",
     "question": "Quelle tonalité majeure a 4 bémols à l'armure ?",
@@ -1595,7 +1595,7 @@
   },
   {
     "id": "TGM_5b_which",
-    "niveau": "C2/1",
+    "niveau": "C3",
     "categorie": "tonalites_alterations",
     "type": "qcm",
     "question": "Quelle tonalité majeure a 5 bémols à l'armure ?",
@@ -1606,7 +1606,7 @@
   },
   {
     "id": "TGM_6b_which",
-    "niveau": "C2/2",
+    "niveau": "C3",
     "categorie": "tonalites_alterations",
     "type": "qcm",
     "question": "Quelle tonalité majeure a 6 bémols à l'armure ?",
@@ -1617,7 +1617,7 @@
   },
   {
     "id": "TGM_7b_which",
-    "niveau": "C2/3",
+    "niveau": "C3",
     "categorie": "tonalites_alterations",
     "type": "qcm",
     "question": "Quelle tonalité majeure a 7 bémols à l'armure ?",
@@ -1639,7 +1639,7 @@
   },
   {
     "id": "TGm_Mi_alts",
-    "niveau": "C1/2",
+    "niveau": "C1/4",
     "categorie": "tonalites_alterations",
     "type": "qcm",
     "question": "De quelle(s) altération(s) la gamme de Mi mineur naturel est-elle constituée ?",
@@ -1650,7 +1650,7 @@
   },
   {
     "id": "TGm_Si_alts",
-    "niveau": "C1/2",
+    "niveau": "C2/1",
     "categorie": "tonalites_alterations",
     "type": "qcm",
     "question": "De quelle(s) altération(s) la gamme de Si mineur naturel est-elle constituée ?",
@@ -1661,7 +1661,7 @@
   },
   {
     "id": "TGm_Fas_alts",
-    "niveau": "C1/3",
+    "niveau": "C2/3",
     "categorie": "tonalites_alterations",
     "type": "qcm",
     "question": "De quelle(s) altération(s) la gamme de Fa# mineur naturel est-elle constituée ?",
@@ -1672,7 +1672,7 @@
   },
   {
     "id": "TGm_Dos_alts",
-    "niveau": "C1/3",
+    "niveau": "C2/4",
     "categorie": "tonalites_alterations",
     "type": "qcm",
     "question": "De quelle(s) altération(s) la gamme de Do# mineur naturel est-elle constituée ?",
@@ -1683,7 +1683,7 @@
   },
   {
     "id": "TGm_Sols_alts",
-    "niveau": "C2/1",
+    "niveau": "C3",
     "categorie": "tonalites_alterations",
     "type": "qcm",
     "question": "De quelle(s) altération(s) la gamme de Sol# mineur naturel est-elle constituée ?",
@@ -1694,7 +1694,7 @@
   },
   {
     "id": "TGm_Rés_alts",
-    "niveau": "C2/2",
+    "niveau": "C3",
     "categorie": "tonalites_alterations",
     "type": "qcm",
     "question": "De quelle(s) altération(s) la gamme de Ré# mineur naturel est-elle constituée ?",
@@ -1705,7 +1705,7 @@
   },
   {
     "id": "TGm_Las_alts",
-    "niveau": "C2/3",
+    "niveau": "C3",
     "categorie": "tonalites_alterations",
     "type": "qcm",
     "question": "De quelle(s) altération(s) la gamme de La# mineur naturel est-elle constituée ?",
@@ -1716,7 +1716,7 @@
   },
   {
     "id": "TGm_Ré_alts",
-    "niveau": "C1/2",
+    "niveau": "C1/4",
     "categorie": "tonalites_alterations",
     "type": "qcm",
     "question": "De quelle(s) altération(s) la gamme de Ré mineur naturel est-elle constituée ?",
@@ -1727,7 +1727,7 @@
   },
   {
     "id": "TGm_Sol_alts",
-    "niveau": "C1/2",
+    "niveau": "C2/1",
     "categorie": "tonalites_alterations",
     "type": "qcm",
     "question": "De quelle(s) altération(s) la gamme de Sol mineur naturel est-elle constituée ?",
@@ -1738,7 +1738,7 @@
   },
   {
     "id": "TGm_Do_alts",
-    "niveau": "C1/3",
+    "niveau": "C2/3",
     "categorie": "tonalites_alterations",
     "type": "qcm",
     "question": "De quelle(s) altération(s) la gamme de Do mineur naturel est-elle constituée ?",
@@ -1749,7 +1749,7 @@
   },
   {
     "id": "TGm_Fa_alts",
-    "niveau": "C1/3",
+    "niveau": "C2/4",
     "categorie": "tonalites_alterations",
     "type": "qcm",
     "question": "De quelle(s) altération(s) la gamme de Fa mineur naturel est-elle constituée ?",
@@ -1760,7 +1760,7 @@
   },
   {
     "id": "TGm_Sib_alts",
-    "niveau": "C2/1",
+    "niveau": "C3",
     "categorie": "tonalites_alterations",
     "type": "qcm",
     "question": "De quelle(s) altération(s) la gamme de Sib mineur naturel est-elle constituée ?",
@@ -1771,7 +1771,7 @@
   },
   {
     "id": "TGm_Mib_alts",
-    "niveau": "C2/2",
+    "niveau": "C3",
     "categorie": "tonalites_alterations",
     "type": "qcm",
     "question": "De quelle(s) altération(s) la gamme de Mib mineur naturel est-elle constituée ?",
@@ -1782,7 +1782,7 @@
   },
   {
     "id": "TGm_Lab_alts",
-    "niveau": "C2/3",
+    "niveau": "C3",
     "categorie": "tonalites_alterations",
     "type": "qcm",
     "question": "De quelle(s) altération(s) la gamme de Lab mineur naturel est-elle constituée ?",
@@ -1804,7 +1804,7 @@
   },
   {
     "id": "TGm_1d_which",
-    "niveau": "C1/2",
+    "niveau": "C1/4",
     "categorie": "tonalites_alterations",
     "type": "qcm",
     "question": "Quelle tonalité mineure a 1 dièse à l'armure ?",
@@ -1815,7 +1815,7 @@
   },
   {
     "id": "TGm_2d_which",
-    "niveau": "C1/2",
+    "niveau": "C2/1",
     "categorie": "tonalites_alterations",
     "type": "qcm",
     "question": "Quelle tonalité mineure a 2 dièses à l'armure ?",
@@ -1826,7 +1826,7 @@
   },
   {
     "id": "TGm_3d_which",
-    "niveau": "C1/3",
+    "niveau": "C2/3",
     "categorie": "tonalites_alterations",
     "type": "qcm",
     "question": "Quelle tonalité mineure a 3 dièses à l'armure ?",
@@ -1837,7 +1837,7 @@
   },
   {
     "id": "TGm_4d_which",
-    "niveau": "C1/3",
+    "niveau": "C2/4",
     "categorie": "tonalites_alterations",
     "type": "qcm",
     "question": "Quelle tonalité mineure a 4 dièses à l'armure ?",
@@ -1848,7 +1848,7 @@
   },
   {
     "id": "TGm_5d_which",
-    "niveau": "C2/1",
+    "niveau": "C3",
     "categorie": "tonalites_alterations",
     "type": "qcm",
     "question": "Quelle tonalité mineure a 5 dièses à l'armure ?",
@@ -1859,7 +1859,7 @@
   },
   {
     "id": "TGm_6d_which",
-    "niveau": "C2/2",
+    "niveau": "C3",
     "categorie": "tonalites_alterations",
     "type": "qcm",
     "question": "Quelle tonalité mineure a 6 dièses à l'armure ?",
@@ -1870,7 +1870,7 @@
   },
   {
     "id": "TGm_7d_which",
-    "niveau": "C2/3",
+    "niveau": "C3",
     "categorie": "tonalites_alterations",
     "type": "qcm",
     "question": "Quelle tonalité mineure a 7 dièses à l'armure ?",
@@ -1881,7 +1881,7 @@
   },
   {
     "id": "TGm_1b_which",
-    "niveau": "C1/2",
+    "niveau": "C1/4",
     "categorie": "tonalites_alterations",
     "type": "qcm",
     "question": "Quelle tonalité mineure a 1 bémol à l'armure ?",
@@ -1892,7 +1892,7 @@
   },
   {
     "id": "TGm_2b_which",
-    "niveau": "C1/2",
+    "niveau": "C2/1",
     "categorie": "tonalites_alterations",
     "type": "qcm",
     "question": "Quelle tonalité mineure a 2 bémols à l'armure ?",
@@ -1903,7 +1903,7 @@
   },
   {
     "id": "TGm_3b_which",
-    "niveau": "C1/3",
+    "niveau": "C2/3",
     "categorie": "tonalites_alterations",
     "type": "qcm",
     "question": "Quelle tonalité mineure a 3 bémols à l'armure ?",
@@ -1914,7 +1914,7 @@
   },
   {
     "id": "TGm_4b_which",
-    "niveau": "C1/3",
+    "niveau": "C2/4",
     "categorie": "tonalites_alterations",
     "type": "qcm",
     "question": "Quelle tonalité mineure a 4 bémols à l'armure ?",
@@ -1925,7 +1925,7 @@
   },
   {
     "id": "TGm_5b_which",
-    "niveau": "C2/1",
+    "niveau": "C3",
     "categorie": "tonalites_alterations",
     "type": "qcm",
     "question": "Quelle tonalité mineure a 5 bémols à l'armure ?",
@@ -1936,7 +1936,7 @@
   },
   {
     "id": "TGm_6b_which",
-    "niveau": "C2/2",
+    "niveau": "C3",
     "categorie": "tonalites_alterations",
     "type": "qcm",
     "question": "Quelle tonalité mineure a 6 bémols à l'armure ?",
@@ -1947,7 +1947,7 @@
   },
   {
     "id": "TGm_7b_which",
-    "niveau": "C2/3",
+    "niveau": "C3",
     "categorie": "tonalites_alterations",
     "type": "qcm",
     "question": "Quelle tonalité mineure a 7 bémols à l'armure ?",
@@ -1970,7 +1970,7 @@
   },
   {
     "id": "TGm_Mi_acc",
-    "niveau": "C1/2",
+    "niveau": "C1/4",
     "categorie": "tonalites_alterations",
     "type": "qcm",
     "question": "Quelle est l'altération accidentelle (sensible) en Mi mineur harmonique ?",
@@ -1982,7 +1982,7 @@
   },
   {
     "id": "TGm_Si_acc",
-    "niveau": "C1/2",
+    "niveau": "C2/1",
     "categorie": "tonalites_alterations",
     "type": "qcm",
     "question": "Quelle est l'altération accidentelle (sensible) en Si mineur harmonique ?",
@@ -1994,7 +1994,7 @@
   },
   {
     "id": "TGm_Fas_acc",
-    "niveau": "C1/3",
+    "niveau": "C2/3",
     "categorie": "tonalites_alterations",
     "type": "qcm",
     "question": "Quelle est l'altération accidentelle (sensible) en Fa# mineur harmonique ?",
@@ -2006,7 +2006,7 @@
   },
   {
     "id": "TGm_Dos_acc",
-    "niveau": "C1/3",
+    "niveau": "C2/4",
     "categorie": "tonalites_alterations",
     "type": "qcm",
     "question": "Quelle est l'altération accidentelle (sensible) en Do# mineur harmonique ?",
@@ -2018,7 +2018,7 @@
   },
   {
     "id": "TGm_Sols_acc",
-    "niveau": "C2/1",
+    "niveau": "C3",
     "categorie": "tonalites_alterations",
     "type": "qcm",
     "question": "Quelle est l'altération accidentelle (sensible) en Sol# mineur harmonique ?",
@@ -2030,7 +2030,7 @@
   },
   {
     "id": "TGm_Rés_acc",
-    "niveau": "C2/2",
+    "niveau": "C3",
     "categorie": "tonalites_alterations",
     "type": "qcm",
     "question": "Quelle est l'altération accidentelle (sensible) en Ré# mineur harmonique ?",
@@ -2042,7 +2042,7 @@
   },
   {
     "id": "TGm_Las_acc",
-    "niveau": "C2/3",
+    "niveau": "C3",
     "categorie": "tonalites_alterations",
     "type": "qcm",
     "question": "Quelle est l'altération accidentelle (sensible) en La# mineur harmonique ?",
@@ -2054,7 +2054,7 @@
   },
   {
     "id": "TGm_Ré_acc",
-    "niveau": "C1/2",
+    "niveau": "C1/4",
     "categorie": "tonalites_alterations",
     "type": "qcm",
     "question": "Quelle est l'altération accidentelle (sensible) en Ré mineur harmonique ?",
@@ -2066,7 +2066,7 @@
   },
   {
     "id": "TGm_Sol_acc",
-    "niveau": "C1/2",
+    "niveau": "C2/1",
     "categorie": "tonalites_alterations",
     "type": "qcm",
     "question": "Quelle est l'altération accidentelle (sensible) en Sol mineur harmonique ?",
@@ -2078,7 +2078,7 @@
   },
   {
     "id": "TGm_Do_acc",
-    "niveau": "C1/3",
+    "niveau": "C2/3",
     "categorie": "tonalites_alterations",
     "type": "qcm",
     "question": "Quelle est l'altération accidentelle (sensible) en Do mineur harmonique ?",
@@ -2090,7 +2090,7 @@
   },
   {
     "id": "TGm_Fa_acc",
-    "niveau": "C1/3",
+    "niveau": "C2/4",
     "categorie": "tonalites_alterations",
     "type": "qcm",
     "question": "Quelle est l'altération accidentelle (sensible) en Fa mineur harmonique ?",
@@ -2102,7 +2102,7 @@
   },
   {
     "id": "TGm_Sib_acc",
-    "niveau": "C2/1",
+    "niveau": "C3",
     "categorie": "tonalites_alterations",
     "type": "qcm",
     "question": "Quelle est l'altération accidentelle (sensible) en Sib mineur harmonique ?",
@@ -2114,7 +2114,7 @@
   },
   {
     "id": "TGm_Mib_acc",
-    "niveau": "C2/2",
+    "niveau": "C3",
     "categorie": "tonalites_alterations",
     "type": "qcm",
     "question": "Quelle est l'altération accidentelle (sensible) en Mib mineur harmonique ?",
@@ -2126,7 +2126,7 @@
   },
   {
     "id": "TGm_Lab_acc",
-    "niveau": "C2/3",
+    "niveau": "C3",
     "categorie": "tonalites_alterations",
     "type": "qcm",
     "question": "Quelle est l'altération accidentelle (sensible) en Lab mineur harmonique ?",
@@ -2138,7 +2138,7 @@
   },
   {
     "id": "IT_Do_Réb",
-    "niveau": "C1/2",
+    "niveau": "C1/3",
     "categorie": "intervalles",
     "type": "qcm",
     "question": "Quelle est la nature de l'intervalle ascendant Do – Réb ?",
@@ -2149,7 +2149,7 @@
   },
   {
     "id": "IT_Do_Ré",
-    "niveau": "C1/2",
+    "niveau": "C1/3",
     "categorie": "intervalles",
     "type": "qcm",
     "question": "Quelle est la nature de l'intervalle ascendant Do – Ré ?",
@@ -2269,14 +2269,14 @@
     "reponse_fausse_3": "Sixte majeure"
   },
   {
-    "id": "IVX_e4_f4",
-    "niveau": "C1/2",
+    "id": "IVX_asc_c4_db4",
+    "niveau": "C1/3",
     "categorie": "intervalles",
     "type": "vexflow_intervalle",
-    "question": "Quelle est la nature de cet intervalle ?",
+    "question": "Quelle est la nature de cet intervalle ascendant ?",
     "vexflow_notes": [
-      "e/4",
-      "f/4"
+      "c/4",
+      "db/4"
     ],
     "reponse_correcte": "Seconde mineure",
     "reponse_fausse_1": "Unisson juste",
@@ -2284,11 +2284,26 @@
     "reponse_fausse_3": "Tierce mineure"
   },
   {
-    "id": "IVX_c4_d4",
-    "niveau": "C1/2",
+    "id": "IVX_desc_c4_b3",
+    "niveau": "C1/3",
     "categorie": "intervalles",
     "type": "vexflow_intervalle",
-    "question": "Quelle est la nature de cet intervalle ?",
+    "question": "Quelle est la nature de cet intervalle descendant ?",
+    "vexflow_notes": [
+      "c/4",
+      "b/3"
+    ],
+    "reponse_correcte": "Seconde mineure",
+    "reponse_fausse_1": "Unisson juste",
+    "reponse_fausse_2": "Seconde majeure",
+    "reponse_fausse_3": "Tierce mineure"
+  },
+  {
+    "id": "IVX_asc_c4_d4",
+    "niveau": "C1/3",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle ascendant ?",
     "vexflow_notes": [
       "c/4",
       "d/4"
@@ -2299,14 +2314,29 @@
     "reponse_fausse_3": "Unisson juste"
   },
   {
-    "id": "IVX_a4_c5",
+    "id": "IVX_desc_c4_bb3",
     "niveau": "C1/3",
     "categorie": "intervalles",
     "type": "vexflow_intervalle",
-    "question": "Quelle est la nature de cet intervalle ?",
+    "question": "Quelle est la nature de cet intervalle descendant ?",
     "vexflow_notes": [
-      "a/4",
-      "c/5"
+      "c/4",
+      "bb/3"
+    ],
+    "reponse_correcte": "Seconde majeure",
+    "reponse_fausse_1": "Seconde mineure",
+    "reponse_fausse_2": "Tierce mineure",
+    "reponse_fausse_3": "Unisson juste"
+  },
+  {
+    "id": "IVX_asc_c4_eb4",
+    "niveau": "C1/3",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle ascendant ?",
+    "vexflow_notes": [
+      "c/4",
+      "eb/4"
     ],
     "reponse_correcte": "Tierce mineure",
     "reponse_fausse_1": "Seconde majeure",
@@ -2314,11 +2344,26 @@
     "reponse_fausse_3": "Seconde mineure"
   },
   {
-    "id": "IVX_c4_e4",
+    "id": "IVX_desc_c4_a3",
     "niveau": "C1/3",
     "categorie": "intervalles",
     "type": "vexflow_intervalle",
-    "question": "Quelle est la nature de cet intervalle ?",
+    "question": "Quelle est la nature de cet intervalle descendant ?",
+    "vexflow_notes": [
+      "c/4",
+      "a/3"
+    ],
+    "reponse_correcte": "Tierce mineure",
+    "reponse_fausse_1": "Seconde majeure",
+    "reponse_fausse_2": "Tierce majeure",
+    "reponse_fausse_3": "Seconde mineure"
+  },
+  {
+    "id": "IVX_asc_c4_e4",
+    "niveau": "C1/3",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle ascendant ?",
     "vexflow_notes": [
       "c/4",
       "e/4"
@@ -2329,14 +2374,29 @@
     "reponse_fausse_3": "Seconde majeure"
   },
   {
-    "id": "IVX_g4_c5",
+    "id": "IVX_desc_c4_ab3",
+    "niveau": "C1/3",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle descendant ?",
+    "vexflow_notes": [
+      "c/4",
+      "ab/3"
+    ],
+    "reponse_correcte": "Tierce majeure",
+    "reponse_fausse_1": "Tierce mineure",
+    "reponse_fausse_2": "Quarte juste",
+    "reponse_fausse_3": "Seconde majeure"
+  },
+  {
+    "id": "IVX_asc_c4_f4",
     "niveau": "C2/1",
     "categorie": "intervalles",
     "type": "vexflow_intervalle",
-    "question": "Quelle est la nature de cet intervalle ?",
+    "question": "Quelle est la nature de cet intervalle ascendant ?",
     "vexflow_notes": [
-      "g/4",
-      "c/5"
+      "c/4",
+      "f/4"
     ],
     "reponse_correcte": "Quarte juste",
     "reponse_fausse_1": "Tierce majeure",
@@ -2344,11 +2404,26 @@
     "reponse_fausse_3": "Tierce mineure"
   },
   {
-    "id": "IVX_c4_fs4",
+    "id": "IVX_desc_c4_g3",
     "niveau": "C2/1",
     "categorie": "intervalles",
     "type": "vexflow_intervalle",
-    "question": "Quelle est la nature de cet intervalle ?",
+    "question": "Quelle est la nature de cet intervalle descendant ?",
+    "vexflow_notes": [
+      "c/4",
+      "g/3"
+    ],
+    "reponse_correcte": "Quarte juste",
+    "reponse_fausse_1": "Tierce majeure",
+    "reponse_fausse_2": "Quarte augmentée",
+    "reponse_fausse_3": "Tierce mineure"
+  },
+  {
+    "id": "IVX_asc_c4_fs4",
+    "niveau": "C2/1",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle ascendant ?",
     "vexflow_notes": [
       "c/4",
       "f#/4"
@@ -2359,11 +2434,26 @@
     "reponse_fausse_3": "Tierce majeure"
   },
   {
-    "id": "IVX_c4_g4",
+    "id": "IVX_desc_c4_gb3",
     "niveau": "C2/1",
     "categorie": "intervalles",
     "type": "vexflow_intervalle",
-    "question": "Quelle est la nature de cet intervalle ?",
+    "question": "Quelle est la nature de cet intervalle descendant ?",
+    "vexflow_notes": [
+      "c/4",
+      "gb/3"
+    ],
+    "reponse_correcte": "Quarte augmentée",
+    "reponse_fausse_1": "Quarte juste",
+    "reponse_fausse_2": "Quinte juste",
+    "reponse_fausse_3": "Tierce majeure"
+  },
+  {
+    "id": "IVX_asc_c4_g4",
+    "niveau": "C2/1",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle ascendant ?",
     "vexflow_notes": [
       "c/4",
       "g/4"
@@ -2374,14 +2464,29 @@
     "reponse_fausse_3": "Quarte juste"
   },
   {
-    "id": "IVX_e4_c5",
+    "id": "IVX_desc_c4_f3",
+    "niveau": "C2/1",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle descendant ?",
+    "vexflow_notes": [
+      "c/4",
+      "f/3"
+    ],
+    "reponse_correcte": "Quinte juste",
+    "reponse_fausse_1": "Quarte augmentée",
+    "reponse_fausse_2": "Sixte mineure",
+    "reponse_fausse_3": "Quarte juste"
+  },
+  {
+    "id": "IVX_asc_c4_ab4",
     "niveau": "C2/2",
     "categorie": "intervalles",
     "type": "vexflow_intervalle",
-    "question": "Quelle est la nature de cet intervalle ?",
+    "question": "Quelle est la nature de cet intervalle ascendant ?",
     "vexflow_notes": [
-      "e/4",
-      "c/5"
+      "c/4",
+      "ab/4"
     ],
     "reponse_correcte": "Sixte mineure",
     "reponse_fausse_1": "Quinte juste",
@@ -2389,11 +2494,26 @@
     "reponse_fausse_3": "Quarte augmentée"
   },
   {
-    "id": "IVX_c4_a4",
+    "id": "IVX_desc_c4_e3",
     "niveau": "C2/2",
     "categorie": "intervalles",
     "type": "vexflow_intervalle",
-    "question": "Quelle est la nature de cet intervalle ?",
+    "question": "Quelle est la nature de cet intervalle descendant ?",
+    "vexflow_notes": [
+      "c/4",
+      "e/3"
+    ],
+    "reponse_correcte": "Sixte mineure",
+    "reponse_fausse_1": "Quinte juste",
+    "reponse_fausse_2": "Sixte majeure",
+    "reponse_fausse_3": "Quarte augmentée"
+  },
+  {
+    "id": "IVX_asc_c4_a4",
+    "niveau": "C2/2",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle ascendant ?",
     "vexflow_notes": [
       "c/4",
       "a/4"
@@ -2404,11 +2524,26 @@
     "reponse_fausse_3": "Quinte juste"
   },
   {
-    "id": "IVX_c4_bb4",
+    "id": "IVX_desc_c4_eb3",
+    "niveau": "C2/2",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle descendant ?",
+    "vexflow_notes": [
+      "c/4",
+      "eb/3"
+    ],
+    "reponse_correcte": "Sixte majeure",
+    "reponse_fausse_1": "Sixte mineure",
+    "reponse_fausse_2": "Septième mineure",
+    "reponse_fausse_3": "Quinte juste"
+  },
+  {
+    "id": "IVX_asc_c4_bb4",
     "niveau": "C2/3",
     "categorie": "intervalles",
     "type": "vexflow_intervalle",
-    "question": "Quelle est la nature de cet intervalle ?",
+    "question": "Quelle est la nature de cet intervalle ascendant ?",
     "vexflow_notes": [
       "c/4",
       "bb/4"
@@ -2419,11 +2554,26 @@
     "reponse_fausse_3": "Sixte mineure"
   },
   {
-    "id": "IVX_c4_b4",
+    "id": "IVX_desc_c4_d3",
     "niveau": "C2/3",
     "categorie": "intervalles",
     "type": "vexflow_intervalle",
-    "question": "Quelle est la nature de cet intervalle ?",
+    "question": "Quelle est la nature de cet intervalle descendant ?",
+    "vexflow_notes": [
+      "c/4",
+      "d/3"
+    ],
+    "reponse_correcte": "Septième mineure",
+    "reponse_fausse_1": "Sixte majeure",
+    "reponse_fausse_2": "Septième majeure",
+    "reponse_fausse_3": "Sixte mineure"
+  },
+  {
+    "id": "IVX_asc_c4_b4",
+    "niveau": "C2/3",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle ascendant ?",
     "vexflow_notes": [
       "c/4",
       "b/4"
@@ -2434,14 +2584,2204 @@
     "reponse_fausse_3": "Sixte majeure"
   },
   {
-    "id": "IVX_c4_c5",
+    "id": "IVX_desc_c4_db3",
     "niveau": "C2/3",
     "categorie": "intervalles",
     "type": "vexflow_intervalle",
-    "question": "Quelle est la nature de cet intervalle ?",
+    "question": "Quelle est la nature de cet intervalle descendant ?",
+    "vexflow_notes": [
+      "c/4",
+      "db/3"
+    ],
+    "reponse_correcte": "Septième majeure",
+    "reponse_fausse_1": "Septième mineure",
+    "reponse_fausse_2": "Octave juste",
+    "reponse_fausse_3": "Sixte majeure"
+  },
+  {
+    "id": "IVX_asc_c4_c5",
+    "niveau": "C2/3",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle ascendant ?",
     "vexflow_notes": [
       "c/4",
       "c/5"
+    ],
+    "reponse_correcte": "Octave juste",
+    "reponse_fausse_1": "Septième majeure",
+    "reponse_fausse_2": "Septième mineure",
+    "reponse_fausse_3": "Sixte majeure"
+  },
+  {
+    "id": "IVX_desc_c4_c3",
+    "niveau": "C2/3",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle descendant ?",
+    "vexflow_notes": [
+      "c/4",
+      "c/3"
+    ],
+    "reponse_correcte": "Octave juste",
+    "reponse_fausse_1": "Septième majeure",
+    "reponse_fausse_2": "Septième mineure",
+    "reponse_fausse_3": "Sixte majeure"
+  },
+  {
+    "id": "IVX_asc_d4_eb4",
+    "niveau": "C1/3",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle ascendant ?",
+    "vexflow_notes": [
+      "d/4",
+      "eb/4"
+    ],
+    "reponse_correcte": "Seconde mineure",
+    "reponse_fausse_1": "Unisson juste",
+    "reponse_fausse_2": "Seconde majeure",
+    "reponse_fausse_3": "Tierce mineure"
+  },
+  {
+    "id": "IVX_desc_d4_cs4",
+    "niveau": "C1/3",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle descendant ?",
+    "vexflow_notes": [
+      "d/4",
+      "c#/4"
+    ],
+    "reponse_correcte": "Seconde mineure",
+    "reponse_fausse_1": "Unisson juste",
+    "reponse_fausse_2": "Seconde majeure",
+    "reponse_fausse_3": "Tierce mineure"
+  },
+  {
+    "id": "IVX_asc_d4_e4",
+    "niveau": "C1/3",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle ascendant ?",
+    "vexflow_notes": [
+      "d/4",
+      "e/4"
+    ],
+    "reponse_correcte": "Seconde majeure",
+    "reponse_fausse_1": "Seconde mineure",
+    "reponse_fausse_2": "Tierce mineure",
+    "reponse_fausse_3": "Unisson juste"
+  },
+  {
+    "id": "IVX_desc_d4_c4",
+    "niveau": "C1/3",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle descendant ?",
+    "vexflow_notes": [
+      "d/4",
+      "c/4"
+    ],
+    "reponse_correcte": "Seconde majeure",
+    "reponse_fausse_1": "Seconde mineure",
+    "reponse_fausse_2": "Tierce mineure",
+    "reponse_fausse_3": "Unisson juste"
+  },
+  {
+    "id": "IVX_asc_d4_f4",
+    "niveau": "C1/3",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle ascendant ?",
+    "vexflow_notes": [
+      "d/4",
+      "f/4"
+    ],
+    "reponse_correcte": "Tierce mineure",
+    "reponse_fausse_1": "Seconde majeure",
+    "reponse_fausse_2": "Tierce majeure",
+    "reponse_fausse_3": "Seconde mineure"
+  },
+  {
+    "id": "IVX_desc_d4_b3",
+    "niveau": "C1/3",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle descendant ?",
+    "vexflow_notes": [
+      "d/4",
+      "b/3"
+    ],
+    "reponse_correcte": "Tierce mineure",
+    "reponse_fausse_1": "Seconde majeure",
+    "reponse_fausse_2": "Tierce majeure",
+    "reponse_fausse_3": "Seconde mineure"
+  },
+  {
+    "id": "IVX_asc_d4_fs4",
+    "niveau": "C1/3",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle ascendant ?",
+    "vexflow_notes": [
+      "d/4",
+      "f#/4"
+    ],
+    "reponse_correcte": "Tierce majeure",
+    "reponse_fausse_1": "Tierce mineure",
+    "reponse_fausse_2": "Quarte juste",
+    "reponse_fausse_3": "Seconde majeure"
+  },
+  {
+    "id": "IVX_desc_d4_bb3",
+    "niveau": "C1/3",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle descendant ?",
+    "vexflow_notes": [
+      "d/4",
+      "bb/3"
+    ],
+    "reponse_correcte": "Tierce majeure",
+    "reponse_fausse_1": "Tierce mineure",
+    "reponse_fausse_2": "Quarte juste",
+    "reponse_fausse_3": "Seconde majeure"
+  },
+  {
+    "id": "IVX_asc_d4_g4",
+    "niveau": "C2/1",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle ascendant ?",
+    "vexflow_notes": [
+      "d/4",
+      "g/4"
+    ],
+    "reponse_correcte": "Quarte juste",
+    "reponse_fausse_1": "Tierce majeure",
+    "reponse_fausse_2": "Quarte augmentée",
+    "reponse_fausse_3": "Tierce mineure"
+  },
+  {
+    "id": "IVX_desc_d4_a3",
+    "niveau": "C2/1",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle descendant ?",
+    "vexflow_notes": [
+      "d/4",
+      "a/3"
+    ],
+    "reponse_correcte": "Quarte juste",
+    "reponse_fausse_1": "Tierce majeure",
+    "reponse_fausse_2": "Quarte augmentée",
+    "reponse_fausse_3": "Tierce mineure"
+  },
+  {
+    "id": "IVX_asc_d4_gs4",
+    "niveau": "C2/1",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle ascendant ?",
+    "vexflow_notes": [
+      "d/4",
+      "g#/4"
+    ],
+    "reponse_correcte": "Quarte augmentée",
+    "reponse_fausse_1": "Quarte juste",
+    "reponse_fausse_2": "Quinte juste",
+    "reponse_fausse_3": "Tierce majeure"
+  },
+  {
+    "id": "IVX_desc_d4_ab3",
+    "niveau": "C2/1",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle descendant ?",
+    "vexflow_notes": [
+      "d/4",
+      "ab/3"
+    ],
+    "reponse_correcte": "Quarte augmentée",
+    "reponse_fausse_1": "Quarte juste",
+    "reponse_fausse_2": "Quinte juste",
+    "reponse_fausse_3": "Tierce majeure"
+  },
+  {
+    "id": "IVX_asc_d4_a4",
+    "niveau": "C2/1",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle ascendant ?",
+    "vexflow_notes": [
+      "d/4",
+      "a/4"
+    ],
+    "reponse_correcte": "Quinte juste",
+    "reponse_fausse_1": "Quarte augmentée",
+    "reponse_fausse_2": "Sixte mineure",
+    "reponse_fausse_3": "Quarte juste"
+  },
+  {
+    "id": "IVX_desc_d4_g3",
+    "niveau": "C2/1",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle descendant ?",
+    "vexflow_notes": [
+      "d/4",
+      "g/3"
+    ],
+    "reponse_correcte": "Quinte juste",
+    "reponse_fausse_1": "Quarte augmentée",
+    "reponse_fausse_2": "Sixte mineure",
+    "reponse_fausse_3": "Quarte juste"
+  },
+  {
+    "id": "IVX_asc_d4_bb4",
+    "niveau": "C2/2",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle ascendant ?",
+    "vexflow_notes": [
+      "d/4",
+      "bb/4"
+    ],
+    "reponse_correcte": "Sixte mineure",
+    "reponse_fausse_1": "Quinte juste",
+    "reponse_fausse_2": "Sixte majeure",
+    "reponse_fausse_3": "Quarte augmentée"
+  },
+  {
+    "id": "IVX_desc_d4_fs3",
+    "niveau": "C2/2",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle descendant ?",
+    "vexflow_notes": [
+      "d/4",
+      "f#/3"
+    ],
+    "reponse_correcte": "Sixte mineure",
+    "reponse_fausse_1": "Quinte juste",
+    "reponse_fausse_2": "Sixte majeure",
+    "reponse_fausse_3": "Quarte augmentée"
+  },
+  {
+    "id": "IVX_asc_d4_b4",
+    "niveau": "C2/2",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle ascendant ?",
+    "vexflow_notes": [
+      "d/4",
+      "b/4"
+    ],
+    "reponse_correcte": "Sixte majeure",
+    "reponse_fausse_1": "Sixte mineure",
+    "reponse_fausse_2": "Septième mineure",
+    "reponse_fausse_3": "Quinte juste"
+  },
+  {
+    "id": "IVX_desc_d4_f3",
+    "niveau": "C2/2",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle descendant ?",
+    "vexflow_notes": [
+      "d/4",
+      "f/3"
+    ],
+    "reponse_correcte": "Sixte majeure",
+    "reponse_fausse_1": "Sixte mineure",
+    "reponse_fausse_2": "Septième mineure",
+    "reponse_fausse_3": "Quinte juste"
+  },
+  {
+    "id": "IVX_asc_d4_c5",
+    "niveau": "C2/3",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle ascendant ?",
+    "vexflow_notes": [
+      "d/4",
+      "c/5"
+    ],
+    "reponse_correcte": "Septième mineure",
+    "reponse_fausse_1": "Sixte majeure",
+    "reponse_fausse_2": "Septième majeure",
+    "reponse_fausse_3": "Sixte mineure"
+  },
+  {
+    "id": "IVX_desc_d4_e3",
+    "niveau": "C2/3",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle descendant ?",
+    "vexflow_notes": [
+      "d/4",
+      "e/3"
+    ],
+    "reponse_correcte": "Septième mineure",
+    "reponse_fausse_1": "Sixte majeure",
+    "reponse_fausse_2": "Septième majeure",
+    "reponse_fausse_3": "Sixte mineure"
+  },
+  {
+    "id": "IVX_asc_d4_cs5",
+    "niveau": "C2/3",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle ascendant ?",
+    "vexflow_notes": [
+      "d/4",
+      "c#/5"
+    ],
+    "reponse_correcte": "Septième majeure",
+    "reponse_fausse_1": "Septième mineure",
+    "reponse_fausse_2": "Octave juste",
+    "reponse_fausse_3": "Sixte majeure"
+  },
+  {
+    "id": "IVX_desc_d4_eb3",
+    "niveau": "C2/3",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle descendant ?",
+    "vexflow_notes": [
+      "d/4",
+      "eb/3"
+    ],
+    "reponse_correcte": "Septième majeure",
+    "reponse_fausse_1": "Septième mineure",
+    "reponse_fausse_2": "Octave juste",
+    "reponse_fausse_3": "Sixte majeure"
+  },
+  {
+    "id": "IVX_asc_d4_d5",
+    "niveau": "C2/3",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle ascendant ?",
+    "vexflow_notes": [
+      "d/4",
+      "d/5"
+    ],
+    "reponse_correcte": "Octave juste",
+    "reponse_fausse_1": "Septième majeure",
+    "reponse_fausse_2": "Septième mineure",
+    "reponse_fausse_3": "Sixte majeure"
+  },
+  {
+    "id": "IVX_desc_d4_d3",
+    "niveau": "C2/3",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle descendant ?",
+    "vexflow_notes": [
+      "d/4",
+      "d/3"
+    ],
+    "reponse_correcte": "Octave juste",
+    "reponse_fausse_1": "Septième majeure",
+    "reponse_fausse_2": "Septième mineure",
+    "reponse_fausse_3": "Sixte majeure"
+  },
+  {
+    "id": "IVX_asc_e4_f4",
+    "niveau": "C1/3",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle ascendant ?",
+    "vexflow_notes": [
+      "e/4",
+      "f/4"
+    ],
+    "reponse_correcte": "Seconde mineure",
+    "reponse_fausse_1": "Unisson juste",
+    "reponse_fausse_2": "Seconde majeure",
+    "reponse_fausse_3": "Tierce mineure"
+  },
+  {
+    "id": "IVX_desc_e4_ds4",
+    "niveau": "C1/3",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle descendant ?",
+    "vexflow_notes": [
+      "e/4",
+      "d#/4"
+    ],
+    "reponse_correcte": "Seconde mineure",
+    "reponse_fausse_1": "Unisson juste",
+    "reponse_fausse_2": "Seconde majeure",
+    "reponse_fausse_3": "Tierce mineure"
+  },
+  {
+    "id": "IVX_asc_e4_fs4",
+    "niveau": "C1/3",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle ascendant ?",
+    "vexflow_notes": [
+      "e/4",
+      "f#/4"
+    ],
+    "reponse_correcte": "Seconde majeure",
+    "reponse_fausse_1": "Seconde mineure",
+    "reponse_fausse_2": "Tierce mineure",
+    "reponse_fausse_3": "Unisson juste"
+  },
+  {
+    "id": "IVX_desc_e4_d4",
+    "niveau": "C1/3",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle descendant ?",
+    "vexflow_notes": [
+      "e/4",
+      "d/4"
+    ],
+    "reponse_correcte": "Seconde majeure",
+    "reponse_fausse_1": "Seconde mineure",
+    "reponse_fausse_2": "Tierce mineure",
+    "reponse_fausse_3": "Unisson juste"
+  },
+  {
+    "id": "IVX_asc_e4_g4",
+    "niveau": "C1/3",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle ascendant ?",
+    "vexflow_notes": [
+      "e/4",
+      "g/4"
+    ],
+    "reponse_correcte": "Tierce mineure",
+    "reponse_fausse_1": "Seconde majeure",
+    "reponse_fausse_2": "Tierce majeure",
+    "reponse_fausse_3": "Seconde mineure"
+  },
+  {
+    "id": "IVX_desc_e4_cs4",
+    "niveau": "C1/3",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle descendant ?",
+    "vexflow_notes": [
+      "e/4",
+      "c#/4"
+    ],
+    "reponse_correcte": "Tierce mineure",
+    "reponse_fausse_1": "Seconde majeure",
+    "reponse_fausse_2": "Tierce majeure",
+    "reponse_fausse_3": "Seconde mineure"
+  },
+  {
+    "id": "IVX_asc_e4_gs4",
+    "niveau": "C1/3",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle ascendant ?",
+    "vexflow_notes": [
+      "e/4",
+      "g#/4"
+    ],
+    "reponse_correcte": "Tierce majeure",
+    "reponse_fausse_1": "Tierce mineure",
+    "reponse_fausse_2": "Quarte juste",
+    "reponse_fausse_3": "Seconde majeure"
+  },
+  {
+    "id": "IVX_desc_e4_c4",
+    "niveau": "C1/3",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle descendant ?",
+    "vexflow_notes": [
+      "e/4",
+      "c/4"
+    ],
+    "reponse_correcte": "Tierce majeure",
+    "reponse_fausse_1": "Tierce mineure",
+    "reponse_fausse_2": "Quarte juste",
+    "reponse_fausse_3": "Seconde majeure"
+  },
+  {
+    "id": "IVX_asc_e4_a4",
+    "niveau": "C2/1",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle ascendant ?",
+    "vexflow_notes": [
+      "e/4",
+      "a/4"
+    ],
+    "reponse_correcte": "Quarte juste",
+    "reponse_fausse_1": "Tierce majeure",
+    "reponse_fausse_2": "Quarte augmentée",
+    "reponse_fausse_3": "Tierce mineure"
+  },
+  {
+    "id": "IVX_desc_e4_b3",
+    "niveau": "C2/1",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle descendant ?",
+    "vexflow_notes": [
+      "e/4",
+      "b/3"
+    ],
+    "reponse_correcte": "Quarte juste",
+    "reponse_fausse_1": "Tierce majeure",
+    "reponse_fausse_2": "Quarte augmentée",
+    "reponse_fausse_3": "Tierce mineure"
+  },
+  {
+    "id": "IVX_asc_e4_as4",
+    "niveau": "C2/1",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle ascendant ?",
+    "vexflow_notes": [
+      "e/4",
+      "a#/4"
+    ],
+    "reponse_correcte": "Quarte augmentée",
+    "reponse_fausse_1": "Quarte juste",
+    "reponse_fausse_2": "Quinte juste",
+    "reponse_fausse_3": "Tierce majeure"
+  },
+  {
+    "id": "IVX_desc_e4_bb3",
+    "niveau": "C2/1",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle descendant ?",
+    "vexflow_notes": [
+      "e/4",
+      "bb/3"
+    ],
+    "reponse_correcte": "Quarte augmentée",
+    "reponse_fausse_1": "Quarte juste",
+    "reponse_fausse_2": "Quinte juste",
+    "reponse_fausse_3": "Tierce majeure"
+  },
+  {
+    "id": "IVX_asc_e4_b4",
+    "niveau": "C2/1",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle ascendant ?",
+    "vexflow_notes": [
+      "e/4",
+      "b/4"
+    ],
+    "reponse_correcte": "Quinte juste",
+    "reponse_fausse_1": "Quarte augmentée",
+    "reponse_fausse_2": "Sixte mineure",
+    "reponse_fausse_3": "Quarte juste"
+  },
+  {
+    "id": "IVX_desc_e4_a3",
+    "niveau": "C2/1",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle descendant ?",
+    "vexflow_notes": [
+      "e/4",
+      "a/3"
+    ],
+    "reponse_correcte": "Quinte juste",
+    "reponse_fausse_1": "Quarte augmentée",
+    "reponse_fausse_2": "Sixte mineure",
+    "reponse_fausse_3": "Quarte juste"
+  },
+  {
+    "id": "IVX_asc_e4_c5",
+    "niveau": "C2/2",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle ascendant ?",
+    "vexflow_notes": [
+      "e/4",
+      "c/5"
+    ],
+    "reponse_correcte": "Sixte mineure",
+    "reponse_fausse_1": "Quinte juste",
+    "reponse_fausse_2": "Sixte majeure",
+    "reponse_fausse_3": "Quarte augmentée"
+  },
+  {
+    "id": "IVX_desc_e4_gs3",
+    "niveau": "C2/2",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle descendant ?",
+    "vexflow_notes": [
+      "e/4",
+      "g#/3"
+    ],
+    "reponse_correcte": "Sixte mineure",
+    "reponse_fausse_1": "Quinte juste",
+    "reponse_fausse_2": "Sixte majeure",
+    "reponse_fausse_3": "Quarte augmentée"
+  },
+  {
+    "id": "IVX_asc_e4_cs5",
+    "niveau": "C2/2",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle ascendant ?",
+    "vexflow_notes": [
+      "e/4",
+      "c#/5"
+    ],
+    "reponse_correcte": "Sixte majeure",
+    "reponse_fausse_1": "Sixte mineure",
+    "reponse_fausse_2": "Septième mineure",
+    "reponse_fausse_3": "Quinte juste"
+  },
+  {
+    "id": "IVX_desc_e4_g3",
+    "niveau": "C2/2",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle descendant ?",
+    "vexflow_notes": [
+      "e/4",
+      "g/3"
+    ],
+    "reponse_correcte": "Sixte majeure",
+    "reponse_fausse_1": "Sixte mineure",
+    "reponse_fausse_2": "Septième mineure",
+    "reponse_fausse_3": "Quinte juste"
+  },
+  {
+    "id": "IVX_asc_e4_d5",
+    "niveau": "C2/3",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle ascendant ?",
+    "vexflow_notes": [
+      "e/4",
+      "d/5"
+    ],
+    "reponse_correcte": "Septième mineure",
+    "reponse_fausse_1": "Sixte majeure",
+    "reponse_fausse_2": "Septième majeure",
+    "reponse_fausse_3": "Sixte mineure"
+  },
+  {
+    "id": "IVX_desc_e4_fs3",
+    "niveau": "C2/3",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle descendant ?",
+    "vexflow_notes": [
+      "e/4",
+      "f#/3"
+    ],
+    "reponse_correcte": "Septième mineure",
+    "reponse_fausse_1": "Sixte majeure",
+    "reponse_fausse_2": "Septième majeure",
+    "reponse_fausse_3": "Sixte mineure"
+  },
+  {
+    "id": "IVX_asc_e4_ds5",
+    "niveau": "C2/3",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle ascendant ?",
+    "vexflow_notes": [
+      "e/4",
+      "d#/5"
+    ],
+    "reponse_correcte": "Septième majeure",
+    "reponse_fausse_1": "Septième mineure",
+    "reponse_fausse_2": "Octave juste",
+    "reponse_fausse_3": "Sixte majeure"
+  },
+  {
+    "id": "IVX_desc_e4_f3",
+    "niveau": "C2/3",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle descendant ?",
+    "vexflow_notes": [
+      "e/4",
+      "f/3"
+    ],
+    "reponse_correcte": "Septième majeure",
+    "reponse_fausse_1": "Septième mineure",
+    "reponse_fausse_2": "Octave juste",
+    "reponse_fausse_3": "Sixte majeure"
+  },
+  {
+    "id": "IVX_asc_e4_e5",
+    "niveau": "C2/3",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle ascendant ?",
+    "vexflow_notes": [
+      "e/4",
+      "e/5"
+    ],
+    "reponse_correcte": "Octave juste",
+    "reponse_fausse_1": "Septième majeure",
+    "reponse_fausse_2": "Septième mineure",
+    "reponse_fausse_3": "Sixte majeure"
+  },
+  {
+    "id": "IVX_desc_e4_e3",
+    "niveau": "C2/3",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle descendant ?",
+    "vexflow_notes": [
+      "e/4",
+      "e/3"
+    ],
+    "reponse_correcte": "Octave juste",
+    "reponse_fausse_1": "Septième majeure",
+    "reponse_fausse_2": "Septième mineure",
+    "reponse_fausse_3": "Sixte majeure"
+  },
+  {
+    "id": "IVX_asc_f4_gb4",
+    "niveau": "C1/3",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle ascendant ?",
+    "vexflow_notes": [
+      "f/4",
+      "gb/4"
+    ],
+    "reponse_correcte": "Seconde mineure",
+    "reponse_fausse_1": "Unisson juste",
+    "reponse_fausse_2": "Seconde majeure",
+    "reponse_fausse_3": "Tierce mineure"
+  },
+  {
+    "id": "IVX_desc_f4_e4",
+    "niveau": "C1/3",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle descendant ?",
+    "vexflow_notes": [
+      "f/4",
+      "e/4"
+    ],
+    "reponse_correcte": "Seconde mineure",
+    "reponse_fausse_1": "Unisson juste",
+    "reponse_fausse_2": "Seconde majeure",
+    "reponse_fausse_3": "Tierce mineure"
+  },
+  {
+    "id": "IVX_asc_f4_g4",
+    "niveau": "C1/3",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle ascendant ?",
+    "vexflow_notes": [
+      "f/4",
+      "g/4"
+    ],
+    "reponse_correcte": "Seconde majeure",
+    "reponse_fausse_1": "Seconde mineure",
+    "reponse_fausse_2": "Tierce mineure",
+    "reponse_fausse_3": "Unisson juste"
+  },
+  {
+    "id": "IVX_desc_f4_eb4",
+    "niveau": "C1/3",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle descendant ?",
+    "vexflow_notes": [
+      "f/4",
+      "eb/4"
+    ],
+    "reponse_correcte": "Seconde majeure",
+    "reponse_fausse_1": "Seconde mineure",
+    "reponse_fausse_2": "Tierce mineure",
+    "reponse_fausse_3": "Unisson juste"
+  },
+  {
+    "id": "IVX_asc_f4_ab4",
+    "niveau": "C1/3",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle ascendant ?",
+    "vexflow_notes": [
+      "f/4",
+      "ab/4"
+    ],
+    "reponse_correcte": "Tierce mineure",
+    "reponse_fausse_1": "Seconde majeure",
+    "reponse_fausse_2": "Tierce majeure",
+    "reponse_fausse_3": "Seconde mineure"
+  },
+  {
+    "id": "IVX_desc_f4_d4",
+    "niveau": "C1/3",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle descendant ?",
+    "vexflow_notes": [
+      "f/4",
+      "d/4"
+    ],
+    "reponse_correcte": "Tierce mineure",
+    "reponse_fausse_1": "Seconde majeure",
+    "reponse_fausse_2": "Tierce majeure",
+    "reponse_fausse_3": "Seconde mineure"
+  },
+  {
+    "id": "IVX_asc_f4_a4",
+    "niveau": "C1/3",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle ascendant ?",
+    "vexflow_notes": [
+      "f/4",
+      "a/4"
+    ],
+    "reponse_correcte": "Tierce majeure",
+    "reponse_fausse_1": "Tierce mineure",
+    "reponse_fausse_2": "Quarte juste",
+    "reponse_fausse_3": "Seconde majeure"
+  },
+  {
+    "id": "IVX_desc_f4_db4",
+    "niveau": "C1/3",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle descendant ?",
+    "vexflow_notes": [
+      "f/4",
+      "db/4"
+    ],
+    "reponse_correcte": "Tierce majeure",
+    "reponse_fausse_1": "Tierce mineure",
+    "reponse_fausse_2": "Quarte juste",
+    "reponse_fausse_3": "Seconde majeure"
+  },
+  {
+    "id": "IVX_asc_f4_bb4",
+    "niveau": "C2/1",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle ascendant ?",
+    "vexflow_notes": [
+      "f/4",
+      "bb/4"
+    ],
+    "reponse_correcte": "Quarte juste",
+    "reponse_fausse_1": "Tierce majeure",
+    "reponse_fausse_2": "Quarte augmentée",
+    "reponse_fausse_3": "Tierce mineure"
+  },
+  {
+    "id": "IVX_desc_f4_c4",
+    "niveau": "C2/1",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle descendant ?",
+    "vexflow_notes": [
+      "f/4",
+      "c/4"
+    ],
+    "reponse_correcte": "Quarte juste",
+    "reponse_fausse_1": "Tierce majeure",
+    "reponse_fausse_2": "Quarte augmentée",
+    "reponse_fausse_3": "Tierce mineure"
+  },
+  {
+    "id": "IVX_asc_f4_b4",
+    "niveau": "C2/1",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle ascendant ?",
+    "vexflow_notes": [
+      "f/4",
+      "b/4"
+    ],
+    "reponse_correcte": "Quarte augmentée",
+    "reponse_fausse_1": "Quarte juste",
+    "reponse_fausse_2": "Quinte juste",
+    "reponse_fausse_3": "Tierce majeure"
+  },
+  {
+    "id": "IVX_desc_f4_cb4",
+    "niveau": "C2/1",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle descendant ?",
+    "vexflow_notes": [
+      "f/4",
+      "cb/4"
+    ],
+    "reponse_correcte": "Quarte augmentée",
+    "reponse_fausse_1": "Quarte juste",
+    "reponse_fausse_2": "Quinte juste",
+    "reponse_fausse_3": "Tierce majeure"
+  },
+  {
+    "id": "IVX_asc_f4_c5",
+    "niveau": "C2/1",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle ascendant ?",
+    "vexflow_notes": [
+      "f/4",
+      "c/5"
+    ],
+    "reponse_correcte": "Quinte juste",
+    "reponse_fausse_1": "Quarte augmentée",
+    "reponse_fausse_2": "Sixte mineure",
+    "reponse_fausse_3": "Quarte juste"
+  },
+  {
+    "id": "IVX_desc_f4_bb3",
+    "niveau": "C2/1",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle descendant ?",
+    "vexflow_notes": [
+      "f/4",
+      "bb/3"
+    ],
+    "reponse_correcte": "Quinte juste",
+    "reponse_fausse_1": "Quarte augmentée",
+    "reponse_fausse_2": "Sixte mineure",
+    "reponse_fausse_3": "Quarte juste"
+  },
+  {
+    "id": "IVX_asc_f4_db5",
+    "niveau": "C2/2",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle ascendant ?",
+    "vexflow_notes": [
+      "f/4",
+      "db/5"
+    ],
+    "reponse_correcte": "Sixte mineure",
+    "reponse_fausse_1": "Quinte juste",
+    "reponse_fausse_2": "Sixte majeure",
+    "reponse_fausse_3": "Quarte augmentée"
+  },
+  {
+    "id": "IVX_desc_f4_a3",
+    "niveau": "C2/2",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle descendant ?",
+    "vexflow_notes": [
+      "f/4",
+      "a/3"
+    ],
+    "reponse_correcte": "Sixte mineure",
+    "reponse_fausse_1": "Quinte juste",
+    "reponse_fausse_2": "Sixte majeure",
+    "reponse_fausse_3": "Quarte augmentée"
+  },
+  {
+    "id": "IVX_asc_f4_d5",
+    "niveau": "C2/2",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle ascendant ?",
+    "vexflow_notes": [
+      "f/4",
+      "d/5"
+    ],
+    "reponse_correcte": "Sixte majeure",
+    "reponse_fausse_1": "Sixte mineure",
+    "reponse_fausse_2": "Septième mineure",
+    "reponse_fausse_3": "Quinte juste"
+  },
+  {
+    "id": "IVX_desc_f4_ab3",
+    "niveau": "C2/2",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle descendant ?",
+    "vexflow_notes": [
+      "f/4",
+      "ab/3"
+    ],
+    "reponse_correcte": "Sixte majeure",
+    "reponse_fausse_1": "Sixte mineure",
+    "reponse_fausse_2": "Septième mineure",
+    "reponse_fausse_3": "Quinte juste"
+  },
+  {
+    "id": "IVX_asc_f4_eb5",
+    "niveau": "C2/3",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle ascendant ?",
+    "vexflow_notes": [
+      "f/4",
+      "eb/5"
+    ],
+    "reponse_correcte": "Septième mineure",
+    "reponse_fausse_1": "Sixte majeure",
+    "reponse_fausse_2": "Septième majeure",
+    "reponse_fausse_3": "Sixte mineure"
+  },
+  {
+    "id": "IVX_desc_f4_g3",
+    "niveau": "C2/3",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle descendant ?",
+    "vexflow_notes": [
+      "f/4",
+      "g/3"
+    ],
+    "reponse_correcte": "Septième mineure",
+    "reponse_fausse_1": "Sixte majeure",
+    "reponse_fausse_2": "Septième majeure",
+    "reponse_fausse_3": "Sixte mineure"
+  },
+  {
+    "id": "IVX_asc_f4_e5",
+    "niveau": "C2/3",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle ascendant ?",
+    "vexflow_notes": [
+      "f/4",
+      "e/5"
+    ],
+    "reponse_correcte": "Septième majeure",
+    "reponse_fausse_1": "Septième mineure",
+    "reponse_fausse_2": "Octave juste",
+    "reponse_fausse_3": "Sixte majeure"
+  },
+  {
+    "id": "IVX_desc_f4_gb3",
+    "niveau": "C2/3",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle descendant ?",
+    "vexflow_notes": [
+      "f/4",
+      "gb/3"
+    ],
+    "reponse_correcte": "Septième majeure",
+    "reponse_fausse_1": "Septième mineure",
+    "reponse_fausse_2": "Octave juste",
+    "reponse_fausse_3": "Sixte majeure"
+  },
+  {
+    "id": "IVX_asc_f4_f5",
+    "niveau": "C2/3",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle ascendant ?",
+    "vexflow_notes": [
+      "f/4",
+      "f/5"
+    ],
+    "reponse_correcte": "Octave juste",
+    "reponse_fausse_1": "Septième majeure",
+    "reponse_fausse_2": "Septième mineure",
+    "reponse_fausse_3": "Sixte majeure"
+  },
+  {
+    "id": "IVX_desc_f4_f3",
+    "niveau": "C2/3",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle descendant ?",
+    "vexflow_notes": [
+      "f/4",
+      "f/3"
+    ],
+    "reponse_correcte": "Octave juste",
+    "reponse_fausse_1": "Septième majeure",
+    "reponse_fausse_2": "Septième mineure",
+    "reponse_fausse_3": "Sixte majeure"
+  },
+  {
+    "id": "IVX_asc_g4_ab4",
+    "niveau": "C1/3",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle ascendant ?",
+    "vexflow_notes": [
+      "g/4",
+      "ab/4"
+    ],
+    "reponse_correcte": "Seconde mineure",
+    "reponse_fausse_1": "Unisson juste",
+    "reponse_fausse_2": "Seconde majeure",
+    "reponse_fausse_3": "Tierce mineure"
+  },
+  {
+    "id": "IVX_desc_g4_fs4",
+    "niveau": "C1/3",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle descendant ?",
+    "vexflow_notes": [
+      "g/4",
+      "f#/4"
+    ],
+    "reponse_correcte": "Seconde mineure",
+    "reponse_fausse_1": "Unisson juste",
+    "reponse_fausse_2": "Seconde majeure",
+    "reponse_fausse_3": "Tierce mineure"
+  },
+  {
+    "id": "IVX_asc_g4_a4",
+    "niveau": "C1/3",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle ascendant ?",
+    "vexflow_notes": [
+      "g/4",
+      "a/4"
+    ],
+    "reponse_correcte": "Seconde majeure",
+    "reponse_fausse_1": "Seconde mineure",
+    "reponse_fausse_2": "Tierce mineure",
+    "reponse_fausse_3": "Unisson juste"
+  },
+  {
+    "id": "IVX_desc_g4_f4",
+    "niveau": "C1/3",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle descendant ?",
+    "vexflow_notes": [
+      "g/4",
+      "f/4"
+    ],
+    "reponse_correcte": "Seconde majeure",
+    "reponse_fausse_1": "Seconde mineure",
+    "reponse_fausse_2": "Tierce mineure",
+    "reponse_fausse_3": "Unisson juste"
+  },
+  {
+    "id": "IVX_asc_g4_bb4",
+    "niveau": "C1/3",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle ascendant ?",
+    "vexflow_notes": [
+      "g/4",
+      "bb/4"
+    ],
+    "reponse_correcte": "Tierce mineure",
+    "reponse_fausse_1": "Seconde majeure",
+    "reponse_fausse_2": "Tierce majeure",
+    "reponse_fausse_3": "Seconde mineure"
+  },
+  {
+    "id": "IVX_desc_g4_e4",
+    "niveau": "C1/3",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle descendant ?",
+    "vexflow_notes": [
+      "g/4",
+      "e/4"
+    ],
+    "reponse_correcte": "Tierce mineure",
+    "reponse_fausse_1": "Seconde majeure",
+    "reponse_fausse_2": "Tierce majeure",
+    "reponse_fausse_3": "Seconde mineure"
+  },
+  {
+    "id": "IVX_asc_g4_b4",
+    "niveau": "C1/3",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle ascendant ?",
+    "vexflow_notes": [
+      "g/4",
+      "b/4"
+    ],
+    "reponse_correcte": "Tierce majeure",
+    "reponse_fausse_1": "Tierce mineure",
+    "reponse_fausse_2": "Quarte juste",
+    "reponse_fausse_3": "Seconde majeure"
+  },
+  {
+    "id": "IVX_desc_g4_eb4",
+    "niveau": "C1/3",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle descendant ?",
+    "vexflow_notes": [
+      "g/4",
+      "eb/4"
+    ],
+    "reponse_correcte": "Tierce majeure",
+    "reponse_fausse_1": "Tierce mineure",
+    "reponse_fausse_2": "Quarte juste",
+    "reponse_fausse_3": "Seconde majeure"
+  },
+  {
+    "id": "IVX_asc_g4_c5",
+    "niveau": "C2/1",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle ascendant ?",
+    "vexflow_notes": [
+      "g/4",
+      "c/5"
+    ],
+    "reponse_correcte": "Quarte juste",
+    "reponse_fausse_1": "Tierce majeure",
+    "reponse_fausse_2": "Quarte augmentée",
+    "reponse_fausse_3": "Tierce mineure"
+  },
+  {
+    "id": "IVX_desc_g4_d4",
+    "niveau": "C2/1",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle descendant ?",
+    "vexflow_notes": [
+      "g/4",
+      "d/4"
+    ],
+    "reponse_correcte": "Quarte juste",
+    "reponse_fausse_1": "Tierce majeure",
+    "reponse_fausse_2": "Quarte augmentée",
+    "reponse_fausse_3": "Tierce mineure"
+  },
+  {
+    "id": "IVX_asc_g4_cs5",
+    "niveau": "C2/1",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle ascendant ?",
+    "vexflow_notes": [
+      "g/4",
+      "c#/5"
+    ],
+    "reponse_correcte": "Quarte augmentée",
+    "reponse_fausse_1": "Quarte juste",
+    "reponse_fausse_2": "Quinte juste",
+    "reponse_fausse_3": "Tierce majeure"
+  },
+  {
+    "id": "IVX_desc_g4_db4",
+    "niveau": "C2/1",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle descendant ?",
+    "vexflow_notes": [
+      "g/4",
+      "db/4"
+    ],
+    "reponse_correcte": "Quarte augmentée",
+    "reponse_fausse_1": "Quarte juste",
+    "reponse_fausse_2": "Quinte juste",
+    "reponse_fausse_3": "Tierce majeure"
+  },
+  {
+    "id": "IVX_asc_g4_d5",
+    "niveau": "C2/1",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle ascendant ?",
+    "vexflow_notes": [
+      "g/4",
+      "d/5"
+    ],
+    "reponse_correcte": "Quinte juste",
+    "reponse_fausse_1": "Quarte augmentée",
+    "reponse_fausse_2": "Sixte mineure",
+    "reponse_fausse_3": "Quarte juste"
+  },
+  {
+    "id": "IVX_desc_g4_c4",
+    "niveau": "C2/1",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle descendant ?",
+    "vexflow_notes": [
+      "g/4",
+      "c/4"
+    ],
+    "reponse_correcte": "Quinte juste",
+    "reponse_fausse_1": "Quarte augmentée",
+    "reponse_fausse_2": "Sixte mineure",
+    "reponse_fausse_3": "Quarte juste"
+  },
+  {
+    "id": "IVX_asc_g4_eb5",
+    "niveau": "C2/2",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle ascendant ?",
+    "vexflow_notes": [
+      "g/4",
+      "eb/5"
+    ],
+    "reponse_correcte": "Sixte mineure",
+    "reponse_fausse_1": "Quinte juste",
+    "reponse_fausse_2": "Sixte majeure",
+    "reponse_fausse_3": "Quarte augmentée"
+  },
+  {
+    "id": "IVX_desc_g4_b3",
+    "niveau": "C2/2",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle descendant ?",
+    "vexflow_notes": [
+      "g/4",
+      "b/3"
+    ],
+    "reponse_correcte": "Sixte mineure",
+    "reponse_fausse_1": "Quinte juste",
+    "reponse_fausse_2": "Sixte majeure",
+    "reponse_fausse_3": "Quarte augmentée"
+  },
+  {
+    "id": "IVX_asc_g4_e5",
+    "niveau": "C2/2",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle ascendant ?",
+    "vexflow_notes": [
+      "g/4",
+      "e/5"
+    ],
+    "reponse_correcte": "Sixte majeure",
+    "reponse_fausse_1": "Sixte mineure",
+    "reponse_fausse_2": "Septième mineure",
+    "reponse_fausse_3": "Quinte juste"
+  },
+  {
+    "id": "IVX_desc_g4_bb3",
+    "niveau": "C2/2",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle descendant ?",
+    "vexflow_notes": [
+      "g/4",
+      "bb/3"
+    ],
+    "reponse_correcte": "Sixte majeure",
+    "reponse_fausse_1": "Sixte mineure",
+    "reponse_fausse_2": "Septième mineure",
+    "reponse_fausse_3": "Quinte juste"
+  },
+  {
+    "id": "IVX_asc_g4_f5",
+    "niveau": "C2/3",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle ascendant ?",
+    "vexflow_notes": [
+      "g/4",
+      "f/5"
+    ],
+    "reponse_correcte": "Septième mineure",
+    "reponse_fausse_1": "Sixte majeure",
+    "reponse_fausse_2": "Septième majeure",
+    "reponse_fausse_3": "Sixte mineure"
+  },
+  {
+    "id": "IVX_desc_g4_a3",
+    "niveau": "C2/3",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle descendant ?",
+    "vexflow_notes": [
+      "g/4",
+      "a/3"
+    ],
+    "reponse_correcte": "Septième mineure",
+    "reponse_fausse_1": "Sixte majeure",
+    "reponse_fausse_2": "Septième majeure",
+    "reponse_fausse_3": "Sixte mineure"
+  },
+  {
+    "id": "IVX_asc_g4_fs5",
+    "niveau": "C2/3",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle ascendant ?",
+    "vexflow_notes": [
+      "g/4",
+      "f#/5"
+    ],
+    "reponse_correcte": "Septième majeure",
+    "reponse_fausse_1": "Septième mineure",
+    "reponse_fausse_2": "Octave juste",
+    "reponse_fausse_3": "Sixte majeure"
+  },
+  {
+    "id": "IVX_desc_g4_ab3",
+    "niveau": "C2/3",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle descendant ?",
+    "vexflow_notes": [
+      "g/4",
+      "ab/3"
+    ],
+    "reponse_correcte": "Septième majeure",
+    "reponse_fausse_1": "Septième mineure",
+    "reponse_fausse_2": "Octave juste",
+    "reponse_fausse_3": "Sixte majeure"
+  },
+  {
+    "id": "IVX_asc_g4_g5",
+    "niveau": "C2/3",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle ascendant ?",
+    "vexflow_notes": [
+      "g/4",
+      "g/5"
+    ],
+    "reponse_correcte": "Octave juste",
+    "reponse_fausse_1": "Septième majeure",
+    "reponse_fausse_2": "Septième mineure",
+    "reponse_fausse_3": "Sixte majeure"
+  },
+  {
+    "id": "IVX_desc_g4_g3",
+    "niveau": "C2/3",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle descendant ?",
+    "vexflow_notes": [
+      "g/4",
+      "g/3"
+    ],
+    "reponse_correcte": "Octave juste",
+    "reponse_fausse_1": "Septième majeure",
+    "reponse_fausse_2": "Septième mineure",
+    "reponse_fausse_3": "Sixte majeure"
+  },
+  {
+    "id": "IVX_asc_a4_bb4",
+    "niveau": "C1/3",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle ascendant ?",
+    "vexflow_notes": [
+      "a/4",
+      "bb/4"
+    ],
+    "reponse_correcte": "Seconde mineure",
+    "reponse_fausse_1": "Unisson juste",
+    "reponse_fausse_2": "Seconde majeure",
+    "reponse_fausse_3": "Tierce mineure"
+  },
+  {
+    "id": "IVX_desc_a4_gs4",
+    "niveau": "C1/3",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle descendant ?",
+    "vexflow_notes": [
+      "a/4",
+      "g#/4"
+    ],
+    "reponse_correcte": "Seconde mineure",
+    "reponse_fausse_1": "Unisson juste",
+    "reponse_fausse_2": "Seconde majeure",
+    "reponse_fausse_3": "Tierce mineure"
+  },
+  {
+    "id": "IVX_asc_a4_b4",
+    "niveau": "C1/3",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle ascendant ?",
+    "vexflow_notes": [
+      "a/4",
+      "b/4"
+    ],
+    "reponse_correcte": "Seconde majeure",
+    "reponse_fausse_1": "Seconde mineure",
+    "reponse_fausse_2": "Tierce mineure",
+    "reponse_fausse_3": "Unisson juste"
+  },
+  {
+    "id": "IVX_desc_a4_g4",
+    "niveau": "C1/3",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle descendant ?",
+    "vexflow_notes": [
+      "a/4",
+      "g/4"
+    ],
+    "reponse_correcte": "Seconde majeure",
+    "reponse_fausse_1": "Seconde mineure",
+    "reponse_fausse_2": "Tierce mineure",
+    "reponse_fausse_3": "Unisson juste"
+  },
+  {
+    "id": "IVX_asc_a4_c5",
+    "niveau": "C1/3",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle ascendant ?",
+    "vexflow_notes": [
+      "a/4",
+      "c/5"
+    ],
+    "reponse_correcte": "Tierce mineure",
+    "reponse_fausse_1": "Seconde majeure",
+    "reponse_fausse_2": "Tierce majeure",
+    "reponse_fausse_3": "Seconde mineure"
+  },
+  {
+    "id": "IVX_desc_a4_fs4",
+    "niveau": "C1/3",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle descendant ?",
+    "vexflow_notes": [
+      "a/4",
+      "f#/4"
+    ],
+    "reponse_correcte": "Tierce mineure",
+    "reponse_fausse_1": "Seconde majeure",
+    "reponse_fausse_2": "Tierce majeure",
+    "reponse_fausse_3": "Seconde mineure"
+  },
+  {
+    "id": "IVX_asc_a4_cs5",
+    "niveau": "C1/3",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle ascendant ?",
+    "vexflow_notes": [
+      "a/4",
+      "c#/5"
+    ],
+    "reponse_correcte": "Tierce majeure",
+    "reponse_fausse_1": "Tierce mineure",
+    "reponse_fausse_2": "Quarte juste",
+    "reponse_fausse_3": "Seconde majeure"
+  },
+  {
+    "id": "IVX_desc_a4_f4",
+    "niveau": "C1/3",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle descendant ?",
+    "vexflow_notes": [
+      "a/4",
+      "f/4"
+    ],
+    "reponse_correcte": "Tierce majeure",
+    "reponse_fausse_1": "Tierce mineure",
+    "reponse_fausse_2": "Quarte juste",
+    "reponse_fausse_3": "Seconde majeure"
+  },
+  {
+    "id": "IVX_asc_a4_d5",
+    "niveau": "C2/1",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle ascendant ?",
+    "vexflow_notes": [
+      "a/4",
+      "d/5"
+    ],
+    "reponse_correcte": "Quarte juste",
+    "reponse_fausse_1": "Tierce majeure",
+    "reponse_fausse_2": "Quarte augmentée",
+    "reponse_fausse_3": "Tierce mineure"
+  },
+  {
+    "id": "IVX_desc_a4_e4",
+    "niveau": "C2/1",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle descendant ?",
+    "vexflow_notes": [
+      "a/4",
+      "e/4"
+    ],
+    "reponse_correcte": "Quarte juste",
+    "reponse_fausse_1": "Tierce majeure",
+    "reponse_fausse_2": "Quarte augmentée",
+    "reponse_fausse_3": "Tierce mineure"
+  },
+  {
+    "id": "IVX_asc_a4_ds5",
+    "niveau": "C2/1",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle ascendant ?",
+    "vexflow_notes": [
+      "a/4",
+      "d#/5"
+    ],
+    "reponse_correcte": "Quarte augmentée",
+    "reponse_fausse_1": "Quarte juste",
+    "reponse_fausse_2": "Quinte juste",
+    "reponse_fausse_3": "Tierce majeure"
+  },
+  {
+    "id": "IVX_desc_a4_eb4",
+    "niveau": "C2/1",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle descendant ?",
+    "vexflow_notes": [
+      "a/4",
+      "eb/4"
+    ],
+    "reponse_correcte": "Quarte augmentée",
+    "reponse_fausse_1": "Quarte juste",
+    "reponse_fausse_2": "Quinte juste",
+    "reponse_fausse_3": "Tierce majeure"
+  },
+  {
+    "id": "IVX_asc_a4_e5",
+    "niveau": "C2/1",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle ascendant ?",
+    "vexflow_notes": [
+      "a/4",
+      "e/5"
+    ],
+    "reponse_correcte": "Quinte juste",
+    "reponse_fausse_1": "Quarte augmentée",
+    "reponse_fausse_2": "Sixte mineure",
+    "reponse_fausse_3": "Quarte juste"
+  },
+  {
+    "id": "IVX_desc_a4_d4",
+    "niveau": "C2/1",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle descendant ?",
+    "vexflow_notes": [
+      "a/4",
+      "d/4"
+    ],
+    "reponse_correcte": "Quinte juste",
+    "reponse_fausse_1": "Quarte augmentée",
+    "reponse_fausse_2": "Sixte mineure",
+    "reponse_fausse_3": "Quarte juste"
+  },
+  {
+    "id": "IVX_asc_a4_f5",
+    "niveau": "C2/2",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle ascendant ?",
+    "vexflow_notes": [
+      "a/4",
+      "f/5"
+    ],
+    "reponse_correcte": "Sixte mineure",
+    "reponse_fausse_1": "Quinte juste",
+    "reponse_fausse_2": "Sixte majeure",
+    "reponse_fausse_3": "Quarte augmentée"
+  },
+  {
+    "id": "IVX_desc_a4_cs4",
+    "niveau": "C2/2",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle descendant ?",
+    "vexflow_notes": [
+      "a/4",
+      "c#/4"
+    ],
+    "reponse_correcte": "Sixte mineure",
+    "reponse_fausse_1": "Quinte juste",
+    "reponse_fausse_2": "Sixte majeure",
+    "reponse_fausse_3": "Quarte augmentée"
+  },
+  {
+    "id": "IVX_asc_a4_fs5",
+    "niveau": "C2/2",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle ascendant ?",
+    "vexflow_notes": [
+      "a/4",
+      "f#/5"
+    ],
+    "reponse_correcte": "Sixte majeure",
+    "reponse_fausse_1": "Sixte mineure",
+    "reponse_fausse_2": "Septième mineure",
+    "reponse_fausse_3": "Quinte juste"
+  },
+  {
+    "id": "IVX_desc_a4_c4",
+    "niveau": "C2/2",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle descendant ?",
+    "vexflow_notes": [
+      "a/4",
+      "c/4"
+    ],
+    "reponse_correcte": "Sixte majeure",
+    "reponse_fausse_1": "Sixte mineure",
+    "reponse_fausse_2": "Septième mineure",
+    "reponse_fausse_3": "Quinte juste"
+  },
+  {
+    "id": "IVX_asc_a4_g5",
+    "niveau": "C2/3",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle ascendant ?",
+    "vexflow_notes": [
+      "a/4",
+      "g/5"
+    ],
+    "reponse_correcte": "Septième mineure",
+    "reponse_fausse_1": "Sixte majeure",
+    "reponse_fausse_2": "Septième majeure",
+    "reponse_fausse_3": "Sixte mineure"
+  },
+  {
+    "id": "IVX_desc_a4_b3",
+    "niveau": "C2/3",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle descendant ?",
+    "vexflow_notes": [
+      "a/4",
+      "b/3"
+    ],
+    "reponse_correcte": "Septième mineure",
+    "reponse_fausse_1": "Sixte majeure",
+    "reponse_fausse_2": "Septième majeure",
+    "reponse_fausse_3": "Sixte mineure"
+  },
+  {
+    "id": "IVX_asc_a4_gs5",
+    "niveau": "C2/3",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle ascendant ?",
+    "vexflow_notes": [
+      "a/4",
+      "g#/5"
+    ],
+    "reponse_correcte": "Septième majeure",
+    "reponse_fausse_1": "Septième mineure",
+    "reponse_fausse_2": "Octave juste",
+    "reponse_fausse_3": "Sixte majeure"
+  },
+  {
+    "id": "IVX_desc_a4_bb3",
+    "niveau": "C2/3",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle descendant ?",
+    "vexflow_notes": [
+      "a/4",
+      "bb/3"
+    ],
+    "reponse_correcte": "Septième majeure",
+    "reponse_fausse_1": "Septième mineure",
+    "reponse_fausse_2": "Octave juste",
+    "reponse_fausse_3": "Sixte majeure"
+  },
+  {
+    "id": "IVX_asc_a4_a5",
+    "niveau": "C2/3",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle ascendant ?",
+    "vexflow_notes": [
+      "a/4",
+      "a/5"
+    ],
+    "reponse_correcte": "Octave juste",
+    "reponse_fausse_1": "Septième majeure",
+    "reponse_fausse_2": "Septième mineure",
+    "reponse_fausse_3": "Sixte majeure"
+  },
+  {
+    "id": "IVX_desc_a4_a3",
+    "niveau": "C2/3",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle descendant ?",
+    "vexflow_notes": [
+      "a/4",
+      "a/3"
+    ],
+    "reponse_correcte": "Octave juste",
+    "reponse_fausse_1": "Septième majeure",
+    "reponse_fausse_2": "Septième mineure",
+    "reponse_fausse_3": "Sixte majeure"
+  },
+  {
+    "id": "IVX_asc_b4_c5",
+    "niveau": "C1/3",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle ascendant ?",
+    "vexflow_notes": [
+      "b/4",
+      "c/5"
+    ],
+    "reponse_correcte": "Seconde mineure",
+    "reponse_fausse_1": "Unisson juste",
+    "reponse_fausse_2": "Seconde majeure",
+    "reponse_fausse_3": "Tierce mineure"
+  },
+  {
+    "id": "IVX_desc_b4_as4",
+    "niveau": "C1/3",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle descendant ?",
+    "vexflow_notes": [
+      "b/4",
+      "a#/4"
+    ],
+    "reponse_correcte": "Seconde mineure",
+    "reponse_fausse_1": "Unisson juste",
+    "reponse_fausse_2": "Seconde majeure",
+    "reponse_fausse_3": "Tierce mineure"
+  },
+  {
+    "id": "IVX_asc_b4_cs5",
+    "niveau": "C1/3",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle ascendant ?",
+    "vexflow_notes": [
+      "b/4",
+      "c#/5"
+    ],
+    "reponse_correcte": "Seconde majeure",
+    "reponse_fausse_1": "Seconde mineure",
+    "reponse_fausse_2": "Tierce mineure",
+    "reponse_fausse_3": "Unisson juste"
+  },
+  {
+    "id": "IVX_desc_b4_a4",
+    "niveau": "C1/3",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle descendant ?",
+    "vexflow_notes": [
+      "b/4",
+      "a/4"
+    ],
+    "reponse_correcte": "Seconde majeure",
+    "reponse_fausse_1": "Seconde mineure",
+    "reponse_fausse_2": "Tierce mineure",
+    "reponse_fausse_3": "Unisson juste"
+  },
+  {
+    "id": "IVX_asc_b4_d5",
+    "niveau": "C1/3",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle ascendant ?",
+    "vexflow_notes": [
+      "b/4",
+      "d/5"
+    ],
+    "reponse_correcte": "Tierce mineure",
+    "reponse_fausse_1": "Seconde majeure",
+    "reponse_fausse_2": "Tierce majeure",
+    "reponse_fausse_3": "Seconde mineure"
+  },
+  {
+    "id": "IVX_desc_b4_gs4",
+    "niveau": "C1/3",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle descendant ?",
+    "vexflow_notes": [
+      "b/4",
+      "g#/4"
+    ],
+    "reponse_correcte": "Tierce mineure",
+    "reponse_fausse_1": "Seconde majeure",
+    "reponse_fausse_2": "Tierce majeure",
+    "reponse_fausse_3": "Seconde mineure"
+  },
+  {
+    "id": "IVX_asc_b4_ds5",
+    "niveau": "C1/3",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle ascendant ?",
+    "vexflow_notes": [
+      "b/4",
+      "d#/5"
+    ],
+    "reponse_correcte": "Tierce majeure",
+    "reponse_fausse_1": "Tierce mineure",
+    "reponse_fausse_2": "Quarte juste",
+    "reponse_fausse_3": "Seconde majeure"
+  },
+  {
+    "id": "IVX_desc_b4_g4",
+    "niveau": "C1/3",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle descendant ?",
+    "vexflow_notes": [
+      "b/4",
+      "g/4"
+    ],
+    "reponse_correcte": "Tierce majeure",
+    "reponse_fausse_1": "Tierce mineure",
+    "reponse_fausse_2": "Quarte juste",
+    "reponse_fausse_3": "Seconde majeure"
+  },
+  {
+    "id": "IVX_asc_b4_e5",
+    "niveau": "C2/1",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle ascendant ?",
+    "vexflow_notes": [
+      "b/4",
+      "e/5"
+    ],
+    "reponse_correcte": "Quarte juste",
+    "reponse_fausse_1": "Tierce majeure",
+    "reponse_fausse_2": "Quarte augmentée",
+    "reponse_fausse_3": "Tierce mineure"
+  },
+  {
+    "id": "IVX_desc_b4_fs4",
+    "niveau": "C2/1",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle descendant ?",
+    "vexflow_notes": [
+      "b/4",
+      "f#/4"
+    ],
+    "reponse_correcte": "Quarte juste",
+    "reponse_fausse_1": "Tierce majeure",
+    "reponse_fausse_2": "Quarte augmentée",
+    "reponse_fausse_3": "Tierce mineure"
+  },
+  {
+    "id": "IVX_asc_b4_es5",
+    "niveau": "C2/1",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle ascendant ?",
+    "vexflow_notes": [
+      "b/4",
+      "e#/5"
+    ],
+    "reponse_correcte": "Quarte augmentée",
+    "reponse_fausse_1": "Quarte juste",
+    "reponse_fausse_2": "Quinte juste",
+    "reponse_fausse_3": "Tierce majeure"
+  },
+  {
+    "id": "IVX_desc_b4_f4",
+    "niveau": "C2/1",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle descendant ?",
+    "vexflow_notes": [
+      "b/4",
+      "f/4"
+    ],
+    "reponse_correcte": "Quarte augmentée",
+    "reponse_fausse_1": "Quarte juste",
+    "reponse_fausse_2": "Quinte juste",
+    "reponse_fausse_3": "Tierce majeure"
+  },
+  {
+    "id": "IVX_asc_b4_fs5",
+    "niveau": "C2/1",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle ascendant ?",
+    "vexflow_notes": [
+      "b/4",
+      "f#/5"
+    ],
+    "reponse_correcte": "Quinte juste",
+    "reponse_fausse_1": "Quarte augmentée",
+    "reponse_fausse_2": "Sixte mineure",
+    "reponse_fausse_3": "Quarte juste"
+  },
+  {
+    "id": "IVX_desc_b4_e4",
+    "niveau": "C2/1",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle descendant ?",
+    "vexflow_notes": [
+      "b/4",
+      "e/4"
+    ],
+    "reponse_correcte": "Quinte juste",
+    "reponse_fausse_1": "Quarte augmentée",
+    "reponse_fausse_2": "Sixte mineure",
+    "reponse_fausse_3": "Quarte juste"
+  },
+  {
+    "id": "IVX_asc_b4_g5",
+    "niveau": "C2/2",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle ascendant ?",
+    "vexflow_notes": [
+      "b/4",
+      "g/5"
+    ],
+    "reponse_correcte": "Sixte mineure",
+    "reponse_fausse_1": "Quinte juste",
+    "reponse_fausse_2": "Sixte majeure",
+    "reponse_fausse_3": "Quarte augmentée"
+  },
+  {
+    "id": "IVX_desc_b4_ds4",
+    "niveau": "C2/2",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle descendant ?",
+    "vexflow_notes": [
+      "b/4",
+      "d#/4"
+    ],
+    "reponse_correcte": "Sixte mineure",
+    "reponse_fausse_1": "Quinte juste",
+    "reponse_fausse_2": "Sixte majeure",
+    "reponse_fausse_3": "Quarte augmentée"
+  },
+  {
+    "id": "IVX_asc_b4_gs5",
+    "niveau": "C2/2",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle ascendant ?",
+    "vexflow_notes": [
+      "b/4",
+      "g#/5"
+    ],
+    "reponse_correcte": "Sixte majeure",
+    "reponse_fausse_1": "Sixte mineure",
+    "reponse_fausse_2": "Septième mineure",
+    "reponse_fausse_3": "Quinte juste"
+  },
+  {
+    "id": "IVX_desc_b4_d4",
+    "niveau": "C2/2",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle descendant ?",
+    "vexflow_notes": [
+      "b/4",
+      "d/4"
+    ],
+    "reponse_correcte": "Sixte majeure",
+    "reponse_fausse_1": "Sixte mineure",
+    "reponse_fausse_2": "Septième mineure",
+    "reponse_fausse_3": "Quinte juste"
+  },
+  {
+    "id": "IVX_asc_b4_a5",
+    "niveau": "C2/3",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle ascendant ?",
+    "vexflow_notes": [
+      "b/4",
+      "a/5"
+    ],
+    "reponse_correcte": "Septième mineure",
+    "reponse_fausse_1": "Sixte majeure",
+    "reponse_fausse_2": "Septième majeure",
+    "reponse_fausse_3": "Sixte mineure"
+  },
+  {
+    "id": "IVX_desc_b4_cs4",
+    "niveau": "C2/3",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle descendant ?",
+    "vexflow_notes": [
+      "b/4",
+      "c#/4"
+    ],
+    "reponse_correcte": "Septième mineure",
+    "reponse_fausse_1": "Sixte majeure",
+    "reponse_fausse_2": "Septième majeure",
+    "reponse_fausse_3": "Sixte mineure"
+  },
+  {
+    "id": "IVX_asc_b4_as5",
+    "niveau": "C2/3",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle ascendant ?",
+    "vexflow_notes": [
+      "b/4",
+      "a#/5"
+    ],
+    "reponse_correcte": "Septième majeure",
+    "reponse_fausse_1": "Septième mineure",
+    "reponse_fausse_2": "Octave juste",
+    "reponse_fausse_3": "Sixte majeure"
+  },
+  {
+    "id": "IVX_desc_b4_c4",
+    "niveau": "C2/3",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle descendant ?",
+    "vexflow_notes": [
+      "b/4",
+      "c/4"
+    ],
+    "reponse_correcte": "Septième majeure",
+    "reponse_fausse_1": "Septième mineure",
+    "reponse_fausse_2": "Octave juste",
+    "reponse_fausse_3": "Sixte majeure"
+  },
+  {
+    "id": "IVX_asc_b4_b5",
+    "niveau": "C2/3",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle ascendant ?",
+    "vexflow_notes": [
+      "b/4",
+      "b/5"
+    ],
+    "reponse_correcte": "Octave juste",
+    "reponse_fausse_1": "Septième majeure",
+    "reponse_fausse_2": "Septième mineure",
+    "reponse_fausse_3": "Sixte majeure"
+  },
+  {
+    "id": "IVX_desc_b4_b3",
+    "niveau": "C2/3",
+    "categorie": "intervalles",
+    "type": "vexflow_intervalle",
+    "question": "Quelle est la nature de cet intervalle descendant ?",
+    "vexflow_notes": [
+      "b/4",
+      "b/3"
     ],
     "reponse_correcte": "Octave juste",
     "reponse_fausse_1": "Septième majeure",

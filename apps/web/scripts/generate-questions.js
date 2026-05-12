@@ -90,35 +90,63 @@ const TEXT_INTERVALS = [
   { to: "Do'", name: 'Octave juste',       idx: 12 },
 ]
 
-// Questions VexFlow : portée avec deux notes
-const VEX_INTERVALS = [
-  { vex: ['e/4', 'f/4'],  name: 'Seconde mineure',    idx: 1  },
-  { vex: ['c/4', 'd/4'],  name: 'Seconde majeure',    idx: 2  },
-  { vex: ['a/4', 'c/5'],  name: 'Tierce mineure',     idx: 3  },
-  { vex: ['c/4', 'e/4'],  name: 'Tierce majeure',     idx: 4  },
-  { vex: ['g/4', 'c/5'],  name: 'Quarte juste',       idx: 5  },
-  { vex: ['c/4', 'f#/4'], name: 'Quarte augmentée',   idx: 6  },
-  { vex: ['c/4', 'g/4'],  name: 'Quinte juste',       idx: 7  },
-  { vex: ['e/4', 'c/5'],  name: 'Sixte mineure',      idx: 8  },
-  { vex: ['c/4', 'a/4'],  name: 'Sixte majeure',      idx: 9  },
-  { vex: ['c/4', 'bb/4'], name: 'Septième mineure',   idx: 10 },
-  { vex: ['c/4', 'b/4'],  name: 'Septième majeure',   idx: 11 },
-  { vex: ['c/4', 'c/5'],  name: 'Octave juste',       idx: 12 },
+// Données pour génération algorithmique VexFlow
+const VEX_INTERVAL_DEFS = [
+  { name: 'Seconde mineure',    steps: 1, semis: 1,  idx: 1 },
+  { name: 'Seconde majeure',    steps: 1, semis: 2,  idx: 2 },
+  { name: 'Tierce mineure',     steps: 2, semis: 3,  idx: 3 },
+  { name: 'Tierce majeure',     steps: 2, semis: 4,  idx: 4 },
+  { name: 'Quarte juste',       steps: 3, semis: 5,  idx: 5 },
+  { name: 'Quarte augmentée',   steps: 3, semis: 6,  idx: 6 },
+  { name: 'Quinte juste',       steps: 4, semis: 7,  idx: 7 },
+  { name: 'Sixte mineure',      steps: 5, semis: 8,  idx: 8 },
+  { name: 'Sixte majeure',      steps: 5, semis: 9,  idx: 9 },
+  { name: 'Septième mineure',   steps: 6, semis: 10, idx: 10 },
+  { name: 'Septième majeure',   steps: 6, semis: 11, idx: 11 },
+  { name: 'Octave juste',       steps: 7, semis: 12, idx: 12 },
 ]
+
+const VEX_LETTERS = ['c', 'd', 'e', 'f', 'g', 'a', 'b']
+const VEX_NATURAL_SEMIS = [0, 2, 4, 5, 7, 9, 11]
+
+// Calcule la seconde note d'un intervalle depuis une note naturelle en octave 4.
+// Retourne la clé VexFlow (ex: 'f#/4') ou null si double altération requise.
+function computeSecondNote(startLetterIdx, ivDef, ascending) {
+  const startMidi = 4 * 12 + VEX_NATURAL_SEMIS[startLetterIdx]
+
+  let rawIdx, targetLetterIdx, targetOctave, targetMidi
+  if (ascending) {
+    rawIdx = startLetterIdx + ivDef.steps
+    targetLetterIdx = rawIdx % 7
+    targetOctave = 4 + Math.floor(rawIdx / 7)
+    targetMidi = startMidi + ivDef.semis
+  } else {
+    rawIdx = startLetterIdx - ivDef.steps
+    targetLetterIdx = ((rawIdx % 7) + 7) % 7
+    targetOctave = 4 + Math.floor(rawIdx / 7)
+    targetMidi = startMidi - ivDef.semis
+  }
+
+  const naturalMidi = targetOctave * 12 + VEX_NATURAL_SEMIS[targetLetterIdx]
+  const accSemis = targetMidi - naturalMidi
+  if (Math.abs(accSemis) > 1) return null
+
+  const acc = accSemis === 1 ? '#' : accSemis === -1 ? 'b' : ''
+  return `${VEX_LETTERS[targetLetterIdx]}${acc}/${targetOctave}`
+}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function altCountToLevel(n) {
   if (n === 0) return 'C1/1'
-  if (n <= 2)  return 'C1/2'
-  if (n <= 4)  return 'C1/3'
-  if (n <= 5)  return 'C2/1'
-  if (n <= 6)  return 'C2/2'
-  return 'C2/3'
+  if (n <= 1)  return 'C1/4'
+  if (n <= 2)  return 'C2/1'
+  if (n <= 3)  return 'C2/3'
+  if (n <= 4)  return 'C2/4'
+  return 'C3'
 }
 
 function intervalToLevel(idx) {
-  if (idx <= 2) return 'C1/2'
   if (idx <= 4) return 'C1/3'
   if (idx <= 7) return 'C2/1'
   if (idx <= 9) return 'C2/2'
@@ -351,21 +379,37 @@ function generateIntervalleTextQuestions() {
 }
 
 function generateIntervalleVexQuestions() {
-  return VEX_INTERVALS.map(iv => {
-    const wrong = intervalDistr3(iv.name)
-    return {
-      id: `IVX_${iv.vex[0].replace('/','').replace('#','s').replace('b','b')}_${iv.vex[1].replace('/','').replace('#','s').replace('b','b')}`,
-      niveau: intervalToLevel(iv.idx),
-      categorie: 'intervalles',
-      type: 'vexflow_intervalle',
-      question: 'Quelle est la nature de cet intervalle ?',
-      vexflow_notes: iv.vex,
-      reponse_correcte: iv.name,
-      reponse_fausse_1: wrong[0] ?? 'Seconde majeure',
-      reponse_fausse_2: wrong[1] ?? 'Tierce mineure',
-      reponse_fausse_3: wrong[2] ?? 'Quarte juste',
+  const qs = []
+  for (let li = 0; li < VEX_LETTERS.length; li++) {
+    const startKey = `${VEX_LETTERS[li]}/4`
+    for (const ivDef of VEX_INTERVAL_DEFS) {
+      for (const ascending of [true, false]) {
+        const secondKey = computeSecondNote(li, ivDef, ascending)
+        if (!secondKey) continue
+
+        const dir = ascending ? 'asc' : 'desc'
+        const startId = `${VEX_LETTERS[li]}4`
+        const endId = secondKey.replace('/', '').replace('#', 's')
+        const id = `IVX_${dir}_${startId}_${endId}`
+        const wrong = intervalDistr3(ivDef.name)
+        const dirLabel = ascending ? 'ascendant' : 'descendant'
+
+        qs.push({
+          id,
+          niveau: intervalToLevel(ivDef.idx),
+          categorie: 'intervalles',
+          type: 'vexflow_intervalle',
+          question: `Quelle est la nature de cet intervalle ${dirLabel} ?`,
+          vexflow_notes: [startKey, secondKey],
+          reponse_correcte: ivDef.name,
+          reponse_fausse_1: wrong[0] ?? 'Seconde majeure',
+          reponse_fausse_2: wrong[1] ?? 'Tierce mineure',
+          reponse_fausse_3: wrong[2] ?? 'Quarte juste',
+        })
+      }
     }
-  })
+  }
+  return qs
 }
 
 // ─── Main ─────────────────────────────────────────────────────────────────────

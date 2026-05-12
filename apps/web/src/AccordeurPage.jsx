@@ -26,7 +26,11 @@ const SEUIL_DEFAULT           = 10
 const SILENCE_MS_DEFAULT      = 40
 const NOTE_JUMP_CENTS_DEFAULT = 30
 const REFERENTIELS            = ['tempere', '5-limite', 'utilisateur']
-const INTERVAL_NAMES          = ['m2','M2','m3','M3','P4','TT','P5','m6','M6','m7','M7','8ve']
+const INTERVAL_NAMES          = [
+  'Seconde mineure','Seconde majeure','Tierce mineure','Tierce majeure',
+  'Quarte juste','Triton','Quinte juste','Sixte mineure',
+  'Sixte majeure','Septième mineure','Septième majeure','Octave',
+]
 const TEMPERAMENT_TEMPERE     = Array(12).fill(0)
 const USER_TEMP_KEY           = 'acc_temperament_user'
 const USER_PRESETS_KEY        = 'acc_temperament_presets'
@@ -222,6 +226,112 @@ function VuMetre({ cents, seuil }) {
       <text x={CX} y={CY - R - 6} fontSize="9" fill="#4b5563" textAnchor="middle">0</text>
       <text x={CX + R + 6} y={CY + 16} fontSize="9" fill="#4b5563" textAnchor="middle">+50¢</text>
     </svg>
+  )
+}
+
+// ─── Knob tempérament ────────────────────────────────────────────────────────────
+function TemperamentKnob({ label, value, onChange, disabled = false }) {
+  const SIZE = 64
+  const STROKE = 6
+  const R = (SIZE - STROKE) / 2
+  const CX = SIZE / 2
+  const CY = SIZE / 2
+  const MIN_VAL = -50
+  const MAX_VAL = 50
+  const START_ANGLE = 225   // degrés depuis 3h (axe x+), sens horaire
+  const SWEEP = 270         // degrés total
+
+  const valToAngle = v => START_ANGLE + ((v - MIN_VAL) / (MAX_VAL - MIN_VAL)) * SWEEP
+
+  const polarToXY = (angleDeg, r) => {
+    const rad = (angleDeg - 90) * Math.PI / 180
+    return { x: CX + r * Math.cos(rad), y: CY + r * Math.sin(rad) }
+  }
+
+  const arcPath = (a1, a2, r) => {
+    const p1 = polarToXY(a1, r)
+    const p2 = polarToXY(a2, r)
+    const large = (a2 - a1 + 360) % 360 > 180 ? 1 : 0
+    return `M ${p1.x} ${p1.y} A ${r} ${r} 0 ${large} 1 ${p2.x} ${p2.y}`
+  }
+
+  const angle = valToAngle(value)
+  const trackPath = arcPath(START_ANGLE, START_ANGLE + SWEEP, R)
+  const fillPath  = arcPath(START_ANGLE, angle, R)
+
+  const dragRef = useRef(null)
+  const [editing, setEditing] = useState(false)
+  const [inputVal, setInputVal] = useState('')
+
+  const onPointerDown = e => {
+    e.preventDefault()
+    e.currentTarget.setPointerCapture(e.pointerId)
+    dragRef.current = { startY: e.clientY, startVal: value }
+  }
+  const onPointerMove = e => {
+    if (!dragRef.current) return
+    const delta = (dragRef.current.startY - e.clientY) * 0.4
+    const next = Math.max(MIN_VAL, Math.min(MAX_VAL, dragRef.current.startVal + delta))
+    onChange(Math.round(next * 10) / 10)
+  }
+  const onPointerUp = () => { dragRef.current = null }
+
+  const commitInput = () => {
+    const n = parseFloat(inputVal)
+    if (!isNaN(n)) onChange(Math.max(MIN_VAL, Math.min(MAX_VAL, Math.round(n * 10) / 10)))
+    setEditing(false)
+  }
+
+  const accent = disabled ? '#374151' : value === 0 ? '#4b5563' : '#FF8B3D'
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, opacity: disabled ? 0.45 : 1 }}>
+      {/* SVG knob */}
+      <svg
+        width={SIZE} height={SIZE}
+        style={{ cursor: disabled ? 'default' : 'ns-resize', touchAction: 'none', userSelect: 'none' }}
+        onPointerDown={disabled ? undefined : onPointerDown}
+        onPointerMove={disabled ? undefined : onPointerMove}
+        onPointerUp={disabled ? undefined : onPointerUp}
+        onPointerCancel={disabled ? undefined : onPointerUp}
+      >
+        <path d={trackPath} fill="none" stroke="#1e293b" strokeWidth={STROKE} strokeLinecap="round" />
+        {value !== 0 && !disabled && <path d={fillPath} fill="none" stroke={accent} strokeWidth={STROKE} strokeLinecap="round" />}
+        {(() => { const p = polarToXY(angle, R); return <circle cx={p.x} cy={p.y} r={STROKE / 2 + 1} fill={accent} /> })()}
+        <circle cx={CX} cy={CY} r={R - STROKE - 4} fill="#0a0f1a" />
+      </svg>
+      {/* Cadre numérique */}
+      {!disabled && editing ? (
+        <input
+          autoFocus
+          value={inputVal}
+          onChange={e => setInputVal(e.target.value)}
+          onBlur={commitInput}
+          onKeyDown={e => { if (e.key === 'Enter') commitInput(); if (e.key === 'Escape') setEditing(false) }}
+          style={{
+            width: 56, textAlign: 'center', fontSize: 11, fontWeight: 700,
+            background: '#0a0f1a', color: '#f9fafb', border: '1px solid #FF8B3D',
+            borderRadius: 4, padding: '2px 4px', outline: 'none',
+          }}
+        />
+      ) : (
+        <button
+          onClick={disabled ? undefined : () => { setInputVal(value.toFixed(1)); setEditing(true) }}
+          style={{
+            width: 56, textAlign: 'center', fontSize: 11, fontWeight: 700,
+            background: '#0a0f1a', color: accent,
+            border: `1px solid ${disabled || value === 0 ? '#1e293b' : '#FF8B3D'}`,
+            borderRadius: 4, padding: '2px 4px', cursor: disabled ? 'default' : 'text',
+            minHeight: 'auto',
+          }}
+        >
+          {value > 0 ? '+' : ''}{value.toFixed(1)}¢
+        </button>
+      )}
+      <span style={{ fontSize: 9, color: '#6b7280', textAlign: 'center', lineHeight: 1.2, maxWidth: 64 }}>
+        {label}
+      </span>
+    </div>
   )
 }
 
@@ -862,116 +972,60 @@ export default function AccordeurPage() {
               <hr style={{ border: 'none', borderTop: '1px solid var(--border-c)', margin: '16px 0' }} />
 
               {/* ── Tempérament utilisateur ── */}
-              <div style={{ marginBottom: 8 }}>
-                <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--text)', marginBottom: 12 }}>Tempérament</div>
+              <details>
+                <summary style={{ fontWeight: 700, fontSize: 13, color: 'var(--text)', cursor: 'pointer', listStyle: 'none', display: 'flex', alignItems: 'center', gap: 6, padding: '2px 0' }}>
+                  <svg width="12" height="12" viewBox="0 0 12 12" style={{ transition: 'transform .2s', flexShrink: 0 }} className="details-arrow"><path d="M2 4l4 4 4-4" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                  Tempérament
+                </summary>
+                <div style={{ marginTop: 12 }}>
 
-                {/* Préréglages */}
-                <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
-                  <select
-                    onChange={e => {
-                      const v = e.target.value
-                      if (v === 'tempere') setUserTemperament(TEMPERAMENT_TEMPERE.slice())
-                      else if (v === 'harmonique') setUserTemperament([...HARMONIQUE_OFFSETS])
-                      else {
-                        const p = userPresets.find(x => x.id === v)
-                        if (p) setUserTemperament([...p.offsets])
-                      }
-                    }}
-                    defaultValue=""
-                    className="flex-1 bg-app text-app border border-app rounded-md px-2 py-1.5 text-xs"
-                  >
-                    <option value="" disabled>Charger un préréglage…</option>
-                    <option value="tempere">Tempéré égal</option>
-                    <option value="harmonique">Harmonique (5-limite)</option>
-                    {userPresets.length > 0 && <option disabled>──────────</option>}
-                    {userPresets.map(p => <option key={p.id} value={p.id}>{p.nom}</option>)}
-                  </select>
-                </div>
+                  {/* Préréglages */}
+                  <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+                    <select
+                      onChange={e => {
+                        const v = e.target.value
+                        if (v === 'tempere') setUserTemperament(TEMPERAMENT_TEMPERE.slice())
+                        else if (v === 'harmonique') setUserTemperament([...HARMONIQUE_OFFSETS])
+                        else {
+                          const p = userPresets.find(x => x.id === v)
+                          if (p) setUserTemperament([...p.offsets])
+                        }
+                      }}
+                      defaultValue=""
+                      className="flex-1 bg-app text-app border border-app rounded-md px-2 py-1.5 text-xs"
+                    >
+                      <option value="" disabled>Charger un préréglage…</option>
+                      <option value="tempere">Tempéré égal</option>
+                      <option value="harmonique">Harmonique (5-limite)</option>
+                      {userPresets.length > 0 && <option disabled>──────────</option>}
+                      {userPresets.map(p => <option key={p.id} value={p.id}>{p.nom}</option>)}
+                    </select>
+                  </div>
 
-                {/* 12 sliders */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 12px', marginBottom: 14 }}>
-                  {INTERVAL_NAMES.map((name, i) => (
-                    <label key={i} style={{ fontSize: 10, color: 'var(--text-muted)' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
-                        <span>{name}</span>
-                        <span style={{ fontWeight: 700, color: userTemperament[i] === 0 ? 'var(--text-muted)' : '#FF8B3D', minWidth: 36, textAlign: 'right' }}>
-                          {userTemperament[i] > 0 ? '+' : ''}{userTemperament[i].toFixed(1)}¢
-                        </span>
-                      </div>
-                      <input
-                        type="range" min="-50" max="50" step="0.5"
+                  {/* 12 knobs (index 11 = Octave, non réglable) */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px 8px', marginBottom: 14 }}>
+                    {INTERVAL_NAMES.map((name, i) => (
+                      <TemperamentKnob
+                        key={i}
+                        label={name}
                         value={userTemperament[i]}
-                        onChange={e => {
-                          const v = parseFloat(e.target.value)
-                          setUserTemperament(prev => { const next = [...prev]; next[i] = v; return next })
-                        }}
-                        style={{ width: '100%', accentColor: '#FF8B3D' }}
+                        disabled={i === 11}
+                        onChange={v => setUserTemperament(prev => { const next = [...prev]; next[i] = v; return next })}
                       />
-                    </label>
-                  ))}
-                </div>
-
-                {/* Reset */}
-                <button
-                  onClick={() => setUserTemperament(TEMPERAMENT_TEMPERE.slice())}
-                  className="text-xs text-app-muted bg-transparent border border-app rounded-md px-3 py-1.5 cursor-pointer mb-3"
-                >Réinitialiser à 0</button>
-
-                {/* Sauvegarder preset */}
-                <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
-                  <input
-                    value={newPresetNom}
-                    onChange={e => setNewPresetNom(e.target.value)}
-                    placeholder="Nom du tempérament…"
-                    className="flex-1 bg-app text-app border border-app rounded-md px-2 py-1.5 text-xs"
-                  />
-                  <button
-                    disabled={!newPresetNom.trim()}
-                    onClick={() => {
-                      const p = { id: `tp-${Date.now()}`, nom: newPresetNom.trim(), offsets: [...userTemperament] }
-                      setUserPresets(prev => [...prev, p])
-                      setNewPresetNom('')
-                    }}
-                    className="bg-app text-app border border-app rounded-md px-3 py-1.5 text-xs cursor-pointer font-bold"
-                    style={{ opacity: newPresetNom.trim() ? 1 : 0.4 }}
-                  >Sauvegarder</button>
-                </div>
-
-                {/* Gérer presets */}
-                {userPresets.length > 0 && (
-                  <div style={{ marginBottom: 10 }}>
-                    {userPresets.map(p => (
-                      <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4, fontSize: 11 }}>
-                        <span style={{ flex: 1, color: 'var(--text)' }}>{p.nom}</span>
-                        <button
-                          onClick={() => setUserTemperament([...p.offsets])}
-                          className="bg-transparent border border-app rounded px-2 py-0.5 text-[10px] cursor-pointer text-app-muted"
-                        >Charger</button>
-                        <button
-                          onClick={() => setUserPresets(prev => prev.filter(x => x.id !== p.id))}
-                          className="bg-transparent border-none text-red-400 cursor-pointer text-sm"
-                          style={{ minHeight: 'auto' }}
-                        >×</button>
-                      </div>
                     ))}
                   </div>
-                )}
 
-                {/* Export / Import */}
-                <div style={{ borderTop: '1px solid var(--border-c)', paddingTop: 10, display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  <button
-                    onClick={() => {
-                      const encoded = btoa(JSON.stringify(userTemperament))
-                      const url = `${window.location.origin}/accordeur?t=${encoded}`
-                      navigator.clipboard.writeText(url)
-                    }}
-                    className="text-xs bg-app border border-app rounded-md px-3 py-1.5 cursor-pointer text-app-muted"
-                  >Copier le lien de partage</button>
-                  <div style={{ display: 'flex', gap: 6 }}>
+                  {/* Reset + Import sur même ligne */}
+                  <div style={{ display: 'flex', gap: 6, marginBottom: 10, alignItems: 'center' }}>
+                    <button
+                      onClick={() => setUserTemperament(TEMPERAMENT_TEMPERE.slice())}
+                      className="text-xs text-app-muted bg-transparent border border-app rounded-md px-3 py-1.5 cursor-pointer"
+                      style={{ flexShrink: 0 }}
+                    >Réinitialiser</button>
                     <input
                       value={importStr}
                       onChange={e => setImportStr(e.target.value)}
-                      placeholder="Coller un lien ou code base64…"
+                      placeholder="Lien ou code base64…"
                       className="flex-1 bg-app text-app border border-app rounded-md px-2 py-1.5 text-xs"
                     />
                     <button
@@ -987,11 +1041,64 @@ export default function AccordeurPage() {
                       }}
                       disabled={!importStr.trim()}
                       className="bg-app border border-app rounded-md px-3 py-1.5 text-xs cursor-pointer text-app-muted font-bold"
-                      style={{ opacity: importStr.trim() ? 1 : 0.4 }}
+                      style={{ opacity: importStr.trim() ? 1 : 0.4, flexShrink: 0 }}
                     >Importer</button>
                   </div>
+
+                  <hr style={{ border: 'none', borderTop: '1px solid var(--border-c)', margin: '10px 0' }} />
+
+                  {/* Sauvegarder preset */}
+                  <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
+                    <input
+                      value={newPresetNom}
+                      onChange={e => setNewPresetNom(e.target.value)}
+                      placeholder="Nom du tempérament…"
+                      className="flex-1 bg-app text-app border border-app rounded-md px-2 py-1.5 text-xs"
+                    />
+                    <button
+                      disabled={!newPresetNom.trim()}
+                      onClick={() => {
+                        const p = { id: `tp-${Date.now()}`, nom: newPresetNom.trim(), offsets: [...userTemperament] }
+                        setUserPresets(prev => [...prev, p])
+                        setNewPresetNom('')
+                      }}
+                      className="bg-app text-app border border-app rounded-md px-3 py-1.5 text-xs cursor-pointer font-bold"
+                      style={{ opacity: newPresetNom.trim() ? 1 : 0.4 }}
+                    >Sauvegarder</button>
+                  </div>
+
+                  {/* Gérer presets */}
+                  {userPresets.length > 0 && (
+                    <div style={{ marginBottom: 10 }}>
+                      {userPresets.map(p => (
+                        <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4, fontSize: 11 }}>
+                          <span style={{ flex: 1, color: 'var(--text)' }}>{p.nom}</span>
+                          <button
+                            onClick={() => setUserTemperament([...p.offsets])}
+                            className="bg-transparent border border-app rounded px-2 py-0.5 text-[10px] cursor-pointer text-app-muted"
+                          >Charger</button>
+                          <button
+                            onClick={() => setUserPresets(prev => prev.filter(x => x.id !== p.id))}
+                            className="bg-transparent border-none text-red-400 cursor-pointer text-sm"
+                            style={{ minHeight: 'auto' }}
+                          >×</button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Export */}
+                  <button
+                    onClick={() => {
+                      const encoded = btoa(JSON.stringify(userTemperament))
+                      const url = `${window.location.origin}/accordeur?t=${encoded}`
+                      navigator.clipboard.writeText(url)
+                    }}
+                    className="text-xs bg-app border border-app rounded-md px-3 py-1.5 cursor-pointer text-app-muted"
+                  >Copier le lien de partage</button>
+
                 </div>
-              </div>
+              </details>
 
             </div>
           </>
