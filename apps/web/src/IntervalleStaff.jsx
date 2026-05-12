@@ -18,11 +18,18 @@ export default function IntervalleStaff({ notes, width = 260, height = 110 }) {
       stave.setStyle({ strokeStyle: '#4b5563', fillStyle: '#4b5563' })
       stave.setContext(ctx).draw()
 
+      const svgAfterStave = ref.current.querySelector('svg')
+      const stavePaths = svgAfterStave ? new Set(svgAfterStave.querySelectorAll('path, rect, line')) : new Set()
+
       const vexNotes = notes.map(key => {
         const note = new StaveNote({ keys: [key], duration: 'q' })
-        note.setStyle({ fillStyle: '#c084fc', strokeStyle: '#c084fc' })
+        note.setStyle({ fillStyle: '#6b7280', strokeStyle: '#6b7280' })
         const accidental = key.split('/')[0].slice(1)
-        if (accidental) note.addModifier(new Accidental(accidental), 0)
+        if (accidental) {
+          const acc = new Accidental(accidental)
+          acc.setStyle({ fillStyle: '#6b7280', strokeStyle: '#6b7280' })
+          note.addModifier(acc, 0)
+        }
         return note
       })
 
@@ -37,7 +44,16 @@ export default function IntervalleStaff({ notes, width = 260, height = 110 }) {
       const svg = ref.current.querySelector('svg')
       if (svg) {
         svg.style.background = 'transparent'
-        svg.querySelectorAll('text').forEach(t => { t.style.fill = '#6b7280' })
+        const COL = '#6b7280'
+        const STAVE_COL = '#9ca3af'
+        svg.querySelectorAll('path, rect, line').forEach(el => {
+          const col = stavePaths.has(el) ? STAVE_COL : COL
+          const s = el.getAttribute('stroke') ?? ''
+          const f = el.getAttribute('fill') ?? ''
+          if (!s || s === '#000000' || s === 'black') el.setAttribute('stroke', col)
+          if (!f || f === '#000000' || f === 'black') el.setAttribute('fill', col)
+        })
+        svg.querySelectorAll('text').forEach(t => { t.style.fill = STAVE_COL })
       }
     } catch (err) {
       console.warn('VexFlow intervalle:', err.message ?? err)

@@ -109,21 +109,20 @@ const VEX_INTERVAL_DEFS = [
 const VEX_LETTERS = ['c', 'd', 'e', 'f', 'g', 'a', 'b']
 const VEX_NATURAL_SEMIS = [0, 2, 4, 5, 7, 9, 11]
 
-// Calcule la seconde note d'un intervalle depuis une note naturelle en octave 4.
-// Retourne la clé VexFlow (ex: 'f#/4') ou null si double altération requise.
-function computeSecondNote(startLetterIdx, ivDef, ascending) {
-  const startMidi = 4 * 12 + VEX_NATURAL_SEMIS[startLetterIdx]
+// Retourne la clé VexFlow de la seconde note (ex: 'f#/4') ou null si double altération requise.
+function computeSecondNote(startLetterIdx, ivDef, ascending, startOctave = 4) {
+  const startMidi = startOctave * 12 + VEX_NATURAL_SEMIS[startLetterIdx]
 
   let rawIdx, targetLetterIdx, targetOctave, targetMidi
   if (ascending) {
     rawIdx = startLetterIdx + ivDef.steps
     targetLetterIdx = rawIdx % 7
-    targetOctave = 4 + Math.floor(rawIdx / 7)
+    targetOctave = startOctave + Math.floor(rawIdx / 7)
     targetMidi = startMidi + ivDef.semis
   } else {
     rawIdx = startLetterIdx - ivDef.steps
     targetLetterIdx = ((rawIdx % 7) + 7) % 7
-    targetOctave = 4 + Math.floor(rawIdx / 7)
+    targetOctave = startOctave + Math.floor(rawIdx / 7)
     targetMidi = startMidi - ivDef.semis
   }
 
@@ -134,6 +133,8 @@ function computeSecondNote(startLetterIdx, ivDef, ascending) {
   const acc = accSemis === 1 ? '#' : accSemis === -1 ? 'b' : ''
   return `${VEX_LETTERS[targetLetterIdx]}${acc}/${targetOctave}`
 }
+
+const MIDI_G3 = 3 * 12 + 7  // = 43
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -381,14 +382,21 @@ function generateIntervalleTextQuestions() {
 function generateIntervalleVexQuestions() {
   const qs = []
   for (let li = 0; li < VEX_LETTERS.length; li++) {
-    const startKey = `${VEX_LETTERS[li]}/4`
     for (const ivDef of VEX_INTERVAL_DEFS) {
       for (const ascending of [true, false]) {
-        const secondKey = computeSecondNote(li, ivDef, ascending)
+        // Choisir l'octave de départ : monter à 5 si la note basse descend sous G3
+        let startOctave = 4
+        if (!ascending) {
+          const secondMidi = 4 * 12 + VEX_NATURAL_SEMIS[li] - ivDef.semis
+          if (secondMidi < MIDI_G3) startOctave = 5
+        }
+
+        const startKey = `${VEX_LETTERS[li]}/${startOctave}`
+        const secondKey = computeSecondNote(li, ivDef, ascending, startOctave)
         if (!secondKey) continue
 
         const dir = ascending ? 'asc' : 'desc'
-        const startId = `${VEX_LETTERS[li]}4`
+        const startId = startKey.replace('/', '')
         const endId = secondKey.replace('/', '').replace('#', 's')
         const id = `IVX_${dir}_${startId}_${endId}`
         const wrong = intervalDistr3(ivDef.name)

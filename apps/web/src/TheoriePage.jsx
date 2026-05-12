@@ -99,7 +99,7 @@ function parseTheorieCSV(csvText) {
 }
 
 // ── Timer bar (animation via ref) ──────────────────────────────────────────────
-function TimerBar({ limit, timedOut }) {
+function TimerBar({ limit, timedOut, revealed }) {
   const barRef = useRef()
   useEffect(() => {
     const bar = barRef.current
@@ -113,6 +113,15 @@ function TimerBar({ limit, timedOut }) {
   useEffect(() => {
     if (timedOut && barRef.current) { barRef.current.style.transition = 'none'; barRef.current.style.width = '0%' }
   }, [timedOut])
+  useEffect(() => {
+    if (revealed && barRef.current) {
+      const current = barRef.current.getBoundingClientRect().width
+      const parent = barRef.current.parentElement.getBoundingClientRect().width
+      const pct = parent > 0 ? (current / parent) * 100 : 0
+      barRef.current.style.transition = 'none'
+      barRef.current.style.width = `${pct}%`
+    }
+  }, [revealed])
   return (
     <div className="h-1.5 rounded-full mb-4 bg-surface-2 overflow-hidden">
       <div ref={barRef} className="h-full rounded-full" style={{ background: timedOut ? '#f87171' : '#8B5CF6' }} />
@@ -356,7 +365,7 @@ function QuizScreen({ session, mode, onAnswer, onNext }) {
           {timedOut ? 'Hors délai' : `${timeLeft}s`}
         </span>
       </div>
-      <TimerBar limit={limit} timedOut={timedOut} />
+      <TimerBar limit={limit} timedOut={timedOut} revealed={revealed} />
 
       {timedOut && !revealed && (
         <div className="text-xs text-red-400 text-center mb-2.5">Temps écoulé — réponds quand même pour 0,5 pt</div>

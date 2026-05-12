@@ -2434,14 +2434,14 @@
     "reponse_fausse_3": "Tierce majeure"
   },
   {
-    "id": "IVX_desc_c4_gb3",
+    "id": "IVX_desc_c5_gb4",
     "niveau": "C2/1",
     "categorie": "intervalles",
     "type": "vexflow_intervalle",
     "question": "Quelle est la nature de cet intervalle descendant ?",
     "vexflow_notes": [
-      "c/4",
-      "gb/3"
+      "c/5",
+      "gb/4"
     ],
     "reponse_correcte": "Quarte augmentée",
     "reponse_fausse_1": "Quarte juste",
@@ -2464,14 +2464,14 @@
     "reponse_fausse_3": "Quarte juste"
   },
   {
-    "id": "IVX_desc_c4_f3",
+    "id": "IVX_desc_c5_f4",
     "niveau": "C2/1",
     "categorie": "intervalles",
     "type": "vexflow_intervalle",
     "question": "Quelle est la nature de cet intervalle descendant ?",
     "vexflow_notes": [
-      "c/4",
-      "f/3"
+      "c/5",
+      "f/4"
     ],
     "reponse_correcte": "Quinte juste",
     "reponse_fausse_1": "Quarte augmentée",
@@ -2494,14 +2494,14 @@
     "reponse_fausse_3": "Quarte augmentée"
   },
   {
-    "id": "IVX_desc_c4_e3",
+    "id": "IVX_desc_c5_e4",
     "niveau": "C2/2",
     "categorie": "intervalles",
     "type": "vexflow_intervalle",
     "question": "Quelle est la nature de cet intervalle descendant ?",
     "vexflow_notes": [
-      "c/4",
-      "e/3"
+      "c/5",
+      "e/4"
     ],
     "reponse_correcte": "Sixte mineure",
     "reponse_fausse_1": "Quinte juste",
@@ -2524,14 +2524,14 @@
     "reponse_fausse_3": "Quinte juste"
   },
   {
-    "id": "IVX_desc_c4_eb3",
+    "id": "IVX_desc_c5_eb4",
     "niveau": "C2/2",
     "categorie": "intervalles",
     "type": "vexflow_intervalle",
     "question": "Quelle est la nature de cet intervalle descendant ?",
     "vexflow_notes": [
-      "c/4",
-      "eb/3"
+      "c/5",
+      "eb/4"
     ],
     "reponse_correcte": "Sixte majeure",
     "reponse_fausse_1": "Sixte mineure",
@@ -2554,14 +2554,14 @@
     "reponse_fausse_3": "Sixte mineure"
   },
   {
-    "id": "IVX_desc_c4_d3",
+    "id": "IVX_desc_c5_d4",
     "niveau": "C2/3",
     "categorie": "intervalles",
     "type": "vexflow_intervalle",
     "question": "Quelle est la nature de cet intervalle descendant ?",
     "vexflow_notes": [
-      "c/4",
-      "d/3"
+      "c/5",
+      "d/4"
     ],
     "reponse_correcte": "Septième mineure",
     "reponse_fausse_1": "Sixte majeure",
@@ -2584,14 +2584,14 @@
     "reponse_fausse_3": "Sixte majeure"
   },
   {
-    "id": "IVX_desc_c4_db3",
+    "id": "IVX_desc_c5_db4",
     "niveau": "C2/3",
     "categorie": "intervalles",
     "type": "vexflow_intervalle",
     "question": "Quelle est la nature de cet intervalle descendant ?",
     "vexflow_notes": [
-      "c/4",
-      "db/3"
+      "c/5",
+      "db/4"
     ],
     "reponse_correcte": "Septième majeure",
     "reponse_fausse_1": "Septième mineure",
@@ -2614,14 +2614,14 @@
     "reponse_fausse_3": "Sixte majeure"
   },
   {
-    "id": "IVX_desc_c4_c3",
+    "id": "IVX_desc_c5_c4",
     "niveau": "C2/3",
     "categorie": "intervalles",
     "type": "vexflow_intervalle",
     "question": "Quelle est la nature de cet intervalle descendant ?",
     "vexflow_notes": [
-      "c/4",
-      "c/3"
+      "c/5",
+      "c/4"
     ],
     "reponse_correcte": "Octave juste",
     "reponse_fausse_1": "Septième majeure",
@@ -2854,14 +2854,14 @@
     "reponse_fausse_3": "Quarte augmentée"
   },
   {
-    "id": "IVX_desc_d4_fs3",
+    "id": "IVX_desc_d5_fs4",
     "niveau": "C2/2",
     "categorie": "intervalles",
     "type": "vexflow_intervalle",
     "question": "Quelle est la nature de cet intervalle descendant ?",
     "vexflow_notes": [
-      "d/4",
-      "f#/3"
+      "d/5",
+      "f#/4"
     ],
     "reponse_correcte": "Sixte mineure",
     "reponse_fausse_1": "Quinte juste",
@@ -2884,14 +2884,14 @@
     "reponse_fausse_3": "Quinte juste"
   },
   {
-    "id": "IVX_desc_d4_f3",
+    "id": "IVX_desc_d5_f4",
     "niveau": "C2/2",
     "categorie": "intervalles",
     "type": "vexflow_intervalle",
     "question": "Quelle est la nature de cet intervalle descendant ?",
     "vexflow_notes": [
-      "d/4",
-      "f/3"
+      "d/5",
+      "f/4"
     ],
     "reponse_correcte": "Sixte majeure",
     "reponse_fausse_1": "Sixte mineure",
@@ -2914,14 +2914,14 @@
     "reponse_fausse_3": "Sixte mineure"
   },
   {
-    "id": "IVX_desc_d4_e3",
+    "id": "IVX_desc_d5_e4",
     "niveau": "C2/3",
     "categorie": "intervalles",
     "type": "vexflow_intervalle",
     "question": "Quelle est la nature de cet intervalle descendant ?",
     "vexflow_notes": [
-      "d/4",
-      "e/3"
+      "d/5",
+      "e/4"
     ],
     "reponse_correcte": "Septième mineure",
     "reponse_fausse_1": "Sixte majeure",
@@ -2944,14 +2944,14 @@
     "reponse_fausse_3": "Sixte majeure"
   },
   {
-    "id": "IVX_desc_d4_eb3",
+    "id": "IVX_desc_d5_eb4",
     "niveau": "C2/3",
     "categorie": "intervalles",
     "type": "vexflow_intervalle",
     "question": "Quelle est la nature de cet intervalle descendant ?",
     "vexflow_notes": [
-      "d/4",
-      "eb/3"
+      "d/5",
+      "eb/4"
     ],
     "reponse_correcte": "Septième majeure",
     "reponse_fausse_1": "Septième mineure",
@@ -2974,14 +2974,14 @@
     "reponse_fausse_3": "Sixte majeure"
   },
   {
-    "id": "IVX_desc_d4_d3",
+    "id": "IVX_desc_d5_d4",
     "niveau": "C2/3",
     "categorie": "intervalles",
     "type": "vexflow_intervalle",
     "question": "Quelle est la nature de cet intervalle descendant ?",
     "vexflow_notes": [
-      "d/4",
-      "d/3"
+      "d/5",
+      "d/4"
     ],
     "reponse_correcte": "Octave juste",
     "reponse_fausse_1": "Septième majeure",
@@ -3274,14 +3274,14 @@
     "reponse_fausse_3": "Sixte mineure"
   },
   {
-    "id": "IVX_desc_e4_fs3",
+    "id": "IVX_desc_e5_fs4",
     "niveau": "C2/3",
     "categorie": "intervalles",
     "type": "vexflow_intervalle",
     "question": "Quelle est la nature de cet intervalle descendant ?",
     "vexflow_notes": [
-      "e/4",
-      "f#/3"
+      "e/5",
+      "f#/4"
     ],
     "reponse_correcte": "Septième mineure",
     "reponse_fausse_1": "Sixte majeure",
@@ -3304,14 +3304,14 @@
     "reponse_fausse_3": "Sixte majeure"
   },
   {
-    "id": "IVX_desc_e4_f3",
+    "id": "IVX_desc_e5_f4",
     "niveau": "C2/3",
     "categorie": "intervalles",
     "type": "vexflow_intervalle",
     "question": "Quelle est la nature de cet intervalle descendant ?",
     "vexflow_notes": [
-      "e/4",
-      "f/3"
+      "e/5",
+      "f/4"
     ],
     "reponse_correcte": "Septième majeure",
     "reponse_fausse_1": "Septième mineure",
@@ -3334,14 +3334,14 @@
     "reponse_fausse_3": "Sixte majeure"
   },
   {
-    "id": "IVX_desc_e4_e3",
+    "id": "IVX_desc_e5_e4",
     "niveau": "C2/3",
     "categorie": "intervalles",
     "type": "vexflow_intervalle",
     "question": "Quelle est la nature de cet intervalle descendant ?",
     "vexflow_notes": [
-      "e/4",
-      "e/3"
+      "e/5",
+      "e/4"
     ],
     "reponse_correcte": "Octave juste",
     "reponse_fausse_1": "Septième majeure",
@@ -3664,14 +3664,14 @@
     "reponse_fausse_3": "Sixte majeure"
   },
   {
-    "id": "IVX_desc_f4_gb3",
+    "id": "IVX_desc_f5_gb4",
     "niveau": "C2/3",
     "categorie": "intervalles",
     "type": "vexflow_intervalle",
     "question": "Quelle est la nature de cet intervalle descendant ?",
     "vexflow_notes": [
-      "f/4",
-      "gb/3"
+      "f/5",
+      "gb/4"
     ],
     "reponse_correcte": "Septième majeure",
     "reponse_fausse_1": "Septième mineure",
@@ -3694,14 +3694,14 @@
     "reponse_fausse_3": "Sixte majeure"
   },
   {
-    "id": "IVX_desc_f4_f3",
+    "id": "IVX_desc_f5_f4",
     "niveau": "C2/3",
     "categorie": "intervalles",
     "type": "vexflow_intervalle",
     "question": "Quelle est la nature de cet intervalle descendant ?",
     "vexflow_notes": [
-      "f/4",
-      "f/3"
+      "f/5",
+      "f/4"
     ],
     "reponse_correcte": "Octave juste",
     "reponse_fausse_1": "Septième majeure",
