@@ -315,7 +315,7 @@ function TemperamentKnob({ label, value, onChange, disabled = false }) {
     setEditing(false)
   }
 
-  const accent = disabled ? '#374151' : value === 0 ? '#4b5563' : '#FF8B3D'
+  const accent = disabled ? '#4b5563' : value === 0 ? '#9ca3af' : '#FF8B3D'
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, opacity: disabled ? 0.45 : 1 }}>
@@ -353,7 +353,7 @@ function TemperamentKnob({ label, value, onChange, disabled = false }) {
           style={{
             width: 56, textAlign: 'center', fontSize: 11, fontWeight: 700,
             background: '#0a0f1a', color: accent,
-            border: `1px solid ${disabled || value === 0 ? '#1e293b' : '#FF8B3D'}`,
+            border: `1px solid ${disabled ? '#1e293b' : value === 0 ? '#374151' : '#FF8B3D'}`,
             borderRadius: 4, padding: '2px 4px', cursor: disabled ? 'default' : 'text',
             minHeight: 'auto',
           }}
@@ -361,7 +361,7 @@ function TemperamentKnob({ label, value, onChange, disabled = false }) {
           {value > 0 ? '+' : ''}{value.toFixed(1)}¢
         </button>
       )}
-      <span style={{ fontSize: 9, color: '#6b7280', textAlign: 'center', lineHeight: 1.2, maxWidth: 64 }}>
+      <span style={{ fontSize: 9, color: '#d1d5db', textAlign: 'center', lineHeight: 1.2, maxWidth: 64 }}>
         {label}
       </span>
     </div>

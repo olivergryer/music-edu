@@ -483,7 +483,7 @@ function TutorialOverlay({ onDone, levelOrder, activity: initActivity, inputMode
                 <div style={{ color: sel ? '#4A6CF7' : (dark ? '#6b7280' : '#9ca3af'), flexShrink:0, width:36, height:36, display:'flex', alignItems:'center', justifyContent:'center', transform:'scale(0.64)', transformOrigin:'center' }}>{ACT_ICONS[i]}</div>
                 <div>
                   <div style={{ fontSize:12, fontWeight:700 }}>{ACTIVITIES[i-1].label}</div>
-                  <div style={{ fontSize:9, marginTop:2, color: sel ? (dark ? '#a5b4fc' : '#6b7280') : (dark ? '#4b5563' : '#bbb') }}>{ACT_SHORT[i]}</div>
+                  <div style={{ fontSize:11, marginTop:2, fontWeight:500, color: sel ? (dark ? '#c4b5fd' : '#4A6CF7') : (dark ? '#9ca3af' : '#6b7280') }}>{ACT_SHORT[i]}</div>
                 </div>
                 {sel && <div style={{ marginLeft:'auto', width:10, height:10, borderRadius:5, background:'#4A6CF7', flexShrink:0 }}/>}
               </div>
@@ -506,7 +506,7 @@ function TutorialOverlay({ onDone, levelOrder, activity: initActivity, inputMode
             transition:'all 0.15s',
           }}>
             <div style={{ fontSize:30, fontWeight:900, color: tapSel ? '#4A6CF7' : micColor, letterSpacing:2 }}>TAP</div>
-            <div style={{ fontSize:10, color: tapSel ? '#a5b4fc' : micColor, marginTop:8, lineHeight:1.4 }}>Touche l'écran au rythme</div>
+            <div style={{ fontSize:12, fontWeight:500, color: tapSel ? (dark ? '#c4b5fd' : '#4A6CF7') : micColor, marginTop:8, lineHeight:1.4 }}>Touche l'écran au rythme</div>
           </div>
           <div role="button" onClick={() => setTutoInputMode("mic")} style={{
             flex:1, borderRadius:18, padding:'28px 12px', textAlign:'center', cursor:'pointer',
@@ -519,7 +519,7 @@ function TutorialOverlay({ onDone, levelOrder, activity: initActivity, inputMode
               <path d="M19 10v2a7 7 0 0 1-14 0v-2" stroke={micSel ? '#4A6CF7' : micColor} strokeWidth="2" strokeLinecap="round"/>
               <line x1="12" y1="19" x2="12" y2="23" stroke={micSel ? '#4A6CF7' : micColor} strokeWidth="2" strokeLinecap="round"/>
             </svg>
-            <div style={{ fontSize:10, color: micSel ? '#a5b4fc' : micColor, marginTop:8, lineHeight:1.4 }}>Chante, frappe dans tes mains ou joue à l'instrument</div>
+            <div style={{ fontSize:12, fontWeight:500, color: micSel ? (dark ? '#c4b5fd' : '#4A6CF7') : micColor, marginTop:8, lineHeight:1.4 }}>Chante, frappe dans tes mains ou joue à l'instrument</div>
           </div>
         </div>
       );
@@ -581,7 +581,7 @@ function TutorialOverlay({ onDone, levelOrder, activity: initActivity, inputMode
       {/* Text */}
       <div style={{ width:'100%', maxWidth:400, textAlign:'center', marginBottom:32 }}>
         <div style={{ fontSize:22, fontWeight:900, color: dark ? '#f9fafb' : '#111827', marginBottom:10 }}>{title}</div>
-        <div style={{ fontSize:14, color: dark ? '#9ca3af' : '#6b7280', lineHeight:1.6 }}>{body}</div>
+        <div style={{ fontSize:14, fontWeight:500, color: dark ? '#d1d5db' : '#374151', lineHeight:1.6 }}>{body}</div>
       </div>
 
       {/* Navigation */}
