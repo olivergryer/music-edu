@@ -92,7 +92,7 @@ function findPosiZeroCross(data, target, range = 2000) {
 
 // Crossfade in-place : fond les N derniers samples avant loopEnd
 // dans les N premiers depuis loopStart → saut inaudible
-function applyLoopCrossfade(buffer, loopStartSample, loopEndSample, xfMs = 20) {
+function applyLoopCrossfade(buffer, loopStartSample, loopEndSample, xfMs = 60) {
   const sr        = buffer.sampleRate
   const xfSamples = Math.min(Math.round(xfMs / 1000 * sr), loopEndSample - loopStartSample)
   for (let ch = 0; ch < buffer.numberOfChannels; ch++) {
@@ -116,7 +116,7 @@ function findLoopPoints(buffer, onsetMs) {
   // Début de boucle : 50ms dans le sustain
   const rawStart = sustainStart + Math.floor(0.05 * sr)
   // Fin de boucle : +400ms (boucle de 400ms)
-  const rawEnd   = rawStart + Math.floor(0.4 * sr)
+  const rawEnd   = rawStart + Math.floor(1.2 * sr)
 
   if (rawEnd >= data.length) {
     return { loopStart: sustainStart / sr, loopEnd: buffer.duration }
@@ -134,6 +134,7 @@ function findLoopPoints(buffer, onsetMs) {
 // ─── Cache mémoire (persist dans la session) ─────────────────────────────────
 const _memCache = new Map()   // instrument → Map<midi, {buffer, onsetMs, loopStart, loopEnd}>
 const _inFlight = new Map()   // instrument → Promise
+export function clearSampleCache() { _memCache.clear(); _inFlight.clear() }
 
 // ─── Charge tous les samples d'un instrument ─────────────────────────────────
 export async function loadInstrumentSamples(instrument, onProgress) {
@@ -173,9 +174,6 @@ export async function loadInstrumentSamples(instrument, onProgress) {
         } catch (decErr) {
           console.warn(`decodeAudioData échoué (${decErr?.message}), décodage manuel…`)
           buf = _decodeAiff(ctx, arrayBuf)
-          const midSlice = buf.getChannelData(0).slice(Math.floor(buf.length / 2), Math.floor(buf.length / 2) + 2000)
-          const peakMid  = Math.max(...midSlice.map(Math.abs))
-          console.log(`_decodeAiff → ${buf.length} frames, ${buf.sampleRate}Hz, ${buf.numberOfChannels}ch, peakMid=${peakMid.toFixed(4)}, ssndOK=${peakMid > 0.001}`)
         }
         const onsetMs = detectOnset(buf)
         const { loopStart, loopEnd } = findLoopPoints(buf, onsetMs)
@@ -239,7 +237,6 @@ function _playSample(ctx, sampleMap, midi, durationMs, startTime, centsOffset, l
 // ─── Joue un accord en boucle (samples, infini) ───────────────────────────────
 // Retourne [{src, midi}] pour mise à jour smooth du playbackRate
 export function playChord(ctx, midis, offsets, sampleMap, diapason = 442) {
-  console.log(`playChord: ctx.state=${ctx.state}, midis=${midis}, sampleMap.size=${sampleMap.size}`)
   const t0            = ctx.currentTime + 0.05
   const diapasonCents = 1200 * Math.log2(diapason / 440)
   return midis.map((midi, i) => {
