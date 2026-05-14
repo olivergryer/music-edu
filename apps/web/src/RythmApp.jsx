@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Link } from "react-router-dom";
+import { useTheme } from "./ThemeContext";
 import RythmStaff from "./RythmStaff";
 import SettingsPage from "./SettingsPage";
 import useSheetData from "./useSheetData";
@@ -366,40 +367,47 @@ export const TUTORIAL_VERSION = "1";   // incrémenter force réaffichage en mod
 
 const ACT_ICONS = {
   1: (
-    <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-      <rect x="4" y="10" width="24" height="3" rx="1.5" fill="#4b5563"/>
-      <rect x="4" y="15" width="24" height="3" rx="1.5" fill="#4b5563"/>
-      <rect x="4" y="20" width="24" height="3" rx="1.5" fill="#4b5563"/>
-      <circle cx="10" cy="20" r="3" fill="currentColor"/>
-      <line x1="13" y1="20" x2="13" y2="10" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-      <circle cx="21" cy="18" r="3" fill="currentColor"/>
-      <line x1="24" y1="18" x2="24" y2="8" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+    /* Portée réaliste : 5 lignes fines + clé de sol + 2 notes noires avec hampe */
+    <svg width="56" height="56" viewBox="0 0 56 56" fill="none">
+      {/* 5 lignes de portée, espacées de 5px, centrées verticalement */}
+      {[16,21,26,31,36].map(y => (
+        <line key={y} x1="9" y1={y} x2="47" y2={y} stroke="currentColor" strokeWidth="1" opacity="0.5"/>
+      ))}
+      {/* Clé de sol simplifiée */}
+      <text x="9" y="33" fontSize="22" fill="currentColor" opacity="0.6" fontFamily="serif">𝄞</text>
+      {/* Note 1 : tête ellipse sur ligne 4 (y=31), hampe vers haut */}
+      <ellipse cx="34" cy="31" rx="4" ry="3" fill="currentColor" transform="rotate(-15 34 31)"/>
+      <line x1="37.5" y1="30" x2="37.5" y2="14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+      {/* Note 2 : tête ellipse entre ligne 3-4 (y=28), hampe vers haut */}
+      <ellipse cx="44" cy="28" rx="4" ry="3" fill="currentColor" transform="rotate(-15 44 28)"/>
+      <line x1="47.5" y1="27" x2="47.5" y2="11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
     </svg>
   ),
   2: (
-    <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-      <path d="M16 7C11.03 7 7 11.03 7 16s4.03 9 9 9 9-4.03 9-9-4.03-9-9-9z" stroke="currentColor" strokeWidth="2" fill="none"/>
-      <path d="M12 14c0-2.21 1.79-4 4-4s4 1.79 4 4v4c0 2.21-1.79 4-4 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" fill="none"/>
-      <line x1="16" y1="25" x2="16" y2="28" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-      <line x1="12" y1="28" x2="20" y2="28" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+    <svg width="56" height="56" viewBox="0 0 56 56" fill="none">
+      <path d="M28 10C19.16 10 12 17.16 12 26s7.16 16 16 16 16-7.16 16-16-7.16-16-16-16z" stroke="currentColor" strokeWidth="2" fill="none"/>
+      <path d="M21 23c0-3.87 3.13-7 7-7s7 3.13 7 7v7c0 3.87-3.13 7-7 7" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" fill="none"/>
+      <line x1="28" y1="42" x2="28" y2="48" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"/>
+      <line x1="22" y1="48" x2="34" y2="48" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"/>
     </svg>
   ),
   3: (
-    <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-      <rect x="3" y="6" width="26" height="20" rx="3" stroke="currentColor" strokeWidth="2" fill="none"/>
-      <line x1="3" y1="12" x2="29" y2="12" stroke="currentColor" strokeWidth="1.5"/>
-      <line x1="3" y1="16" x2="29" y2="16" stroke="currentColor" strokeWidth="1.5"/>
-      <line x1="3" y1="20" x2="29" y2="20" stroke="currentColor" strokeWidth="1.5"/>
-      <circle cx="10" cy="20" r="2.5" fill="currentColor"/>
-      <line x1="12.5" y1="20" x2="12.5" y2="11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-      <circle cx="20" cy="18" r="2.5" fill="currentColor"/>
-      <line x1="22.5" y1="18" x2="22.5" y2="9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+    <svg width="56" height="56" viewBox="0 0 56 56" fill="none">
+      <rect x="5" y="9" width="46" height="38" rx="5" stroke="currentColor" strokeWidth="2" fill="none"/>
+      {/* 3 lignes internes de portée */}
+      <line x1="5" y1="20" x2="51" y2="20" stroke="currentColor" strokeWidth="1" opacity="0.5"/>
+      <line x1="5" y1="28" x2="51" y2="28" stroke="currentColor" strokeWidth="1" opacity="0.5"/>
+      <line x1="5" y1="36" x2="51" y2="36" stroke="currentColor" strokeWidth="1" opacity="0.5"/>
+      <ellipse cx="18" cy="36" rx="5" ry="3.5" fill="currentColor" transform="rotate(-15 18 36)"/>
+      <line x1="22.5" y1="35" x2="22.5" y2="19" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+      <ellipse cx="35" cy="32" rx="5" ry="3.5" fill="currentColor" transform="rotate(-15 35 32)"/>
+      <line x1="39.5" y1="31" x2="39.5" y2="15" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
     </svg>
   ),
   4: (
-    <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-      <circle cx="16" cy="16" r="11" stroke="currentColor" strokeWidth="2" fill="none"/>
-      <path d="M13 11.5l9 4.5-9 4.5V11.5z" fill="currentColor"/>
+    <svg width="56" height="56" viewBox="0 0 56 56" fill="none">
+      <circle cx="28" cy="28" r="20" stroke="currentColor" strokeWidth="2.5" fill="none"/>
+      <path d="M22 20l16 8-16 8V20z" fill="currentColor"/>
     </svg>
   ),
 };
@@ -413,11 +421,11 @@ const ACT_SHORT = {
 
 function TutorialSlide1() {
   return (
-    <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, width:220 }}>
+    <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, width:280 }}>
       {[1,2,3,4].map(id => (
-        <div key={id} style={{ background:'rgba(74,108,247,0.1)', border:'2px solid rgba(74,108,247,0.4)', borderRadius:14, padding:'14px 8px 10px', textAlign:'center', color:'#c084fc' }}>
+        <div key={id} style={{ background:'rgba(74,108,247,0.1)', border:'2px solid rgba(74,108,247,0.4)', borderRadius:14, padding:'16px 8px 12px', textAlign:'center', color:'#c084fc' }}>
           {ACT_ICONS[id]}
-          <div style={{ fontSize:10, color:'#a5b4fc', marginTop:6, lineHeight:1.3 }}>{ACTIVITIES[id-1].label}</div>
+          <div style={{ fontSize:10, color:'#a5b4fc', marginTop:8, lineHeight:1.3 }}>{ACTIVITIES[id-1].label}</div>
         </div>
       ))}
     </div>
@@ -436,7 +444,7 @@ function TutorialSlide2({ activity }) {
           borderRadius:12, padding:'8px 12px',
           color: i===id ? '#fff' : '#6b7280',
         }}>
-          <div style={{ color: i===id ? '#4A6CF7' : '#6b7280', flexShrink:0 }}>{ACT_ICONS[i]}</div>
+          <div style={{ color: i===id ? '#4A6CF7' : '#6b7280', flexShrink:0, width:36, height:36, display:'flex', alignItems:'center', justifyContent:'center', transform:'scale(0.64)', transformOrigin:'center' }}>{ACT_ICONS[i]}</div>
           <div>
             <div style={{ fontSize:11, fontWeight:700 }}>{ACTIVITIES[i-1].label}</div>
             <div style={{ fontSize:9, marginTop:2, color: i===id ? '#a5b4fc' : '#4b5563' }}>{ACT_SHORT[i]}</div>
@@ -544,11 +552,13 @@ function TutorialOverlay({ onDone, levelOrder, activity }) {
   const [slide, setSlide] = useState(0);
   const total = TUTO_SLIDES.length;
   const { title, body, Visual } = TUTO_SLIDES[slide];
+  const { dark, toggle } = useTheme();
 
   return (
     <div style={{
       position:'fixed', inset:0, zIndex:100,
-      background:'#030712',
+      background: dark ? '#030712' : '#f9fafb',
+      color: dark ? '#f9fafb' : '#111827',
       display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'space-between',
       padding:'24px 20px 36px',
       overflowY:'auto',
@@ -559,15 +569,22 @@ function TutorialOverlay({ onDone, levelOrder, activity }) {
           {Array.from({ length: total }).map((_, i) => (
             <div key={i} style={{
               width: i===slide ? 20 : 7, height:7, borderRadius:4,
-              background: i <= slide ? '#4A6CF7' : 'rgba(255,255,255,0.1)',
+              background: i <= slide ? '#4A6CF7' : (dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.12)'),
               transition:'width 0.25s,background 0.25s',
             }}/>
           ))}
         </div>
-        <button
-          onClick={onDone}
-          style={{ background:'none', border:'none', color:'#6b7280', fontSize:13, fontWeight:700, cursor:'pointer', padding:'4px 8px' }}
-        >Ignorer</button>
+        <div style={{ display:'flex', gap:8, alignItems:'center' }}>
+          <button
+            onClick={toggle}
+            title={dark ? "Passer en thème clair" : "Passer en thème sombre"}
+            style={{ background:'none', border:`1px solid ${dark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)'}`, borderRadius:8, color: dark ? '#9ca3af' : '#6b7280', fontSize:16, cursor:'pointer', padding:'4px 8px', lineHeight:1 }}
+          >{dark ? '☀️' : '🌙'}</button>
+          <button
+            onClick={onDone}
+            style={{ background:'none', border:'none', color: dark ? '#6b7280' : '#9ca3af', fontSize:13, fontWeight:700, cursor:'pointer', padding:'4px 8px' }}
+          >Ignorer</button>
+        </div>
       </div>
 
       {/* Visual */}
@@ -577,8 +594,8 @@ function TutorialOverlay({ onDone, levelOrder, activity }) {
 
       {/* Text */}
       <div style={{ width:'100%', maxWidth:400, textAlign:'center', marginBottom:32 }}>
-        <div style={{ fontSize:22, fontWeight:900, color:'#f9fafb', marginBottom:10 }}>{title}</div>
-        <div style={{ fontSize:14, color:'#9ca3af', lineHeight:1.6 }}>{body}</div>
+        <div style={{ fontSize:22, fontWeight:900, color: dark ? '#f9fafb' : '#111827', marginBottom:10 }}>{title}</div>
+        <div style={{ fontSize:14, color: dark ? '#9ca3af' : '#6b7280', lineHeight:1.6 }}>{body}</div>
       </div>
 
       {/* Navigation */}
@@ -1378,7 +1395,7 @@ export default function RythmApp() {
                         style={{ flex:1, padding:'8px 0', borderRadius:10, border:'none', background: revealBeat===beat ? '#4A6CF7' : 'var(--surface-2)', color: revealBeat===beat ? '#fff' : 'var(--text-muted)', fontWeight:700, fontSize:12, cursor:'pointer', textAlign:'center' }}
                       >
                         <div>{beat}</div>
-                        <div style={{ fontSize:9, color: revealBeat===beat ? '#ddd8fe' : 'var(--border-c)', marginTop:2 }}>{beat===1?"–":beat===2?"+10%":beat===3?"+20%":"+50%"}</div>
+                        <div style={{ fontSize:9, color: revealBeat===beat ? '#ddd8fe' : 'var(--text-muted)', marginTop:2 }}>{beat===1?"–":beat===2?"+10%":beat===3?"+20%":"+50%"}</div>
                       </button>
                     ))}
                   </div>

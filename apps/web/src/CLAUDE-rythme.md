@@ -1,9 +1,9 @@
 # Module Rythme — référence technique
 
 ## Fichiers
-- `RythmApp.jsx` — composant principal ~1400 lignes, **sensible**
+- `RythmApp.jsx` — composant principal ~2100 lignes, **sensible**
 - `RythmStaff.jsx` — rendu VexFlow SVG, ResizeObserver mobile
-- `SettingsPage.jsx` — catalogue formules + Google Sheets + offset flash
+- `SettingsPage.jsx` — réglages avancés : catalogue formules + Google Sheets + offset flash calibration
 
 ## 4 activités
 1. **Reproduire vu** — portée visible, l'élève tape/chante
@@ -19,10 +19,12 @@
 
 ## Audio
 - `beep(strong)` : métronome (sine 1000/700 Hz, 80 ms)
-- `rhythmBeep()` : son rythme (triangle 330 Hz, 150 ms) — toujours appelé avec `false`
-- `tapBeep()` : bruit blanc 40 ms
+- `rhythmBeep(strong, forced)` : son rythme (triangle 330 Hz, 150 ms) — `forced=true` bypass toggle
+- `tapBeep(forced)` : bruit blanc 40 ms — `forced=true` bypass toggle
 - `rhythmPulse()` : rhythmBeep + flash visuel
+- `playPatternAudio(pat, bpm, delayMs, forced)` : joue pattern avec option forced
 - Toggles son via refs (`rhythmSoundRef`, `tapSoundRef`) — assignés dans render body, pas useEffect
+- Act 2/3/4 : `rhythmSoundOn` forcé à `true` via `useEffect([activity])` — son toujours actif
 - Beat 1 : vérifier `!pat.figs[0]?.rest` avant jouer le son
 - `tidsRef` = timers jeu · `audioTidsRef` = timers audio (clearés séparément)
 
@@ -33,20 +35,39 @@
 - Offset optimal calculé en results : `optOffset = clamp(-mean(tap−expected), −200, 200)`
 - `scoreDevs` prop RythmStaff : figIdx → dev signé ms · `sessionBpm` requis
 - `compact` prop RythmStaff : limite formatWidth (usage dans SettingsPage catalogue)
+- Résultats : boutons **▶ Mes taps** + **▶ Solution** — appellent forced=true (indépendants des toggles son)
 
 ## Scoring act 3 & 4 (QCM)
 - 100 pts si correct, 0 si faux
-- Distracteurs filtrés par `attackFingerprint(figs)` — rejette homorythmes
+- Distracteurs : `attackFingerprint(figs)` rejette homorythmes + préfère même `figs.length` que formule remplacée
 
 ## Niveaux XP (Parcours musicien)
 `Apprenti → Musicien → Instrumentiste → Soliste → Concertiste → Virtuose → Maestro`
 - `LEVEL_ORDER` + `LEVEL_FORMULA_IDS` dans `RythmApp.jsx` (sélection formules par niveau)
 - Seuils XP : `hooks/useProgressFirebase.ts` (0 / 2500 / 6000 / 12500 / 45000 / 80000 / 140000)
 
-## Navigation home page
-Ordre des blocs : activités → **Commencer** → Mode de jeu → Niveaux → Tempo → Reveal beat
-`handleNext` — callback centralisé pour passer à l'exercice suivant / fin de série.
-Appelé par le bouton Commencer/Suivant ET par clic sur le bloc portée en `phase === "results"` (acts 1 & 2).
+## Navigation & pages
+`currentPage` state : `"home"` | `"game"` | `"settings"` | `"series-end"`
+
+**Home page** : grille 2×2 activités (icônes SVG `ACT_ICONS`) + résumé réglages cliquable + bouton Commencer
+**Modal réglages** : overlay bottom-sheet, accordion 5 sections (Saisie · Tempo · Niveau · Mode · Révélation)
+- `settingsModalOpen` state · `openAccordion` state (section ouverte par défaut : `"saisie"`)
+- ⚙ home page et ⚙ header jeu ouvrent la modal (pas SettingsPage)
+- "Réglages avancés" dans modal → `setCurrentPage("settings")`
+
+**Tutorial premier lancement** :
+- `ENABLE_TUTORIAL` : `true` (toujours) | `false` (jamais) | `"once"` (une fois, localStorage)
+- `TUTORIAL_VERSION` : incrémenter force réaffichage en mode `"once"`
+- 5 slides plein écran avec miniatures JSX du vrai UI
+- `handleTutorialDone()` : marque vu si mode `"once"`
+
+## Persistance réglages (localStorage)
+- Clé `rythm-settings-v1` : `selectedFormulas` (array), `tempoMode`, `bpmFixed`, `bpmMin`, `bpmMax`, `revealBeat`, `inputMode`
+- `userSheetLoadRef` : reset formules seulement quand sheet chargée manuellement (pas au mount async CSV)
+
+## Flash portée
+- `flashBorderOn` state : toggle ⚡ SVG top-right du bloc portée (act 1 & 2)
+- Stem des notes : pas de changement de couleur pendant la lecture (activeIdx ignoré dans `noteColor`)
 
 ## Formules rythmiques
 - Source de vérité : `/public/formules-rythme-template.csv` chargé via `useSheetData`
@@ -60,7 +81,9 @@ Groupes : `binary` (4/4) ou `ternary` (12/8) · `totalMs = 4 * beatMs` pour les 
 
 ## Points d'attention
 - VexFlow 5 : `Beam.draw()` n'appelle pas `applyStyle()` → couleur ligatures via `ctx.setFillStyle/setStrokeStyle` avant draw
+- `staveY` petites hauteurs : `max(4, (height-40)/3)` — portée plus haute dans le bloc
 - Chunk size warning build = normal (VexFlow volumineux)
-- `RythmApp.jsx` n'utilise pas React Router → navigation interne via `currentPage` state (`"game"` | `"settings"` | `"series-end"`)
 - `attackFingerprint(figs)` : onsets non-silences × 1000 → string (évite flottants)
 - Dots timing (RythmStaff) : gauche = tôt, droite = tard · miss = pas de dot
+- Act 2 : bouton son rythme masqué (son toujours actif, essentiel à l'écoute)
+- Act 3 : `opacity: 1` constant sur la grille portées (pas de fade pendant countdown)

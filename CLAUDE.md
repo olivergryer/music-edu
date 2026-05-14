@@ -75,12 +75,12 @@ teacherCodes/{code}
 - `index.css` global : `touch-action: manipulation` (supprime délai 300ms tablette), `cursor: pointer`, focus ring `#c084fc`
 
 ## Conventions
-- **Tailwind v4** pour layout/spacing (classes utilitaires) + **inline styles** pour couleurs et valeurs dynamiques — pas de CSS modules ni styled-components
+- **Inline styles** pour couleurs et valeurs dynamiques + **Tailwind v4** pour layout/spacing — pas de CSS modules ni styled-components
 - **Pas de lib externe** sans demande explicite
 - **Interface 100% français** — labels, feedback, erreurs
 - **Mobile-first** — maxWidth 540px, touch-friendly, min 44px zones cliquables
 - `vercel.json` — ne jamais supprimer `"rewrites": [{"source":"/(.*)", "destination":"/index.html"}]`
-- `RythmApp.jsx` — fichier sensible (~1400 lignes), ne modifier que sur demande explicite
+- `RythmApp.jsx` — fichier sensible (~2100 lignes), ne modifier que sur demande explicite
 - CSV `/public/formules-rythme-template.csv` — source de vérité formules rythme, ajouter dans le CSV pas dans le code
 
 ## Workflow
