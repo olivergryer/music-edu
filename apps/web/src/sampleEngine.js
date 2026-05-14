@@ -173,7 +173,9 @@ export async function loadInstrumentSamples(instrument, onProgress) {
         } catch (decErr) {
           console.warn(`decodeAudioData échoué (${decErr?.message}), décodage manuel…`)
           buf = _decodeAiff(ctx, arrayBuf)
-          console.log(`_decodeAiff → ${buf.length} frames, ${buf.sampleRate}Hz, ${buf.numberOfChannels}ch, max=${Math.max(...buf.getChannelData(0).slice(0,1000)).toFixed(4)}`)
+          const midSlice = buf.getChannelData(0).slice(Math.floor(buf.length / 2), Math.floor(buf.length / 2) + 2000)
+          const peakMid  = Math.max(...midSlice.map(Math.abs))
+          console.log(`_decodeAiff → ${buf.length} frames, ${buf.sampleRate}Hz, ${buf.numberOfChannels}ch, peakMid=${peakMid.toFixed(4)}, ssndOK=${peakMid > 0.001}`)
         }
         const onsetMs = detectOnset(buf)
         const { loopStart, loopEnd } = findLoopPoints(buf, onsetMs)
@@ -237,6 +239,7 @@ function _playSample(ctx, sampleMap, midi, durationMs, startTime, centsOffset, l
 // ─── Joue un accord en boucle (samples, infini) ───────────────────────────────
 // Retourne [{src, midi}] pour mise à jour smooth du playbackRate
 export function playChord(ctx, midis, offsets, sampleMap, diapason = 442) {
+  console.log(`playChord: ctx.state=${ctx.state}, midis=${midis}, sampleMap.size=${sampleMap.size}`)
   const t0            = ctx.currentTime + 0.05
   const diapasonCents = 1200 * Math.log2(diapason / 440)
   return midis.map((midi, i) => {
