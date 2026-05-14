@@ -181,6 +181,8 @@ export async function loadInstrumentSamples(instrument, onProgress) {
         if (manifestEntry) {
           loopStart = manifestEntry.loopStart
           loopEnd   = manifestEntry.loopEnd
+          const sr = buf.sampleRate
+          applyLoopCrossfade(buf, Math.round(loopStart * sr), Math.round(loopEnd * sr), 20)
         } else {
           ;({ loopStart, loopEnd } = findLoopPoints(buf, onsetMs))
         }

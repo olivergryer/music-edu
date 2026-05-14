@@ -147,9 +147,7 @@ function processSample(mono, sampleRate, midi) {
   // Loop end : loopStart + N × period, N tel que boucle ≈ 0.8s
   const N             = Math.max(1, Math.round(0.8 * sampleRate / period))
   const rawEnd        = loopStartSample + N * period
-  const loopEndSample = rawEnd < mono.length
-    ? findPosiZeroCross(mono, rawEnd)
-    : mono.length - 1
+  const loopEndSample = Math.min(Math.round(rawEnd), mono.length - 1)
 
   const loopStart = loopStartSample / sampleRate
   const loopEnd   = loopEndSample   / sampleRate
