@@ -1,4 +1,5 @@
 import { midiToHz, JUST_RATIOS_CENTS } from './accordeurUtils'
+import LOOP_MANIFEST from './sampleLoopManifest.json'
 
 // ─── Base URL R2 ──────────────────────────────────────────────────────────────
 const R2_BASE = 'https://pub-bcb45c74de5d47c598fedde0a9f6a474.r2.dev/samples/'
@@ -134,7 +135,6 @@ function findLoopPoints(buffer, onsetMs) {
 // ─── Cache mémoire (persist dans la session) ─────────────────────────────────
 const _memCache = new Map()   // instrument → Map<midi, {buffer, onsetMs, loopStart, loopEnd}>
 const _inFlight = new Map()   // instrument → Promise
-export function clearSampleCache() { _memCache.clear(); _inFlight.clear() }
 
 // ─── Charge tous les samples d'un instrument ─────────────────────────────────
 export async function loadInstrumentSamples(instrument, onProgress) {
@@ -175,9 +175,17 @@ export async function loadInstrumentSamples(instrument, onProgress) {
           console.warn(`decodeAudioData échoué (${decErr?.message}), décodage manuel…`)
           buf = _decodeAiff(ctx, arrayBuf)
         }
-        const onsetMs = detectOnset(buf)
-        const { loopStart, loopEnd } = findLoopPoints(buf, onsetMs)
-        map.set(midi, { buffer: buf, onsetMs, loopStart, loopEnd })
+        const manifestEntry = LOOP_MANIFEST[instrument]?.[midi]
+        const onsetMs = manifestEntry?.onsetMs ?? detectOnset(buf)
+        let loopStart, loopEnd
+        if (manifestEntry) {
+          loopStart = manifestEntry.loopStart
+          loopEnd   = manifestEntry.loopEnd
+        } else {
+          ;({ loopStart, loopEnd } = findLoopPoints(buf, onsetMs))
+        }
+        map.set(midi, { buffer: buf, onsetMs, loopStart, loopEnd,
+                        pitchCorrCents: manifestEntry?.pitchCorrCents ?? 0 })
       } catch (e) { console.warn(`sampleEngine: échec ${url}`, e?.message ?? e) }
       onProgress?.(++loaded / total)
     })
@@ -207,10 +215,10 @@ function _correctionCinqLimite(semitoneFromTonic) {
 function _playSample(ctx, sampleMap, midi, durationMs, startTime, centsOffset, loop = false) {
   const entry = sampleMap.get(midi)
   if (!entry) return null
-  const { buffer, onsetMs, loopStart, loopEnd } = entry
+  const { buffer, onsetMs, loopStart, loopEnd, pitchCorrCents = 0 } = entry
   const src = ctx.createBufferSource()
   src.buffer = buffer
-  src.playbackRate.value = Math.pow(2, centsOffset / 1200)
+  src.playbackRate.value = Math.pow(2, (centsOffset + pitchCorrCents) / 1200)
 
   if (loop) {
     src.loop      = true
@@ -231,7 +239,7 @@ function _playSample(ctx, sampleMap, midi, durationMs, startTime, centsOffset, l
     gain.connect(ctx.destination)
     src.start(startTime, onsetMs / 1000)
   }
-  return { src, midi }
+  return { src, midi, pitchCorrCents: entry.pitchCorrCents ?? 0 }
 }
 
 // ─── Joue un accord en boucle (samples, infini) ───────────────────────────────

@@ -334,10 +334,10 @@ export default function GenerateurAccordPage() {
       })
     } else {
       const diapasonCents = 1200 * Math.log2(diapason / 440)
-      sampleSrcsRef.current.forEach(({ src, midi }) => {
+      sampleSrcsRef.current.forEach(({ src, midi, pitchCorrCents = 0 }) => {
         const chordIdx = chordMidis.indexOf(midi)
         const offset   = offsets[chordIdx] ?? 0
-        const rate     = Math.pow(2, (diapasonCents + offset) / 1200)
+        const rate     = Math.pow(2, (diapasonCents + offset + pitchCorrCents) / 1200)
         try { src.playbackRate.setTargetAtTime(rate, t, 0.05) } catch {}
       })
     }
