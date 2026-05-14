@@ -125,11 +125,12 @@ export async function loadInstrumentSamples(instrument, onProgress) {
         const onsetMs = detectOnset(buf)
         const { loopStart, loopEnd } = findLoopPoints(buf, onsetMs)
         map.set(midi, { buffer: buf, onsetMs, loopStart, loopEnd })
-      } catch { /* note absente ou erreur réseau */ }
+      } catch (e) { console.warn(`sampleEngine: échec ${url}`, e?.message ?? e) }
       onProgress?.(++loaded / total)
     })
   ).then(() => {
     ctx.close()
+    console.log(`sampleEngine: ${instrument} — ${map.size}/${total} samples chargés`)
     _memCache.set(instrument, map)
     _inFlight.delete(instrument)
     return map
