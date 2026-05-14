@@ -136,7 +136,9 @@ function generateDistractorVariant(target, pool) {
   const alternatives = beatPool1.filter(f => f.id !== slot.formula.id);
   if (alternatives.length === 0) return generateMeasure(target.timeSig, pool);
 
-  const newFormula = alternatives[Math.floor(Math.random() * alternatives.length)];
+  const sameCount = alternatives.filter(f => f.figs.length === slot.formula.figs.length);
+  const pool2 = sameCount.length > 0 ? sameCount : alternatives;
+  const newFormula = pool2[Math.floor(Math.random() * pool2.length)];
   const newSlots = target.formulaSlots.map((s, i) =>
     i === slot.idx ? { ...s, formula: newFormula } : s
   );
@@ -527,8 +529,8 @@ export default function RythmApp() {
   }, [getCtx]);
 
   // Note du rythme — triangle chaud, plus long
-  const rhythmBeep = useCallback((strong = false) => {
-    if (!rhythmSoundRef.current) return;
+  const rhythmBeep = useCallback((strong = false, forced = false) => {
+    if (!forced && !rhythmSoundRef.current) return;
     try {
       const ac = getCtx();
       const o  = ac.createOscillator(), g = ac.createGain();
@@ -542,8 +544,8 @@ export default function RythmApp() {
   }, [getCtx]);
 
   // Confirmation tap — bruit court et sec
-  const tapBeep = useCallback(() => {
-    if (!tapSoundRef.current) return;
+  const tapBeep = useCallback((forced = false) => {
+    if (!forced && !tapSoundRef.current) return;
     try {
       const ac = getCtx();
       const frames = Math.floor(ac.sampleRate * 0.04);
@@ -565,7 +567,7 @@ export default function RythmApp() {
     const minT = Math.min(0, ...tapTimes);
     tapTimes.forEach(t => {
       const delay = Math.max(0, t - minT);
-      const id = setTimeout(() => tapBeep(), delay);
+      const id = setTimeout(() => tapBeep(true), delay);
       audioTidsRef.current.push(id);
     });
     if (pattern && sessionBpm) {
@@ -629,13 +631,13 @@ export default function RythmApp() {
   const clearTids = () => { tidsRef.current.forEach(clearTimeout); tidsRef.current = []; };
   const tid       = (fn, ms) => { const id = setTimeout(fn, ms); tidsRef.current.push(id); return id; };
 
-  const playPatternAudio = useCallback((pat, bpmVal, delayMs = 0) => {
+  const playPatternAudio = useCallback((pat, bpmVal, delayMs = 0, forced = false) => {
     audioTidsRef.current.forEach(clearTimeout);
     audioTidsRef.current = [];
     const { timestamps, totalMs } = toTimestamps(pat.figs, bpmVal, pat.timeSig);
     pat.figs.forEach((fig, i) => {
       if (!fig.rest) {
-        const id = setTimeout(() => rhythmBeep(false), delayMs + timestamps[i]);
+        const id = setTimeout(() => rhythmBeep(false, forced), delayMs + timestamps[i]);
         audioTidsRef.current.push(id);
       }
     });
@@ -1385,7 +1387,17 @@ export default function RythmApp() {
           <div className="bg-surface-2 border border-app rounded-full px-2.5 py-0.5 text-xs text-app font-bold">⭐ {totalPts}</div>
           <button
             onPointerDown={e => e.stopPropagation()}
-            onClick={() => { if (canStart) setCurrentPage("settings"); }}
+            onClick={e => {
+              e.stopPropagation();
+              clearTids();
+              audioTidsRef.current.forEach(clearTimeout);
+              audioTidsRef.current = [];
+              cancelAnimationFrame(rafRef.current);
+              stopMic();
+              setPhase("idle");
+              setPattern(null);
+              setCurrentPage("settings");
+            }}
             className="bg-surface-2 border border-app rounded-xl text-app-muted text-lg cursor-pointer px-2 py-0.5 leading-none"
             title="Réglages"
           >⚙</button>
@@ -1570,7 +1582,7 @@ export default function RythmApp() {
                   >▶ Réécouter</button>
                   <button
                     onPointerDown={e => e.stopPropagation()}
-                    onClick={() => playPatternAudio(pattern, sessionBpm)}
+                    onClick={() => playPatternAudio(pattern, sessionBpm, 0, true)}
                     className="rounded-xl border-none px-3 py-1.5 text-[11px] font-bold cursor-pointer"
                     style={{ background: 'rgba(52,211,153,0.12)', color: '#34d399' }}
                   >▶ Solution</button>

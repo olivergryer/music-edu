@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { Renderer, Stave, StaveNote, Voice, Formatter, Accidental } from 'vexflow'
 
-export default function IntervalleStaff({ notes, width = 260, height = 110 }) {
+export default function IntervalleStaff({ notes, width = 260, height = 150 }) {
   const ref = useRef(null)
 
   useEffect(() => {
@@ -13,7 +13,7 @@ export default function IntervalleStaff({ notes, width = 260, height = 110 }) {
       renderer.resize(width, height)
       const ctx = renderer.getContext()
 
-      const stave = new Stave(8, 14, width - 16)
+      const stave = new Stave(8, 30, width - 16)
       stave.addClef('treble')
       stave.setStyle({ strokeStyle: '#4b5563', fillStyle: '#4b5563' })
       stave.setContext(ctx).draw()

@@ -184,7 +184,7 @@ function keyNameDistr3(allNotes, correctNote) {
   return allNotes.filter(n => n !== correctNote).slice(0, 3)
 }
 
-// Distracteurs d'intervalles : voisins dans INTERVAL_NAMES
+// Distracteurs d'intervalles : voisins dans INTERVAL_NAMES (questions texte)
 function intervalDistr3(correctName) {
   const ci = INTERVAL_NAMES.indexOf(correctName)
   const result = []
@@ -193,6 +193,20 @@ function intervalDistr3(correctName) {
     if (result.length < 3 && ci + d < INTERVAL_NAMES.length) result.push(INTERVAL_NAMES[ci + d])
   }
   return result
+}
+
+// Distracteurs VexFlow : même degré (même lettre cible, altération différente), puis voisins
+function intervalDistr3SameDegree(correctName) {
+  const def = VEX_INTERVAL_DEFS.find(d => d.name === correctName)
+  if (!def) return intervalDistr3(correctName)
+  const sameDeg = VEX_INTERVAL_DEFS.filter(d => d.steps === def.steps && d.name !== correctName).map(d => d.name)
+  const result = [...sameDeg]
+  const ci = VEX_INTERVAL_DEFS.indexOf(def)
+  for (let d = 1; result.length < 3 && d < VEX_INTERVAL_DEFS.length; d++) {
+    if (ci - d >= 0 && !result.includes(VEX_INTERVAL_DEFS[ci - d].name)) result.push(VEX_INTERVAL_DEFS[ci - d].name)
+    if (result.length < 3 && ci + d < VEX_INTERVAL_DEFS.length && !result.includes(VEX_INTERVAL_DEFS[ci + d].name)) result.push(VEX_INTERVAL_DEFS[ci + d].name)
+  }
+  return result.filter(n => n !== correctName).slice(0, 3)
 }
 
 // ─── Générateurs ─────────────────────────────────────────────────────────────
@@ -399,7 +413,7 @@ function generateIntervalleVexQuestions() {
         const startId = startKey.replace('/', '')
         const endId = secondKey.replace('/', '').replace('#', 's')
         const id = `IVX_${dir}_${startId}_${endId}`
-        const wrong = intervalDistr3(ivDef.name)
+        const wrong = intervalDistr3SameDegree(ivDef.name)
         const dirLabel = ascending ? 'ascendant' : 'descendant'
 
         qs.push({

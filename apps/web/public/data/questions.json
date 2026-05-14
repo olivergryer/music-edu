@@ -2279,9 +2279,9 @@
       "db/4"
     ],
     "reponse_correcte": "Seconde mineure",
-    "reponse_fausse_1": "Unisson juste",
-    "reponse_fausse_2": "Seconde majeure",
-    "reponse_fausse_3": "Tierce mineure"
+    "reponse_fausse_1": "Seconde majeure",
+    "reponse_fausse_2": "Tierce mineure",
+    "reponse_fausse_3": "Tierce majeure"
   },
   {
     "id": "IVX_desc_c4_b3",
@@ -2294,9 +2294,9 @@
       "b/3"
     ],
     "reponse_correcte": "Seconde mineure",
-    "reponse_fausse_1": "Unisson juste",
-    "reponse_fausse_2": "Seconde majeure",
-    "reponse_fausse_3": "Tierce mineure"
+    "reponse_fausse_1": "Seconde majeure",
+    "reponse_fausse_2": "Tierce mineure",
+    "reponse_fausse_3": "Tierce majeure"
   },
   {
     "id": "IVX_asc_c4_d4",
@@ -2311,7 +2311,7 @@
     "reponse_correcte": "Seconde majeure",
     "reponse_fausse_1": "Seconde mineure",
     "reponse_fausse_2": "Tierce mineure",
-    "reponse_fausse_3": "Unisson juste"
+    "reponse_fausse_3": "Tierce majeure"
   },
   {
     "id": "IVX_desc_c4_bb3",
@@ -2326,7 +2326,7 @@
     "reponse_correcte": "Seconde majeure",
     "reponse_fausse_1": "Seconde mineure",
     "reponse_fausse_2": "Tierce mineure",
-    "reponse_fausse_3": "Unisson juste"
+    "reponse_fausse_3": "Tierce majeure"
   },
   {
     "id": "IVX_asc_c4_eb4",
@@ -2339,8 +2339,8 @@
       "eb/4"
     ],
     "reponse_correcte": "Tierce mineure",
-    "reponse_fausse_1": "Seconde majeure",
-    "reponse_fausse_2": "Tierce majeure",
+    "reponse_fausse_1": "Tierce majeure",
+    "reponse_fausse_2": "Seconde majeure",
     "reponse_fausse_3": "Seconde mineure"
   },
   {
@@ -2354,8 +2354,8 @@
       "a/3"
     ],
     "reponse_correcte": "Tierce mineure",
-    "reponse_fausse_1": "Seconde majeure",
-    "reponse_fausse_2": "Tierce majeure",
+    "reponse_fausse_1": "Tierce majeure",
+    "reponse_fausse_2": "Seconde majeure",
     "reponse_fausse_3": "Seconde mineure"
   },
   {
@@ -2399,8 +2399,8 @@
       "f/4"
     ],
     "reponse_correcte": "Quarte juste",
-    "reponse_fausse_1": "Tierce majeure",
-    "reponse_fausse_2": "Quarte augmentée",
+    "reponse_fausse_1": "Quarte augmentée",
+    "reponse_fausse_2": "Tierce majeure",
     "reponse_fausse_3": "Tierce mineure"
   },
   {
@@ -2414,8 +2414,8 @@
       "g/3"
     ],
     "reponse_correcte": "Quarte juste",
-    "reponse_fausse_1": "Tierce majeure",
-    "reponse_fausse_2": "Quarte augmentée",
+    "reponse_fausse_1": "Quarte augmentée",
+    "reponse_fausse_2": "Tierce majeure",
     "reponse_fausse_3": "Tierce mineure"
   },
   {
@@ -2489,8 +2489,8 @@
       "ab/4"
     ],
     "reponse_correcte": "Sixte mineure",
-    "reponse_fausse_1": "Quinte juste",
-    "reponse_fausse_2": "Sixte majeure",
+    "reponse_fausse_1": "Sixte majeure",
+    "reponse_fausse_2": "Quinte juste",
     "reponse_fausse_3": "Quarte augmentée"
   },
   {
@@ -2504,8 +2504,8 @@
       "e/4"
     ],
     "reponse_correcte": "Sixte mineure",
-    "reponse_fausse_1": "Quinte juste",
-    "reponse_fausse_2": "Sixte majeure",
+    "reponse_fausse_1": "Sixte majeure",
+    "reponse_fausse_2": "Quinte juste",
     "reponse_fausse_3": "Quarte augmentée"
   },
   {
@@ -2549,8 +2549,8 @@
       "bb/4"
     ],
     "reponse_correcte": "Septième mineure",
-    "reponse_fausse_1": "Sixte majeure",
-    "reponse_fausse_2": "Septième majeure",
+    "reponse_fausse_1": "Septième majeure",
+    "reponse_fausse_2": "Sixte majeure",
     "reponse_fausse_3": "Sixte mineure"
   },
   {
@@ -2564,8 +2564,8 @@
       "d/4"
     ],
     "reponse_correcte": "Septième mineure",
-    "reponse_fausse_1": "Sixte majeure",
-    "reponse_fausse_2": "Septième majeure",
+    "reponse_fausse_1": "Septième majeure",
+    "reponse_fausse_2": "Sixte majeure",
     "reponse_fausse_3": "Sixte mineure"
   },
   {
@@ -2639,9 +2639,9 @@
       "eb/4"
     ],
     "reponse_correcte": "Seconde mineure",
-    "reponse_fausse_1": "Unisson juste",
-    "reponse_fausse_2": "Seconde majeure",
-    "reponse_fausse_3": "Tierce mineure"
+    "reponse_fausse_1": "Seconde majeure",
+    "reponse_fausse_2": "Tierce mineure",
+    "reponse_fausse_3": "Tierce majeure"
   },
   {
     "id": "IVX_desc_d4_cs4",
@@ -2654,9 +2654,9 @@
       "c#/4"
     ],
     "reponse_correcte": "Seconde mineure",
-    "reponse_fausse_1": "Unisson juste",
-    "reponse_fausse_2": "Seconde majeure",
-    "reponse_fausse_3": "Tierce mineure"
+    "reponse_fausse_1": "Seconde majeure",
+    "reponse_fausse_2": "Tierce mineure",
+    "reponse_fausse_3": "Tierce majeure"
   },
   {
     "id": "IVX_asc_d4_e4",
@@ -2671,7 +2671,7 @@
     "reponse_correcte": "Seconde majeure",
     "reponse_fausse_1": "Seconde mineure",
     "reponse_fausse_2": "Tierce mineure",
-    "reponse_fausse_3": "Unisson juste"
+    "reponse_fausse_3": "Tierce majeure"
   },
   {
     "id": "IVX_desc_d4_c4",
@@ -2686,7 +2686,7 @@
     "reponse_correcte": "Seconde majeure",
     "reponse_fausse_1": "Seconde mineure",
     "reponse_fausse_2": "Tierce mineure",
-    "reponse_fausse_3": "Unisson juste"
+    "reponse_fausse_3": "Tierce majeure"
   },
   {
     "id": "IVX_asc_d4_f4",
@@ -2699,8 +2699,8 @@
       "f/4"
     ],
     "reponse_correcte": "Tierce mineure",
-    "reponse_fausse_1": "Seconde majeure",
-    "reponse_fausse_2": "Tierce majeure",
+    "reponse_fausse_1": "Tierce majeure",
+    "reponse_fausse_2": "Seconde majeure",
     "reponse_fausse_3": "Seconde mineure"
   },
   {
@@ -2714,8 +2714,8 @@
       "b/3"
     ],
     "reponse_correcte": "Tierce mineure",
-    "reponse_fausse_1": "Seconde majeure",
-    "reponse_fausse_2": "Tierce majeure",
+    "reponse_fausse_1": "Tierce majeure",
+    "reponse_fausse_2": "Seconde majeure",
     "reponse_fausse_3": "Seconde mineure"
   },
   {
@@ -2759,8 +2759,8 @@
       "g/4"
     ],
     "reponse_correcte": "Quarte juste",
-    "reponse_fausse_1": "Tierce majeure",
-    "reponse_fausse_2": "Quarte augmentée",
+    "reponse_fausse_1": "Quarte augmentée",
+    "reponse_fausse_2": "Tierce majeure",
     "reponse_fausse_3": "Tierce mineure"
   },
   {
@@ -2774,8 +2774,8 @@
       "a/3"
     ],
     "reponse_correcte": "Quarte juste",
-    "reponse_fausse_1": "Tierce majeure",
-    "reponse_fausse_2": "Quarte augmentée",
+    "reponse_fausse_1": "Quarte augmentée",
+    "reponse_fausse_2": "Tierce majeure",
     "reponse_fausse_3": "Tierce mineure"
   },
   {
@@ -2849,8 +2849,8 @@
       "bb/4"
     ],
     "reponse_correcte": "Sixte mineure",
-    "reponse_fausse_1": "Quinte juste",
-    "reponse_fausse_2": "Sixte majeure",
+    "reponse_fausse_1": "Sixte majeure",
+    "reponse_fausse_2": "Quinte juste",
     "reponse_fausse_3": "Quarte augmentée"
   },
   {
@@ -2864,8 +2864,8 @@
       "f#/4"
     ],
     "reponse_correcte": "Sixte mineure",
-    "reponse_fausse_1": "Quinte juste",
-    "reponse_fausse_2": "Sixte majeure",
+    "reponse_fausse_1": "Sixte majeure",
+    "reponse_fausse_2": "Quinte juste",
     "reponse_fausse_3": "Quarte augmentée"
   },
   {
@@ -2909,8 +2909,8 @@
       "c/5"
     ],
     "reponse_correcte": "Septième mineure",
-    "reponse_fausse_1": "Sixte majeure",
-    "reponse_fausse_2": "Septième majeure",
+    "reponse_fausse_1": "Septième majeure",
+    "reponse_fausse_2": "Sixte majeure",
     "reponse_fausse_3": "Sixte mineure"
   },
   {
@@ -2924,8 +2924,8 @@
       "e/4"
     ],
     "reponse_correcte": "Septième mineure",
-    "reponse_fausse_1": "Sixte majeure",
-    "reponse_fausse_2": "Septième majeure",
+    "reponse_fausse_1": "Septième majeure",
+    "reponse_fausse_2": "Sixte majeure",
     "reponse_fausse_3": "Sixte mineure"
   },
   {
@@ -2999,9 +2999,9 @@
       "f/4"
     ],
     "reponse_correcte": "Seconde mineure",
-    "reponse_fausse_1": "Unisson juste",
-    "reponse_fausse_2": "Seconde majeure",
-    "reponse_fausse_3": "Tierce mineure"
+    "reponse_fausse_1": "Seconde majeure",
+    "reponse_fausse_2": "Tierce mineure",
+    "reponse_fausse_3": "Tierce majeure"
   },
   {
     "id": "IVX_desc_e4_ds4",
@@ -3014,9 +3014,9 @@
       "d#/4"
     ],
     "reponse_correcte": "Seconde mineure",
-    "reponse_fausse_1": "Unisson juste",
-    "reponse_fausse_2": "Seconde majeure",
-    "reponse_fausse_3": "Tierce mineure"
+    "reponse_fausse_1": "Seconde majeure",
+    "reponse_fausse_2": "Tierce mineure",
+    "reponse_fausse_3": "Tierce majeure"
   },
   {
     "id": "IVX_asc_e4_fs4",
@@ -3031,7 +3031,7 @@
     "reponse_correcte": "Seconde majeure",
     "reponse_fausse_1": "Seconde mineure",
     "reponse_fausse_2": "Tierce mineure",
-    "reponse_fausse_3": "Unisson juste"
+    "reponse_fausse_3": "Tierce majeure"
   },
   {
     "id": "IVX_desc_e4_d4",
@@ -3046,7 +3046,7 @@
     "reponse_correcte": "Seconde majeure",
     "reponse_fausse_1": "Seconde mineure",
     "reponse_fausse_2": "Tierce mineure",
-    "reponse_fausse_3": "Unisson juste"
+    "reponse_fausse_3": "Tierce majeure"
   },
   {
     "id": "IVX_asc_e4_g4",
@@ -3059,8 +3059,8 @@
       "g/4"
     ],
     "reponse_correcte": "Tierce mineure",
-    "reponse_fausse_1": "Seconde majeure",
-    "reponse_fausse_2": "Tierce majeure",
+    "reponse_fausse_1": "Tierce majeure",
+    "reponse_fausse_2": "Seconde majeure",
     "reponse_fausse_3": "Seconde mineure"
   },
   {
@@ -3074,8 +3074,8 @@
       "c#/4"
     ],
     "reponse_correcte": "Tierce mineure",
-    "reponse_fausse_1": "Seconde majeure",
-    "reponse_fausse_2": "Tierce majeure",
+    "reponse_fausse_1": "Tierce majeure",
+    "reponse_fausse_2": "Seconde majeure",
     "reponse_fausse_3": "Seconde mineure"
   },
   {
@@ -3119,8 +3119,8 @@
       "a/4"
     ],
     "reponse_correcte": "Quarte juste",
-    "reponse_fausse_1": "Tierce majeure",
-    "reponse_fausse_2": "Quarte augmentée",
+    "reponse_fausse_1": "Quarte augmentée",
+    "reponse_fausse_2": "Tierce majeure",
     "reponse_fausse_3": "Tierce mineure"
   },
   {
@@ -3134,8 +3134,8 @@
       "b/3"
     ],
     "reponse_correcte": "Quarte juste",
-    "reponse_fausse_1": "Tierce majeure",
-    "reponse_fausse_2": "Quarte augmentée",
+    "reponse_fausse_1": "Quarte augmentée",
+    "reponse_fausse_2": "Tierce majeure",
     "reponse_fausse_3": "Tierce mineure"
   },
   {
@@ -3209,8 +3209,8 @@
       "c/5"
     ],
     "reponse_correcte": "Sixte mineure",
-    "reponse_fausse_1": "Quinte juste",
-    "reponse_fausse_2": "Sixte majeure",
+    "reponse_fausse_1": "Sixte majeure",
+    "reponse_fausse_2": "Quinte juste",
     "reponse_fausse_3": "Quarte augmentée"
   },
   {
@@ -3224,8 +3224,8 @@
       "g#/3"
     ],
     "reponse_correcte": "Sixte mineure",
-    "reponse_fausse_1": "Quinte juste",
-    "reponse_fausse_2": "Sixte majeure",
+    "reponse_fausse_1": "Sixte majeure",
+    "reponse_fausse_2": "Quinte juste",
     "reponse_fausse_3": "Quarte augmentée"
   },
   {
@@ -3269,8 +3269,8 @@
       "d/5"
     ],
     "reponse_correcte": "Septième mineure",
-    "reponse_fausse_1": "Sixte majeure",
-    "reponse_fausse_2": "Septième majeure",
+    "reponse_fausse_1": "Septième majeure",
+    "reponse_fausse_2": "Sixte majeure",
     "reponse_fausse_3": "Sixte mineure"
   },
   {
@@ -3284,8 +3284,8 @@
       "f#/4"
     ],
     "reponse_correcte": "Septième mineure",
-    "reponse_fausse_1": "Sixte majeure",
-    "reponse_fausse_2": "Septième majeure",
+    "reponse_fausse_1": "Septième majeure",
+    "reponse_fausse_2": "Sixte majeure",
     "reponse_fausse_3": "Sixte mineure"
   },
   {
@@ -3359,9 +3359,9 @@
       "gb/4"
     ],
     "reponse_correcte": "Seconde mineure",
-    "reponse_fausse_1": "Unisson juste",
-    "reponse_fausse_2": "Seconde majeure",
-    "reponse_fausse_3": "Tierce mineure"
+    "reponse_fausse_1": "Seconde majeure",
+    "reponse_fausse_2": "Tierce mineure",
+    "reponse_fausse_3": "Tierce majeure"
   },
   {
     "id": "IVX_desc_f4_e4",
@@ -3374,9 +3374,9 @@
       "e/4"
     ],
     "reponse_correcte": "Seconde mineure",
-    "reponse_fausse_1": "Unisson juste",
-    "reponse_fausse_2": "Seconde majeure",
-    "reponse_fausse_3": "Tierce mineure"
+    "reponse_fausse_1": "Seconde majeure",
+    "reponse_fausse_2": "Tierce mineure",
+    "reponse_fausse_3": "Tierce majeure"
   },
   {
     "id": "IVX_asc_f4_g4",
@@ -3391,7 +3391,7 @@
     "reponse_correcte": "Seconde majeure",
     "reponse_fausse_1": "Seconde mineure",
     "reponse_fausse_2": "Tierce mineure",
-    "reponse_fausse_3": "Unisson juste"
+    "reponse_fausse_3": "Tierce majeure"
   },
   {
     "id": "IVX_desc_f4_eb4",
@@ -3406,7 +3406,7 @@
     "reponse_correcte": "Seconde majeure",
     "reponse_fausse_1": "Seconde mineure",
     "reponse_fausse_2": "Tierce mineure",
-    "reponse_fausse_3": "Unisson juste"
+    "reponse_fausse_3": "Tierce majeure"
   },
   {
     "id": "IVX_asc_f4_ab4",
@@ -3419,8 +3419,8 @@
       "ab/4"
     ],
     "reponse_correcte": "Tierce mineure",
-    "reponse_fausse_1": "Seconde majeure",
-    "reponse_fausse_2": "Tierce majeure",
+    "reponse_fausse_1": "Tierce majeure",
+    "reponse_fausse_2": "Seconde majeure",
     "reponse_fausse_3": "Seconde mineure"
   },
   {
@@ -3434,8 +3434,8 @@
       "d/4"
     ],
     "reponse_correcte": "Tierce mineure",
-    "reponse_fausse_1": "Seconde majeure",
-    "reponse_fausse_2": "Tierce majeure",
+    "reponse_fausse_1": "Tierce majeure",
+    "reponse_fausse_2": "Seconde majeure",
     "reponse_fausse_3": "Seconde mineure"
   },
   {
@@ -3479,8 +3479,8 @@
       "bb/4"
     ],
     "reponse_correcte": "Quarte juste",
-    "reponse_fausse_1": "Tierce majeure",
-    "reponse_fausse_2": "Quarte augmentée",
+    "reponse_fausse_1": "Quarte augmentée",
+    "reponse_fausse_2": "Tierce majeure",
     "reponse_fausse_3": "Tierce mineure"
   },
   {
@@ -3494,8 +3494,8 @@
       "c/4"
     ],
     "reponse_correcte": "Quarte juste",
-    "reponse_fausse_1": "Tierce majeure",
-    "reponse_fausse_2": "Quarte augmentée",
+    "reponse_fausse_1": "Quarte augmentée",
+    "reponse_fausse_2": "Tierce majeure",
     "reponse_fausse_3": "Tierce mineure"
   },
   {
@@ -3569,8 +3569,8 @@
       "db/5"
     ],
     "reponse_correcte": "Sixte mineure",
-    "reponse_fausse_1": "Quinte juste",
-    "reponse_fausse_2": "Sixte majeure",
+    "reponse_fausse_1": "Sixte majeure",
+    "reponse_fausse_2": "Quinte juste",
     "reponse_fausse_3": "Quarte augmentée"
   },
   {
@@ -3584,8 +3584,8 @@
       "a/3"
     ],
     "reponse_correcte": "Sixte mineure",
-    "reponse_fausse_1": "Quinte juste",
-    "reponse_fausse_2": "Sixte majeure",
+    "reponse_fausse_1": "Sixte majeure",
+    "reponse_fausse_2": "Quinte juste",
     "reponse_fausse_3": "Quarte augmentée"
   },
   {
@@ -3629,8 +3629,8 @@
       "eb/5"
     ],
     "reponse_correcte": "Septième mineure",
-    "reponse_fausse_1": "Sixte majeure",
-    "reponse_fausse_2": "Septième majeure",
+    "reponse_fausse_1": "Septième majeure",
+    "reponse_fausse_2": "Sixte majeure",
     "reponse_fausse_3": "Sixte mineure"
   },
   {
@@ -3644,8 +3644,8 @@
       "g/3"
     ],
     "reponse_correcte": "Septième mineure",
-    "reponse_fausse_1": "Sixte majeure",
-    "reponse_fausse_2": "Septième majeure",
+    "reponse_fausse_1": "Septième majeure",
+    "reponse_fausse_2": "Sixte majeure",
     "reponse_fausse_3": "Sixte mineure"
   },
   {
@@ -3719,9 +3719,9 @@
       "ab/4"
     ],
     "reponse_correcte": "Seconde mineure",
-    "reponse_fausse_1": "Unisson juste",
-    "reponse_fausse_2": "Seconde majeure",
-    "reponse_fausse_3": "Tierce mineure"
+    "reponse_fausse_1": "Seconde majeure",
+    "reponse_fausse_2": "Tierce mineure",
+    "reponse_fausse_3": "Tierce majeure"
   },
   {
     "id": "IVX_desc_g4_fs4",
@@ -3734,9 +3734,9 @@
       "f#/4"
     ],
     "reponse_correcte": "Seconde mineure",
-    "reponse_fausse_1": "Unisson juste",
-    "reponse_fausse_2": "Seconde majeure",
-    "reponse_fausse_3": "Tierce mineure"
+    "reponse_fausse_1": "Seconde majeure",
+    "reponse_fausse_2": "Tierce mineure",
+    "reponse_fausse_3": "Tierce majeure"
   },
   {
     "id": "IVX_asc_g4_a4",
@@ -3751,7 +3751,7 @@
     "reponse_correcte": "Seconde majeure",
     "reponse_fausse_1": "Seconde mineure",
     "reponse_fausse_2": "Tierce mineure",
-    "reponse_fausse_3": "Unisson juste"
+    "reponse_fausse_3": "Tierce majeure"
   },
   {
     "id": "IVX_desc_g4_f4",
@@ -3766,7 +3766,7 @@
     "reponse_correcte": "Seconde majeure",
     "reponse_fausse_1": "Seconde mineure",
     "reponse_fausse_2": "Tierce mineure",
-    "reponse_fausse_3": "Unisson juste"
+    "reponse_fausse_3": "Tierce majeure"
   },
   {
     "id": "IVX_asc_g4_bb4",
@@ -3779,8 +3779,8 @@
       "bb/4"
     ],
     "reponse_correcte": "Tierce mineure",
-    "reponse_fausse_1": "Seconde majeure",
-    "reponse_fausse_2": "Tierce majeure",
+    "reponse_fausse_1": "Tierce majeure",
+    "reponse_fausse_2": "Seconde majeure",
     "reponse_fausse_3": "Seconde mineure"
   },
   {
@@ -3794,8 +3794,8 @@
       "e/4"
     ],
     "reponse_correcte": "Tierce mineure",
-    "reponse_fausse_1": "Seconde majeure",
-    "reponse_fausse_2": "Tierce majeure",
+    "reponse_fausse_1": "Tierce majeure",
+    "reponse_fausse_2": "Seconde majeure",
     "reponse_fausse_3": "Seconde mineure"
   },
   {
@@ -3839,8 +3839,8 @@
       "c/5"
     ],
     "reponse_correcte": "Quarte juste",
-    "reponse_fausse_1": "Tierce majeure",
-    "reponse_fausse_2": "Quarte augmentée",
+    "reponse_fausse_1": "Quarte augmentée",
+    "reponse_fausse_2": "Tierce majeure",
     "reponse_fausse_3": "Tierce mineure"
   },
   {
@@ -3854,8 +3854,8 @@
       "d/4"
     ],
     "reponse_correcte": "Quarte juste",
-    "reponse_fausse_1": "Tierce majeure",
-    "reponse_fausse_2": "Quarte augmentée",
+    "reponse_fausse_1": "Quarte augmentée",
+    "reponse_fausse_2": "Tierce majeure",
     "reponse_fausse_3": "Tierce mineure"
   },
   {
@@ -3929,8 +3929,8 @@
       "eb/5"
     ],
     "reponse_correcte": "Sixte mineure",
-    "reponse_fausse_1": "Quinte juste",
-    "reponse_fausse_2": "Sixte majeure",
+    "reponse_fausse_1": "Sixte majeure",
+    "reponse_fausse_2": "Quinte juste",
     "reponse_fausse_3": "Quarte augmentée"
   },
   {
@@ -3944,8 +3944,8 @@
       "b/3"
     ],
     "reponse_correcte": "Sixte mineure",
-    "reponse_fausse_1": "Quinte juste",
-    "reponse_fausse_2": "Sixte majeure",
+    "reponse_fausse_1": "Sixte majeure",
+    "reponse_fausse_2": "Quinte juste",
     "reponse_fausse_3": "Quarte augmentée"
   },
   {
@@ -3989,8 +3989,8 @@
       "f/5"
     ],
     "reponse_correcte": "Septième mineure",
-    "reponse_fausse_1": "Sixte majeure",
-    "reponse_fausse_2": "Septième majeure",
+    "reponse_fausse_1": "Septième majeure",
+    "reponse_fausse_2": "Sixte majeure",
     "reponse_fausse_3": "Sixte mineure"
   },
   {
@@ -4004,8 +4004,8 @@
       "a/3"
     ],
     "reponse_correcte": "Septième mineure",
-    "reponse_fausse_1": "Sixte majeure",
-    "reponse_fausse_2": "Septième majeure",
+    "reponse_fausse_1": "Septième majeure",
+    "reponse_fausse_2": "Sixte majeure",
     "reponse_fausse_3": "Sixte mineure"
   },
   {
@@ -4079,9 +4079,9 @@
       "bb/4"
     ],
     "reponse_correcte": "Seconde mineure",
-    "reponse_fausse_1": "Unisson juste",
-    "reponse_fausse_2": "Seconde majeure",
-    "reponse_fausse_3": "Tierce mineure"
+    "reponse_fausse_1": "Seconde majeure",
+    "reponse_fausse_2": "Tierce mineure",
+    "reponse_fausse_3": "Tierce majeure"
   },
   {
     "id": "IVX_desc_a4_gs4",
@@ -4094,9 +4094,9 @@
       "g#/4"
     ],
     "reponse_correcte": "Seconde mineure",
-    "reponse_fausse_1": "Unisson juste",
-    "reponse_fausse_2": "Seconde majeure",
-    "reponse_fausse_3": "Tierce mineure"
+    "reponse_fausse_1": "Seconde majeure",
+    "reponse_fausse_2": "Tierce mineure",
+    "reponse_fausse_3": "Tierce majeure"
   },
   {
     "id": "IVX_asc_a4_b4",
@@ -4111,7 +4111,7 @@
     "reponse_correcte": "Seconde majeure",
     "reponse_fausse_1": "Seconde mineure",
     "reponse_fausse_2": "Tierce mineure",
-    "reponse_fausse_3": "Unisson juste"
+    "reponse_fausse_3": "Tierce majeure"
   },
   {
     "id": "IVX_desc_a4_g4",
@@ -4126,7 +4126,7 @@
     "reponse_correcte": "Seconde majeure",
     "reponse_fausse_1": "Seconde mineure",
     "reponse_fausse_2": "Tierce mineure",
-    "reponse_fausse_3": "Unisson juste"
+    "reponse_fausse_3": "Tierce majeure"
   },
   {
     "id": "IVX_asc_a4_c5",
@@ -4139,8 +4139,8 @@
       "c/5"
     ],
     "reponse_correcte": "Tierce mineure",
-    "reponse_fausse_1": "Seconde majeure",
-    "reponse_fausse_2": "Tierce majeure",
+    "reponse_fausse_1": "Tierce majeure",
+    "reponse_fausse_2": "Seconde majeure",
     "reponse_fausse_3": "Seconde mineure"
   },
   {
@@ -4154,8 +4154,8 @@
       "f#/4"
     ],
     "reponse_correcte": "Tierce mineure",
-    "reponse_fausse_1": "Seconde majeure",
-    "reponse_fausse_2": "Tierce majeure",
+    "reponse_fausse_1": "Tierce majeure",
+    "reponse_fausse_2": "Seconde majeure",
     "reponse_fausse_3": "Seconde mineure"
   },
   {
@@ -4199,8 +4199,8 @@
       "d/5"
     ],
     "reponse_correcte": "Quarte juste",
-    "reponse_fausse_1": "Tierce majeure",
-    "reponse_fausse_2": "Quarte augmentée",
+    "reponse_fausse_1": "Quarte augmentée",
+    "reponse_fausse_2": "Tierce majeure",
     "reponse_fausse_3": "Tierce mineure"
   },
   {
@@ -4214,8 +4214,8 @@
       "e/4"
     ],
     "reponse_correcte": "Quarte juste",
-    "reponse_fausse_1": "Tierce majeure",
-    "reponse_fausse_2": "Quarte augmentée",
+    "reponse_fausse_1": "Quarte augmentée",
+    "reponse_fausse_2": "Tierce majeure",
     "reponse_fausse_3": "Tierce mineure"
   },
   {
@@ -4289,8 +4289,8 @@
       "f/5"
     ],
     "reponse_correcte": "Sixte mineure",
-    "reponse_fausse_1": "Quinte juste",
-    "reponse_fausse_2": "Sixte majeure",
+    "reponse_fausse_1": "Sixte majeure",
+    "reponse_fausse_2": "Quinte juste",
     "reponse_fausse_3": "Quarte augmentée"
   },
   {
@@ -4304,8 +4304,8 @@
       "c#/4"
     ],
     "reponse_correcte": "Sixte mineure",
-    "reponse_fausse_1": "Quinte juste",
-    "reponse_fausse_2": "Sixte majeure",
+    "reponse_fausse_1": "Sixte majeure",
+    "reponse_fausse_2": "Quinte juste",
     "reponse_fausse_3": "Quarte augmentée"
   },
   {
@@ -4349,8 +4349,8 @@
       "g/5"
     ],
     "reponse_correcte": "Septième mineure",
-    "reponse_fausse_1": "Sixte majeure",
-    "reponse_fausse_2": "Septième majeure",
+    "reponse_fausse_1": "Septième majeure",
+    "reponse_fausse_2": "Sixte majeure",
     "reponse_fausse_3": "Sixte mineure"
   },
   {
@@ -4364,8 +4364,8 @@
       "b/3"
     ],
     "reponse_correcte": "Septième mineure",
-    "reponse_fausse_1": "Sixte majeure",
-    "reponse_fausse_2": "Septième majeure",
+    "reponse_fausse_1": "Septième majeure",
+    "reponse_fausse_2": "Sixte majeure",
     "reponse_fausse_3": "Sixte mineure"
   },
   {
@@ -4439,9 +4439,9 @@
       "c/5"
     ],
     "reponse_correcte": "Seconde mineure",
-    "reponse_fausse_1": "Unisson juste",
-    "reponse_fausse_2": "Seconde majeure",
-    "reponse_fausse_3": "Tierce mineure"
+    "reponse_fausse_1": "Seconde majeure",
+    "reponse_fausse_2": "Tierce mineure",
+    "reponse_fausse_3": "Tierce majeure"
   },
   {
     "id": "IVX_desc_b4_as4",
@@ -4454,9 +4454,9 @@
       "a#/4"
     ],
     "reponse_correcte": "Seconde mineure",
-    "reponse_fausse_1": "Unisson juste",
-    "reponse_fausse_2": "Seconde majeure",
-    "reponse_fausse_3": "Tierce mineure"
+    "reponse_fausse_1": "Seconde majeure",
+    "reponse_fausse_2": "Tierce mineure",
+    "reponse_fausse_3": "Tierce majeure"
   },
   {
     "id": "IVX_asc_b4_cs5",
@@ -4471,7 +4471,7 @@
     "reponse_correcte": "Seconde majeure",
     "reponse_fausse_1": "Seconde mineure",
     "reponse_fausse_2": "Tierce mineure",
-    "reponse_fausse_3": "Unisson juste"
+    "reponse_fausse_3": "Tierce majeure"
   },
   {
     "id": "IVX_desc_b4_a4",
@@ -4486,7 +4486,7 @@
     "reponse_correcte": "Seconde majeure",
     "reponse_fausse_1": "Seconde mineure",
     "reponse_fausse_2": "Tierce mineure",
-    "reponse_fausse_3": "Unisson juste"
+    "reponse_fausse_3": "Tierce majeure"
   },
   {
     "id": "IVX_asc_b4_d5",
@@ -4499,8 +4499,8 @@
       "d/5"
     ],
     "reponse_correcte": "Tierce mineure",
-    "reponse_fausse_1": "Seconde majeure",
-    "reponse_fausse_2": "Tierce majeure",
+    "reponse_fausse_1": "Tierce majeure",
+    "reponse_fausse_2": "Seconde majeure",
     "reponse_fausse_3": "Seconde mineure"
   },
   {
@@ -4514,8 +4514,8 @@
       "g#/4"
     ],
     "reponse_correcte": "Tierce mineure",
-    "reponse_fausse_1": "Seconde majeure",
-    "reponse_fausse_2": "Tierce majeure",
+    "reponse_fausse_1": "Tierce majeure",
+    "reponse_fausse_2": "Seconde majeure",
     "reponse_fausse_3": "Seconde mineure"
   },
   {
@@ -4559,8 +4559,8 @@
       "e/5"
     ],
     "reponse_correcte": "Quarte juste",
-    "reponse_fausse_1": "Tierce majeure",
-    "reponse_fausse_2": "Quarte augmentée",
+    "reponse_fausse_1": "Quarte augmentée",
+    "reponse_fausse_2": "Tierce majeure",
     "reponse_fausse_3": "Tierce mineure"
   },
   {
@@ -4574,8 +4574,8 @@
       "f#/4"
     ],
     "reponse_correcte": "Quarte juste",
-    "reponse_fausse_1": "Tierce majeure",
-    "reponse_fausse_2": "Quarte augmentée",
+    "reponse_fausse_1": "Quarte augmentée",
+    "reponse_fausse_2": "Tierce majeure",
     "reponse_fausse_3": "Tierce mineure"
   },
   {
@@ -4649,8 +4649,8 @@
       "g/5"
     ],
     "reponse_correcte": "Sixte mineure",
-    "reponse_fausse_1": "Quinte juste",
-    "reponse_fausse_2": "Sixte majeure",
+    "reponse_fausse_1": "Sixte majeure",
+    "reponse_fausse_2": "Quinte juste",
     "reponse_fausse_3": "Quarte augmentée"
   },
   {
@@ -4664,8 +4664,8 @@
       "d#/4"
     ],
     "reponse_correcte": "Sixte mineure",
-    "reponse_fausse_1": "Quinte juste",
-    "reponse_fausse_2": "Sixte majeure",
+    "reponse_fausse_1": "Sixte majeure",
+    "reponse_fausse_2": "Quinte juste",
     "reponse_fausse_3": "Quarte augmentée"
   },
   {
@@ -4709,8 +4709,8 @@
       "a/5"
     ],
     "reponse_correcte": "Septième mineure",
-    "reponse_fausse_1": "Sixte majeure",
-    "reponse_fausse_2": "Septième majeure",
+    "reponse_fausse_1": "Septième majeure",
+    "reponse_fausse_2": "Sixte majeure",
     "reponse_fausse_3": "Sixte mineure"
   },
   {
@@ -4724,8 +4724,8 @@
       "c#/4"
     ],
     "reponse_correcte": "Septième mineure",
-    "reponse_fausse_1": "Sixte majeure",
-    "reponse_fausse_2": "Septième majeure",
+    "reponse_fausse_1": "Septième majeure",
+    "reponse_fausse_2": "Sixte majeure",
     "reponse_fausse_3": "Sixte mineure"
   },
   {
