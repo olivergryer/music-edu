@@ -170,8 +170,10 @@ export async function loadInstrumentSamples(instrument, onProgress) {
         let buf
         try {
           buf = await ctx.decodeAudioData(arrayBuf.slice(0))
-        } catch {
+        } catch (decErr) {
+          console.warn(`decodeAudioData échoué (${decErr?.message}), décodage manuel…`)
           buf = _decodeAiff(ctx, arrayBuf)
+          console.log(`_decodeAiff → ${buf.length} frames, ${buf.sampleRate}Hz, ${buf.numberOfChannels}ch, max=${Math.max(...buf.getChannelData(0).slice(0,1000)).toFixed(4)}`)
         }
         const onsetMs = detectOnset(buf)
         const { loopStart, loopEnd } = findLoopPoints(buf, onsetMs)
