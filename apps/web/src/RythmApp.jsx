@@ -415,144 +415,137 @@ const ACT_ICONS = {
 const ACT_SHORT = {
   1: "Reproduis ce que tu vois",
   2: "Reproduis ce que tu entends",
-  3: "Identifie la bonne portée",
-  4: "Identifie la bonne lecture",
+  3: "Identifie le rythme entendu parmi les 4 rythmes écrits",
+  4: "Identifie le rythme écrit parmi les 4 rythmes entendus",
 };
 
-function TutorialSlide1() {
-  return (
-    <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, width:280 }}>
-      {[1,2,3,4].map(id => (
-        <div key={id} style={{ background:'rgba(74,108,247,0.1)', border:'2px solid rgba(74,108,247,0.4)', borderRadius:14, padding:'16px 8px 12px', textAlign:'center', color:'#c084fc' }}>
-          {ACT_ICONS[id]}
-          <div style={{ fontSize:10, color:'#a5b4fc', marginTop:8, lineHeight:1.3 }}>{ACTIVITIES[id-1].label}</div>
-        </div>
-      ))}
-    </div>
-  );
-}
+const TUTO_TOTAL = 4;
 
-function TutorialSlide2({ activity }) {
-  const id = activity || 1;
-  return (
-    <div style={{ display:'flex', flexDirection:'column', gap:8, width:240 }}>
-      {[1,2,3,4].map(i => (
-        <div key={i} style={{
-          display:'flex', alignItems:'center', gap:10,
-          background: i===id ? 'rgba(74,108,247,0.15)' : 'rgba(255,255,255,0.03)',
-          border: `2px solid ${i===id ? '#4A6CF7' : 'rgba(255,255,255,0.06)'}`,
-          borderRadius:12, padding:'8px 12px',
-          color: i===id ? '#fff' : '#6b7280',
-        }}>
-          <div style={{ color: i===id ? '#4A6CF7' : '#6b7280', flexShrink:0, width:36, height:36, display:'flex', alignItems:'center', justifyContent:'center', transform:'scale(0.64)', transformOrigin:'center' }}>{ACT_ICONS[i]}</div>
-          <div>
-            <div style={{ fontSize:11, fontWeight:700 }}>{ACTIVITIES[i-1].label}</div>
-            <div style={{ fontSize:9, marginTop:2, color: i===id ? '#a5b4fc' : '#4b5563' }}>{ACT_SHORT[i]}</div>
+function TutorialOverlay({ onDone, levelOrder, activity: initActivity, inputMode: initInputMode }) {
+  const [slide, setSlide] = useState(0);
+  const { dark } = useTheme();
+
+  const [tutoActivity,  setTutoActivity]  = useState(initActivity || 1);
+  const [tutoInputMode, setTutoInputMode] = useState(initInputMode || "tap");
+  const levels = levelOrder.length > 0 ? levelOrder : LEVEL_ORDER;
+  const [tutoLevel, setTutoLevel] = useState(levels[0] ?? null);
+
+  const SLIDES = [
+    {
+      title: "Bienvenue dans Rythme !",
+      body: "Entraîne-toi à reproduire et reconnaître des rythmes musicaux, du débutant au virtuose.",
+    },
+    {
+      title: "Quel exercice ?",
+      body: "Clique sur l'activité que tu veux pratiquer.",
+    },
+    {
+      title: "Tap ou Micro ?",
+      body: "Comment vas-tu saisir le rythme ?",
+    },
+    {
+      title: "Choisis ton niveau",
+      body: "Tu pourras en changer à tout moment dans les réglages.",
+    },
+  ];
+
+  const { title, body } = SLIDES[slide];
+
+  /* ── Visuals inline ────────────────────────── */
+  function renderVisual() {
+    if (slide === 0) {
+      return (
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, width:280 }}>
+          {[1,2,3,4].map(id => (
+            <div key={id} style={{ background:'rgba(74,108,247,0.1)', border:'2px solid rgba(74,108,247,0.4)', borderRadius:14, padding:'16px 8px 12px', textAlign:'center', color:'#c084fc' }}>
+              {ACT_ICONS[id]}
+              <div style={{ fontSize:10, color:'#a5b4fc', marginTop:8, lineHeight:1.3 }}>{ACTIVITIES[id-1].label}</div>
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    if (slide === 1) {
+      return (
+        <div style={{ display:'flex', flexDirection:'column', gap:8, width:280 }}>
+          {[1,2,3,4].map(i => {
+            const sel = tutoActivity === i;
+            return (
+              <div key={i} role="button" onClick={() => setTutoActivity(i)} style={{
+                display:'flex', alignItems:'center', gap:12,
+                background: sel ? 'rgba(74,108,247,0.18)' : (dark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.04)'),
+                border: `2px solid ${sel ? '#4A6CF7' : (dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.1)')}`,
+                borderRadius:14, padding:'10px 14px', cursor:'pointer',
+                color: sel ? (dark ? '#fff' : '#111827') : (dark ? '#6b7280' : '#9ca3af'),
+                transition:'all 0.15s',
+              }}>
+                <div style={{ color: sel ? '#4A6CF7' : (dark ? '#6b7280' : '#9ca3af'), flexShrink:0, width:36, height:36, display:'flex', alignItems:'center', justifyContent:'center', transform:'scale(0.64)', transformOrigin:'center' }}>{ACT_ICONS[i]}</div>
+                <div>
+                  <div style={{ fontSize:12, fontWeight:700 }}>{ACTIVITIES[i-1].label}</div>
+                  <div style={{ fontSize:9, marginTop:2, color: sel ? (dark ? '#a5b4fc' : '#6b7280') : (dark ? '#4b5563' : '#bbb') }}>{ACT_SHORT[i]}</div>
+                </div>
+                {sel && <div style={{ marginLeft:'auto', width:10, height:10, borderRadius:5, background:'#4A6CF7', flexShrink:0 }}/>}
+              </div>
+            );
+          })}
+        </div>
+      );
+    }
+
+    if (slide === 2) {
+      const micColor = dark ? '#9ca3af' : '#6b7280';
+      const tapSel = tutoInputMode === "tap";
+      const micSel = tutoInputMode === "mic";
+      return (
+        <div style={{ display:'flex', gap:12, width:280 }}>
+          <div role="button" onClick={() => setTutoInputMode("tap")} style={{
+            flex:1, borderRadius:18, padding:'28px 12px', textAlign:'center', cursor:'pointer',
+            background: tapSel ? 'rgba(74,108,247,0.18)' : (dark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)'),
+            border: `2px solid ${tapSel ? '#4A6CF7' : (dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)')}`,
+            transition:'all 0.15s',
+          }}>
+            <div style={{ fontSize:30, fontWeight:900, color: tapSel ? '#4A6CF7' : micColor, letterSpacing:2 }}>TAP</div>
+            <div style={{ fontSize:10, color: tapSel ? '#a5b4fc' : micColor, marginTop:8, lineHeight:1.4 }}>Touche l'écran au rythme</div>
+          </div>
+          <div role="button" onClick={() => setTutoInputMode("mic")} style={{
+            flex:1, borderRadius:18, padding:'28px 12px', textAlign:'center', cursor:'pointer',
+            background: micSel ? 'rgba(74,108,247,0.18)' : (dark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)'),
+            border: `2px solid ${micSel ? '#4A6CF7' : (dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)')}`,
+            transition:'all 0.15s',
+          }}>
+            <svg width="38" height="38" viewBox="0 0 24 24" fill="none" style={{ margin:'0 auto', display:'block' }}>
+              <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" stroke={micSel ? '#4A6CF7' : micColor} strokeWidth="2" fill="none"/>
+              <path d="M19 10v2a7 7 0 0 1-14 0v-2" stroke={micSel ? '#4A6CF7' : micColor} strokeWidth="2" strokeLinecap="round"/>
+              <line x1="12" y1="19" x2="12" y2="23" stroke={micSel ? '#4A6CF7' : micColor} strokeWidth="2" strokeLinecap="round"/>
+            </svg>
+            <div style={{ fontSize:10, color: micSel ? '#a5b4fc' : micColor, marginTop:8, lineHeight:1.4 }}>Chante, frappe dans tes mains ou joue à l'instrument</div>
           </div>
         </div>
-      ))}
-    </div>
-  );
-}
+      );
+    }
 
-function TutorialSlide3() {
-  return (
-    <div style={{ display:'flex', flexDirection:'column', gap:14, alignItems:'center', width:220 }}>
-      <div style={{ display:'flex', gap:10 }}>
-        <div style={{ flex:1, background:'rgba(74,108,247,0.18)', border:'2px solid #4A6CF7', borderRadius:16, padding:'20px 24px', textAlign:'center' }}>
-          <div style={{ fontSize:28, fontWeight:900, color:'#fff', letterSpacing:2 }}>TAP</div>
-          <div style={{ fontSize:10, color:'#a5b4fc', marginTop:6 }}>Touche l'écran</div>
+    if (slide === 3) {
+      return (
+        <div style={{ display:'flex', flexWrap:'wrap', gap:8, justifyContent:'center', width:280 }}>
+          {levels.map(lv => {
+            const sel = tutoLevel === lv;
+            return (
+              <div key={lv} role="button" onClick={() => setTutoLevel(lv)} style={{
+                padding:'10px 18px', borderRadius:24, fontSize:13, fontWeight:700, cursor:'pointer',
+                background: sel ? '#4A6CF7' : (dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'),
+                color: sel ? '#fff' : (dark ? '#9ca3af' : '#6b7280'),
+                border: `2px solid ${sel ? '#4A6CF7' : 'transparent'}`,
+                transition:'all 0.15s',
+              }}>{lv}</div>
+            );
+          })}
         </div>
-        <div style={{ flex:1, background:'rgba(255,255,255,0.04)', border:'2px solid rgba(255,255,255,0.1)', borderRadius:16, padding:'20px 12px', textAlign:'center' }}>
-          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" style={{ margin:'0 auto', display:'block' }}>
-            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" stroke="#6b7280" strokeWidth="2" fill="none"/>
-            <path d="M19 10v2a7 7 0 0 1-14 0v-2" stroke="#6b7280" strokeWidth="2" strokeLinecap="round"/>
-            <line x1="12" y1="19" x2="12" y2="23" stroke="#6b7280" strokeWidth="2" strokeLinecap="round"/>
-          </svg>
-          <div style={{ fontSize:10, color:'#6b7280', marginTop:6 }}>Micro</div>
-        </div>
-      </div>
-      <div style={{ fontSize:11, color:'#6b7280', textAlign:'center', lineHeight:1.6, maxWidth:200 }}>
-        TAP : tape l'écran au rythme.<br/>Micro : chante ou frappe des mains.
-      </div>
-    </div>
-  );
-}
+      );
+    }
 
-function TutorialSlide4({ levelOrder }) {
-  const levels = levelOrder.length > 0 ? levelOrder : ["C1/1","C1/2","C2/1","C2/2","C3/1","C3/2"];
-  return (
-    <div style={{ display:'flex', flexDirection:'column', gap:12, alignItems:'center', width:240 }}>
-      <div style={{ display:'flex', flexWrap:'wrap', gap:6, justifyContent:'center' }}>
-        {levels.map((lv, i) => (
-          <div key={lv} style={{
-            padding:'6px 14px', borderRadius:20, fontSize:12, fontWeight:700,
-            background: i===0 ? '#4A6CF7' : i===1 ? 'rgba(74,108,247,0.25)' : 'rgba(255,255,255,0.05)',
-            color: i===0 ? '#fff' : i===1 ? '#a5b4fc' : '#4b5563',
-          }}>{lv}</div>
-        ))}
-      </div>
-      <div style={{ fontSize:11, color:'#6b7280', textAlign:'center', lineHeight:1.6, maxWidth:220 }}>
-        Chaque niveau introduit de nouvelles formules rythmiques. Commence en C1/1 !
-      </div>
-      <div style={{ display:'flex', alignItems:'center', gap:8, background:'rgba(74,108,247,0.08)', border:'1px solid rgba(74,108,247,0.2)', borderRadius:10, padding:'8px 14px' }}>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" fill="#fbbf24"/></svg>
-        <span style={{ fontSize:11, color:'#fbbf24', fontWeight:600 }}>XP débloqués à chaque exercice réussi</span>
-      </div>
-    </div>
-  );
-}
-
-function TutorialSlide5() {
-  return (
-    <div style={{ display:'flex', flexDirection:'column', gap:14, alignItems:'center', width:240 }}>
-      <div style={{ width:'100%', borderRadius:18, padding:'18px 0', background:'linear-gradient(135deg,#4A6CF7,#8B5CF6)', textAlign:'center', color:'#fff', fontSize:16, fontWeight:900, boxShadow:'0 8px 32px rgba(74,108,247,0.4)' }}>
-        ▶ Commencer
-      </div>
-      <div style={{ display:'flex', alignItems:'center', gap:10, background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.08)', borderRadius:12, padding:'10px 16px', width:'100%', boxSizing:'border-box' }}>
-        <span style={{ fontSize:20 }}>⚙</span>
-        <div>
-          <div style={{ fontSize:11, fontWeight:700, color:'#e5e7eb' }}>Réglages</div>
-          <div style={{ fontSize:10, color:'#6b7280', marginTop:2 }}>Tempo · Niveau · Mode de jeu</div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-const TUTO_SLIDES = [
-  {
-    title: "Bienvenue dans Rythme !",
-    body: "Entraîne-toi à reproduire et reconnaître des rythmes musicaux, du débutant au virtuose.",
-    Visual: TutorialSlide1,
-  },
-  {
-    title: "4 exercices progressifs",
-    body: "Chaque mode travaille une compétence différente. Alterne-les pour progresser vite.",
-    Visual: TutorialSlide2,
-  },
-  {
-    title: "Tap ou Micro",
-    body: "Choisis ton mode de saisie dans les Réglages avant de commencer.",
-    Visual: TutorialSlide3,
-  },
-  {
-    title: "Choisis ton niveau",
-    body: "Commence en C1/1. Les niveaux se débloquent au fur et à mesure de ta progression.",
-    Visual: TutorialSlide4,
-  },
-  {
-    title: "C'est parti !",
-    body: "Lance un exercice. Tes réglages sont sauvegardés d'une session à l'autre.",
-    Visual: TutorialSlide5,
-  },
-];
-
-function TutorialOverlay({ onDone, levelOrder, activity }) {
-  const [slide, setSlide] = useState(0);
-  const total = TUTO_SLIDES.length;
-  const { title, body, Visual } = TUTO_SLIDES[slide];
-  const { dark, toggle } = useTheme();
+    return null;
+  }
 
   return (
     <div style={{
@@ -560,13 +553,13 @@ function TutorialOverlay({ onDone, levelOrder, activity }) {
       background: dark ? '#030712' : '#f9fafb',
       color: dark ? '#f9fafb' : '#111827',
       display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'space-between',
-      padding:'24px 20px 36px',
+      padding:'24px 20px 80px',
       overflowY:'auto',
     }}>
       {/* Top bar */}
       <div style={{ width:'100%', maxWidth:480, display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8 }}>
         <div style={{ display:'flex', gap:6 }}>
-          {Array.from({ length: total }).map((_, i) => (
+          {Array.from({ length: TUTO_TOTAL }).map((_, i) => (
             <div key={i} style={{
               width: i===slide ? 20 : 7, height:7, borderRadius:4,
               background: i <= slide ? '#4A6CF7' : (dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.12)'),
@@ -574,22 +567,15 @@ function TutorialOverlay({ onDone, levelOrder, activity }) {
             }}/>
           ))}
         </div>
-        <div style={{ display:'flex', gap:8, alignItems:'center' }}>
-          <button
-            onClick={toggle}
-            title={dark ? "Passer en thème clair" : "Passer en thème sombre"}
-            style={{ background:'none', border:`1px solid ${dark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)'}`, borderRadius:8, color: dark ? '#9ca3af' : '#6b7280', fontSize:16, cursor:'pointer', padding:'4px 8px', lineHeight:1 }}
-          >{dark ? '☀️' : '🌙'}</button>
-          <button
-            onClick={onDone}
-            style={{ background:'none', border:'none', color: dark ? '#6b7280' : '#9ca3af', fontSize:13, fontWeight:700, cursor:'pointer', padding:'4px 8px' }}
-          >Ignorer</button>
-        </div>
+        <button
+          onClick={() => onDone(null)}
+          style={{ background:'none', border:'none', color: dark ? '#6b7280' : '#9ca3af', fontSize:13, fontWeight:700, cursor:'pointer', padding:'4px 8px' }}
+        >Ignorer</button>
       </div>
 
       {/* Visual */}
       <div style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', padding:'20px 0' }}>
-        <Visual levelOrder={levelOrder} activity={activity} />
+        {renderVisual()}
       </div>
 
       {/* Text */}
@@ -607,9 +593,9 @@ function TutorialOverlay({ onDone, levelOrder, activity }) {
           >← Précédent</button>
         )}
         <button
-          onClick={() => slide < total - 1 ? setSlide(s => s + 1) : onDone()}
+          onClick={() => slide < TUTO_TOTAL - 1 ? setSlide(s => s + 1) : onDone({ activity: tutoActivity, inputMode: tutoInputMode, level: tutoLevel })}
           style={{ flex:2, padding:'14px 0', borderRadius:16, border:'none', background:'linear-gradient(135deg,#4A6CF7,#8B5CF6)', color:'#fff', fontSize:15, fontWeight:900, cursor:'pointer', boxShadow:'0 8px 24px rgba(74,108,247,0.35)' }}
-        >{slide < total - 1 ? "Suivant →" : "Commencer !"}</button>
+        >{slide < TUTO_TOTAL - 1 ? "Suivant →" : "▶ Commencer !"}</button>
       </div>
     </div>
   );
@@ -712,6 +698,7 @@ export default function RythmApp() {
   const micStreamRef   = useRef(null);
   const micAnalyserRef = useRef(null);
   const micRafRef      = useRef(null);
+  const pendingTutoStartRef = useRef(false);
   const lastOnsetRef   = useRef(0);
 
   const userSheetLoadRef = useRef(false);
@@ -726,11 +713,18 @@ export default function RythmApp() {
 
   const { addSession } = useProgressFirebase();
 
-  const handleTutorialDone = () => {
+  const handleTutorialDone = (selections) => {
     if (ENABLE_TUTORIAL === "once") {
       localStorage.setItem(`rythm-tuto-${TUTORIAL_VERSION}`, "1");
     }
     setShowTutorial(false);
+    if (!selections) return; // "Ignorer"
+    const { activity: a, inputMode: im, level: lv } = selections;
+    setActivity(a);
+    if (im === "mic") { setInputMode("mic"); startMic(); }
+    else { setInputMode("tap"); stopMic(); }
+    if (lv) selectLevel(lv);
+    pendingTutoStartRef.current = true; // startSession fires after next render (fresh closures)
   };
 
   // Son rythme toujours actif pour act 2/3/4 (essentiel à l'écoute)
@@ -1259,6 +1253,14 @@ export default function RythmApp() {
     startGame();
   };
 
+  // Lance le jeu après tutorial interactif (attend que les closures de startGame soient fraîches)
+  useEffect(() => {
+    if (pendingTutoStartRef.current) {
+      pendingTutoStartRef.current = false;
+      startSession();
+    }
+  });
+
   // ── Modal réglages ─────────────────────────────────────────────────────────
   const formulaCountModal = selectedFormulas.size;
   const SettingsModal = settingsModalOpen && (
@@ -1418,7 +1420,7 @@ export default function RythmApp() {
   if (currentPage === "home") {
     return (
       <>
-        {showTutorial && <TutorialOverlay onDone={handleTutorialDone} levelOrder={levelOrder} activity={activity} />}
+        {showTutorial && <TutorialOverlay onDone={handleTutorialDone} levelOrder={levelOrder} activity={activity} inputMode={inputMode} />}
         {SettingsModal}
         <div className="bg-app text-app min-h-dvh flex flex-col items-center px-3.5 py-3 pb-8 select-none">
           {/* Header */}

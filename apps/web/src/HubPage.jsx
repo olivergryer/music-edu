@@ -8,13 +8,13 @@ import banniereLight from './assets/banniere_light.svg'
 const MODULES = [
   { id: 'rythme',    label: 'Rythme',    desc: 'Lecture et reproduction rythmique', to: '/rythme',    active: true, color: '#4A6CF7' },
   { id: 'theorie',   label: 'Théorie',   desc: 'Intervalles, accords, armures',     to: '/theorie',   active: true, color: '#8B5CF6' },
-  { id: 'accordeur', label: 'Accordeur', desc: 'Accordeur chromatique',             to: '/accordeur', active: true, color: '#FF8B3D' },
+  { id: 'accordeur', label: 'Accordeur', desc: 'Accordeur par phrase et générateur d\'accords', to: '/accordeur', active: true, color: '#FF8B3D' },
 ]
 
 function ModuleCard({ label, desc, active, color }) {
   return (
     <div
-      className="bg-surface rounded-2xl p-6 border border-app transition-all duration-200 hover:shadow-lg group"
+      className="bg-surface rounded-2xl p-6 border border-app transition-all duration-200 hover:shadow-lg group h-full"
       style={{ opacity: active ? 1 : 0.4, cursor: active ? 'pointer' : 'default' }}
     >
       <div
@@ -51,7 +51,7 @@ export default function HubPage() {
           />
         </div>
 
-        <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))' }}>
+        <div className="grid gap-4 items-stretch" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))' }}>
           {MODULES.map(m => m.active
             ? <Link key={m.id} to={m.to} className="no-underline">
                 <ModuleCard {...m} />
