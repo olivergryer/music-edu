@@ -110,6 +110,10 @@ export async function loadInstrumentSamples(instrument, onProgress) {
   const map   = new Map()
   let loaded  = 0
   const ctx   = new AudioContext()
+  // Safari suspend AudioContext hors user gesture — forcer resume avant decode
+  if (ctx.state === 'suspended') {
+    try { await ctx.resume() } catch {}
+  }
 
   const promise = Promise.all(
     Array.from({ length: total }, (_, i) => loMidi + i).map(async midi => {

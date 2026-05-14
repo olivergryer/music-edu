@@ -28,11 +28,22 @@ function bestOctaveShift(midis) {
 }
 
 const STAVE_MARGIN = 140
+const PX_PER_BEAT  = 52  // pixels par beat (quarter note)
+
+// Durée réelle (ms) → type VexFlow + valeur en beats
+function durationToVex(ms) {
+  if (ms >= 1400) return { dur: 'w', beats: 4 }
+  if (ms >= 700)  return { dur: 'h', beats: 2 }
+  if (ms >= 350)  return { dur: 'q', beats: 1 }
+  if (ms >= 175)  return { dur: '8', beats: 0.5 }
+  return { dur: '16', beats: 0.25 }
+}
 
 export default function AccordeurStaff({ notes, seuil = 10, transpoKey = 'C', tonicName = 'Do', containerWidth = 500, height = 180, notePx = 52 }) {
   const ref = useRef(null)
 
-  const staveWidth = Math.max(containerWidth - 4, notes?.length * notePx + STAVE_MARGIN)
+  const totalBeats = notes?.reduce((acc, n) => acc + durationToVex(Math.max(200, n.finMs - n.debutMs)).beats, 0) ?? 0
+  const staveWidth = Math.max(containerWidth - 4, totalBeats * PX_PER_BEAT + STAVE_MARGIN)
 
   useEffect(() => {
     if (!ref.current || !notes?.length) return
@@ -78,8 +89,9 @@ export default function AccordeurStaff({ notes, seuil = 10, transpoKey = 'C', to
         const hasSharp    = vexPart.includes('#')
         const hasFlat     = vexPart.length > 1 && !hasSharp
         const letter      = hasSharp || hasFlat ? vexPart[0] : vexPart
+        const { dur }     = durationToVex(Math.max(200, note.finMs - note.debutMs))
 
-        const sn = new StaveNote({ keys: [key], duration: 'q' })
+        const sn = new StaveNote({ keys: [key], duration: dur })
         sn.setStyle({ fillStyle: couleur, strokeStyle: couleur })
 
         if (hasSharp) {
@@ -107,7 +119,8 @@ export default function AccordeurStaff({ notes, seuil = 10, transpoKey = 'C', to
         return sn
       })
 
-      const voice = new Voice({ num_beats: notes.length, beat_value: 4 })
+      const totalBeatsLocal = notes.reduce((acc, n) => acc + durationToVex(Math.max(200, n.finMs - n.debutMs)).beats, 0)
+      const voice = new Voice({ num_beats: totalBeatsLocal, beat_value: 4 })
       voice.setMode(Voice.Mode.SOFT)
       voice.addTickables(vexNotes)
 

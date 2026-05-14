@@ -360,6 +360,244 @@ function loadSettings() {
   } catch { return {}; }
 }
 
+// ─── Tutorial ────────────────────────────────────────────────────────────────
+export const ENABLE_TUTORIAL = true;   // true = toujours | false = jamais | "once" = une fois
+export const TUTORIAL_VERSION = "1";   // incrémenter force réaffichage en mode "once"
+
+const ACT_ICONS = {
+  1: (
+    <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+      <rect x="4" y="10" width="24" height="3" rx="1.5" fill="#4b5563"/>
+      <rect x="4" y="15" width="24" height="3" rx="1.5" fill="#4b5563"/>
+      <rect x="4" y="20" width="24" height="3" rx="1.5" fill="#4b5563"/>
+      <circle cx="10" cy="20" r="3" fill="currentColor"/>
+      <line x1="13" y1="20" x2="13" y2="10" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+      <circle cx="21" cy="18" r="3" fill="currentColor"/>
+      <line x1="24" y1="18" x2="24" y2="8" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+    </svg>
+  ),
+  2: (
+    <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+      <path d="M16 7C11.03 7 7 11.03 7 16s4.03 9 9 9 9-4.03 9-9-4.03-9-9-9z" stroke="currentColor" strokeWidth="2" fill="none"/>
+      <path d="M12 14c0-2.21 1.79-4 4-4s4 1.79 4 4v4c0 2.21-1.79 4-4 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" fill="none"/>
+      <line x1="16" y1="25" x2="16" y2="28" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+      <line x1="12" y1="28" x2="20" y2="28" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+    </svg>
+  ),
+  3: (
+    <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+      <rect x="3" y="6" width="26" height="20" rx="3" stroke="currentColor" strokeWidth="2" fill="none"/>
+      <line x1="3" y1="12" x2="29" y2="12" stroke="currentColor" strokeWidth="1.5"/>
+      <line x1="3" y1="16" x2="29" y2="16" stroke="currentColor" strokeWidth="1.5"/>
+      <line x1="3" y1="20" x2="29" y2="20" stroke="currentColor" strokeWidth="1.5"/>
+      <circle cx="10" cy="20" r="2.5" fill="currentColor"/>
+      <line x1="12.5" y1="20" x2="12.5" y2="11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+      <circle cx="20" cy="18" r="2.5" fill="currentColor"/>
+      <line x1="22.5" y1="18" x2="22.5" y2="9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+    </svg>
+  ),
+  4: (
+    <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+      <circle cx="16" cy="16" r="11" stroke="currentColor" strokeWidth="2" fill="none"/>
+      <path d="M13 11.5l9 4.5-9 4.5V11.5z" fill="currentColor"/>
+    </svg>
+  ),
+};
+
+const ACT_SHORT = {
+  1: "Reproduis ce que tu vois",
+  2: "Reproduis ce que tu entends",
+  3: "Identifie la bonne portée",
+  4: "Identifie la bonne lecture",
+};
+
+function TutorialSlide1() {
+  return (
+    <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, width:220 }}>
+      {[1,2,3,4].map(id => (
+        <div key={id} style={{ background:'rgba(74,108,247,0.1)', border:'2px solid rgba(74,108,247,0.4)', borderRadius:14, padding:'14px 8px 10px', textAlign:'center', color:'#c084fc' }}>
+          {ACT_ICONS[id]}
+          <div style={{ fontSize:10, color:'#a5b4fc', marginTop:6, lineHeight:1.3 }}>{ACTIVITIES[id-1].label}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function TutorialSlide2({ activity }) {
+  const id = activity || 1;
+  return (
+    <div style={{ display:'flex', flexDirection:'column', gap:8, width:240 }}>
+      {[1,2,3,4].map(i => (
+        <div key={i} style={{
+          display:'flex', alignItems:'center', gap:10,
+          background: i===id ? 'rgba(74,108,247,0.15)' : 'rgba(255,255,255,0.03)',
+          border: `2px solid ${i===id ? '#4A6CF7' : 'rgba(255,255,255,0.06)'}`,
+          borderRadius:12, padding:'8px 12px',
+          color: i===id ? '#fff' : '#6b7280',
+        }}>
+          <div style={{ color: i===id ? '#4A6CF7' : '#6b7280', flexShrink:0 }}>{ACT_ICONS[i]}</div>
+          <div>
+            <div style={{ fontSize:11, fontWeight:700 }}>{ACTIVITIES[i-1].label}</div>
+            <div style={{ fontSize:9, marginTop:2, color: i===id ? '#a5b4fc' : '#4b5563' }}>{ACT_SHORT[i]}</div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function TutorialSlide3() {
+  return (
+    <div style={{ display:'flex', flexDirection:'column', gap:14, alignItems:'center', width:220 }}>
+      <div style={{ display:'flex', gap:10 }}>
+        <div style={{ flex:1, background:'rgba(74,108,247,0.18)', border:'2px solid #4A6CF7', borderRadius:16, padding:'20px 24px', textAlign:'center' }}>
+          <div style={{ fontSize:28, fontWeight:900, color:'#fff', letterSpacing:2 }}>TAP</div>
+          <div style={{ fontSize:10, color:'#a5b4fc', marginTop:6 }}>Touche l'écran</div>
+        </div>
+        <div style={{ flex:1, background:'rgba(255,255,255,0.04)', border:'2px solid rgba(255,255,255,0.1)', borderRadius:16, padding:'20px 12px', textAlign:'center' }}>
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" style={{ margin:'0 auto', display:'block' }}>
+            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" stroke="#6b7280" strokeWidth="2" fill="none"/>
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2" stroke="#6b7280" strokeWidth="2" strokeLinecap="round"/>
+            <line x1="12" y1="19" x2="12" y2="23" stroke="#6b7280" strokeWidth="2" strokeLinecap="round"/>
+          </svg>
+          <div style={{ fontSize:10, color:'#6b7280', marginTop:6 }}>Micro</div>
+        </div>
+      </div>
+      <div style={{ fontSize:11, color:'#6b7280', textAlign:'center', lineHeight:1.6, maxWidth:200 }}>
+        TAP : tape l'écran au rythme.<br/>Micro : chante ou frappe des mains.
+      </div>
+    </div>
+  );
+}
+
+function TutorialSlide4({ levelOrder }) {
+  const levels = levelOrder.length > 0 ? levelOrder : ["C1/1","C1/2","C2/1","C2/2","C3/1","C3/2"];
+  return (
+    <div style={{ display:'flex', flexDirection:'column', gap:12, alignItems:'center', width:240 }}>
+      <div style={{ display:'flex', flexWrap:'wrap', gap:6, justifyContent:'center' }}>
+        {levels.map((lv, i) => (
+          <div key={lv} style={{
+            padding:'6px 14px', borderRadius:20, fontSize:12, fontWeight:700,
+            background: i===0 ? '#4A6CF7' : i===1 ? 'rgba(74,108,247,0.25)' : 'rgba(255,255,255,0.05)',
+            color: i===0 ? '#fff' : i===1 ? '#a5b4fc' : '#4b5563',
+          }}>{lv}</div>
+        ))}
+      </div>
+      <div style={{ fontSize:11, color:'#6b7280', textAlign:'center', lineHeight:1.6, maxWidth:220 }}>
+        Chaque niveau introduit de nouvelles formules rythmiques. Commence en C1/1 !
+      </div>
+      <div style={{ display:'flex', alignItems:'center', gap:8, background:'rgba(74,108,247,0.08)', border:'1px solid rgba(74,108,247,0.2)', borderRadius:10, padding:'8px 14px' }}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" fill="#fbbf24"/></svg>
+        <span style={{ fontSize:11, color:'#fbbf24', fontWeight:600 }}>XP débloqués à chaque exercice réussi</span>
+      </div>
+    </div>
+  );
+}
+
+function TutorialSlide5() {
+  return (
+    <div style={{ display:'flex', flexDirection:'column', gap:14, alignItems:'center', width:240 }}>
+      <div style={{ width:'100%', borderRadius:18, padding:'18px 0', background:'linear-gradient(135deg,#4A6CF7,#8B5CF6)', textAlign:'center', color:'#fff', fontSize:16, fontWeight:900, boxShadow:'0 8px 32px rgba(74,108,247,0.4)' }}>
+        ▶ Commencer
+      </div>
+      <div style={{ display:'flex', alignItems:'center', gap:10, background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.08)', borderRadius:12, padding:'10px 16px', width:'100%', boxSizing:'border-box' }}>
+        <span style={{ fontSize:20 }}>⚙</span>
+        <div>
+          <div style={{ fontSize:11, fontWeight:700, color:'#e5e7eb' }}>Réglages</div>
+          <div style={{ fontSize:10, color:'#6b7280', marginTop:2 }}>Tempo · Niveau · Mode de jeu</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const TUTO_SLIDES = [
+  {
+    title: "Bienvenue dans Rythme !",
+    body: "Entraîne-toi à reproduire et reconnaître des rythmes musicaux, du débutant au virtuose.",
+    Visual: TutorialSlide1,
+  },
+  {
+    title: "4 exercices progressifs",
+    body: "Chaque mode travaille une compétence différente. Alterne-les pour progresser vite.",
+    Visual: TutorialSlide2,
+  },
+  {
+    title: "Tap ou Micro",
+    body: "Choisis ton mode de saisie dans les Réglages avant de commencer.",
+    Visual: TutorialSlide3,
+  },
+  {
+    title: "Choisis ton niveau",
+    body: "Commence en C1/1. Les niveaux se débloquent au fur et à mesure de ta progression.",
+    Visual: TutorialSlide4,
+  },
+  {
+    title: "C'est parti !",
+    body: "Lance un exercice. Tes réglages sont sauvegardés d'une session à l'autre.",
+    Visual: TutorialSlide5,
+  },
+];
+
+function TutorialOverlay({ onDone, levelOrder, activity }) {
+  const [slide, setSlide] = useState(0);
+  const total = TUTO_SLIDES.length;
+  const { title, body, Visual } = TUTO_SLIDES[slide];
+
+  return (
+    <div style={{
+      position:'fixed', inset:0, zIndex:100,
+      background:'#030712',
+      display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'space-between',
+      padding:'24px 20px 36px',
+      overflowY:'auto',
+    }}>
+      {/* Top bar */}
+      <div style={{ width:'100%', maxWidth:480, display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8 }}>
+        <div style={{ display:'flex', gap:6 }}>
+          {Array.from({ length: total }).map((_, i) => (
+            <div key={i} style={{
+              width: i===slide ? 20 : 7, height:7, borderRadius:4,
+              background: i <= slide ? '#4A6CF7' : 'rgba(255,255,255,0.1)',
+              transition:'width 0.25s,background 0.25s',
+            }}/>
+          ))}
+        </div>
+        <button
+          onClick={onDone}
+          style={{ background:'none', border:'none', color:'#6b7280', fontSize:13, fontWeight:700, cursor:'pointer', padding:'4px 8px' }}
+        >Ignorer</button>
+      </div>
+
+      {/* Visual */}
+      <div style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', padding:'20px 0' }}>
+        <Visual levelOrder={levelOrder} activity={activity} />
+      </div>
+
+      {/* Text */}
+      <div style={{ width:'100%', maxWidth:400, textAlign:'center', marginBottom:32 }}>
+        <div style={{ fontSize:22, fontWeight:900, color:'#f9fafb', marginBottom:10 }}>{title}</div>
+        <div style={{ fontSize:14, color:'#9ca3af', lineHeight:1.6 }}>{body}</div>
+      </div>
+
+      {/* Navigation */}
+      <div style={{ width:'100%', maxWidth:400, display:'flex', gap:10 }}>
+        {slide > 0 && (
+          <button
+            onClick={() => setSlide(s => s - 1)}
+            style={{ flex:1, padding:'14px 0', borderRadius:16, border:'2px solid rgba(74,108,247,0.3)', background:'none', color:'#4A6CF7', fontSize:14, fontWeight:700, cursor:'pointer' }}
+          >← Précédent</button>
+        )}
+        <button
+          onClick={() => slide < total - 1 ? setSlide(s => s + 1) : onDone()}
+          style={{ flex:2, padding:'14px 0', borderRadius:16, border:'none', background:'linear-gradient(135deg,#4A6CF7,#8B5CF6)', color:'#fff', fontSize:15, fontWeight:900, cursor:'pointer', boxShadow:'0 8px 24px rgba(74,108,247,0.35)' }}
+        >{slide < total - 1 ? "Suivant →" : "Commencer !"}</button>
+      </div>
+    </div>
+  );
+}
+
 // ─── Composant principal ──────────────────────────────────────────────────────
 export default function RythmApp() {
   const {
@@ -371,6 +609,13 @@ export default function RythmApp() {
   );
 
   const [currentPage,     setCurrentPage]     = useState("home");
+  const [settingsModalOpen, setSettingsModalOpen] = useState(false);
+  const [openAccordion,   setOpenAccordion]   = useState("saisie");
+  const [showTutorial,    setShowTutorial]    = useState(() => {
+    if (!ENABLE_TUTORIAL) return false;
+    if (ENABLE_TUTORIAL === true) return true;
+    return !localStorage.getItem(`rythm-tuto-${TUTORIAL_VERSION}`);
+  });
   const [selectedFormulas,setSelectedFormulas] = useState(() => {
     const s = loadSettings();
     return s.selectedFormulas ? new Set(s.selectedFormulas) : DEFAULT_SELECTED;
@@ -463,6 +708,13 @@ export default function RythmApp() {
   }, [_resetToDefault]);
 
   const { addSession } = useProgressFirebase();
+
+  const handleTutorialDone = () => {
+    if (ENABLE_TUTORIAL === "once") {
+      localStorage.setItem(`rythm-tuto-${TUTORIAL_VERSION}`, "1");
+    }
+    setShowTutorial(false);
+  };
 
   // Son rythme toujours actif pour act 2/3/4 (essentiel à l'écoute)
   useEffect(() => {
@@ -963,273 +1215,259 @@ export default function RythmApp() {
     );
   }
 
+  // ── Helpers home page ─────────────────────────────────────────────────────
+  const isLevelActive = (level) => {
+    const cumIds = [];
+    for (const lv of levelOrder) {
+      (levelFormulaIds[lv] ?? []).forEach(id => cumIds.push(id));
+      if (lv === level) break;
+    }
+    return cumIds.length > 0 && cumIds.every(id => selectedFormulas.has(id));
+  };
+
+  const startSession = () => {
+    if (seriesMode) {
+      const baseBpm = tempoMode === "fixed" ? bpmFixed : Math.round((bpmMin + bpmMax) / 2);
+      seriesBaseBpmRef.current = baseBpm;
+      seriesIdxRef.current = 0;
+    } else {
+      seriesBaseBpmRef.current = null;
+      seriesIdxRef.current = 0;
+    }
+    setSeriesIdx(0); setSeriesXpLog([]); setSeriesMedals([]); setSeriesResult(null);
+    setCurrentPage("game"); setPhase("idle"); setPattern(null);
+    setScores([]); setEarnedPts(0); setProgress(0); setActiveIdx(-1);
+    setRevealed(false); setChoices([]); setSelectedIdx(null); setPendingIdx(null);
+    setBeatFlash(false); setMetroDotFlash(false); setCountdownN(1);
+    startGame();
+  };
+
+  // ── Modal réglages ─────────────────────────────────────────────────────────
+  const formulaCountModal = selectedFormulas.size;
+  const SettingsModal = settingsModalOpen && (
+    <div
+      onClick={() => setSettingsModalOpen(false)}
+      style={{ position:'fixed', inset:0, zIndex:50, background:'rgba(0,0,0,0.7)', display:'flex', alignItems:'flex-end', justifyContent:'center' }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{ width:'100%', maxWidth:540, background:'var(--surface)', borderRadius:'24px 24px 0 0', padding:'20px 16px 36px', maxHeight:'88dvh', overflowY:'auto' }}
+      >
+        {/* Handle + titre */}
+        <div style={{ width:40, height:4, borderRadius:2, background:'rgba(255,255,255,0.15)', margin:'0 auto 16px' }}/>
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16 }}>
+          <span style={{ fontSize:16, fontWeight:900, color:'var(--text)' }}>Réglages</span>
+          <button onClick={() => setSettingsModalOpen(false)} style={{ background:'none', border:'none', color:'var(--text-muted)', fontSize:20, cursor:'pointer', lineHeight:1 }}>✕</button>
+        </div>
+
+        {/* Accordion helper */}
+        {[
+          { key:"saisie",    label:"① Saisie" },
+          { key:"tempo",     label:"② Tempo" },
+          { key:"niveau",    label:"③ Niveau · Formules" },
+          { key:"mode",      label:"④ Mode de jeu" },
+          { key:"reveal",    label:"⑤ Révélation", disabled: activity===3||activity===4 },
+        ].map(({ key, label, disabled }) => {
+          const open = openAccordion === key;
+          return (
+            <div key={key} style={{ marginBottom:6 }}>
+              <button
+                onClick={() => setOpenAccordion(open ? null : key)}
+                style={{ width:'100%', display:'flex', justifyContent:'space-between', alignItems:'center', background: open ? 'rgba(74,108,247,0.1)' : 'var(--surface-2)', border: open ? '1px solid rgba(74,108,247,0.3)' : '1px solid transparent', borderRadius:12, padding:'11px 14px', cursor: disabled ? 'default' : 'pointer', opacity: disabled ? 0.4 : 1 }}
+                disabled={!!disabled}
+              >
+                <span style={{ fontSize:13, fontWeight:700, color: open ? '#a5b4fc' : 'var(--text-muted)' }}>{label}</span>
+                <span style={{ fontSize:16, color: open ? '#4A6CF7' : 'var(--border-c)', transition:'transform 0.2s', display:'inline-block', transform: open ? 'rotate(180deg)' : 'rotate(0)' }}>⌄</span>
+              </button>
+
+              {open && key==="saisie" && (
+                <div style={{ padding:'12px 14px 4px' }}>
+                  <div style={{ fontSize:11, color:'var(--text-muted)', marginBottom:8 }}>Mode de saisie (activités 1 &amp; 2)</div>
+                  <div style={{ display:'flex', gap:8, marginBottom: inputMode==="mic" ? 12 : 0 }}>
+                    <button onClick={() => { setInputMode("tap"); stopMic(); }} style={{ flex:1, padding:'14px 0', borderRadius:14, border:'none', background: inputMode==="tap" ? 'linear-gradient(135deg,#4A6CF7,#8B5CF6)' : 'var(--surface-2)', color: inputMode==="tap" ? '#fff' : 'var(--text-muted)', fontWeight:900, fontSize:15, cursor:'pointer' }}>
+                      TAP
+                    </button>
+                    <button onClick={() => { setInputMode("mic"); startMic(); }} style={{ flex:1, padding:'14px 0', borderRadius:14, border:'none', background: inputMode==="mic" ? 'linear-gradient(135deg,#4A6CF7,#8B5CF6)' : 'var(--surface-2)', color: inputMode==="mic" ? '#fff' : 'var(--text-muted)', fontWeight:700, fontSize:13, cursor:'pointer' }}>
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style={{ verticalAlign:'middle', marginRight:4 }}><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" stroke="currentColor" strokeWidth="2" fill="none"/><path d="M19 10v2a7 7 0 0 1-14 0v-2" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/><line x1="12" y1="19" x2="12" y2="23" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
+                      Micro
+                    </button>
+                  </div>
+                  {inputMode==="mic" && (
+                    <div style={{ background:'var(--surface-2)', borderRadius:10, padding:'10px 12px' }}>
+                      <div style={{ display:'flex', justifyContent:'space-between', fontSize:10, color:'var(--text-muted)', marginBottom:4 }}>
+                        <span>Seuil détection</span>
+                        <span style={{ fontWeight:700, color:'#4A6CF7' }}>{micThreshold.toFixed(3)}</span>
+                      </div>
+                      <input type="range" min={5} max={500} step={5} value={Math.round(micThreshold*1000)} onChange={e => setMicThreshold(+e.target.value/1000)} style={{ width:'100%', accentColor:'#4A6CF7' }}/>
+                    </div>
+                  )}
+                  {micError && <div style={{ fontSize:10, color:'#f87171', marginTop:6 }}>{micError}</div>}
+                </div>
+              )}
+
+              {open && key==="tempo" && (
+                <div style={{ padding:'12px 14px 4px' }}>
+                  <div style={{ display:'flex', gap:6, marginBottom:12 }}>
+                    {["fixed","range"].map(mode => (
+                      <button key={mode} onClick={() => setTempoMode(mode)} style={{ flex:1, padding:'8px 0', borderRadius:10, border:'none', background: tempoMode===mode ? '#4A6CF7' : 'var(--surface-2)', color: tempoMode===mode ? '#fff' : 'var(--text-muted)', fontWeight:700, fontSize:12, cursor:'pointer' }}>
+                        {mode==="fixed" ? "Fixe" : "Variable"}
+                      </button>
+                    ))}
+                  </div>
+                  {tempoMode==="fixed" && (
+                    <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+                      <input type="range" min={0} max={TEMPI.length-1} value={closestTempoIdx(bpmFixed)} onChange={e => setBpmFixed(TEMPI[+e.target.value])} style={{ flex:1, accentColor:'#4A6CF7' }}/>
+                      <span style={{ fontSize:13, fontWeight:900, color:'#4A6CF7', minWidth:60 }}>{bpmFixed} BPM</span>
+                    </div>
+                  )}
+                  {tempoMode==="range" && (
+                    <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+                      {[["Min",bpmMin,setBpmMin],["Max",bpmMax,setBpmMax]].map(([lbl,val,setter]) => (
+                        <div key={lbl} style={{ display:'flex', alignItems:'center', gap:8 }}>
+                          <span style={{ fontSize:10, color:'var(--text-muted)', width:24 }}>{lbl}</span>
+                          <input type="range" min={0} max={TEMPI.length-1} value={closestTempoIdx(val)} onChange={e => setter(TEMPI[+e.target.value])} style={{ flex:1, accentColor:'#4A6CF7' }}/>
+                          <span style={{ fontSize:11, fontWeight:700, color:'#4A6CF7', width:50 }}>{val} BPM</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {open && key==="niveau" && (
+                <div style={{ padding:'12px 14px 4px' }}>
+                  <div style={{ display:'flex', flexWrap:'wrap', gap:6, marginBottom:10 }}>
+                    {levelOrder.map(level => {
+                      const active = isLevelActive(level);
+                      const hasF = (levelFormulaIds[level] ?? []).length > 0;
+                      return (
+                        <button key={level} onClick={() => selectLevel(level)} disabled={!hasF}
+                          style={{ padding:'6px 14px', borderRadius:20, border:'none', background: active ? '#4A6CF7' : 'var(--surface-2)', color: active ? '#fff' : hasF ? 'var(--text-muted)' : 'var(--border-c)', fontSize:11, fontWeight:700, cursor: hasF ? 'pointer' : 'default' }}
+                        >{level}</button>
+                      );
+                    })}
+                  </div>
+                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                    <span style={{ fontSize:11, color:'var(--text-muted)' }}>{formulaCountModal} formule{formulaCountModal!==1?"s":""} sélectionnée{formulaCountModal!==1?"s":""}</span>
+                    <button onClick={() => { setSettingsModalOpen(false); setCurrentPage("settings"); }} style={{ background:'none', border:'none', color:'#4A6CF7', fontSize:11, fontWeight:700, cursor:'pointer' }}>Détail formules →</button>
+                  </div>
+                </div>
+              )}
+
+              {open && key==="mode" && (
+                <div style={{ padding:'12px 14px 4px' }}>
+                  <div style={{ display:'flex', gap:8 }}>
+                    {[["single","Exercice seul"],["series","Série de 10"]].map(([mode,label]) => {
+                      const active = seriesMode ? mode==="series" : mode==="single";
+                      return (
+                        <button key={mode} onClick={() => setSeriesMode(mode==="series")}
+                          style={{ flex:1, padding:'10px 0', borderRadius:12, border:'none', background: active ? '#4A6CF7' : 'var(--surface-2)', color: active ? '#fff' : 'var(--text-muted)', fontWeight:700, fontSize:12, cursor:'pointer' }}
+                        >{label}</button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {open && key==="reveal" && !disabled && (
+                <div style={{ padding:'12px 14px 4px' }}>
+                  <div style={{ fontSize:11, color:'var(--text-muted)', marginBottom:8 }}>Afficher la portée au temps… (activité 1)</div>
+                  <div style={{ display:'flex', gap:6 }}>
+                    {[1,2,3,4].map(beat => (
+                      <button key={beat} onClick={() => setRevealBeat(beat)}
+                        style={{ flex:1, padding:'8px 0', borderRadius:10, border:'none', background: revealBeat===beat ? '#4A6CF7' : 'var(--surface-2)', color: revealBeat===beat ? '#fff' : 'var(--text-muted)', fontWeight:700, fontSize:12, cursor:'pointer', textAlign:'center' }}
+                      >
+                        <div>{beat}</div>
+                        <div style={{ fontSize:9, color: revealBeat===beat ? '#ddd8fe' : 'var(--border-c)', marginTop:2 }}>{beat===1?"–":beat===2?"+10%":beat===3?"+20%":"+50%"}</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
+
+        {/* Réglages avancés */}
+        <button onClick={() => { setSettingsModalOpen(false); setCurrentPage("settings"); }}
+          style={{ width:'100%', marginTop:16, padding:'11px 0', borderRadius:12, border:'1px solid rgba(255,255,255,0.06)', background:'none', color:'var(--text-muted)', fontSize:12, fontWeight:600, cursor:'pointer' }}>
+          Réglages avancés (feuille CSV, calibration…)
+        </button>
+      </div>
+    </div>
+  );
+
   // ── Page accueil ───────────────────────────────────────────────────────────
   if (currentPage === "home") {
-    const ACTIVITY_DESCS = {
-      1: "Un rythme s'affiche. Reproduis-le en tapant.",
-      2: "Écoute le rythme, puis reproduis-le en tapant.",
-      3: "Écoute et identifie la bonne portée parmi 4.",
-      4: "Observe la portée et identifie la bonne lecture audio.",
-    };
-    const formulaCountHome = selectedFormulas.size;
-
-    // Détermine si un niveau est entièrement sélectionné (cumulatif)
-    const isLevelActiveHome = (level) => {
-      const cumIds = [];
-      for (const lv of levelOrder) {
-        (levelFormulaIds[lv] ?? []).forEach(id => cumIds.push(id));
-        if (lv === level) break;
-      }
-      return cumIds.length > 0 && cumIds.every(id => selectedFormulas.has(id));
-    };
-
     return (
-      <div className="bg-app text-app min-h-dvh flex flex-col items-center px-3.5 py-3 pb-8 select-none">
-        {/* Header */}
-        <div className="w-full max-w-xl flex justify-between items-center mb-4">
-          <Link to="/" className="bg-surface-2 border border-app rounded-lg px-2.5 py-1 font-bold text-xs no-underline" style={{ color: '#4A6CF7' }}>← Tessitura</Link>
-          <button
-            onClick={() => setCurrentPage("settings")}
-            className="bg-surface-2 border border-app rounded-xl text-app-muted text-lg cursor-pointer px-2 py-0.5 leading-none"
-            title="Réglages avancés"
-          >⚙</button>
-        </div>
-
-        <div className="w-full max-w-xl">
-          <div className="text-3xl font-black mb-4" style={{ color: '#4A6CF7' }}>Rythme</div>
-
-          {/* 4 cartes activités */}
-          <div className="flex flex-col gap-2 mb-4">
-            {ACTIVITIES.map(a => {
-              const sel = activity === a.id;
-              return (
-                <div key={a.id}
-                  role="button"
-                  onClick={() => setActivity(a.id)}
-                  className="rounded-2xl cursor-pointer flex items-center gap-3.5 px-4 py-3 transition-all duration-150 border-2"
-                  style={{
-                    borderColor: sel ? '#4A6CF7' : 'var(--border-c)',
-                    background: sel ? 'rgba(74,108,247,0.08)' : 'var(--surface)',
-                  }}
-                >
-                  <div className="text-xl font-black min-w-7 text-center flex-shrink-0" style={{ color: sel ? '#4A6CF7' : 'var(--border-c)' }}>
-                    {a.id}
-                  </div>
-                  <div>
-                    <div className="text-sm font-bold" style={{ color: sel ? 'var(--text)' : 'var(--text-muted)' }}>
-                      {a.label}
-                    </div>
-                    <div className="text-[11px] mt-0.5" style={{ color: sel ? '#4A6CF7' : 'var(--text-muted)' }}>
-                      {ACTIVITY_DESCS[a.id]}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
+      <>
+        {showTutorial && <TutorialOverlay onDone={handleTutorialDone} levelOrder={levelOrder} activity={activity} />}
+        {SettingsModal}
+        <div className="bg-app text-app min-h-dvh flex flex-col items-center px-3.5 py-3 pb-8 select-none">
+          {/* Header */}
+          <div className="w-full max-w-xl flex justify-between items-center mb-4">
+            <Link to="/" className="bg-surface-2 border border-app rounded-lg px-2.5 py-1 font-bold text-xs no-underline" style={{ color: '#4A6CF7' }}>← Tessitura</Link>
+            <button
+              onClick={() => { setOpenAccordion("saisie"); setSettingsModalOpen(true); }}
+              className="bg-surface-2 border border-app rounded-xl text-app-muted text-lg cursor-pointer px-2 py-0.5 leading-none"
+              title="Réglages"
+            >⚙</button>
           </div>
 
-          {/* CTA Commencer */}
-          <button
-            onClick={() => {
-              // Init série
-              if (seriesMode) {
-                const baseBpm = tempoMode === "fixed" ? bpmFixed : Math.round((bpmMin + bpmMax) / 2);
-                seriesBaseBpmRef.current = baseBpm;
-                seriesIdxRef.current = 0;
-              } else {
-                seriesBaseBpmRef.current = null;
-                seriesIdxRef.current = 0;
-              }
-              setSeriesIdx(0);
-              setSeriesXpLog([]);
-              setSeriesMedals([]);
-              setSeriesResult(null);
-              setCurrentPage("game");
-              setPhase("idle");
-              setPattern(null);
-              setScores([]);
-              setEarnedPts(0);
-              setProgress(0);
-              setActiveIdx(-1);
-              setRevealed(false);
-              setChoices([]);
-              setSelectedIdx(null);
-              setPendingIdx(null);
-              setBeatFlash(false);
-              setMetroDotFlash(false);
-              setCountdownN(1);
-              startGame();
-            }}
-            className="w-full border-none rounded-2xl cursor-pointer text-white text-base font-bold mb-4"
-            style={{ padding: '18px 0', background: 'linear-gradient(135deg,#4A6CF7,#8B5CF6)', boxShadow: '0 8px 32px rgba(74,108,247,0.4)' }}
-          >{seriesMode ? "▶ Commencer la série" : "▶ Commencer"}</button>
+          <div className="w-full max-w-xl">
+            <div className="text-3xl font-black mb-5" style={{ color: '#4A6CF7' }}>Rythme</div>
 
-          {/* Mode de jeu — Exercice seul / Série de 10 */}
-          <div className="bg-surface rounded-2xl px-3.5 py-3 mb-2.5">
-            <div className="text-[10px] font-bold text-app-muted uppercase tracking-wider mb-2">
-              Mode de jeu
-            </div>
-            <div className="flex gap-1.5">
-              {[["single","Exercice seul"],["series","Série de 10"]].map(([mode,label]) => {
-                const active = seriesMode ? mode==="series" : mode==="single";
+            {/* 2×2 grid activités */}
+            <div className="grid grid-cols-2 gap-3 mb-5">
+              {ACTIVITIES.map(a => {
+                const sel = activity === a.id;
                 return (
-                  <button key={mode}
-                    onClick={() => setSeriesMode(mode==="series")}
-                    className="flex-1 py-2 rounded-xl text-xs font-bold cursor-pointer border-none"
-                    style={{ background: active ? '#4A6CF7' : 'var(--surface-2)', color: active ? '#fff' : 'var(--text-muted)' }}
-                  >{label}</button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Niveaux */}
-          <div className="bg-surface rounded-2xl px-3.5 py-3 mb-2.5">
-            <div className="text-[10px] font-bold text-app-muted uppercase tracking-wider mb-2">
-              Niveau
-            </div>
-            <div className="flex flex-wrap gap-1.5 mb-1.5">
-              {levelOrder.map(level => {
-                const active = isLevelActiveHome(level);
-                const hasFormulas = (levelFormulaIds[level] ?? []).length > 0;
-                return (
-                  <button key={level}
-                    onClick={() => selectLevel(level)}
-                    disabled={!hasFormulas}
-                    className="px-3.5 py-1 rounded-full text-[11px] font-bold border-none transition-all duration-150"
+                  <div key={a.id}
+                    role="button"
+                    onClick={() => setActivity(a.id)}
+                    className="rounded-2xl cursor-pointer flex flex-col items-center justify-center gap-2 transition-all duration-150"
                     style={{
-                      cursor: hasFormulas ? 'pointer' : 'default',
-                      background: active ? '#4A6CF7' : 'var(--surface-2)',
-                      color: active ? '#fff' : hasFormulas ? 'var(--text-muted)' : 'var(--border-c)',
+                      padding:'20px 12px 16px',
+                      border: `2px solid ${sel ? '#4A6CF7' : 'var(--border-c)'}`,
+                      background: sel ? 'rgba(74,108,247,0.1)' : 'var(--surface)',
+                      color: sel ? '#c084fc' : '#6b7280',
+                      minHeight: 100,
                     }}
-                  >{level}</button>
+                  >
+                    {ACT_ICONS[a.id]}
+                    <div style={{ fontSize:12, fontWeight:700, textAlign:'center', color: sel ? 'var(--text)' : 'var(--text-muted)', lineHeight:1.3 }}>{a.label}</div>
+                  </div>
                 );
               })}
             </div>
-            <div className="flex items-center justify-between">
-              <div className="text-[11px] text-app-muted">
-                {formulaCountHome} formule{formulaCountHome!==1?"s":""} sélectionnée{formulaCountHome!==1?"s":""}
+
+            {/* Résumé réglages */}
+            <button
+              onClick={() => { setOpenAccordion("saisie"); setSettingsModalOpen(true); }}
+              className="w-full rounded-2xl mb-3 flex items-center justify-between"
+              style={{ background:'var(--surface)', border:'1px solid var(--border-c)', padding:'12px 16px', cursor:'pointer' }}
+            >
+              <div style={{ display:'flex', flexDirection:'column', gap:3, textAlign:'left' }}>
+                <span style={{ fontSize:12, fontWeight:700, color:'var(--text)' }}>Réglages</span>
+                <span style={{ fontSize:11, color:'var(--text-muted)' }}>
+                  {tempoMode==="fixed" ? `${bpmFixed} BPM` : `${bpmMin}–${bpmMax} BPM`}
+                  {" · "}{selectedFormulas.size} formule{selectedFormulas.size!==1?"s":""}
+                  {" · "}{seriesMode?"Série de 10":"Exercice seul"}
+                  {(activity===1||activity===2) && ` · ${inputMode==="tap"?"TAP":"Micro"}`}
+                </span>
               </div>
-              <button
-                onClick={() => setCurrentPage("settings")}
-                className="bg-transparent border-none text-[11px] font-bold cursor-pointer p-0"
-                style={{ color: '#4A6CF7' }}
-              >Voir toutes les formules →</button>
-            </div>
+              <span style={{ fontSize:18, color:'#4A6CF7' }}>⚙</span>
+            </button>
+
+            {/* CTA Commencer */}
+            <button
+              onClick={startSession}
+              className="w-full border-none rounded-2xl cursor-pointer text-white text-base font-bold"
+              style={{ padding: '18px 0', background: 'linear-gradient(135deg,#4A6CF7,#8B5CF6)', boxShadow: '0 8px 32px rgba(74,108,247,0.4)' }}
+            >{seriesMode ? "▶ Commencer la série" : "▶ Commencer"}</button>
           </div>
-
-          {/* Tempo + TAP/MIC */}
-          <div className="bg-surface rounded-2xl px-3.5 py-3 mb-2.5">
-            <div className="text-[10px] font-bold text-app-muted uppercase tracking-wider mb-2">
-              Tempo
-            </div>
-            {/* Ligne 1 : toggle Fixe/Variable + BPM affiché + TAP/MIC */}
-            <div className="flex items-center gap-2 flex-wrap" style={{ marginBottom: tempoMode==="range" ? 8 : 0 }}>
-              <div className="flex gap-1 flex-shrink-0">
-                {["fixed","range"].map(mode => (
-                  <button key={mode}
-                    onClick={() => setTempoMode(mode)}
-                    className="px-2 py-1 rounded-lg text-[10px] font-semibold cursor-pointer border-none"
-                    style={{ background: tempoMode===mode ? '#4A6CF7' : 'var(--surface-2)', color: tempoMode===mode ? '#fff' : 'var(--text-muted)' }}
-                  >{mode==="fixed"?"Fixe":"Variable"}</button>
-                ))}
-              </div>
-              {tempoMode === "fixed" && (
-                <div className="flex-1" style={{ minWidth: 80 }}>
-                  <input type="range" min={0} max={TEMPI.length-1}
-                    value={closestTempoIdx(bpmFixed)}
-                    onChange={e => setBpmFixed(TEMPI[+e.target.value])}
-                    className="w-full block" style={{ accentColor: '#4A6CF7' }}
-                  />
-                </div>
-              )}
-              <div className="text-[11px] font-bold flex-shrink-0 text-right" style={{ minWidth: 54, color: '#4A6CF7' }}>
-                {tempoMode==="fixed"
-                  ? `${bpmFixed} BPM`
-                  : `${Math.min(bpmMin,bpmMax)}↔${Math.max(bpmMin,bpmMax)}`}
-              </div>
-              {(activity===1||activity===2) && (
-                <div className="flex gap-1 flex-shrink-0">
-                  {[["tap","TAP"],["mic","🎤"]].map(([mode,label]) => (
-                    <button key={mode}
-                      onClick={() => {
-                        if (mode==="mic") { setInputMode("mic"); startMic(); }
-                        else { setInputMode("tap"); stopMic(); }
-                      }}
-                      className="px-2 py-1 rounded-lg text-[10px] font-bold cursor-pointer border-none"
-                      style={{ background: inputMode===mode ? '#4A6CF7' : 'var(--surface-2)', color: inputMode===mode ? '#fff' : 'var(--text-muted)' }}
-                    >{label}</button>
-                  ))}
-                </div>
-              )}
-            </div>
-            {/* Ligne 2 : sliders Min/Max (mode Variable) */}
-            {tempoMode === "range" && (
-              <div className="flex flex-col gap-1">
-                <div className="flex items-center gap-2">
-                  <span className="text-[9px] text-app-muted flex-shrink-0 w-6">Min</span>
-                  <input type="range" min={0} max={TEMPI.length-1}
-                    value={closestTempoIdx(bpmMin)}
-                    onChange={e => setBpmMin(TEMPI[+e.target.value])}
-                    className="flex-1" style={{ accentColor: '#4A6CF7' }}
-                  />
-                  <span className="text-[10px] font-bold flex-shrink-0 text-right w-[38px]" style={{ color: '#4A6CF7' }}>{bpmMin} BPM</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-[9px] text-app-muted flex-shrink-0 w-6">Max</span>
-                  <input type="range" min={0} max={TEMPI.length-1}
-                    value={closestTempoIdx(bpmMax)}
-                    onChange={e => setBpmMax(TEMPI[+e.target.value])}
-                    className="flex-1" style={{ accentColor: '#4A6CF7' }}
-                  />
-                  <span className="text-[10px] font-bold flex-shrink-0 text-right w-[38px]" style={{ color: '#4A6CF7' }}>{bpmMax} BPM</span>
-                </div>
-              </div>
-            )}
-            {/* Seuil MIC */}
-            {inputMode==="mic" && (activity===1||activity===2) && (
-              <div className="mt-2.5 bg-surface-2 rounded-xl px-3 py-2">
-                <div className="flex justify-between text-[10px] text-app-muted mb-0.5">
-                  <span>Seuil détection</span>
-                  <span className="font-bold" style={{ color: '#4A6CF7' }}>{micThreshold.toFixed(3)}</span>
-                </div>
-                <input type="range" min={5} max={500} step={5}
-                  value={Math.round(micThreshold*1000)}
-                  onChange={e => setMicThreshold(+e.target.value/1000)}
-                  className="w-full" style={{ accentColor: '#4A6CF7' }}
-                />
-              </div>
-            )}
-            {micError && (
-              <div className="text-[10px] text-red-400 mt-1.5 text-center">{micError}</div>
-            )}
-          </div>
-
-          {/* Reveal beat — act 1 seulement */}
-          {activity===1 && (
-            <div className="bg-surface rounded-2xl px-3.5 py-3 mb-2.5">
-              <div className="text-[10px] font-bold text-app-muted uppercase tracking-wider mb-2">
-                Voir le rythme au temps…
-              </div>
-              <div className="flex gap-1.5">
-                {[1,2,3,4].map(beat => (
-                  <button key={beat}
-                    onClick={() => setRevealBeat(beat)}
-                    className="flex-1 py-1.5 rounded-xl text-[11px] font-bold cursor-pointer border-none"
-                    style={{ background: revealBeat===beat ? '#4A6CF7' : 'var(--surface-2)', color: revealBeat===beat ? '#fff' : 'var(--text-muted)' }}
-                  >
-                    {beat}
-                    <div className="text-[9px] font-normal mt-0.5" style={{ color: revealBeat===beat ? '#ddd8fe' : 'var(--text-muted)' }}>
-                      {beat===1?"pas de bonus":beat===2?"+10%":beat===3?"+20%":"+50%"}
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
         </div>
-      </div>
+      </>
     );
   }
 
@@ -1337,6 +1575,8 @@ export default function RythmApp() {
 
   // ── Rendu jeu ──────────────────────────────────────────────────────────────
   return (
+    <>
+    {SettingsModal}
     <div
       className="bg-app text-app min-h-dvh flex flex-col items-center px-3.5 py-3 pb-6 select-none"
       style={{ touchAction: phase === 'results' ? 'pan-y' : 'none' }}
@@ -1396,7 +1636,8 @@ export default function RythmApp() {
               stopMic();
               setPhase("idle");
               setPattern(null);
-              setCurrentPage("settings");
+              setOpenAccordion("saisie");
+              setSettingsModalOpen(true);
             }}
             className="bg-surface-2 border border-app rounded-xl text-app-muted text-lg cursor-pointer px-2 py-0.5 leading-none"
             title="Réglages"
@@ -1842,5 +2083,6 @@ export default function RythmApp() {
         )}
       </div>
     </div>
+    </>
   );
 }

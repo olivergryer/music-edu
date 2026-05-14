@@ -42,6 +42,39 @@ const C_MUTED   = '#4b5563'
 const C_MUTED2  = '#6b7280'
 const C_TRITONE = '#FF8B3D'
 
+// ─── Info tooltip ───────────────────────────────────────────────────────────────
+function InfoTip({ text }) {
+  const [show, setShow] = useState(false)
+  return (
+    <span style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', marginTop: 6 }}>
+      <button
+        onMouseEnter={() => setShow(true)}
+        onMouseLeave={() => setShow(false)}
+        onFocus={() => setShow(true)}
+        onBlur={() => setShow(false)}
+        onClick={() => setShow(v => !v)}
+        style={{ background: 'none', border: '1px solid #374151', borderRadius: '50%', width: 16, height: 16, padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 'auto', flexShrink: 0 }}
+        aria-label="Information"
+      >
+        <svg width="10" height="10" viewBox="0 0 10 10">
+          <circle cx="5" cy="5" r="4.5" fill="none" stroke="#6b7280" strokeWidth="1"/>
+          <text x="5" y="7.5" textAnchor="middle" fontSize="6.5" fill="#6b7280" fontFamily="serif" fontWeight="bold">i</text>
+        </svg>
+      </button>
+      {show && (
+        <span style={{
+          position: 'absolute', left: 20, top: '50%', transform: 'translateY(-50%)',
+          background: '#1f2937', color: '#d1d5db', border: '1px solid #374151',
+          borderRadius: 6, padding: '4px 8px', fontSize: 10, whiteSpace: 'nowrap',
+          zIndex: 100, pointerEvents: 'none', lineHeight: 1.4,
+        }}>
+          {text}
+        </span>
+      )}
+    </span>
+  )
+}
+
 // ─── Bouton ─────────────────────────────────────────────────────────────────────
 function Btn({ children, onClick, disabled, variant = 'primary', className = '' }) {
   const variants = {
@@ -406,11 +439,13 @@ export default function AccordeurPage() {
   const [sampleMap,      setSampleMap]      = useState(null)
   const [sampleLoadPct,  setSampleLoadPct]  = useState(0)
   const [sampleLoading,  setSampleLoading]  = useState(false)
+  const [sampleError,    setSampleError]    = useState(false)
 
   // Enregistrement brut (Blob MediaRecorder, éphémère)
   const recordingBlobRef    = useRef(null)
   const reecouteAudioRef    = useRef(null)
   const [hasRecordingBlob,  setHasRecordingBlob] = useState(false)
+  const [isReplaying,       setIsReplaying]       = useState(false)
 
   // Version juste
   const [versionJustePlaying, setVersionJustePlaying] = useState(false)
@@ -482,11 +517,16 @@ export default function AccordeurPage() {
   useEffect(() => {
     localStorage.setItem('accordeur_instrument_preference', instrument)
     setSampleMap(null)
+    setSampleError(false)
     setSampleLoadPct(0)
     setSampleLoading(true)
     loadInstrumentSamples(instrument, p => setSampleLoadPct(p))
-      .then(map => { setSampleMap(map); setSampleLoading(false) })
-      .catch(() => setSampleLoading(false))
+      .then(map => {
+        setSampleMap(map)
+        setSampleLoading(false)
+        if (!isOscillatorInstrument(instrument) && map.size === 0) setSampleError(true)
+      })
+      .catch(() => { setSampleLoading(false); setSampleError(true) })
   }, [instrument])
 
   // Stopper version juste si le référentiel change
@@ -964,7 +1004,7 @@ export default function AccordeurPage() {
                     <div className="text-app-muted text-[10px] mt-0.5">Haut = moins de faux positifs</div>
                   </label>
                   {phase === 'resultats' && (
-                    <div className="mt-2 text-[10px] text-app-muted">Modification active le bouton ↻ Recalculer sur la portée.</div>
+                    <InfoTip text="Modification active le bouton ↻ Recalculer sur la portée." />
                   )}
                 </div>
               </details>
@@ -1217,21 +1257,36 @@ export default function AccordeurPage() {
                   <div style={{ height: '100%', width: `${Math.round(sampleLoadPct * 100)}%`, background: '#FF8B3D', borderRadius: 2, transition: 'width 0.15s' }} />
                 </div>
               )}
+              {sampleError && (
+                <div style={{ fontSize: 10, color: '#f87171', marginBottom: 8 }}>
+                  Samples indisponibles — lecture en sinusoïde.
+                </div>
+              )}
               <div style={{ display: 'flex', gap: 8 }}>
                 <button
                   disabled={!hasRecordingBlob}
                   onClick={() => {
+                    if (isReplaying) {
+                      reecouteAudioRef.current?.pause()
+                      reecouteAudioRef.current = null
+                      setIsReplaying(false)
+                      return
+                    }
                     if (!recordingBlobRef.current) return
-                    reecouteAudioRef.current?.pause()
                     const url   = URL.createObjectURL(recordingBlobRef.current)
                     const audio = new Audio(url)
                     audio.play()
-                    audio.onended = () => URL.revokeObjectURL(url)
+                    setIsReplaying(true)
+                    audio.onended = () => { URL.revokeObjectURL(url); setIsReplaying(false) }
                     reecouteAudioRef.current = audio
                   }}
                   className="flex-1 rounded-xl font-bold text-xs py-2 border border-app cursor-pointer transition-opacity"
-                  style={{ background: 'var(--surface-2)', color: 'var(--text-muted)', opacity: hasRecordingBlob ? 1 : 0.4 }}
-                >▶ Réécouter</button>
+                  style={{
+                    background: isReplaying ? '#1e3a5f' : 'var(--surface-2)',
+                    color: isReplaying ? '#60a5fa' : 'var(--text-muted)',
+                    opacity: hasRecordingBlob ? 1 : 0.4,
+                  }}
+                >{isReplaying ? '■ Arrêter' : '▶ Réécouter'}</button>
                 <button
                   disabled={!notes.length || sampleLoading}
                   onClick={() => {
@@ -1243,10 +1298,11 @@ export default function AccordeurPage() {
                     const struct    = [...DEFAULT_STRUCTURES, ...structures].find(x => x.id === structureId)
                     const tonikMidi = struct ? (noteNameToPC(struct.toniques[0]?.tonique ?? 'Do') + 60) : 60
                     const ctx = new AudioContext()
+                    ctx.resume().catch(() => {})
                     const isOsc = isOscillatorInstrument(instrument)
                     const srcs = isOsc
                       ? playPhraseOscillator(ctx, notes, referentiel, tonikMidi, diapason)
-                      : (sampleMap ? playPhrase(ctx, notes, sampleMap, referentiel, tonikMidi, diapason) : [])
+                      : (sampleMap?.size > 0 ? playPhrase(ctx, notes, sampleMap, referentiel, tonikMidi, diapason) : playPhraseOscillator(ctx, notes, referentiel, tonikMidi, diapason))
                     setVersionJustePlaying(true)
                     const totalMs = phraseDurationMs(notes)
                     const timer = setTimeout(() => {

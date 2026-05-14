@@ -43,11 +43,11 @@ export default function HubPage() {
     <div className="bg-app min-h-dvh flex flex-col items-center px-5 py-12">
 
       <div className="w-full max-w-2xl">
-        <div className="mb-12 text-center">
+        <div className="mb-12">
           <img
             src={dark ? banniereDark : banniereLight}
             alt="Tessitura"
-            style={{ maxWidth: '320px', width: '100%', height: 'auto' }}
+            style={{ width: '100%', height: 'auto' }}
           />
         </div>
 
