@@ -26,6 +26,51 @@ function buildSampleUrl(instrument, midi) {
   return R2_BASE + INSTRUMENTS[instrument].pattern(R2_PC[pc], oct)
 }
 
+// ─── Décodage AIFF 24-bit manuel (fallback Chrome qui ne supporte pas AIFF 24-bit) ──
+function _decodeAiff(ctx, arrayBuffer) {
+  const bytes = new Uint8Array(arrayBuffer)
+  const view  = new DataView(arrayBuffer)
+
+  let numChannels = 2, numFrames = 0, sampleSize = 24, sampleRate = 44100
+  let ssndStart = -1
+
+  let pos = 12
+  while (pos < bytes.length - 8) {
+    const id   = String.fromCharCode(bytes[pos], bytes[pos+1], bytes[pos+2], bytes[pos+3])
+    const size = view.getUint32(pos + 4)
+    pos += 8
+    if (id === 'COMM') {
+      numChannels = view.getInt16(pos)
+      numFrames   = view.getUint32(pos + 2)
+      sampleSize  = view.getInt16(pos + 6)
+      const exp   = (view.getUint16(pos + 8) & 0x7FFF) - 16383
+      sampleRate  = view.getUint32(pos + 10) * Math.pow(2, exp - 31)
+    } else if (id === 'SSND') {
+      ssndStart = pos + 8 + view.getUint32(pos) // skip offset+blockAlign
+    }
+    pos += size + (size & 1)
+    if (ssndStart !== -1 && numFrames > 0) break
+  }
+
+  if (ssndStart < 0 || numFrames === 0) throw new Error('AIFF parse failed')
+
+  const buf = ctx.createBuffer(numChannels, numFrames, sampleRate)
+  const bytesPerSample = Math.ceil(sampleSize / 8)
+  const stride = numChannels * bytesPerSample
+
+  for (let ch = 0; ch < numChannels; ch++) {
+    const out = buf.getChannelData(ch)
+    for (let i = 0; i < numFrames; i++) {
+      const p  = ssndStart + i * stride + ch * bytesPerSample
+      // big-endian signed → float32
+      let v = (bytes[p] << 16) | (bytes[p + 1] << 8) | bytes[p + 2]
+      if (v & 0x800000) v |= ~0xFFFFFF
+      out[i] = v / 8388608
+    }
+  }
+  return buf
+}
+
 // ─── Détection de l'onset (premier frame > -40 dB) ───────────────────────────
 function detectOnset(buffer) {
   const data = buffer.getChannelData(0)
@@ -120,8 +165,14 @@ export async function loadInstrumentSamples(instrument, onProgress) {
       const url = buildSampleUrl(instrument, midi)
       try {
         const res = await fetch(url)
-        if (!res.ok) throw new Error()
-        const buf = await ctx.decodeAudioData(await res.arrayBuffer())
+        if (!res.ok) throw new Error(`HTTP ${res.status}`)
+        const arrayBuf = await res.arrayBuffer()
+        let buf
+        try {
+          buf = await ctx.decodeAudioData(arrayBuf.slice(0))
+        } catch {
+          buf = _decodeAiff(ctx, arrayBuf)
+        }
         const onsetMs = detectOnset(buf)
         const { loopStart, loopEnd } = findLoopPoints(buf, onsetMs)
         map.set(midi, { buffer: buf, onsetMs, loopStart, loopEnd })
