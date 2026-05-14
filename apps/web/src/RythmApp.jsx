@@ -367,20 +367,18 @@ export const TUTORIAL_VERSION = "1";   // incrémenter force réaffichage en mod
 
 const ACT_ICONS = {
   1: (
-    /* Portée réaliste : 5 lignes fines + clé de sol + 2 notes noires avec hampe */
+    /* Portée : 5 lignes + clé de sol + 2 notes centrées */
     <svg width="56" height="56" viewBox="0 0 56 56" fill="none">
-      {/* 5 lignes de portée, espacées de 5px, centrées verticalement */}
       {[16,21,26,31,36].map(y => (
-        <line key={y} x1="9" y1={y} x2="47" y2={y} stroke="currentColor" strokeWidth="1" opacity="0.5"/>
+        <line key={y} x1="6" y1={y} x2="50" y2={y} stroke="currentColor" strokeWidth="1" opacity="0.5"/>
       ))}
-      {/* Clé de sol simplifiée */}
-      <text x="9" y="33" fontSize="22" fill="currentColor" opacity="0.6" fontFamily="serif">𝄞</text>
-      {/* Note 1 : tête ellipse sur ligne 4 (y=31), hampe vers haut */}
-      <ellipse cx="34" cy="31" rx="4" ry="3" fill="currentColor" transform="rotate(-15 34 31)"/>
-      <line x1="37.5" y1="30" x2="37.5" y2="14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-      {/* Note 2 : tête ellipse entre ligne 3-4 (y=28), hampe vers haut */}
-      <ellipse cx="44" cy="28" rx="4" ry="3" fill="currentColor" transform="rotate(-15 44 28)"/>
-      <line x1="47.5" y1="27" x2="47.5" y2="11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+      <text x="6" y="33" fontSize="22" fill="currentColor" opacity="0.6" fontFamily="serif">𝄞</text>
+      {/* Note 1 */}
+      <ellipse cx="32" cy="31" rx="5" ry="3.5" fill="currentColor" transform="rotate(-15 32 31)"/>
+      <line x1="36.5" y1="30" x2="36.5" y2="13" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+      {/* Note 2 */}
+      <ellipse cx="44" cy="26" rx="5" ry="3.5" fill="currentColor" transform="rotate(-15 44 26)"/>
+      <line x1="48.5" y1="25" x2="48.5" y2="8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
     </svg>
   ),
   2: (
@@ -457,9 +455,9 @@ function TutorialOverlay({ onDone, levelOrder, activity: initActivity, inputMode
       return (
         <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, width:280 }}>
           {[1,2,3,4].map(id => (
-            <div key={id} style={{ background:'rgba(74,108,247,0.1)', border:'2px solid rgba(74,108,247,0.4)', borderRadius:14, padding:'16px 8px 12px', textAlign:'center', color:'#c084fc' }}>
+            <div key={id} style={{ background:'rgba(74,108,247,0.1)', border:'2px solid rgba(74,108,247,0.4)', borderRadius:14, padding:'16px 8px 12px', display:'flex', flexDirection:'column', alignItems:'center', color:'#c084fc' }}>
               {ACT_ICONS[id]}
-              <div style={{ fontSize:10, color:'#a5b4fc', marginTop:8, lineHeight:1.3 }}>{ACTIVITIES[id-1].label}</div>
+              <div style={{ fontSize:10, color:'#a5b4fc', marginTop:8, lineHeight:1.3, textAlign:'center' }}>{ACTIVITIES[id-1].label}</div>
             </div>
           ))}
         </div>
