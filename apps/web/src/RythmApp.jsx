@@ -1904,7 +1904,7 @@ export default function RythmApp() {
                         timeSig={c.timeSig}
                         activeIdx={-1}
                         width={choiceCols === 1 ? 480 : 240}
-                        height={90}
+                        height={120}
                         showClef={false}
                         showTimeSig={true}
                       />
