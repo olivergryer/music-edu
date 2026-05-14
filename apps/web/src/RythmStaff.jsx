@@ -113,7 +113,7 @@ export default function RythmStaff({
       const ctx = renderer.getContext();
       ctx.setFont("Arial", 10);
 
-      const staveY = height < 120 ? Math.max(4, Math.round((height - 40) / 2) - 2) : 24;
+      const staveY = height < 120 ? Math.max(4, Math.round((height - 40) / 3)) : 24;
       const stave  = new Stave(10, staveY, renderWidth - 20);
       if (showClef)    stave.addClef("treble");
       if (showTimeSig) stave.addTimeSignature(timeSig);
@@ -178,7 +178,6 @@ export default function RythmStaff({
 
       const svg = ref.current.querySelector("svg");
       if (svg) {
-        svg.style.display = "block"; // supprime le gap de descente inline
         svg.style.background = "transparent";
         svg.querySelectorAll("text").forEach(t => { t.style.fill = "#6b7280"; });
 
@@ -210,5 +209,5 @@ export default function RythmStaff({
     }
   }, [figures, timeSig, activeIdx, scoreGrades, scoreDevs, sessionBpm, renderWidth, height, showClef, showTimeSig, compact]);
 
-  return <div ref={ref} style={{ width:"100%", maxWidth:width, overflow:"hidden" }} />;
+  return <div ref={ref} style={{ width:"100%", maxWidth:width, height:height, overflow:"hidden" }} />;
 }
