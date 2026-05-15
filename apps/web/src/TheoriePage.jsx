@@ -558,7 +558,7 @@ function QuizScreen({ session, mode, onAnswer, onNext }) {
   }
 
   return (
-    <div onPointerDown={handlePointerDown} onPointerUp={handlePointerUp}
+    <div onPointerDown={handlePointerDown} onPointerUp={handlePointerUp}>
       <div className="flex justify-between items-center mb-2">
         <span className="text-xs text-app-muted">Question {currentIdx + 1} / {pool.length}</span>
         <span className="text-xs font-bold" style={{ color: timedOut ? '#f87171' : timeLeft <= 3 ? '#fbbf24' : 'var(--text-muted)' }}>
