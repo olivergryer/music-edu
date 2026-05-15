@@ -181,8 +181,6 @@ export async function loadInstrumentSamples(instrument, onProgress) {
         if (manifestEntry) {
           loopStart = manifestEntry.loopStart
           loopEnd   = manifestEntry.loopEnd
-          const sr = buf.sampleRate
-          applyLoopCrossfade(buf, Math.round(loopStart * sr), Math.round(loopEnd * sr), 20)
         } else {
           ;({ loopStart, loopEnd } = findLoopPoints(buf, onsetMs))
         }
@@ -244,14 +242,79 @@ function _playSample(ctx, sampleMap, midi, durationMs, startTime, centsOffset, l
   return { src, midi, pitchCorrCents: entry.pitchCorrCents ?? 0 }
 }
 
-// ─── Joue un accord en boucle (samples, infini) ───────────────────────────────
-// Retourne [{src, midi}] pour mise à jour smooth du playbackRate
+// ─── Synthèse granulaire — lecture infinie sans clic ─────────────────────────
+// Grains de 150ms à 50 % de chevauchement, enveloppes Hann → pas de discontinuité
+function _playGranular(ctx, sampleMap, midi, startTime, centsOffset) {
+  const entry = sampleMap.get(midi)
+  if (!entry) return null
+  const { buffer, loopStart, loopEnd, pitchCorrCents = 0 } = entry
+
+  const GRAIN_DUR_WC = 0.15
+  const HOP_WC       = 0.075
+  const LOOKAHEAD    = 0.2
+  const INTERVAL_MS  = 50
+
+  let currentRate   = Math.pow(2, (centsOffset + pitchCorrCents) / 1200)
+  let grainPos      = loopStart
+  let nextGrainTime = startTime
+  let stopped       = false
+
+  const masterGain = ctx.createGain()
+  masterGain.gain.setValueAtTime(0.75, startTime)
+  masterGain.connect(ctx.destination)
+
+  function scheduleGrain() {
+    const src = ctx.createBufferSource()
+    src.buffer = buffer
+    src.playbackRate.value = currentRate
+
+    const grainGain = ctx.createGain()
+    const t = nextGrainTime
+    grainGain.gain.setValueAtTime(0, t)
+    grainGain.gain.linearRampToValueAtTime(1, t + GRAIN_DUR_WC / 2)
+    grainGain.gain.linearRampToValueAtTime(0, t + GRAIN_DUR_WC)
+
+    src.connect(grainGain)
+    grainGain.connect(masterGain)
+    src.start(t, grainPos, GRAIN_DUR_WC * currentRate)
+
+    grainPos += HOP_WC * currentRate
+    if (grainPos + GRAIN_DUR_WC * currentRate > loopEnd) grainPos = loopStart
+    nextGrainTime += HOP_WC
+  }
+
+  function tick() {
+    if (stopped) return
+    while (nextGrainTime < ctx.currentTime + LOOKAHEAD) scheduleGrain()
+  }
+
+  tick()
+  const intervalId = setInterval(tick, INTERVAL_MS)
+
+  return {
+    src: {
+      stop: () => {
+        stopped = true
+        clearInterval(intervalId)
+        masterGain.gain.setTargetAtTime(0, ctx.currentTime, 0.04)
+      },
+      playbackRate: {
+        setTargetAtTime: (rate) => { currentRate = rate },
+      },
+    },
+    midi,
+    pitchCorrCents,
+  }
+}
+
+// ─── Joue un accord en boucle (samples, granulaire infini) ────────────────────
+// Retourne [{src, midi, pitchCorrCents}] — interface compatible GenerateurAccordPage
 export function playChord(ctx, midis, offsets, sampleMap, diapason = 442) {
   const t0            = ctx.currentTime + 0.05
   const diapasonCents = 1200 * Math.log2(diapason / 440)
   return midis.map((midi, i) => {
     const centsOffset = diapasonCents + (offsets[i] ?? 0)
-    return _playSample(ctx, sampleMap, midi, 0, t0, centsOffset, true)
+    return _playGranular(ctx, sampleMap, midi, t0, centsOffset)
   }).filter(Boolean)
 }
 
