@@ -162,19 +162,28 @@ function _midiToSFNote(midi) {
 }
 
 // ─── Joue une note soundfont avec sustain infini ───────────────────────────
+// player.play() retourne un GainNode (pas AudioBufferSourceNode) — la source
+// est accessible via node.source (sample-player internals)
 function _playSoundFontNote(player, midi, centsOffset) {
   const noteName = _midiToSFNote(midi)
   const sfCtx    = _getSFCtx()
   if (sfCtx.state === 'suspended') sfCtx.resume()
-  const node = player.play(noteName, sfCtx.currentTime + 0.05, { gain: 0.75 })
+  const node = player.play(noteName, sfCtx.currentTime + 0.05, {
+    gain: 0.75, loop: true, loopStart: 0.2,
+  })
   if (!node) return null
-  const baseRate = node.playbackRate.value
-  node.playbackRate.value = baseRate * Math.pow(2, centsOffset / 1200)
+  const source      = node.source  // AudioBufferSourceNode
+  const sfBaseRate  = source?.playbackRate.value ?? 1
+  if (source && centsOffset !== 0) {
+    source.playbackRate.value = sfBaseRate * Math.pow(2, centsOffset / 1200)
+  }
   return {
     src: {
-      stop: () => { try { node.stop(0) } catch {} },
+      stop: () => { try { node.stop(sfCtx.currentTime) } catch {} },
       playbackRate: {
-        setTargetAtTime: (newRate) => { node.playbackRate.value = baseRate * newRate },
+        setTargetAtTime: (callerRate) => {
+          if (source) source.playbackRate.value = sfBaseRate * callerRate
+        },
       },
     },
     midi,
