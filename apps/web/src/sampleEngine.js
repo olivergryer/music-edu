@@ -258,9 +258,12 @@ function _playGranular(ctx, sampleMap, midi, startTime, centsOffset) {
   const LOOKAHEAD    = 0.25
   const INTERVAL_MS  = 60
 
+  // Granulaire synchrone : position fixe au centre du sustain + scatter aléatoire
+  // → ton stable, aucun artifact de traversal ni de ping-pong
+  const centerPos = poolStart + (poolEnd - poolStart) / 2
+  const SCATTER   = 0.02  // ±20ms de scatter aléatoire
+
   let currentRate   = Math.pow(2, (centsOffset + pitchCorrCents) / 1200)
-  let grainPos      = poolStart
-  let direction     = 1        // ping-pong : +1 avance, -1 recule
   let nextGrainTime = startTime
   let stopped       = false
 
@@ -269,7 +272,6 @@ function _playGranular(ctx, sampleMap, midi, startTime, centsOffset) {
   masterGain.connect(ctx.destination)
 
   function scheduleGrain() {
-    // Toujours dans le futur pour éviter enveloppes démarrées mid-ramp
     const t = Math.max(nextGrainTime, ctx.currentTime + 0.003)
 
     const src = ctx.createBufferSource()
@@ -283,17 +285,13 @@ function _playGranular(ctx, sampleMap, midi, startTime, centsOffset) {
 
     src.connect(grainGain)
     grainGain.connect(masterGain)
-    // Clamp grainPos dans le pool avant de jouer
-    const safePos = Math.max(poolStart, Math.min(grainPos, poolEnd - GRAIN_DUR_WC * currentRate))
-    src.start(t, safePos, GRAIN_DUR_WC * currentRate)
 
-    // Cleanup après lecture (évite accumulation de GainNodes)
+    const scatter = (Math.random() - 0.5) * 2 * SCATTER
+    const pos = Math.max(poolStart,
+                  Math.min(poolEnd - GRAIN_DUR_WC * currentRate, centerPos + scatter))
+    src.start(t, pos, GRAIN_DUR_WC * currentRate)
+
     src.onended = () => { try { src.disconnect(); grainGain.disconnect() } catch {} }
-
-    // Avance ping-pong
-    grainPos += HOP_WC * currentRate * direction
-    if (grainPos + GRAIN_DUR_WC * currentRate >= poolEnd) direction = -1
-    if (grainPos <= poolStart)                            direction = 1
 
     nextGrainTime = t + HOP_WC
   }
