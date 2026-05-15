@@ -7,7 +7,7 @@ import {
   midiToHz, JUST_RATIOS_CENTS, HARMONIQUE_OFFSETS,
   centsTempere, hzToMidi, frameRMS, preEmphasis, HZ_MIN, HZ_MAX,
 } from './accordeurUtils'
-import { INSTRUMENTS, isOscillatorInstrument, loadInstrumentSamples, playChord, playChordOscillator } from './sampleEngine'
+import { INSTRUMENTS, isOscillatorInstrument, loadInstrumentSamples, playChord, playChordOscillator } from './windEngine'
 
 function computeUserOffsets(chordMidis, rootName, userTemperament) {
   const rootPC = noteNameToPC(rootName)

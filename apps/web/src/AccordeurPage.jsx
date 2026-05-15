@@ -5,7 +5,7 @@ import AccordeurStaff from './AccordeurStaff'
 import SpectrePaneau from './SpectrePaneau'
 import GenerateurAccord from './GenerateurAccord'
 import JeuGamme from './JeuGamme'
-import { INSTRUMENTS, loadInstrumentSamples, isOscillatorInstrument, playPhrase, playPhraseOscillator, phraseDurationMs } from './sampleEngine'
+import { INSTRUMENTS, loadInstrumentSamples, isOscillatorInstrument, playPhrase, playPhraseOscillator, phraseDurationMs } from './windEngine'
 import {
   analyserBuffer, segmenter, calculerEcarts, courbebrute,
   scorePedagogique, scoreQualite, couleurJustesse,
