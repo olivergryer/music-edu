@@ -247,7 +247,7 @@ function _playSample(ctx, sampleMap, midi, durationMs, startTime, centsOffset, l
 function _playGranular(ctx, sampleMap, midi, startTime, centsOffset) {
   const entry = sampleMap.get(midi)
   if (!entry) return null
-  const { buffer, onsetMs, pitchCorrCents = 0 } = entry
+  const { buffer, onsetMs, pitchCorrCents = 0, periodSamples } = entry
 
   // Pool = zone sustain complète (évite attaque + queue)
   const poolStart = Math.min(onsetMs / 1000 + 0.2, buffer.duration * 0.3)
@@ -258,10 +258,10 @@ function _playGranular(ctx, sampleMap, midi, startTime, centsOffset) {
   const LOOKAHEAD    = 0.25
   const INTERVAL_MS  = 60
 
-  // Granulaire synchrone : position fixe au centre du sustain + scatter aléatoire
-  // → ton stable, aucun artifact de traversal ni de ping-pong
+  // Scatter en multiples entiers de la période fondamentale → grains en phase → pas de tremolo.
+  // Fallback 0 si periodSamples absent du manifest (manifest ancien) → son figé mais sans tremolo.
   const centerPos = poolStart + (poolEnd - poolStart) / 2
-  const SCATTER   = 0.02  // ±20ms de scatter aléatoire
+  const periodSec = periodSamples ? periodSamples / buffer.sampleRate : 0
 
   let currentRate   = Math.pow(2, (centsOffset + pitchCorrCents) / 1200)
   let nextGrainTime = startTime
@@ -286,7 +286,7 @@ function _playGranular(ctx, sampleMap, midi, startTime, centsOffset) {
     src.connect(grainGain)
     grainGain.connect(masterGain)
 
-    const scatter = (Math.random() - 0.5) * 2 * SCATTER
+    const scatter = periodSec > 0 ? Math.round(Math.random() * 5) * periodSec : 0
     const pos = Math.max(poolStart,
                   Math.min(poolEnd - GRAIN_DUR_WC * currentRate, centerPos + scatter))
     src.start(t, pos, GRAIN_DUR_WC * currentRate)

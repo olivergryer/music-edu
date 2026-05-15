@@ -163,6 +163,7 @@ function processSample(mono, sampleRate, midi) {
     loopStart:      parseFloat(loopStart.toFixed(6)),
     loopEnd:        parseFloat(loopEnd.toFixed(6)),
     pitchCorrCents,
+    periodSamples:  period,
   }
 }
 
