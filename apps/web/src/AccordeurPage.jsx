@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
+import TourGuide from './TourGuide'
 import { PitchDetector } from 'pitchy'
 import AccordeurStaff from './AccordeurStaff'
 import SpectrePaneau from './SpectrePaneau'
@@ -41,6 +42,220 @@ const C_ACCENT  = '#4A6CF7'
 const C_MUTED   = '#4b5563'
 const C_MUTED2  = '#6b7280'
 const C_TRITONE = '#FF8B3D'
+
+// ─── Tutorial ────────────────────────────────────────────────────────────────────
+const ACC_TUTO_KEY = 'acc_tuto_v1'
+const TUTO_TOTAL_ACC = 5
+const ACC_COLOR = '#FF8B3D'
+
+function AccordeurTutorial({ onDone }) {
+  const [slide, setSlide] = useState(0)
+  const [modeLive, setModeLive] = useState(true)
+
+  function renderVisual() {
+    if (slide === 0) {
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
+          <svg width="120" height="80" viewBox="0 0 120 80" fill="none">
+            <path d="M10 70 A55 55 0 0 1 110 70" stroke="rgba(255,139,61,0.2)" strokeWidth="12" strokeLinecap="round" fill="none"/>
+            <path d="M10 70 A55 55 0 0 1 75 18" stroke={ACC_COLOR} strokeWidth="12" strokeLinecap="round" fill="none"/>
+            <circle cx="60" cy="70" r="5" fill={ACC_COLOR}/>
+            <line x1="60" y1="65" x2="75" y2="22" stroke={ACC_COLOR} strokeWidth="2.5" strokeLinecap="round"/>
+          </svg>
+          <div style={{ display: 'flex', gap: 20, alignItems: 'baseline' }}>
+            <span style={{ fontSize: 48, fontWeight: 900, color: ACC_COLOR, letterSpacing: 2 }}>Sol</span>
+            <span style={{ fontSize: 22, fontWeight: 700, color: '#6b7280' }}>4</span>
+          </div>
+          <div style={{ fontSize: 18, fontWeight: 800, color: '#34d399' }}>+2.1¢</div>
+        </div>
+      )
+    }
+    if (slide === 1) {
+      const opts = [
+        { id: true,  label: '♩ Live',          desc: 'Note + cents en direct' },
+        { id: false, label: '● Enregistrement', desc: 'Analyse une phrase entière' },
+      ]
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: 280 }}>
+          {opts.map(o => {
+            const sel = modeLive === o.id
+            return (
+              <div key={String(o.id)} role="button" onClick={() => setModeLive(o.id)} style={{
+                borderRadius: 16, padding: '16px 18px', cursor: 'pointer',
+                background: sel ? 'rgba(255,139,61,0.15)' : 'rgba(255,255,255,0.03)',
+                border: `2px solid ${sel ? ACC_COLOR : 'rgba(255,255,255,0.08)'}`,
+                transition: 'all 0.15s',
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                  <span style={{ fontSize: 14, fontWeight: 800, color: sel ? '#ffb385' : '#6b7280' }}>{o.label}</span>
+                  {sel && <div style={{ width: 10, height: 10, borderRadius: 5, background: ACC_COLOR }}/>}
+                </div>
+                <div style={{ fontSize: 11, color: sel ? '#ffd0a8' : '#6b7280', lineHeight: 1.4 }}>{o.desc}</div>
+              </div>
+            )
+          })}
+        </div>
+      )
+    }
+    if (slide === 2) {
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: 280 }}>
+          {[
+            { label: 'Tempéré',    desc: 'Système standard occidental', color: '#6b7280' },
+            { label: 'Harmonique', desc: 'Intonation juste 5-limite',   color: ACC_COLOR },
+            { label: 'Utilisateur',desc: 'Tempérament personnalisé',    color: '#c084fc' },
+          ].map((r, i) => (
+            <div key={r.label} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', borderRadius: 12, background: i === 0 ? 'rgba(255,139,61,0.12)' : 'rgba(255,255,255,0.03)', border: `1.5px solid ${i === 0 ? ACC_COLOR : 'rgba(255,255,255,0.07)'}` }}>
+              <div style={{ width: 8, height: 8, borderRadius: 4, background: r.color, flexShrink: 0 }}/>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: '#e5e7eb' }}>{r.label}</div>
+                <div style={{ fontSize: 10, color: '#6b7280', marginTop: 2 }}>{r.desc}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )
+    }
+    if (slide === 3) {
+      return (
+        <div style={{ width: 280 }}>
+          <svg width="280" height="80" viewBox="0 0 280 80" fill="none">
+            {[15, 25, 35, 45, 55].map(y => <line key={y} x1="10" y1={y} x2="270" y2={y} stroke="#374151" strokeWidth="0.8"/>)}
+            {[
+              { x: 40, y: 55, c: '#34d399', label: 'Sol' },
+              { x: 80, y: 45, c: '#34d399', label: 'La' },
+              { x: 120, y: 35, c: '#fbbf24', label: 'Si' },
+              { x: 160, y: 25, c: '#34d399', label: 'Do' },
+              { x: 200, y: 35, c: '#f87171', label: 'Ré' },
+            ].map(n => (
+              <g key={n.x}>
+                <ellipse cx={n.x} cy={n.y} rx="10" ry="6.5" fill={n.c} opacity="0.85" transform={`rotate(-15 ${n.x} ${n.y})`}/>
+                <line x1={n.x + 9} y1={n.y - 5} x2={n.x + 9} y2={n.y - 28} stroke={n.c} strokeWidth="1.5" opacity="0.85"/>
+              </g>
+            ))}
+          </svg>
+          <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+            {[
+              { label: 'Score', val: '4/5', color: '#34d399' },
+              { label: 'Qualité', val: '83%', color: ACC_COLOR },
+            ].map(s => (
+              <div key={s.label} style={{ flex: 1, textAlign: 'center', padding: '10px 0', borderRadius: 10, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                <div style={{ fontSize: 20, fontWeight: 900, color: s.color }}>{s.val}</div>
+                <div style={{ fontSize: 10, color: '#6b7280', marginTop: 2 }}>{s.label}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )
+    }
+    if (slide === 4) {
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
+          <svg width="100" height="110" viewBox="0 0 20 22" fill="none" style={{ opacity: 0.9 }}>
+            {[3, 8, 13, 18].map(x => <line key={x} x1={x} y1="1" x2={x} y2="21" stroke={ACC_COLOR} strokeWidth="1.5" strokeLinecap="round"/>)}
+            {[5, 10, 15, 20].map(y => <line key={y} x1="1" y1={y} x2="20" y2={y} stroke={ACC_COLOR} strokeWidth="1.5"/>)}
+            <circle cx="3" cy="7.5" r="2.5" fill={ACC_COLOR}/>
+            <circle cx="8" cy="12.5" r="2.5" fill={ACC_COLOR}/>
+            <circle cx="13" cy="7.5" r="2.5" fill={ACC_COLOR}/>
+            <circle cx="18" cy="2.5" r="2.5" fill={ACC_COLOR}/>
+          </svg>
+          <div style={{ display: 'flex', gap: 8 }}>
+            {['Flûte', 'Hautbois', 'Clarinette'].map(i => (
+              <div key={i} style={{ padding: '6px 12px', borderRadius: 8, background: 'rgba(255,139,61,0.12)', border: `1px solid rgba(255,139,61,0.3)`, fontSize: 11, fontWeight: 600, color: '#ffb385' }}>{i}</div>
+            ))}
+          </div>
+        </div>
+      )
+    }
+  }
+
+  const SLIDES = [
+    { title: 'Accordeur chromatique',   body: 'Détecte ta note en temps réel. Enregistre une phrase entière et analyse ta justesse note par note.' },
+    { title: 'Mode de départ',           body: 'Live : note + cents affichés en direct. Enregistrement : joue une phrase complète puis consulte l\'analyse.' },
+    { title: 'Référentiels de justesse', body: 'Tempéré : standard occidental. Harmonique : ratios naturels 5-limite. Choisis une tonique pour activer ces modes.' },
+    { title: 'Analyse de phrase',        body: 'Après l\'enregistrement, la portée affiche chaque note colorée selon la justesse. Score et qualité calculés automatiquement.' },
+    { title: 'Générateur d\'accords',   body: 'Écoute un accord de référence avec flûte, hautbois ou clarinette. Compare les intonations tempérée, harmonique et personnalisée.' },
+  ]
+
+  const { title, body } = SLIDES[slide]
+
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 100,
+      background: '#030712', color: '#f9fafb',
+      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'space-between',
+      padding: '24px 20px 80px', overflowY: 'auto',
+    }}>
+      {/* Dots + Ignorer */}
+      <div style={{ width: '100%', maxWidth: 480, display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+        <div style={{ display: 'flex', gap: 6 }}>
+          {Array.from({ length: TUTO_TOTAL_ACC }).map((_, i) => (
+            <div key={i} style={{
+              width: i === slide ? 20 : 7, height: 7, borderRadius: 4,
+              background: i <= slide ? ACC_COLOR : 'rgba(255,255,255,0.1)',
+              transition: 'width 0.25s, background 0.25s',
+            }}/>
+          ))}
+        </div>
+        <button onClick={() => onDone({ modeLive })} style={{ background: 'none', border: 'none', color: '#6b7280', fontSize: 13, fontWeight: 700, cursor: 'pointer', padding: '4px 8px' }}>
+          Ignorer
+        </button>
+      </div>
+
+      {/* Visual */}
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px 0' }}>
+        {renderVisual()}
+      </div>
+
+      {/* Text */}
+      <div style={{ width: '100%', maxWidth: 400, textAlign: 'center', marginBottom: 32 }}>
+        <div style={{ fontSize: 22, fontWeight: 900, color: '#f9fafb', marginBottom: 10 }}>{title}</div>
+        <div style={{ fontSize: 14, fontWeight: 500, color: '#d1d5db', lineHeight: 1.6 }}>{body}</div>
+      </div>
+
+      {/* Navigation */}
+      <div style={{ width: '100%', maxWidth: 400, display: 'flex', gap: 10 }}>
+        {slide > 0 && (
+          <button onClick={() => setSlide(s => s - 1)} style={{ flex: 1, padding: '14px 0', borderRadius: 16, border: `2px solid rgba(255,139,61,0.3)`, background: 'none', color: ACC_COLOR, fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
+            ← Précédent
+          </button>
+        )}
+        <button
+          onClick={() => slide < TUTO_TOTAL_ACC - 1 ? setSlide(s => s + 1) : onDone({ modeLive })}
+          style={{ flex: 2, padding: '14px 0', borderRadius: 16, border: 'none', background: `linear-gradient(135deg,#b45309,${ACC_COLOR})`, color: '#fff', fontSize: 15, fontWeight: 900, cursor: 'pointer', boxShadow: `0 8px 24px rgba(255,139,61,0.35)` }}
+        >
+          {slide < TUTO_TOTAL_ACC - 1 ? 'Suivant →' : '▶ Commencer !'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function HelpModal({ onTuto, onTour, onClose }) {
+  return (
+    <>
+      <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 200 }}/>
+      <div style={{
+        position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)',
+        zIndex: 201, width: 'min(320px, 90vw)',
+        background: '#0a0f1a', border: '1.5px solid rgba(255,139,61,0.3)',
+        borderRadius: 20, padding: '28px 24px', textAlign: 'center',
+      }}>
+        <div style={{ fontSize: 18, fontWeight: 900, color: '#f9fafb', marginBottom: 6 }}>Aide</div>
+        <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 24 }}>Comment puis-je t'aider ?</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <button onClick={onTuto} style={{ padding: '14px 0', borderRadius: 14, border: 'none', background: `linear-gradient(135deg,#b45309,${ACC_COLOR})`, color: '#fff', fontSize: 14, fontWeight: 800, cursor: 'pointer' }}>
+            ▶ Relancer le tutoriel
+          </button>
+          <button onClick={onTour} style={{ padding: '14px 0', borderRadius: 14, border: `2px solid rgba(255,139,61,0.35)`, background: 'none', color: ACC_COLOR, fontSize: 14, fontWeight: 800, cursor: 'pointer' }}>
+            Bulles explicatives
+          </button>
+        </div>
+        <button onClick={onClose} style={{ marginTop: 16, background: 'none', border: 'none', color: '#6b7280', fontSize: 12, cursor: 'pointer' }}>Fermer</button>
+      </div>
+    </>
+  )
+}
 
 // ─── Info tooltip ───────────────────────────────────────────────────────────────
 function InfoTip({ text }) {
@@ -424,6 +639,11 @@ export default function AccordeurPage() {
 
   const [sessions,     setSessions]    = useState(() => lireSessions())
   const [showReglages, setShowReglages] = useState(false)
+  const [warnRef,      setWarnRef]      = useState(false)
+  const [showTutorial, setShowTutorial] = useState(() => { try { return !localStorage.getItem(ACC_TUTO_KEY) } catch { return true } })
+  const [showHelp,     setShowHelp]     = useState(false)
+  const [showTour,     setShowTour]     = useState(false)
+  const warnRefTimer = useRef(null)
 
   const [userTemperament, setUserTemperament] = useState(() => {
     try { const v = JSON.parse(localStorage.getItem(USER_TEMP_KEY)); return Array.isArray(v) && v.length === 12 ? v : TEMPERAMENT_TEMPERE.slice() } catch { return TEMPERAMENT_TEMPERE.slice() }
@@ -815,6 +1035,21 @@ export default function AccordeurPage() {
   const muMoyen    = notes.length ? (notes.reduce((a, n) => a + n.muCents, 0) / notes.length).toFixed(1) : null
   const sigmaMoyen = notes.length ? (notes.reduce((a, n) => a + n.sigmaCents, 0) / notes.length).toFixed(1) : null
 
+  function handleTutorialDone({ modeLive: ml } = {}) {
+    try { localStorage.setItem(ACC_TUTO_KEY, '1') } catch {}
+    setShowTutorial(false)
+    if (ml !== undefined) basculerMode(ml)
+    setInstrument('oscillator')
+    localStorage.setItem('accordeur_instrument_preference', 'oscillator')
+  }
+
+  const ACC_TOUR_STEPS = [
+    { tourId: 'toggle-mode',    title: 'Mode Live / Enregistrement', desc: 'Bascule entre l\'écoute en temps réel et l\'enregistrement d\'une phrase complète.' },
+    { tourId: 'struct-ref',     title: 'Structure & référentiel',     desc: 'Sélectionne une tonique puis le référentiel — Tempéré, Harmonique ou Utilisateur.' },
+    { tourId: 'lien-generateur',title: 'Générateur d\'accords',      desc: 'Écoute un accord de référence avec différents instruments et intonations.' },
+    { tourId: 'btn-reglages',   title: 'Réglages',                   desc: 'Diapason, transposition, seuil de justesse, historique des sessions et tempéraments.' },
+  ]
+
   const transpoNom = (nom) => {
     const idx = noteNameToPC(nom)
     const offset = TRANSPOSITIONS[transpoKey]?.offset ?? 0
@@ -860,17 +1095,27 @@ export default function AccordeurPage() {
               </svg>
             </Link>
           </div>
-          <button
-            onClick={() => setShowReglages(v => !v)}
-            title="Réglages"
-            className="flex items-center justify-center rounded-lg border border-app bg-surface cursor-pointer transition-opacity"
-            style={{ width: 32, height: 32, color: 'var(--text-muted)', background: showReglages ? 'var(--surface-2)' : undefined }}
-          >
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="3"/>
-              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-            </svg>
-          </button>
+          <div style={{ display: 'flex', gap: 6 }}>
+            <button
+              onClick={() => setShowHelp(true)}
+              title="Aide"
+              data-tour="btn-aide"
+              className="flex items-center justify-center rounded-lg border border-app bg-surface cursor-pointer"
+              style={{ width: 32, height: 32, color: 'var(--text-muted)', fontWeight: 700, fontSize: 15 }}
+            >?</button>
+            <button
+              onClick={() => setShowReglages(v => !v)}
+              title="Réglages"
+              data-tour="btn-reglages"
+              className="flex items-center justify-center rounded-lg border border-app bg-surface cursor-pointer transition-opacity"
+              style={{ width: 32, height: 32, color: 'var(--text-muted)', background: showReglages ? 'var(--surface-2)' : undefined }}
+            >
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="3"/>
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+              </svg>
+            </button>
+          </div>
         </div>
 
         {/* ── Drawer Réglages (overlay) ── */}
@@ -1147,7 +1392,7 @@ export default function AccordeurPage() {
         {/* ── Zone enregistrement / Live ── */}
         <div className="bg-surface border border-app rounded-2xl p-6 mb-4 text-center">
           {/* Toggle Enregistrer / Live */}
-          <div className="flex gap-1.5 mb-5">
+          <div className="flex gap-1.5 mb-5" data-tour="toggle-mode">
             {[['rec', '● Enregistrer'], ['live', '♩ Live']].map(([v, label]) => (
               <button key={v}
                 onClick={() => basculerMode(v === 'live')}
@@ -1238,7 +1483,7 @@ export default function AccordeurPage() {
           {erreur && <div className="text-red-400 text-xs mt-3">{erreur}</div>}
 
           {/* ── Lien Générateur d'accords ── */}
-          <div style={{ display: 'flex', justifyContent: 'flex-start', marginTop: 16 }}>
+          <div style={{ display: 'flex', justifyContent: 'flex-start', marginTop: 16 }} data-tour="lien-generateur">
             <Link
               to="/accordeur/generateur"
               style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: '#FF8B3D', fontSize: 12, fontWeight: 600, textDecoration: 'none', opacity: 0.85 }}
@@ -1495,7 +1740,7 @@ export default function AccordeurPage() {
         )}
 
         {/* ── Structures de toniques + Référentiel ── */}
-        <div className="bg-surface border border-app rounded-xl p-4 mb-4">
+        <div className="bg-surface border border-app rounded-xl p-4 mb-4" data-tour="struct-ref">
           <div className="flex justify-between items-center mb-2.5">
             <span className="font-bold text-sm text-app">Structure de toniques</span>
             <Btn variant="ghost" onClick={() => setShowStructMgr(v => !v)}>
@@ -1524,7 +1769,15 @@ export default function AccordeurPage() {
               const needsStructure = (r === '5-limite' || r === 'utilisateur') && structureId === null
               return (
                 <button key={r}
-                  onClick={() => { if (!needsStructure) setReferentiel(r) }}
+                  onClick={() => {
+                    if (needsStructure) {
+                      clearTimeout(warnRefTimer.current)
+                      setWarnRef(true)
+                      warnRefTimer.current = setTimeout(() => setWarnRef(false), 3000)
+                    } else {
+                      setReferentiel(r)
+                    }
+                  }}
                   title={needsStructure ? 'Sélectionnez une structure tonale ci-dessus pour activer ce référentiel' : undefined}
                   className="flex-1 py-1.5 rounded-md border-none font-bold text-xs transition-colors"
                   style={{
@@ -1537,7 +1790,7 @@ export default function AccordeurPage() {
               )
             })}
           </div>
-          {structureId === null && referentiel !== 'tempere' && (
+          {(warnRef || (structureId === null && referentiel !== 'tempere')) && (
             <div style={{ fontSize: 11, color: '#fbbf24', marginTop: 6 }}>
               Référentiel Harmonique/Utilisateur nécessite une structure tonale — sélectionnez-en une ci-dessus.
             </div>
@@ -1646,6 +1899,15 @@ export default function AccordeurPage() {
           onClose={() => setShowSpectre(false)}
         />
       )}
+      {showTutorial && <AccordeurTutorial onDone={sel => handleTutorialDone(sel)} />}
+      {showHelp && (
+        <HelpModal
+          onTuto={() => { setShowHelp(false); setShowTutorial(true) }}
+          onTour={() => { setShowHelp(false); setShowTour(true) }}
+          onClose={() => setShowHelp(false)}
+        />
+      )}
+      {showTour && <TourGuide steps={ACC_TOUR_STEPS} onDone={() => setShowTour(false)} />}
     </div>
   )
 }

@@ -101,7 +101,9 @@ return chordMidis.map(midi => {
 - Volume accord stable, non couplé au micro (getUserMedia avec AGC désactivé)
 - Hint après 30 frames (~3s) sans signal : "Plus fort / ou plus près" (`noDetectCountRef`)
 
-## Moteur de samples (`sampleEngine.js`)
+## Moteur audio (`windEngine.js`)
+
+Remplace `sampleEngine.js` (supprimé). Dépendance : **Tone.js** (`npm install tone`).
 
 ### Instruments
 | Clé | Label | Tessiture MIDI |
@@ -113,29 +115,26 @@ return chordMidis.map(midi => {
 | `saxophone` | Saxophone alto | 49–80 |
 | `bassoon` | Basson | 34–74 |
 
-Noms R2 : bémols uniquement (`Db`, `Eb`, `Gb`, `Ab`, `Bb`).
 Clé localStorage préférence : `accordeur_instrument_preference` (partagée AccordeurPage ↔ GenerateurAccordPage, défaut `'flute'`).
 
-### Boucle (loop)
-Points détectés par `findPosiZeroCross` (passage par zéro positif). Après calcul, **crossfade in-place 20ms** appliqué au buffer :
-```js
-// applyLoopCrossfade : fond les N derniers samples avant loopEnd dans les N premiers depuis loopStart
-data[loopEndSample - N + i] = data[...] * (1 - alpha) + data[loopStartSample + i] * alpha
-```
-Modification in-place sur `buffer.getChannelData(ch)`, tous canaux. Appliqué une seule fois au chargement.
+### Chargement — `Tone.ToneAudioBuffers`
+Source : CDN MusyngKite (`gleitz.github.io/midi-js-soundfonts/MusyngKite/<instrument>-mp3/`).
+~10–14 samples clés par instrument (tous les 3–4 demi-tons). Pitch-shift vers toute note via `playbackRate`.
+Cache session : `_bufferCache` (Map instrument → Map `__tone__`) + `_inFlight` (évite double-chargement).
 
-### Chargement
-Cache mémoire session : `_memCache` + `_inFlight` (évite double-fetch StrictMode). SW cache `r2.dev/samples/` → `audio-samples-v1`.
+### Lecture sustain infini — `Tone.Player`
+`_playToneNote` crée un `Tone.Player` avec `loop: true`, `loopStart: 300ms`, `loopEnd: 80 % durée buffer`.
+`playbackRate = semitonesRate × callerRate` où `semitonesRate = 2^(Δsemitones/12)` (shift depuis sample le plus proche).
+Interface retournée : `{ src: { stop(), playbackRate: { setTargetAtTime(rate) } }, midi, pitchCorrCents: 0 }`.
 
-### playbackRate et diapason
-Samples enregistrés à A4=440 Hz. `diapasonCents = 1200 * log2(diapason / 440)` appliqué via playbackRate.
+`playChord` ignore le paramètre `ctx` pour les instruments Tone.js (Tone gère son propre AudioContext).
 
 ### Fonctions exportées
 | Fonction | Usage |
 |----------|-------|
 | `loadInstrumentSamples(instrument, onProgress)` | charge et cache |
-| `playChord(ctx, midis, offsets, sampleMap, diapason)` | accord boucle infinie |
-| `playChordOscillator(ctx, midis, offsets, diapason)` | idem oscillateurs |
+| `playChord(ctx, midis, offsets, sampleMap, diapason)` | accord sustain infini |
+| `playChordOscillator(ctx, midis, offsets, diapason)` | idem oscillateurs Web Audio |
 | `playPhrase(ctx, notes, sampleMap, referentiel, tonikMidi, diapason)` | phrase legato |
 | `playPhraseOscillator(...)` | idem oscillateurs |
 
@@ -146,6 +145,15 @@ Samples enregistrés à A4=440 Hz. `diapasonCents = 1200 * log2(diapason / 440)`
 - Autres : `JUST_RATIOS_CENTS[semitone]` (tableau 12 entrées 5-limite dans accordeurUtils)
 
 `midiToHzReferentiel` accepte `userOffsets = null` en 5e param pour le référentiel utilisateur.
+
+## Référentiel sans structure (AccordeurPage)
+Boutons Harmonique et Utilisateur grisés (`opacity: 0.4`, `cursor: not-allowed`) si `structureId === null`.
+Clic sur bouton désactivé → message warning jaune 3 s (`warnRef` state + `warnRefTimer` ref + `setTimeout 3000`).
+Message permanent si `structureId === null && referentiel !== 'tempere'` (cas localStorage chargé sans structure).
+
+## Lien Générateur d'accords (AccordeurPage)
+Lien avec icône tablature SVG en bas à gauche du bloc "Zone enregistrement / Live" (`bg-surface border rounded-2xl`).
+Toujours visible (hors conditionnels live/rec).
 
 ## Boutons lecture (mode enregistrement)
 | Bouton | Actif si | Action |

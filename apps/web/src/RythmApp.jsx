@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Link } from "react-router-dom";
+import TourGuide from "./TourGuide";
 import { useTheme } from "./ThemeContext";
 import RythmStaff from "./RythmStaff";
 import SettingsPage from "./SettingsPage";
@@ -617,6 +618,8 @@ export default function RythmApp() {
     if (ENABLE_TUTORIAL === true) return true;
     return !localStorage.getItem(`rythm-tuto-${TUTORIAL_VERSION}`);
   });
+  const [showHelp,        setShowHelp]        = useState(false);
+  const [showTour,        setShowTour]        = useState(false);
   const [selectedFormulas,setSelectedFormulas] = useState(() => {
     const s = loadSettings();
     return s.selectedFormulas ? new Set(s.selectedFormulas) : DEFAULT_SELECTED;
@@ -1419,23 +1422,51 @@ export default function RythmApp() {
     return (
       <>
         {showTutorial && <TutorialOverlay onDone={handleTutorialDone} levelOrder={levelOrder} activity={activity} inputMode={inputMode} />}
+        {showHelp && (
+          <>
+            <div onClick={() => setShowHelp(false)} style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.6)', zIndex:200 }}/>
+            <div style={{ position:'fixed', top:'50%', left:'50%', transform:'translate(-50%,-50%)', zIndex:201, width:'min(320px, 90vw)', background:'#0a0f1a', border:'1.5px solid rgba(74,108,247,0.3)', borderRadius:20, padding:'28px 24px', textAlign:'center' }}>
+              <div style={{ fontSize:18, fontWeight:900, color:'#f9fafb', marginBottom:6 }}>Aide</div>
+              <div style={{ fontSize:12, color:'#6b7280', marginBottom:24 }}>Comment puis-je t'aider ?</div>
+              <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+                <button onClick={() => { setShowHelp(false); setShowTutorial(true); }} style={{ padding:'14px 0', borderRadius:14, border:'none', background:'linear-gradient(135deg,#3b82f6,#4A6CF7)', color:'#fff', fontSize:14, fontWeight:800, cursor:'pointer' }}>▶ Relancer le tutoriel</button>
+                <button onClick={() => { setShowHelp(false); setShowTour(true); }} style={{ padding:'14px 0', borderRadius:14, border:'2px solid rgba(74,108,247,0.35)', background:'none', color:'#4A6CF7', fontSize:14, fontWeight:800, cursor:'pointer' }}>Bulles explicatives</button>
+              </div>
+              <button onClick={() => setShowHelp(false)} style={{ marginTop:16, background:'none', border:'none', color:'#6b7280', fontSize:12, cursor:'pointer' }}>Fermer</button>
+            </div>
+          </>
+        )}
+        {showTour && <TourGuide steps={[
+          { tourId:'activite-grid',       title:'Activités',  desc:'4 exercices : frapper le rythme, compléter, identifier ou composer. Choisis selon ton niveau.' },
+          { tourId:'btn-reglages-rythme', title:'Réglages',   desc:'Configure le tempo, le mode de saisie (TAP ou micro) et les niveaux de formules.' },
+          { tourId:'btn-commencer',       title:'Commencer',  desc:'Lance l\'exercice avec les réglages en cours. Possible de jouer en série de 10 pour un score global.' },
+        ]} onDone={() => setShowTour(false)} />}
         {SettingsModal}
         <div className="bg-app text-app min-h-dvh flex flex-col items-center px-3.5 py-3 pb-8 select-none">
           {/* Header */}
           <div className="w-full max-w-xl flex justify-between items-center mb-4">
             <Link to="/" className="bg-surface-2 border border-app rounded-lg px-2.5 py-1 font-bold text-xs no-underline" style={{ color: '#4A6CF7' }}>← Tessitura</Link>
-            <button
-              onClick={() => { setOpenAccordion("saisie"); setSettingsModalOpen(true); }}
-              className="bg-surface-2 border border-app rounded-xl text-app-muted text-lg cursor-pointer px-2 py-0.5 leading-none"
-              title="Réglages"
-            >⚙</button>
+            <div style={{ display:'flex', gap:6 }}>
+              <button
+                onClick={() => setShowHelp(true)}
+                title="Aide"
+                className="bg-surface-2 border border-app rounded-lg cursor-pointer flex items-center justify-center"
+                style={{ width:32, height:32, fontWeight:700, fontSize:15, color:'var(--text-muted)' }}
+              >?</button>
+              <button
+                onClick={() => { setOpenAccordion("saisie"); setSettingsModalOpen(true); }}
+                className="bg-surface-2 border border-app rounded-xl text-app-muted text-lg cursor-pointer px-2 py-0.5 leading-none"
+                title="Réglages"
+                data-tour="btn-reglages-rythme"
+              >⚙</button>
+            </div>
           </div>
 
           <div className="w-full max-w-xl">
             <div className="text-3xl font-black mb-5" style={{ color: '#4A6CF7' }}>Rythme</div>
 
             {/* 2×2 grid activités */}
-            <div className="grid grid-cols-2 gap-3 mb-5">
+            <div className="grid grid-cols-2 gap-3 mb-5" data-tour="activite-grid">
               {ACTIVITIES.map(a => {
                 const sel = activity === a.id;
                 return (
@@ -1479,6 +1510,7 @@ export default function RythmApp() {
             {/* CTA Commencer */}
             <button
               onClick={startSession}
+              data-tour="btn-commencer"
               className="w-full border-none rounded-2xl cursor-pointer text-white text-base font-bold"
               style={{ padding: '18px 0', background: 'linear-gradient(135deg,#4A6CF7,#8B5CF6)', boxShadow: '0 8px 32px rgba(74,108,247,0.4)' }}
             >{seriesMode ? "▶ Commencer la série" : "▶ Commencer"}</button>
