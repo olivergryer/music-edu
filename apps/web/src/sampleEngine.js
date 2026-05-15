@@ -247,15 +247,20 @@ function _playSample(ctx, sampleMap, midi, durationMs, startTime, centsOffset, l
 function _playGranular(ctx, sampleMap, midi, startTime, centsOffset) {
   const entry = sampleMap.get(midi)
   if (!entry) return null
-  const { buffer, loopStart, loopEnd, pitchCorrCents = 0 } = entry
+  const { buffer, onsetMs, pitchCorrCents = 0 } = entry
 
-  const GRAIN_DUR_WC = 0.15
-  const HOP_WC       = 0.075
-  const LOOKAHEAD    = 0.2
-  const INTERVAL_MS  = 50
+  // Pool = zone sustain complète (évite attaque + queue)
+  const poolStart = Math.min(onsetMs / 1000 + 0.2, buffer.duration * 0.3)
+  const poolEnd   = Math.max(poolStart + 0.5, buffer.duration - 0.2)
+
+  const GRAIN_DUR_WC = 0.25   // grains plus longs → moins de nodes/s, meilleure qualité basse
+  const HOP_WC       = 0.125  // 50 % overlap
+  const LOOKAHEAD    = 0.25
+  const INTERVAL_MS  = 60
 
   let currentRate   = Math.pow(2, (centsOffset + pitchCorrCents) / 1200)
-  let grainPos      = loopStart
+  let grainPos      = poolStart
+  let direction     = 1        // ping-pong : +1 avance, -1 recule
   let nextGrainTime = startTime
   let stopped       = false
 
@@ -264,23 +269,33 @@ function _playGranular(ctx, sampleMap, midi, startTime, centsOffset) {
   masterGain.connect(ctx.destination)
 
   function scheduleGrain() {
+    // Toujours dans le futur pour éviter enveloppes démarrées mid-ramp
+    const t = Math.max(nextGrainTime, ctx.currentTime + 0.003)
+
     const src = ctx.createBufferSource()
     src.buffer = buffer
     src.playbackRate.value = currentRate
 
     const grainGain = ctx.createGain()
-    const t = nextGrainTime
     grainGain.gain.setValueAtTime(0, t)
     grainGain.gain.linearRampToValueAtTime(1, t + GRAIN_DUR_WC / 2)
     grainGain.gain.linearRampToValueAtTime(0, t + GRAIN_DUR_WC)
 
     src.connect(grainGain)
     grainGain.connect(masterGain)
-    src.start(t, grainPos, GRAIN_DUR_WC * currentRate)
+    // Clamp grainPos dans le pool avant de jouer
+    const safePos = Math.max(poolStart, Math.min(grainPos, poolEnd - GRAIN_DUR_WC * currentRate))
+    src.start(t, safePos, GRAIN_DUR_WC * currentRate)
 
-    grainPos += HOP_WC * currentRate
-    if (grainPos + GRAIN_DUR_WC * currentRate > loopEnd) grainPos = loopStart
-    nextGrainTime += HOP_WC
+    // Cleanup après lecture (évite accumulation de GainNodes)
+    src.onended = () => { try { src.disconnect(); grainGain.disconnect() } catch {} }
+
+    // Avance ping-pong
+    grainPos += HOP_WC * currentRate * direction
+    if (grainPos + GRAIN_DUR_WC * currentRate >= poolEnd) direction = -1
+    if (grainPos <= poolStart)                            direction = 1
+
+    nextGrainTime = t + HOP_WC
   }
 
   function tick() {
