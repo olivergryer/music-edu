@@ -168,9 +168,7 @@ function _playSoundFontNote(player, midi, centsOffset) {
   const noteName = _midiToSFNote(midi)
   const sfCtx    = _getSFCtx()
   if (sfCtx.state === 'suspended') sfCtx.resume()
-  const node = player.play(noteName, sfCtx.currentTime + 0.05, {
-    gain: 0.75, loop: true, loopStart: 0.2,
-  })
+  const node = player.play(noteName, sfCtx.currentTime + 0.05, { gain: 0.75 })
   if (!node) return null
   const source      = node.source  // AudioBufferSourceNode
   const sfBaseRate  = source?.playbackRate.value ?? 1
@@ -213,9 +211,7 @@ export async function loadInstrumentSamples(instrument, onProgress) {
   // Soundfont GM — soundfont-player gère le sustain infini nativement
   if (INSTRUMENTS[instrument]?.isSF) {
     const sfCtx = _getSFCtx()
-    const promise = Soundfont.instrument(sfCtx, SOUNDFONT_NAMES[instrument], {
-      soundfont: 'FluidR3_GM', format: 'mp3',
-    }).then(player => {
+    const promise = Soundfont.instrument(sfCtx, SOUNDFONT_NAMES[instrument]).then(player => {
       const map = new Map([['__sf__', player]])
       _memCache.set(instrument, map)
       _inFlight.delete(instrument)
