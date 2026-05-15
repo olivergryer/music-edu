@@ -1515,7 +1515,9 @@ export default function AccordeurPage() {
                   className="flex-1 bg-app text-app border border-app rounded-md px-2 py-1.5 text-xs"
                 >
                   {Object.entries(INSTRUMENTS).map(([k, v]) => (
-                    <option key={k} value={k}>{v.label}</option>
+                    <option key={k} value={k} disabled={k !== 'oscillator'}>
+                      {v.label}{k !== 'oscillator' ? ' (bientôt)' : ''}
+                    </option>
                   ))}
                 </select>
               </div>

@@ -414,7 +414,9 @@ export default function GenerateurAccordPage() {
               onChange={e => setInstrument(e.target.value)}
             >
               {Object.entries(INSTRUMENTS).map(([k, v]) => (
-                <option key={k} value={k}>{v.label}</option>
+                <option key={k} value={k} disabled={k !== 'oscillator'}>
+                  {v.label}{k !== 'oscillator' ? ' (bientôt)' : ''}
+                </option>
               ))}
             </select>
           </div>

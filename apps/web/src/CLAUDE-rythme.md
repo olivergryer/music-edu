@@ -84,7 +84,7 @@ Groupes : `binary` (4/4) ou `ternary` (12/8) · `totalMs = 4 * beatMs` pour les 
 
 ## Points d'attention
 - VexFlow 5 : `Beam.draw()` n'appelle pas `applyStyle()` → couleur ligatures via `ctx.setFillStyle/setStrokeStyle` avant draw
-- VexFlow `staveY` : **offset réel = +40px** — `getYForLine(0) = staveY + 40`, `getYForLine(4) = staveY + 80`. Formule correcte pour centrer : `staveY = max(4, round(height/2 - 60))`. Pour h<150 seulement (h≥150 → staveY=24 hardcodé). Pour h=90 la ligne du bas sortirait du SVG → utiliser h≥120 pour les petits blocs (act 3 choices : `height={120}`).
+- VexFlow `staveY` : **offset réel = +40px** — `getYForLine(0) = staveY + 40`, `getYForLine(4) = staveY + 80`. Formule correcte pour centrer : `staveY = max(4, round(height/2 - 60))`. Pour h<150 seulement (h≥150 → staveY=24 hardcodé). Pour h=90 la ligne du bas sortirait du SVG → utiliser h≥100 pour les petits blocs (act 3 choices : `height={100}`, width 168/336).
 - `staveY` dans `RythmStaff.jsx` : `height >= 150 ? 24 : Math.max(4, Math.round(height / 2 - 60))`
 - RythmStaff div : `height: height` (prop) en style explicite — empêche le flex-stretch dans les cartes
 - Chunk size warning build = normal (VexFlow volumineux)

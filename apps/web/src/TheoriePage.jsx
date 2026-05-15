@@ -546,8 +546,19 @@ function QuizScreen({ session, mode, onAnswer, onNext }) {
   const isLast = currentIdx === pool.length - 1
   const catLabel = CATEGORIES.find(c => c.includes.includes(q.categorie))?.label ?? q.categorie
 
+  const pointerDownY = useRef(null)
+  function handlePointerDown(e) {
+    if (!revealed) return
+    pointerDownY.current = e.clientY
+  }
+  function handlePointerUp(e) {
+    if (!revealed || pointerDownY.current === null) return
+    if (Math.abs(e.clientY - pointerDownY.current) < 8) onNext()
+    pointerDownY.current = null
+  }
+
   return (
-    <div>
+    <div onPointerDown={handlePointerDown} onPointerUp={handlePointerUp}
       <div className="flex justify-between items-center mb-2">
         <span className="text-xs text-app-muted">Question {currentIdx + 1} / {pool.length}</span>
         <span className="text-xs font-bold" style={{ color: timedOut ? '#f87171' : timeLeft <= 3 ? '#fbbf24' : 'var(--text-muted)' }}>
@@ -617,6 +628,7 @@ function QuizScreen({ session, mode, onAnswer, onNext }) {
             className="w-full rounded-xl px-4 py-3 text-sm font-bold text-white border-none mt-4"
             style={{ background: '#8B5CF6' }}
             onClick={onNext}
+            onPointerDown={e => e.stopPropagation()}
           >
             {isLast ? 'Voir les résultats →' : 'Suivant →'}
           </button>
@@ -771,8 +783,7 @@ export default function TheoriePage() {
               >
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <circle cx="12" cy="12" r="3"/>
-                  <path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/>
-                  <path d="M12 2v2m0 16v2M2 12h2m16 0h2"/>
+                  <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
                 </svg>
               </button>
             )}

@@ -1933,8 +1933,8 @@ export default function RythmApp() {
                         figures={c.figs}
                         timeSig={c.timeSig}
                         activeIdx={-1}
-                        width={choiceCols === 1 ? 480 : 240}
-                        height={120}
+                        width={choiceCols === 1 ? 336 : 168}
+                        height={100}
                         showClef={false}
                         showTimeSig={true}
                       />
