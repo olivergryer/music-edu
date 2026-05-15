@@ -179,8 +179,12 @@ export async function loadInstrumentSamples(instrument, onProgress) {
         const onsetMs = manifestEntry?.onsetMs ?? detectOnset(buf)
         let loopStart, loopEnd
         if (manifestEntry) {
-          loopStart = manifestEntry.loopStart
-          loopEnd   = manifestEntry.loopEnd
+          const sr = buf.sampleRate
+          const loopStartSample = Math.round(manifestEntry.loopStart * sr)
+          const loopEndSample   = Math.round(manifestEntry.loopEnd * sr)
+          applyLoopCrossfade(buf, loopStartSample, loopEndSample, 20)
+          loopStart = loopStartSample / sr
+          loopEnd   = loopEndSample / sr
         } else {
           ;({ loopStart, loopEnd } = findLoopPoints(buf, onsetMs))
         }
@@ -240,6 +244,43 @@ function _playSample(ctx, sampleMap, midi, durationMs, startTime, centsOffset, l
     src.start(startTime, onsetMs / 1000)
   }
   return { src, midi, pitchCorrCents: entry.pitchCorrCents ?? 0 }
+}
+
+// ─── Lecture en boucle infinie (src.loop) avec crossfade pré-appliqué ────────
+// Interface identique à _playGranular : stop() avec fade, playbackRate.setTargetAtTime
+function _playLooped(ctx, sampleMap, midi, startTime, centsOffset) {
+  const entry = sampleMap.get(midi)
+  if (!entry) return null
+  const { buffer, onsetMs, loopStart, loopEnd, pitchCorrCents = 0 } = entry
+
+  const src = ctx.createBufferSource()
+  src.buffer = buffer
+  src.playbackRate.value = Math.pow(2, (centsOffset + pitchCorrCents) / 1200)
+  src.loop      = true
+  src.loopStart = loopStart
+  src.loopEnd   = loopEnd
+
+  const gain = ctx.createGain()
+  gain.gain.setValueAtTime(0.75, startTime)
+  src.connect(gain)
+  gain.connect(ctx.destination)
+  src.start(startTime, onsetMs / 1000)
+
+  return {
+    src: {
+      stop: () => {
+        gain.gain.setTargetAtTime(0, ctx.currentTime, 0.04)
+        try { src.stop(ctx.currentTime + 0.3) } catch {}
+      },
+      playbackRate: {
+        setTargetAtTime: (rate) => {
+          src.playbackRate.setTargetAtTime(rate, ctx.currentTime, 0.02)
+        },
+      },
+    },
+    midi,
+    pitchCorrCents,
+  }
 }
 
 // ─── Synthèse granulaire — lecture infinie sans clic ─────────────────────────
@@ -327,7 +368,7 @@ export function playChord(ctx, midis, offsets, sampleMap, diapason = 442) {
   const diapasonCents = 1200 * Math.log2(diapason / 440)
   return midis.map((midi, i) => {
     const centsOffset = diapasonCents + (offsets[i] ?? 0)
-    return _playGranular(ctx, sampleMap, midi, t0, centsOffset)
+    return _playLooped(ctx, sampleMap, midi, t0, centsOffset)
   }).filter(Boolean)
 }
 
