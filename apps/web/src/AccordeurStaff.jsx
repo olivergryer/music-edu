@@ -28,7 +28,7 @@ function bestOctaveShift(midis) {
 }
 
 const STAVE_MARGIN = 140
-const PX_PER_BEAT  = 52  // pixels par beat (quarter note)
+const PX_PER_BEAT  = 28  // pixels par beat (quarter note)
 
 // Durée réelle (ms) → type VexFlow + valeur en beats
 function durationToVex(ms) {
