@@ -1237,6 +1237,28 @@ export default function AccordeurPage() {
 
           {erreur && <div className="text-red-400 text-xs mt-3">{erreur}</div>}
 
+          {/* ── Lien Générateur d'accords ── */}
+          <div style={{ display: 'flex', justifyContent: 'flex-start', marginTop: 16 }}>
+            <Link
+              to="/accordeur/generateur"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: '#FF8B3D', fontSize: 12, fontWeight: 600, textDecoration: 'none', opacity: 0.85 }}
+            >
+              <svg width="14" height="16" viewBox="0 0 20 22" fill="none">
+                {[3, 8, 13, 18].map(x => (
+                  <line key={x} x1={x} y1="1" x2={x} y2="21" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                ))}
+                {[5, 10, 15, 20].map(y => (
+                  <line key={y} x1="1" y1={y} x2="20" y2={y} stroke="currentColor" strokeWidth="1.5" />
+                ))}
+                <circle cx="3" cy="7.5" r="2.5" fill="currentColor" />
+                <circle cx="8" cy="12.5" r="2.5" fill="currentColor" />
+                <circle cx="13" cy="7.5" r="2.5" fill="currentColor" />
+                <circle cx="18" cy="2.5" r="2.5" fill="currentColor" />
+              </svg>
+              Générateur d'accords
+            </Link>
+          </div>
+
           {/* ── Instrument + Réécouter + Version juste (mode enregistrement) ── */}
           {!modeLive && (
             <div style={{ marginTop: 18, paddingTop: 14, borderTop: '1px solid var(--border-c)' }}>
