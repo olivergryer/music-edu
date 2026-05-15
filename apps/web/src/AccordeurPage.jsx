@@ -1255,7 +1255,7 @@ export default function AccordeurPage() {
                 <circle cx="13" cy="7.5" r="2.5" fill="currentColor" />
                 <circle cx="18" cy="2.5" r="2.5" fill="currentColor" />
               </svg>
-              Générateur d'accords
+              <span style={{ lineHeight: 1.3 }}>Générateur<br />d'accords</span>
             </Link>
           </div>
 
@@ -1520,16 +1520,28 @@ export default function AccordeurPage() {
           </select>
 
           <div className="flex gap-1.5">
-            {REFERENTIELS.map(r => (
-              <button key={r} onClick={() => setReferentiel(r)}
-                className="flex-1 py-1.5 rounded-md border-none font-bold text-xs cursor-pointer transition-colors"
-                style={{
-                  background: referentiel === r ? '#FF8B3D' : 'var(--surface-2)',
-                  color:      referentiel === r ? '#fff' : 'var(--text-muted)',
-                }}
-              >{r === 'tempere' ? 'Tempéré' : r === '5-limite' ? 'Harmonique' : 'Utilisateur'}</button>
-            ))}
+            {REFERENTIELS.map(r => {
+              const needsStructure = (r === '5-limite' || r === 'utilisateur') && structureId === null
+              return (
+                <button key={r}
+                  onClick={() => { if (!needsStructure) setReferentiel(r) }}
+                  title={needsStructure ? 'Sélectionnez une structure tonale ci-dessus pour activer ce référentiel' : undefined}
+                  className="flex-1 py-1.5 rounded-md border-none font-bold text-xs transition-colors"
+                  style={{
+                    background: referentiel === r ? '#FF8B3D' : 'var(--surface-2)',
+                    color:      referentiel === r ? '#fff' : needsStructure ? 'var(--text-muted)' : 'var(--text-muted)',
+                    opacity:    needsStructure ? 0.4 : 1,
+                    cursor:     needsStructure ? 'not-allowed' : 'pointer',
+                  }}
+                >{r === 'tempere' ? 'Tempéré' : r === '5-limite' ? 'Harmonique' : 'Utilisateur'}</button>
+              )
+            })}
           </div>
+          {structureId === null && referentiel !== 'tempere' && (
+            <div style={{ fontSize: 11, color: '#fbbf24', marginTop: 6 }}>
+              Référentiel Harmonique/Utilisateur nécessite une structure tonale — sélectionnez-en une ci-dessus.
+            </div>
+          )}
 
           {urlStructure && (
             <div className="mt-2.5 flex gap-2 items-center">
