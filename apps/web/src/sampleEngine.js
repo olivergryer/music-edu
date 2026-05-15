@@ -1,3 +1,4 @@
+import Soundfont from 'soundfont-player'
 import { midiToHz, JUST_RATIOS_CENTS } from './accordeurUtils'
 import LOOP_MANIFEST from './sampleLoopManifest.json'
 
@@ -8,11 +9,11 @@ const R2_PC   = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'
 // ─── Définitions des instruments ─────────────────────────────────────────────
 export const INSTRUMENTS = {
   oscillator: { label: 'Sinusoïde',     loMidi: 0,  hiMidi: 127, isOsc: true },
-  flute:      { label: 'Flûte',         loMidi: 59, hiMidi: 97,  pattern: (n, o) => `flute/Flute.nonvib.ff.${n}${o}.stereo.aif`     },
-  oboe:       { label: 'Hautbois',      loMidi: 58, hiMidi: 92,  pattern: (n, o) => `oboe/Oboe.ff.${n}${o}.stereo.aif`               },
-  clarinet:   { label: 'Clarinette',    loMidi: 50, hiMidi: 95,  pattern: (n, o) => `clarinet/BbClarinet.ff.${n}${o}.stereo.aif`     },
-  saxophone:  { label: 'Saxophone alto',loMidi: 49, hiMidi: 80,  pattern: (n, o) => `saxophone/AltoSax.NoVib.ff.${n}${o}.stereo.aif` },
-  bassoon:    { label: 'Basson',        loMidi: 34, hiMidi: 74,  pattern: (n, o) => `bassoon/Bassoon.ff.${n}${o}.stereo.aif`         },
+  flute:      { label: 'Flûte',         loMidi: 59, hiMidi: 97,  isSF: true },
+  oboe:       { label: 'Hautbois',      loMidi: 58, hiMidi: 92,  isSF: true },
+  clarinet:   { label: 'Clarinette',    loMidi: 50, hiMidi: 95,  isSF: true },
+  saxophone:  { label: 'Saxophone alto',loMidi: 49, hiMidi: 80,  isSF: true },
+  bassoon:    { label: 'Basson',        loMidi: 34, hiMidi: 74,  isSF: true },
 }
 
 // ─── Instrument oscillateur ? ─────────────────────────────────────────────────
@@ -109,17 +110,22 @@ function applyLoopCrossfade(buffer, loopStartSample, loopEndSample, xfMs = 60) {
   }
 }
 
-function findLoopPoints(buffer, onsetMs) {
+function findLoopPoints(buffer, onsetMs, targetLoopSec = 1.2) {
   const sr   = buffer.sampleRate
   const data = buffer.getChannelData(0)
-  // Sauter l'attaque (onset + 150ms)
   const sustainStart = Math.floor((onsetMs / 1000 + 0.15) * sr)
-  // Début de boucle : 50ms dans le sustain
   const rawStart = sustainStart + Math.floor(0.05 * sr)
-  // Fin de boucle : +400ms (boucle de 400ms)
-  const rawEnd   = rawStart + Math.floor(1.2 * sr)
+  const rawEnd   = rawStart + Math.floor(targetLoopSec * sr)
 
   if (rawEnd >= data.length) {
+    // Fallback : boucle sur 80 % du sample (évite la queue de release)
+    const fallbackEnd = Math.floor(data.length * 0.80)
+    const loopStartSample = findPosiZeroCross(data, rawStart)
+    const loopEndSample   = findPosiZeroCross(data, fallbackEnd)
+    if (loopEndSample > loopStartSample + sr * 0.1) {
+      applyLoopCrossfade(buffer, loopStartSample, loopEndSample)
+      return { loopStart: loopStartSample / sr, loopEnd: loopEndSample / sr }
+    }
     return { loopStart: sustainStart / sr, loopEnd: buffer.duration }
   }
 
@@ -129,6 +135,50 @@ function findLoopPoints(buffer, onsetMs) {
   return {
     loopStart: loopStartSample / sr,
     loopEnd:   loopEndSample   / sr,
+  }
+}
+
+// ─── Soundfont GM via soundfont-player ───────────────────────────────────────
+const SOUNDFONT_NAMES = {
+  flute:     'flute',
+  oboe:      'oboe',
+  clarinet:  'clarinet',
+  saxophone: 'alto-sax',
+  bassoon:   'bassoon',
+}
+
+// AudioContext singleton partagé entre tous les instruments soundfont
+let _sfCtx = null
+function _getSFCtx() {
+  if (!_sfCtx || _sfCtx.state === 'closed') {
+    _sfCtx = new (window.AudioContext || window.webkitAudioContext)()
+  }
+  return _sfCtx
+}
+
+const _SF_NOTES = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B']
+function _midiToSFNote(midi) {
+  return _SF_NOTES[midi % 12] + (Math.floor(midi / 12) - 1)
+}
+
+// ─── Joue une note soundfont avec sustain infini ───────────────────────────
+function _playSoundFontNote(player, midi, centsOffset) {
+  const noteName = _midiToSFNote(midi)
+  const sfCtx    = _getSFCtx()
+  if (sfCtx.state === 'suspended') sfCtx.resume()
+  const node = player.play(noteName, sfCtx.currentTime + 0.05, { gain: 0.75 })
+  if (!node) return null
+  const baseRate = node.playbackRate.value
+  node.playbackRate.value = baseRate * Math.pow(2, centsOffset / 1200)
+  return {
+    src: {
+      stop: () => { try { node.stop(0) } catch {} },
+      playbackRate: {
+        setTargetAtTime: (newRate) => { node.playbackRate.value = baseRate * newRate },
+      },
+    },
+    midi,
+    pitchCorrCents: 0,
   }
 }
 
@@ -149,6 +199,26 @@ export async function loadInstrumentSamples(instrument, onProgress) {
     const map = await _inFlight.get(instrument)
     onProgress?.(1)
     return map
+  }
+
+  // Soundfont GM — soundfont-player gère le sustain infini nativement
+  if (INSTRUMENTS[instrument]?.isSF) {
+    const sfCtx = _getSFCtx()
+    const promise = Soundfont.instrument(sfCtx, SOUNDFONT_NAMES[instrument], {
+      soundfont: 'FluidR3_GM', format: 'mp3',
+    }).then(player => {
+      const map = new Map([['__sf__', player]])
+      _memCache.set(instrument, map)
+      _inFlight.delete(instrument)
+      onProgress?.(1)
+      return map
+    }).catch(e => {
+      console.error(`sampleEngine: soundfont load failed (${instrument})`, e)
+      _inFlight.delete(instrument)
+      return new Map()
+    })
+    _inFlight.set(instrument, promise)
+    return promise
   }
 
   const { loMidi, hiMidi } = INSTRUMENTS[instrument]
@@ -361,11 +431,17 @@ function _playGranular(ctx, sampleMap, midi, startTime, centsOffset) {
   }
 }
 
-// ─── Joue un accord en boucle (samples, granulaire infini) ────────────────────
+// ─── Joue un accord en boucle ────────────────────────────────────────────────
 // Retourne [{src, midi, pitchCorrCents}] — interface compatible GenerateurAccordPage
 export function playChord(ctx, midis, offsets, sampleMap, diapason = 442) {
-  const t0            = ctx.currentTime + 0.05
   const diapasonCents = 1200 * Math.log2(diapason / 440)
+  const sfPlayer = sampleMap?.get('__sf__')
+  if (sfPlayer) {
+    return midis.map((midi, i) =>
+      _playSoundFontNote(sfPlayer, midi, diapasonCents + (offsets[i] ?? 0))
+    ).filter(Boolean)
+  }
+  const t0 = ctx.currentTime + 0.05
   return midis.map((midi, i) => {
     const centsOffset = diapasonCents + (offsets[i] ?? 0)
     return _playLooped(ctx, sampleMap, midi, t0, centsOffset)
@@ -396,25 +472,39 @@ export function playChordOscillator(ctx, midis, offsets, diapason = 442) {
 export function playPhrase(ctx, notes, sampleMap, referentiel, tonikMidi, diapason = 442) {
   const tonic         = tonikMidi ?? 60
   const diapasonCents = 1200 * Math.log2(diapason / 440)
+  const sfPlayer      = sampleMap?.get('__sf__')
+
+  if (sfPlayer) {
+    const sfCtx = _getSFCtx()
+    if (sfCtx.state === 'suspended') sfCtx.resume()
+    let time = sfCtx.currentTime + 0.05
+    return notes.map(({ midiCible, debutMs, finMs }) => {
+      const durSec = Math.max(200, Math.min(finMs - debutMs, 2000)) / 1000
+      let corrCents = 0
+      if (referentiel === '5-limite') {
+        corrCents = _correctionCinqLimite(((midiCible - tonic) % 12 + 12) % 12)
+      }
+      const node = sfPlayer.play(_midiToSFNote(midiCible), time, {
+        gain: 0.75, duration: durSec,
+      })
+      time += durSec
+      return node
+    }).filter(Boolean)
+  }
+
   let time = ctx.currentTime + 0.05
   const srcs = []
-
   notes.forEach(note => {
     const { midiCible, debutMs, finMs } = note
-    const rawMs     = finMs - debutMs
-    const durationMs = Math.max(200, rawMs)
-
+    const durationMs = Math.max(200, finMs - debutMs)
     let corrCents = 0
     if (referentiel === '5-limite') {
-      const interval = ((midiCible - tonic) % 12 + 12) % 12
-      corrCents = _correctionCinqLimite(interval)
+      corrCents = _correctionCinqLimite(((midiCible - tonic) % 12 + 12) % 12)
     }
-
     const entry = _playSample(ctx, sampleMap, midiCible, durationMs, time, diapasonCents + corrCents, false)
     if (entry) srcs.push(entry.src)
     time += Math.min(durationMs, 2000) / 1000
   })
-
   return srcs
 }
 

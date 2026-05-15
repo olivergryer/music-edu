@@ -196,6 +196,209 @@ function TexteQuestion({ value, onChange, onSubmit, revealed, correct }) {
 }
 
 // ── Accueil ────────────────────────────────────────────────────────────────────
+// ── Tutorial ───────────────────────────────────────────────────────────────────
+const THEORIE_TUTO_KEY = 'theorie_tuto_v1'
+const TUTO_TOTAL = 4
+
+const CAT_COLORS = ['#8B5CF6','#7C3AED','#A78BFA','#6D28D9','#C4B5FD','#DDD6FE']
+
+function TheorieTutorial({ onDone }) {
+  const [slide, setSlide] = useState(0)
+  const [selectedMode, setSelectedMode] = useState('entrainement')
+
+  const SLIDES = [
+    { title: 'Bienvenue dans Théorie !', body: 'Quiz de théorie musicale — intervalles, tonalités, rythme, harmonie et plus. Progresse à ton rythme, du débutant au niveau avancé.' },
+    { title: '4 types de questions',     body: 'QCM classique, vrai ou faux, réponse libre, ou identification d\'un intervalle sur portée.' },
+    { title: 'Réponds vite !',           body: '20 secondes par question. Répondre hors délai donne 0,5 point au lieu de 1 — mais tu peux toujours répondre !' },
+    { title: 'Quel mode ?',              body: 'Choisis ton mode de départ. Tu pourras en changer à tout moment depuis l\'accueil.' },
+  ]
+
+  function renderVisual() {
+    if (slide === 0) {
+      return (
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, width:280 }}>
+          {CATEGORIES.map((cat, i) => (
+            <div key={cat.id} style={{ background:'rgba(139,92,246,0.1)', border:'2px solid rgba(139,92,246,0.3)', borderRadius:14, padding:'14px 10px', textAlign:'center' }}>
+              <div style={{ width:10, height:10, borderRadius:5, background:CAT_COLORS[i], margin:'0 auto 8px' }} />
+              <div style={{ fontSize:10, fontWeight:700, color:'#c4b5fd', lineHeight:1.3 }}>{cat.label}</div>
+            </div>
+          ))}
+        </div>
+      )
+    }
+
+    if (slide === 1) {
+      const types = [
+        {
+          label: 'QCM', sub: '4 propositions',
+          icon: (
+            <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+              {[8,16,24,32].map((y,i) => (
+                <g key={y}>
+                  <circle cx="8" cy={y} r="4" stroke="#8B5CF6" strokeWidth="1.5" fill={i===1?'#8B5CF6':'none'}/>
+                  <line x1="16" y1={y} x2="32" y2={y} stroke="#9ca3af" strokeWidth="1.5" strokeLinecap="round"/>
+                </g>
+              ))}
+            </svg>
+          ),
+        },
+        {
+          label: 'Vrai / Faux', sub: '2 choix',
+          icon: (
+            <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+              <rect x="2" y="4" width="14" height="28" rx="4" fill="rgba(52,211,153,0.15)" stroke="#34d399" strokeWidth="1.5"/>
+              <text x="9" y="22" textAnchor="middle" fontSize="13" fontWeight="900" fill="#34d399">V</text>
+              <rect x="20" y="4" width="14" height="28" rx="4" fill="rgba(248,113,113,0.15)" stroke="#f87171" strokeWidth="1.5"/>
+              <text x="27" y="22" textAnchor="middle" fontSize="13" fontWeight="900" fill="#f87171">F</text>
+            </svg>
+          ),
+        },
+        {
+          label: 'Texte libre', sub: 'Tape ta réponse',
+          icon: (
+            <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+              <rect x="2" y="8" width="32" height="20" rx="4" stroke="#8B5CF6" strokeWidth="1.5" fill="none"/>
+              <line x1="8" y1="18" x2="22" y2="18" stroke="#c084fc" strokeWidth="1.5" strokeLinecap="round"/>
+              <line x1="22" y1="14" x2="22" y2="22" stroke="#c084fc" strokeWidth="1.5" strokeLinecap="round"/>
+            </svg>
+          ),
+        },
+        {
+          label: 'Portée', sub: 'Identifie l\'intervalle',
+          icon: (
+            <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+              {[10,15,20,25,30].map(y => <line key={y} x1="2" y1={y} x2="34" y2={y} stroke="#9ca3af" strokeWidth="0.8"/>)}
+              <ellipse cx="16" cy="25" rx="4" ry="2.8" fill="#8B5CF6" transform="rotate(-15 16 25)"/>
+              <line x1="19.5" y1="24" x2="19.5" y2="12" stroke="#8B5CF6" strokeWidth="1.5" strokeLinecap="round"/>
+              <ellipse cx="26" cy="20" rx="4" ry="2.8" fill="#8B5CF6" transform="rotate(-15 26 20)"/>
+              <line x1="29.5" y1="19" x2="29.5" y2="7" stroke="#8B5CF6" strokeWidth="1.5" strokeLinecap="round"/>
+            </svg>
+          ),
+        },
+      ]
+      return (
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, width:280 }}>
+          {types.map(t => (
+            <div key={t.label} style={{ background:'rgba(139,92,246,0.08)', border:'2px solid rgba(139,92,246,0.25)', borderRadius:14, padding:'16px 10px', display:'flex', flexDirection:'column', alignItems:'center', gap:8 }}>
+              {t.icon}
+              <div style={{ fontSize:11, fontWeight:800, color:'#c4b5fd', textAlign:'center' }}>{t.label}</div>
+              <div style={{ fontSize:10, color:'#9ca3af', textAlign:'center', lineHeight:1.3 }}>{t.sub}</div>
+            </div>
+          ))}
+        </div>
+      )
+    }
+
+    if (slide === 2) {
+      return (
+        <div style={{ width:280, display:'flex', flexDirection:'column', gap:16, alignItems:'center' }}>
+          <div style={{ width:'100%', background:'rgba(139,92,246,0.12)', borderRadius:12, padding:'20px 16px' }}>
+            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10 }}>
+              <span style={{ fontSize:13, fontWeight:700, color:'#c4b5fd' }}>Temps restant</span>
+              <span style={{ fontSize:13, fontWeight:700, color:'#c4b5fd' }}>20s</span>
+            </div>
+            <div style={{ height:6, borderRadius:3, background:'rgba(139,92,246,0.2)', overflow:'hidden' }}>
+              <div style={{ height:'100%', width:'65%', borderRadius:3, background:'#8B5CF6' }} />
+            </div>
+          </div>
+          <div style={{ display:'flex', gap:10, width:'100%' }}>
+            <div style={{ flex:1, background:'rgba(52,211,153,0.1)', border:'2px solid rgba(52,211,153,0.3)', borderRadius:12, padding:'14px 10px', textAlign:'center' }}>
+              <div style={{ fontSize:20, fontWeight:900, color:'#34d399' }}>1 pt</div>
+              <div style={{ fontSize:10, color:'#9ca3af', marginTop:4 }}>Dans les temps</div>
+            </div>
+            <div style={{ flex:1, background:'rgba(251,191,36,0.1)', border:'2px solid rgba(251,191,36,0.3)', borderRadius:12, padding:'14px 10px', textAlign:'center' }}>
+              <div style={{ fontSize:20, fontWeight:900, color:'#fbbf24' }}>½ pt</div>
+              <div style={{ fontSize:10, color:'#9ca3af', marginTop:4 }}>Hors délai</div>
+            </div>
+          </div>
+        </div>
+      )
+    }
+
+    if (slide === 3) {
+      const modes = [
+        { id:'entrainement', label:'Entraînement', desc:'10 questions · catégories au choix · feedback immédiat' },
+        { id:'examen',       label:'Examen',        desc:'40 questions · toutes catégories · seuil 35/40' },
+      ]
+      return (
+        <div style={{ display:'flex', flexDirection:'column', gap:10, width:280 }}>
+          {modes.map(m => {
+            const sel = selectedMode === m.id
+            return (
+              <div key={m.id} role="button" onClick={() => setSelectedMode(m.id)} style={{
+                borderRadius:16, padding:'16px 18px', cursor:'pointer',
+                background: sel ? 'rgba(139,92,246,0.18)' : 'rgba(255,255,255,0.03)',
+                border:`2px solid ${sel ? '#8B5CF6' : 'rgba(255,255,255,0.08)'}`,
+                transition:'all 0.15s',
+              }}>
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:4 }}>
+                  <span style={{ fontSize:14, fontWeight:800, color: sel ? '#c4b5fd' : '#6b7280' }}>{m.label}</span>
+                  {sel && <div style={{ width:10, height:10, borderRadius:5, background:'#8B5CF6' }}/>}
+                </div>
+                <div style={{ fontSize:11, color: sel ? '#a78bfa' : '#6b7280', lineHeight:1.4 }}>{m.desc}</div>
+              </div>
+            )
+          })}
+        </div>
+      )
+    }
+  }
+
+  const { title, body } = SLIDES[slide]
+  const ACC = '#8B5CF6'
+
+  return (
+    <div style={{
+      position:'fixed', inset:0, zIndex:100,
+      background:'#030712', color:'#f9fafb',
+      display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'space-between',
+      padding:'24px 20px 80px', overflowY:'auto',
+    }}>
+      {/* Dots + Ignorer */}
+      <div style={{ width:'100%', maxWidth:480, display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8 }}>
+        <div style={{ display:'flex', gap:6 }}>
+          {Array.from({ length: TUTO_TOTAL }).map((_, i) => (
+            <div key={i} style={{
+              width: i===slide ? 20 : 7, height:7, borderRadius:4,
+              background: i <= slide ? ACC : 'rgba(255,255,255,0.1)',
+              transition:'width 0.25s, background 0.25s',
+            }}/>
+          ))}
+        </div>
+        <button onClick={() => onDone(null)} style={{ background:'none', border:'none', color:'#6b7280', fontSize:13, fontWeight:700, cursor:'pointer', padding:'4px 8px' }}>
+          Ignorer
+        </button>
+      </div>
+
+      {/* Visual */}
+      <div style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', padding:'20px 0' }}>
+        {renderVisual()}
+      </div>
+
+      {/* Text */}
+      <div style={{ width:'100%', maxWidth:400, textAlign:'center', marginBottom:32 }}>
+        <div style={{ fontSize:22, fontWeight:900, color:'#f9fafb', marginBottom:10 }}>{title}</div>
+        <div style={{ fontSize:14, fontWeight:500, color:'#d1d5db', lineHeight:1.6 }}>{body}</div>
+      </div>
+
+      {/* Navigation */}
+      <div style={{ width:'100%', maxWidth:400, display:'flex', gap:10 }}>
+        {slide > 0 && (
+          <button onClick={() => setSlide(s => s - 1)} style={{ flex:1, padding:'14px 0', borderRadius:16, border:`2px solid rgba(139,92,246,0.3)`, background:'none', color:ACC, fontSize:14, fontWeight:700, cursor:'pointer' }}>
+            ← Précédent
+          </button>
+        )}
+        <button
+          onClick={() => slide < TUTO_TOTAL - 1 ? setSlide(s => s + 1) : onDone(selectedMode)}
+          style={{ flex:2, padding:'14px 0', borderRadius:16, border:'none', background:'linear-gradient(135deg,#7C3AED,#8B5CF6)', color:'#fff', fontSize:15, fontWeight:900, cursor:'pointer', boxShadow:'0 8px 24px rgba(139,92,246,0.35)' }}
+        >
+          {slide < TUTO_TOTAL - 1 ? 'Suivant →' : '▶ Commencer !'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
 function HomeScreen({ onMode, onLoadCSV, csvCount }) {
   const fileRef = useRef()
   function handleFile(e) {
@@ -215,7 +418,7 @@ function HomeScreen({ onMode, onLoadCSV, csvCount }) {
       <p className="text-sm text-app-muted mb-6">Quiz de théorie musicale</p>
       {[
         { mode: 'entrainement', label: 'Entraînement', desc: '10 questions · catégories au choix · feedback immédiat après chaque réponse' },
-        { mode: 'examen', label: 'Examen', desc: '40 questions · toutes catégories · seuil de passage 38/40 · pas de feedback pendant le test' },
+        { mode: 'examen', label: 'Examen', desc: '40 questions · toutes catégories · seuil de passage 35/40 · pas de feedback pendant le test' },
       ].map(({ mode, label, desc }) => (
         <div key={mode} className={cardCls}>
           <div className="text-base font-extrabold mb-2" style={{ color: '#8B5CF6' }}>{label}</div>
@@ -449,7 +652,7 @@ function ResultScreen({ session, mode, onReplay }) {
   const totalPts = answers.reduce((s, a) => s + a.points, 0)
   const maxPts = pool.length
   const pct = maxPts > 0 ? totalPts / maxPts : 0
-  const passed = mode === 'examen' ? totalPts >= 38 : null
+  const passed = mode === 'examen' ? totalPts >= 35 : null
   const errors = answers.filter(a => !a.correct)
   const barColor = pct >= 0.9 ? '#22C55E' : pct >= 0.7 ? '#fbbf24' : '#f87171'
 
@@ -476,7 +679,7 @@ function ResultScreen({ session, mode, onReplay }) {
         )}
         {mode === 'examen' && !passed && (
           <div className="text-sm mt-1" style={{ color: '#fca5a5' }}>
-            Seuil de passage : 38/40. Il te manque {(38 - totalPts).toFixed(1)} point{38 - totalPts > 1 ? 's' : ''}.
+            Seuil de passage : 35/40. Il te manque {(35 - totalPts).toFixed(1)} point{35 - totalPts > 1 ? 's' : ''}.
           </div>
         )}
       </div>
@@ -512,6 +715,9 @@ export default function TheoriePage() {
   const [allQuestions, setAllQuestions] = useState([])
   const [csvQuestions, setCsvQuestions] = useState([])
   const [session, setSession] = useState(null)
+  const [showTutorial, setShowTutorial] = useState(() => {
+    try { return !localStorage.getItem(THEORIE_TUTO_KEY) } catch { return false }
+  })
 
   useEffect(() => {
     fetch('/data/questions.json').then(r => r.json()).then(setAllQuestions).catch(() => setAllQuestions([]))
@@ -527,6 +733,12 @@ export default function TheoriePage() {
     if (pool.length === 0) { alert('Aucune question ne correspond à cette sélection. Élargis le niveau ou les catégories.'); return }
     setSession({ pool, currentIdx: 0, answers: [] })
     setScreen('quiz')
+  }
+
+  function handleTutorialDone(selectedMode) {
+    try { localStorage.setItem(THEORIE_TUTO_KEY, '1') } catch {}
+    setShowTutorial(false)
+    if (selectedMode) { setMode(selectedMode); setScreen('setup') }
   }
 
   function handleAnswer(result) { setSession(prev => ({ ...prev, answers: [...prev.answers, result] })) }
@@ -558,7 +770,8 @@ export default function TheoriePage() {
           )}
         </div>
 
-        {screen === 'home' && <HomeScreen onMode={m => { setMode(m); setScreen('setup') }} onLoadCSV={setCsvQuestions} csvCount={csvQuestions.length} />}
+        {showTutorial && <TheorieTutorial onDone={handleTutorialDone} />}
+        {screen === 'home' && !showTutorial && <HomeScreen onMode={m => { setMode(m); setScreen('setup') }} onLoadCSV={setCsvQuestions} csvCount={csvQuestions.length} />}
         {screen === 'setup' && <SetupScreen mode={mode} questions={mergedQuestions} onStart={handleStart} />}
         {screen === 'quiz' && session && <QuizScreen key={session.currentIdx} session={session} mode={mode} onAnswer={handleAnswer} onNext={handleNext} />}
         {screen === 'result' && session && <ResultScreen session={session} mode={mode} onReplay={() => { setSession(null); setMode(null); setScreen('home') }} />}
