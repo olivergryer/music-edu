@@ -168,7 +168,7 @@ function _playSoundFontNote(player, midi, centsOffset) {
   const noteName = _midiToSFNote(midi)
   const sfCtx    = _getSFCtx()
   if (sfCtx.state === 'suspended') sfCtx.resume()
-  const node = player.play(noteName, sfCtx.currentTime + 0.05, { gain: 0.75 })
+  const node = player.play(noteName, sfCtx.currentTime + 0.05, { gain: 0.75, loop: true })
   if (!node) return null
   const source      = node.source  // AudioBufferSourceNode
   const sfBaseRate  = source?.playbackRate.value ?? 1
