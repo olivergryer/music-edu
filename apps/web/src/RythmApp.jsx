@@ -138,7 +138,8 @@ function generateDistractorVariant(target, pool) {
   const alternatives = beatPool1.filter(f => f.id !== slot.formula.id);
   if (alternatives.length === 0) return generateMeasure(target.timeSig, pool);
 
-  const sameCount = alternatives.filter(f => f.figs.length === slot.formula.figs.length);
+  const slotNotes = noteCount(slot.formula.figs);
+  const sameCount = alternatives.filter(f => noteCount(f.figs) === slotNotes);
   const pool2 = sameCount.length > 0 ? sameCount : alternatives;
   const newFormula = pool2[Math.floor(Math.random() * pool2.length)];
   const newSlots = target.formulaSlots.map((s, i) =>

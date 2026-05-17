@@ -110,7 +110,11 @@ function downsample(arr, n) {
 const SVGNS = 'http://www.w3.org/2000/svg'
 function svgEl(tag, attrs) {
   const e = document.createElementNS(SVGNS, tag)
-  for (const k in attrs) e.setAttribute(k, attrs[k])
+  for (const k in attrs) {
+    // fill/stroke via style — les attributs de présentation SVG n'acceptent pas var(...)
+    if (k === 'fill' || k === 'stroke') e.style[k] = attrs[k]
+    else e.setAttribute(k, attrs[k])
+  }
   return e
 }
 
@@ -191,8 +195,8 @@ export default function AccordeurStaff({ notes, transpoKey = 'C', tonicName = 'D
       svg.querySelectorAll('path').forEach(p => {
         const s = p.getAttribute('stroke') ?? ''
         const f = p.getAttribute('fill') ?? ''
-        if (!s || s === '#000000' || s === 'black') p.setAttribute('stroke', STAVE_COL)
-        if (!f || f === '#000000' || f === 'black') p.setAttribute('fill', STAVE_COL)
+        if (!s || s === '#000000' || s === 'black') p.style.stroke = STAVE_COL
+        if (!f || f === '#000000' || f === 'black') p.style.fill = STAVE_COL
         const w = parseFloat(p.getAttribute('stroke-width') || '1')
         p.setAttribute('stroke-width', (w * 0.7).toFixed(2))
       })
@@ -219,7 +223,7 @@ export default function AccordeurStaff({ notes, transpoKey = 'C', tonicName = 'D
         const targetY = sn.getYs()[0]
         const couleur = tog.couleur ? couleurEcart(note.muCents) : NEUTRAL_HEAD
         const offset  = Math.max(-maxOffset, Math.min(maxOffset, note.muCents * MU_COEFF))
-        const headY   = targetY + offset
+        const headY   = targetY - offset   // Y SVG inversé : +cents (trop haut) → Y plus petit
 
         // 1. Nom de la note (toujours affiché — pas de toggle dédié)
         const nameT = svgEl('text', {
