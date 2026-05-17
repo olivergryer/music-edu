@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Renderer, Stave, StaveNote, Voice, Formatter, Accidental } from 'vexflow'
 import { transposerMidi, buildEnharmonicVexScale } from './accordeurUtils'
+import { useTheme } from './ThemeContext'
 
 function midiToVexKey(midi, vexScale) {
   const name   = vexScale[((midi % 12) + 12) % 12] ?? 'c'
@@ -37,19 +38,23 @@ const STAVE_MARGIN      = 140
 const PX_PER_NOTE       = 28
 const MAX_NOTES_DISPLAY = 30
 
-// Couleurs sensibles au thème light/dark (variables CSS)
-const STAVE_COL    = 'var(--text-muted)'
-const NEUTRAL_HEAD = 'var(--text)'
-const NEUTRAL_TEXT = 'var(--text-muted)'
-const TARGET_COL   = 'var(--text-muted)'
-const ZERO_COL     = 'var(--border-c)'
+// Palette résolue en hex selon le thème (var() ne fonctionne pas en attribut SVG)
+function themePalette(dark) {
+  return {
+    stave:  dark ? '#9CA3AF' : '#6B7280',
+    head:   dark ? '#F4F5F7' : '#0D1026',
+    text:   dark ? '#9CA3AF' : '#6B7280',
+    target: dark ? '#9CA3AF' : '#6B7280',
+    zero:   dark ? '#475569' : '#CBD5E1',
+  }
+}
 
 const STAVE_Y      = 58
 const VALUES_Y     = 182    // descendu de 5 interlignes (~50px)
 const ZERO_Y       = 238
 const SPARK_HALF   = 18     // px pour ±SPARK_SCALE cents
 const SPARK_SCALE  = 50     // ¢ pleine échelle sparkline
-const MU_COEFF     = 0.4    // px de déplacement vertical par cent (à calibrer)
+const MU_COEFF     = 0.25   // px de déplacement vertical par cent (à calibrer)
 const HEAD_RX      = 7.6    // tête de note : plus elliptique, −20% vs initial
 const HEAD_RY      = 4.8
 
@@ -120,6 +125,8 @@ function svgEl(tag, attrs) {
 
 export default function AccordeurStaff({ notes, transpoKey = 'C', tonicName = 'Do', containerWidth = 500, height = 300, notePx = 52 }) {
   const ref = useRef(null)
+  const { dark } = useTheme()
+  const C = themePalette(dark)
 
   const [tog, setTog] = useState(() => {
     try {
@@ -195,12 +202,12 @@ export default function AccordeurStaff({ notes, transpoKey = 'C', tonicName = 'D
       svg.querySelectorAll('path').forEach(p => {
         const s = p.getAttribute('stroke') ?? ''
         const f = p.getAttribute('fill') ?? ''
-        if (!s || s === '#000000' || s === 'black') p.style.stroke = STAVE_COL
-        if (!f || f === '#000000' || f === 'black') p.style.fill = STAVE_COL
+        if (!s || s === '#000000' || s === 'black') p.style.stroke = C.stave
+        if (!f || f === '#000000' || f === 'black') p.style.fill = C.stave
         const w = parseFloat(p.getAttribute('stroke-width') || '1')
         p.setAttribute('stroke-width', (w * 0.7).toFixed(2))
       })
-      svg.querySelectorAll('text').forEach(t => { t.style.fill = STAVE_COL })
+      svg.querySelectorAll('text').forEach(t => { t.style.fill = C.stave })
 
       // Masque les têtes de notes natives — redessinées par la couche custom
       svg.querySelectorAll('.vf-notehead').forEach(n => { n.style.opacity = '0' })
@@ -221,14 +228,14 @@ export default function AccordeurStaff({ notes, transpoKey = 'C', tonicName = 'D
         const note    = displayedNotes[i]
         const cx      = centersX[i]
         const targetY = sn.getYs()[0]
-        const couleur = tog.couleur ? couleurEcart(note.muCents) : NEUTRAL_HEAD
+        const couleur = tog.couleur ? couleurEcart(note.muCents) : C.head
         const offset  = Math.max(-maxOffset, Math.min(maxOffset, note.muCents * MU_COEFF))
         const headY   = targetY - offset   // Y SVG inversé : +cents (trop haut) → Y plus petit
 
         // 1. Nom de la note (toujours affiché — pas de toggle dédié)
         const nameT = svgEl('text', {
           x: cx, y: STAVE_Y - 14, 'text-anchor': 'middle',
-          'font-size': '11', fill: NEUTRAL_TEXT, 'font-family': 'Arial, sans-serif',
+          'font-size': '11', fill: C.text, 'font-family': 'Arial, sans-serif',
         })
         nameT.textContent = vexKeyToLabel(keys[i])
         gNames.appendChild(nameT)
@@ -237,7 +244,7 @@ export default function AccordeurStaff({ notes, transpoKey = 'C', tonicName = 'D
         if (tog.halo) {
           const ryO = Math.min(28, 9 + note.sigmaCents * 0.7)
           const rxO = ryO * 0.5
-          const haloCol = tog.couleur ? couleur : STAVE_COL
+          const haloCol = tog.couleur ? couleur : C.stave
           gHalos.appendChild(svgEl('ellipse', {
             cx, cy: headY, rx: rxO, ry: ryO, fill: haloCol, opacity: '0.16',
           }))
@@ -250,7 +257,7 @@ export default function AccordeurStaff({ notes, transpoKey = 'C', tonicName = 'D
         if (tog.cible) {
           gTargets.appendChild(svgEl('ellipse', {
             cx, cy: targetY, rx: HEAD_RX, ry: HEAD_RY, fill: 'none',
-            stroke: TARGET_COL, 'stroke-width': '1', 'stroke-dasharray': '2,2',
+            stroke: C.target, 'stroke-width': '1', 'stroke-dasharray': '2,2',
             transform: `rotate(-20 ${cx} ${targetY})`,
           }))
         }
@@ -266,7 +273,7 @@ export default function AccordeurStaff({ notes, transpoKey = 'C', tonicName = 'D
           const valT = svgEl('text', {
             x: cx, y: VALUES_Y, 'text-anchor': 'middle',
             'font-size': '11', 'font-weight': '500',
-            fill: tog.couleur ? couleur : NEUTRAL_TEXT, 'font-family': 'Arial, sans-serif',
+            fill: tog.couleur ? couleur : C.text, 'font-family': 'Arial, sans-serif',
           })
           valT.textContent = fmtCents(note.muCents)
           gValues.appendChild(valT)
@@ -277,10 +284,10 @@ export default function AccordeurStaff({ notes, transpoKey = 'C', tonicName = 'D
       if (tog.sparkline) {
         gSpark.appendChild(svgEl('line', {
           x1: 10, y1: ZERO_Y, x2: staveWidth - 10, y2: ZERO_Y,
-          stroke: ZERO_COL, 'stroke-width': '1', 'stroke-dasharray': '2,3',
+          stroke: C.zero, 'stroke-width': '1', 'stroke-dasharray': '2,3',
         }))
         const zlab = svgEl('text', {
-          x: 4, y: ZERO_Y + 3, 'font-size': '9', fill: ZERO_COL, 'font-family': 'Arial, sans-serif',
+          x: 4, y: ZERO_Y + 3, 'font-size': '9', fill: C.text, 'font-family': 'Arial, sans-serif',
         })
         zlab.textContent = '0¢'
         gSpark.appendChild(zlab)
@@ -294,7 +301,7 @@ export default function AccordeurStaff({ notes, transpoKey = 'C', tonicName = 'D
           if (i > 0)                    w = Math.min(w, Math.abs(cx - centersX[i - 1]) * 0.9)
           if (i < centersX.length - 1)  w = Math.min(w, Math.abs(centersX[i + 1] - cx) * 0.9)
           const x0 = cx - w / 2
-          const couleur = tog.couleur ? couleurEcart(note.muCents) : NEUTRAL_TEXT
+          const couleur = tog.couleur ? couleurEcart(note.muCents) : C.text
           const coords = pts.map((c, j) => {
             const x = x0 + (w * j) / (pts.length - 1)
             const cl = Math.max(-SPARK_SCALE, Math.min(SPARK_SCALE, c))
@@ -317,7 +324,7 @@ export default function AccordeurStaff({ notes, transpoKey = 'C', tonicName = 'D
     } catch (err) {
       console.warn('AccordeurStaff VexFlow:', err.message ?? err)
     }
-  }, [notes, transpoKey, tonicName, staveWidth, height, tog]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [notes, transpoKey, tonicName, staveWidth, height, tog, dark]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const TOGGLES = [
     { k: 'couleur',   label: 'Couleur' },

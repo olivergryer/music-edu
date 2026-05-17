@@ -150,6 +150,37 @@ function generateDistractorVariant(target, pool) {
   return { timeSig: target.timeSig, name: "Aléatoire", figs: newFigs, formulaSlots: newSlots };
 }
 
+// Nombre de notes jouées (figures non-silences)
+function noteCount(figs) {
+  return figs.filter(f => !f.rest).length;
+}
+
+// Distracteur par permutation des slots du pattern cible.
+// Multiset de formules conservé → même nombre de notes garanti.
+function generateDistractorPermutation(target) {
+  const slots = target.formulaSlots;
+  if (!slots || slots.length < 2) return null;
+  const formulas = slots.map(s => s.formula).filter(Boolean);
+  if (formulas.length < 2) return null;
+
+  let perm;
+  if (Math.random() < 0.5) {
+    perm = shuffle(formulas);                                  // permutation aléatoire
+  } else {
+    const off = 1 + Math.floor(Math.random() * (formulas.length - 1));
+    perm = formulas.map((_, i) => formulas[(i + off) % formulas.length]); // rotation circulaire
+  }
+
+  let beat = 0;
+  const newSlots = perm.map(f => {
+    const s = { formula: f, startBeat: beat, beats: f.beats };
+    beat += f.beats;
+    return s;
+  });
+  const newFigs = newSlots.flatMap(s => s.formula.figs.map(f => ({ ...f })));
+  return { timeSig: target.timeSig, name: "Aléatoire", figs: newFigs, formulaSlots: newSlots };
+}
+
 // Empreinte des onsets non-silences (en unités de noires × 1000 pour éviter float)
 function attackFingerprint(figs) {
   let pos = 0;
@@ -164,30 +195,38 @@ function generateDistractors(target, pool, n = 3) {
   const key    = p => p.figs.map(f => f.dur + (f.triplet ? "t" : "")).join(",");
   const targetKey     = key(target);
   const targetAttacks = attackFingerprint(target.figs);
+  const targetNotes   = noteCount(target.figs);
   const result = [];
-  let attempts = 0;
-  while (result.length < n && attempts < 80) {
-    attempts++;
-    const c  = generateDistractorVariant(target, pool);
+
+  // Accepte un candidat : distinct de la cible, non-homorythme, pas vide/1 note, non doublon
+  const accept = (c) => {
+    if (!c) return false;
     const ck = key(c);
-    if (
-      ck !== targetKey &&
-      attackFingerprint(c.figs) !== targetAttacks &&
-      result.every(d => key(d) !== ck)
-    ) result.push(c);
-  }
-  // Fallback : mesures aléatoires, aussi filtrées homorythmes
-  let fallbackAttempts = 0;
-  while (result.length < n && fallbackAttempts < 80) {
-    fallbackAttempts++;
-    const c  = generateMeasure(target.timeSig, pool);
-    const ck = key(c);
-    if (
-      ck !== targetKey &&
-      attackFingerprint(c.figs) !== targetAttacks &&
-      result.every(d => key(d) !== ck)
-    ) result.push(c);
-  }
+    if (ck === targetKey) return false;
+    if (attackFingerprint(c.figs) === targetAttacks) return false;
+    if (noteCount(c.figs) <= 1) return false;
+    return result.every(d => key(d) !== ck);
+  };
+
+  const fill = (gen, requireSameNotes) => {
+    let attempts = 0;
+    while (result.length < n && attempts < 80) {
+      attempts++;
+      const c = gen();
+      if (!accept(c)) continue;
+      if (requireSameNotes && noteCount(c.figs) !== targetNotes) continue;
+      result.push(c);
+    }
+  };
+
+  // 1) Permutations des slots — même nombre de notes garanti
+  fill(() => generateDistractorPermutation(target), false);
+  // 2) Variant : un temps changé, nombre de notes préservé
+  fill(() => generateDistractorVariant(target, pool), true);
+  // 3) Fallback : mesures aléatoires, gardées seulement si même nombre de notes
+  fill(() => generateMeasure(target.timeSig, pool), true);
+  // 4) Dernier recours : variant sans contrainte de nombre de notes (garantit 4 choix)
+  fill(() => generateDistractorVariant(target, pool), false);
   return result;
 }
 
@@ -661,6 +700,17 @@ export default function RythmApp() {
   const tapSoundRef    = useRef(true);
   rhythmSoundRef.current = rhythmSoundOn;
   tapSoundRef.current    = tapSoundOn;
+
+  // Mode Extrême act 1 : rythme + flash off → score x2
+  const [extremeAnimOn, setExtremeAnimOn] = useState(false);
+  const [scoreWasExtreme, setScoreWasExtreme] = useState(false);  // mode Extrême figé au calcul du score
+  const extremeMode = activity === 1 && !rhythmSoundOn && !flashBorderOn;
+  useEffect(() => {
+    if (!extremeMode) return;
+    setExtremeAnimOn(true);
+    const t = setTimeout(() => setExtremeAnimOn(false), 1600);
+    return () => clearTimeout(t);
+  }, [extremeMode]);
 
   // Act 3 & 4
   const [choices,     setChoices]     = useState([]);
@@ -1158,7 +1208,9 @@ export default function RythmApp() {
     setScores(s);
     const raw    = s.reduce((sum, x) => sum + x.pts, 0);
     const bonus  = REVEAL_BONUS[revealBeat] / 100;
-    const earned = Math.round(raw * (1 + bonus));
+    const extremeMult = extremeMode ? 2 : 1;   // Mode Extrême : score x2 (cumul avec bonus révélation)
+    setScoreWasExtreme(extremeMode);
+    const earned = Math.round(raw * (1 + bonus) * extremeMult);
     setEarnedPts(earned);
     setTotalPts(prev => prev + earned);
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1577,7 +1629,7 @@ export default function RythmApp() {
   const playableCount = pattern?.figs.filter(f => !f.rest).length ?? 1;
   const rawMax        = playableCount * 100;
   const bonusMult     = 1 + REVEAL_BONUS[revealBeat] / 100;
-  const maxPts        = Math.round(rawMax * bonusMult);
+  const maxPts        = Math.round(rawMax * bonusMult * (scoreWasExtreme ? 2 : 1));
   const pct           = maxPts ? Math.round((earnedPts / maxPts) * 100) : 0;
   const medal         = pct >= 90 ? "🥇" : pct >= 70 ? "🥈" : pct >= 50 ? "🥉" : "🎯";
 
@@ -1702,6 +1754,37 @@ export default function RythmApp() {
         {/* Contenu central */}
         <div className="flex-1 flex flex-col items-center justify-center gap-4 min-w-0">
 
+          {/* Animation Mode Extrême activé */}
+          {extremeAnimOn && (
+            <div
+              style={{
+                position: 'fixed', inset: 0, zIndex: 50,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                pointerEvents: 'none',
+              }}
+            >
+              <div
+                style={{
+                  animation: 'extreme-pop 1.6s ease-out forwards',
+                  textAlign: 'center',
+                  background: 'rgba(3,7,18,0.85)',
+                  border: '2px solid #f87171',
+                  borderRadius: 20,
+                  padding: '20px 32px',
+                  boxShadow: '0 0 40px rgba(248,113,113,0.5)',
+                }}
+              >
+                <div style={{ fontSize: 40, lineHeight: 1 }}>⚡</div>
+                <div style={{ fontSize: 22, fontWeight: 900, color: '#f87171', marginTop: 6 }}>
+                  Mode Extrême Activé
+                </div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: '#fbbf24', marginTop: 2 }}>
+                  Score ×2
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* IDLE */}
           {phase==="idle" && (
             <div className="text-center px-5">
@@ -1754,6 +1837,11 @@ export default function RythmApp() {
                     {activity===1 && phase==="results" && REVEAL_BONUS[revealBeat]>0 &&
                       <span className="text-yellow-400 ml-2">
                         +{REVEAL_BONUS[revealBeat]}% bonus
+                      </span>
+                    }
+                    {activity===1 && phase==="results" && scoreWasExtreme &&
+                      <span className="ml-2 font-black" style={{ color: '#f87171' }}>
+                        ⚡ ×2 Extrême
                       </span>
                     }
                   </div>

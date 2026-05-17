@@ -39,7 +39,15 @@
 
 ## Scoring act 3 & 4 (QCM)
 - 100 pts si correct, 0 si faux
-- Distracteurs : `attackFingerprint(figs)` rejette homorythmes + préfère même `figs.length` que formule remplacée
+- Distracteurs `generateDistractors` : 4 sources en cascade → permutations slots (`generateDistractorPermutation`, shuffle/rotation circulaire) · variant 1 temps · mesures aléatoires · variant sans contrainte
+- Toutes les réponses ont le **même nombre de notes** (non-rest) que la cible · jamais de mesure vide ou 1 note
+- `attackFingerprint(figs)` rejette homorythmes · `noteCount(figs)` = figures non-rest
+
+## Mode Extrême (act 1)
+- `extremeMode = activity===1 && !rhythmSoundOn && !flashBorderOn` — son rythme ET flash off
+- Score ×2, cumul multiplicatif avec REVEAL_BONUS : `earned = round(raw * (1+bonus) * 2)`
+- `scoreWasExtreme` fige l'état au calcul du score (`maxPts` ×2 aussi → `pct` ≤ 100%)
+- Animation overlay `extreme-pop` (keyframe `index.css`) + badge "⚡ ×2 Extrême" dans results
 
 ## Niveaux XP (Parcours musicien)
 `Apprenti → Musicien → Instrumentiste → Soliste → Concertiste → Virtuose → Maestro`
