@@ -1,6 +1,6 @@
-import { useEffect, useRef } from 'react'
-import { Renderer, Stave, StaveNote, Voice, Formatter, Annotation, Accidental } from 'vexflow'
-import { couleurJustesse, transposerMidi, buildEnharmonicVexScale } from './accordeurUtils'
+import { useEffect, useRef, useState } from 'react'
+import { Renderer, Stave, StaveNote, Voice, Formatter, Accidental } from 'vexflow'
+import { transposerMidi, buildEnharmonicVexScale } from './accordeurUtils'
 
 function midiToVexKey(midi, vexScale) {
   const name   = vexScale[((midi % 12) + 12) % 12] ?? 'c'
@@ -8,15 +8,21 @@ function midiToVexKey(midi, vexScale) {
   return `${name}/${octave}`
 }
 
+// Nom affiché type "G4", "Bb3" depuis la clé VexFlow ("g/4", "bb/3")
+function vexKeyToLabel(key) {
+  const [part, oct] = key.split('/')
+  const letter = part[0].toUpperCase()
+  const acc    = part.slice(1)            // "" | "#" | "b" | "##" | "bb"
+  return `${letter}${acc}${oct}`
+}
+
 // ─── Coût lignes supplémentaires (clé de sol) ─────────────────────────────────
-// Zone confortable : B3(59) – A5(81). Pénalité proportionnelle hors zone.
 function ledgerCost(midi) {
   if (midi < 59) return (59 - midi)
   if (midi > 81) return (midi - 81)
   return 0
 }
 
-// ─── Décalage octave optimal pour minimiser les lignes supplémentaires ─────────
 function bestOctaveShift(midis) {
   if (!midis.length) return 0
   let best = 0, bestCost = Infinity
@@ -28,10 +34,26 @@ function bestOctaveShift(midis) {
 }
 
 const STAVE_MARGIN      = 140
-const PX_PER_NOTE       = 28   // espacement minimum par note
-const MAX_NOTES_DISPLAY = 30   // troncature si phrase trop longue
+const PX_PER_NOTE       = 28
+const MAX_NOTES_DISPLAY = 30
 
-// Durée réelle (ms) → type VexFlow + valeur en beats
+const STAVE_COL    = '#9ca3af'
+const NEUTRAL_HEAD = '#e5e7eb'
+const NEUTRAL_TEXT = '#9ca3af'
+const TARGET_COL   = '#6b7280'
+const ZERO_COL     = '#3f4658'
+
+const STAVE_Y      = 58
+const VALUES_Y     = 132
+const ZERO_Y       = 188
+const SPARK_HALF   = 18    // px pour ±SPARK_SCALE cents
+const SPARK_SCALE  = 30    // ¢ pleine échelle sparkline
+const MU_COEFF     = 0.4   // px de déplacement vertical par cent (à calibrer)
+
+const TOGGLE_KEY   = 'accordeur_visu_toggles'
+const DEFAULT_TOG  = { couleur: true, halo: true, cible: true, sparkline: true, valeurs: true }
+
+// Durée réelle (ms) → type VexFlow
 function durationToVex(ms) {
   if (ms >= 1400) return { dur: 'w', beats: 4 }
   if (ms >= 700)  return { dur: 'h', beats: 2 }
@@ -40,8 +62,70 @@ function durationToVex(ms) {
   return { dur: '16', beats: 0.25 }
 }
 
-export default function AccordeurStaff({ notes, seuil = 10, transpoKey = 'C', tonicName = 'Do', containerWidth = 500, height = 180, notePx = 52 }) {
+// ─── Interpolation couleur continue selon |μ| en cents ────────────────────────
+const COLOR_STOPS = [
+  { c: 0,  rgb: [0x1D, 0x9E, 0x75] },
+  { c: 10, rgb: [0xBA, 0x75, 0x17] },
+  { c: 20, rgb: [0xD8, 0x5A, 0x30] },
+  { c: 30, rgb: [0x99, 0x3C, 0x1D] },
+]
+function couleurEcart(muCents) {
+  const a = Math.abs(muCents)
+  if (a <= COLOR_STOPS[0].c) return rgbStr(COLOR_STOPS[0].rgb)
+  const last = COLOR_STOPS[COLOR_STOPS.length - 1]
+  if (a >= last.c) return rgbStr(last.rgb)
+  for (let i = 0; i < COLOR_STOPS.length - 1; i++) {
+    const s0 = COLOR_STOPS[i], s1 = COLOR_STOPS[i + 1]
+    if (a >= s0.c && a <= s1.c) {
+      const t = (a - s0.c) / (s1.c - s0.c)
+      return rgbStr([
+        Math.round(s0.rgb[0] + (s1.rgb[0] - s0.rgb[0]) * t),
+        Math.round(s0.rgb[1] + (s1.rgb[1] - s0.rgb[1]) * t),
+        Math.round(s0.rgb[2] + (s1.rgb[2] - s0.rgb[2]) * t),
+      ])
+    }
+  }
+  return rgbStr(last.rgb)
+}
+function rgbStr([r, g, b]) { return `rgb(${r},${g},${b})` }
+
+// Texte cents : "+14¢", "−22¢", "0¢" (moins typographique U+2212)
+function fmtCents(mu) {
+  const r = Math.round(mu)
+  if (r === 0) return '0¢'
+  return (r > 0 ? '+' : '−') + Math.abs(r) + '¢'
+}
+
+// Réduit une série à n points répartis uniformément
+function downsample(arr, n) {
+  if (!arr || arr.length <= n) return arr ?? []
+  const out = []
+  for (let i = 0; i < n; i++) out.push(arr[Math.round(i * (arr.length - 1) / (n - 1))])
+  return out
+}
+
+const SVGNS = 'http://www.w3.org/2000/svg'
+function svgEl(tag, attrs) {
+  const e = document.createElementNS(SVGNS, tag)
+  for (const k in attrs) e.setAttribute(k, attrs[k])
+  return e
+}
+
+export default function AccordeurStaff({ notes, transpoKey = 'C', tonicName = 'Do', containerWidth = 500, height = 250, notePx = 52 }) {
   const ref = useRef(null)
+
+  const [tog, setTog] = useState(() => {
+    try {
+      const raw = JSON.parse(localStorage.getItem(TOGGLE_KEY))
+      return raw ? { ...DEFAULT_TOG, ...raw } : DEFAULT_TOG
+    } catch { return DEFAULT_TOG }
+  })
+
+  const toggle = (k) => setTog(prev => {
+    const next = { ...prev, [k]: !prev[k] }
+    try { localStorage.setItem(TOGGLE_KEY, JSON.stringify(next)) } catch { /* ignore */ }
+    return next
+  })
 
   const displayedNotes = notes?.slice(0, MAX_NOTES_DISPLAY) ?? []
   const staveWidth = Math.max(containerWidth - 4, displayedNotes.length * PX_PER_NOTE + STAVE_MARGIN)
@@ -56,72 +140,39 @@ export default function AccordeurStaff({ notes, seuil = 10, transpoKey = 'C', to
       const ctx = renderer.getContext()
       ctx.setFont('Arial', 9)
 
-      // ── Gamme enharmonique selon tonique transposée ──────────────────────────
-      const vexScale = buildEnharmonicVexScale(tonicName)
-
-      // ── Octave-fit ───────────────────────────────────────────────────────────
+      const vexScale    = buildEnharmonicVexScale(tonicName)
       const midisTranspo = displayedNotes.map(n => transposerMidi(n.midiCible, transpoKey))
       const octaveShift  = bestOctaveShift(midisTranspo)
 
-      const staveY = 36
-      const stave  = new Stave(10, staveY, staveWidth - 20)
-
-      if (octaveShift === 12) {
-        // Notes affichées une octave au-dessus → sons une octave plus bas → 8vb
-        stave.addClef('treble', 'default', '8vb')
-      } else if (octaveShift === -12) {
-        // Notes affichées une octave en-dessous → sons une octave plus haut → 8va
-        stave.addClef('treble', 'default', '8va')
-      } else {
-        stave.addClef('treble')
-      }
-
-      stave.setStyle({ strokeStyle: '#9ca3af', fillStyle: '#9ca3af' })
-      const STAVE_COL = '#9ca3af'
+      const stave = new Stave(10, STAVE_Y, staveWidth - 20)
+      if (octaveShift === 12)       stave.addClef('treble', 'default', '8vb')
+      else if (octaveShift === -12) stave.addClef('treble', 'default', '8va')
+      else                          stave.addClef('treble')
       stave.setContext(ctx).draw()
 
-      // ── StaveNotes ───────────────────────────────────────────────────────────
-      const accTracker = {}
+      const interline = stave.getSpacingBetweenLines?.() ?? 10
+      const maxOffset = interline * 0.5
+
+      // ── StaveNotes (têtes natives masquées ensuite) ──────────────────────────
+      const keys = []
       const vexNotes = displayedNotes.map(note => {
         const midiDisplay = transposerMidi(note.midiCible, transpoKey) + octaveShift
         const key         = midiToVexKey(midiDisplay, vexScale)
-        const couleur     = couleurJustesse(note.muCents, seuil)
-        const vexPart     = key.split('/')[0]
-        const hasSharp    = vexPart.includes('#')
-        const hasFlat     = vexPart.length > 1 && !hasSharp
-        const letter      = hasSharp || hasFlat ? vexPart[0] : vexPart
-        const { dur }     = durationToVex(Math.max(200, note.finMs - note.debutMs))
+        keys.push(key)
+        const vexPart  = key.split('/')[0]
+        const hasSharp = vexPart.includes('#')
+        const hasFlat  = vexPart.length > 1 && !hasSharp
+        const { dur }  = durationToVex(Math.max(200, note.finMs - note.debutMs))
 
         const sn = new StaveNote({ keys: [key], duration: dur })
-        sn.setStyle({ fillStyle: couleur, strokeStyle: couleur })
-
-        if (hasSharp) {
-          const acc = new Accidental('#')
-          acc.setStyle({ fillStyle: couleur, strokeStyle: couleur })
-          sn.addModifier(acc, 0)
-        } else if (hasFlat) {
-          const acc = new Accidental('b')
-          acc.setStyle({ fillStyle: couleur, strokeStyle: couleur })
-          sn.addModifier(acc, 0)
-        } else if (accTracker[letter]) {
-          const acc = new Accidental('n')
-          acc.setStyle({ fillStyle: couleur, strokeStyle: couleur })
-          sn.addModifier(acc, 0)
-        }
-        accTracker[letter] = hasSharp || hasFlat
-
-        const centsLabel = (note.muCents >= 0 ? '+' : '') + note.muCents.toFixed(1) + '¢'
-        const ann = new Annotation(centsLabel)
-          .setFont('Arial', 8)
-          .setVerticalJustification(Annotation.VerticalJustify.BOTTOM)
-        ann.setStyle({ fillStyle: couleur, strokeStyle: couleur })
-        sn.addModifier(ann, 0)
-
+        if (hasSharp)      sn.addModifier(new Accidental('#'), 0)
+        else if (hasFlat)  sn.addModifier(new Accidental('b'), 0)
         return sn
       })
 
-      const totalBeatsLocal = displayedNotes.reduce((acc, n) => acc + durationToVex(Math.max(200, n.finMs - n.debutMs)).beats, 0)
-      const voice = new Voice({ num_beats: totalBeatsLocal, beat_value: 4 })
+      const totalBeats = displayedNotes.reduce(
+        (acc, n) => acc + durationToVex(Math.max(200, n.finMs - n.debutMs)).beats, 0)
+      const voice = new Voice({ num_beats: totalBeats, beat_value: 4 })
       voice.setMode(Voice.Mode.SOFT)
       voice.addTickables(vexNotes)
 
@@ -129,47 +180,171 @@ export default function AccordeurStaff({ notes, seuil = 10, transpoKey = 'C', to
       new Formatter().joinVoices([voice]).format([voice], noteWidth)
       voice.draw(ctx, stave)
 
-      // ── Barres σ (SVG natif) ─────────────────────────────────────────────────
       const svg = ref.current.querySelector('svg')
-      if (svg) {
-        svg.style.background = 'transparent'
-        // Recolor paths with default/black stroke — stave lines, barlines, stems
-        // VexFlow setStyle on Stave doesn't reliably propagate to path elements in SVG backend
-        svg.querySelectorAll('path').forEach(p => {
-          const s = p.getAttribute('stroke') ?? ''
-          const f = p.getAttribute('fill') ?? ''
-          if (!s || s === '#000000' || s === 'black') p.setAttribute('stroke', STAVE_COL)
-          if (!f || f === '#000000' || f === 'black') p.setAttribute('fill', STAVE_COL)
+      if (!svg) return
+      svg.style.background = 'transparent'
+
+      // Recolore + affine les traits VexFlow (portée, hampes, altérations)
+      svg.querySelectorAll('path').forEach(p => {
+        const s = p.getAttribute('stroke') ?? ''
+        const f = p.getAttribute('fill') ?? ''
+        if (!s || s === '#000000' || s === 'black') p.setAttribute('stroke', STAVE_COL)
+        if (!f || f === '#000000' || f === 'black') p.setAttribute('fill', STAVE_COL)
+        const w = parseFloat(p.getAttribute('stroke-width') || '1')
+        p.setAttribute('stroke-width', (w * 0.7).toFixed(2))
+      })
+      svg.querySelectorAll('text').forEach(t => { t.style.fill = STAVE_COL })
+
+      // Masque les têtes de notes natives — redessinées par la couche custom
+      svg.querySelectorAll('.vf-notehead').forEach(n => { n.style.opacity = '0' })
+
+      // ── Couche personnalisée ─────────────────────────────────────────────────
+      const layer = svgEl('g', { class: 'custom-layer' })
+      const gNames  = svgEl('g', { class: 'note-names' })
+      const gHalos  = svgEl('g', { class: 'halos' })
+      const gTargets = svgEl('g', { class: 'targets' })
+      const gHeads  = svgEl('g', { class: 'heads' })
+      const gValues = svgEl('g', { class: 'values' })
+      const gSpark  = svgEl('g', { class: 'sparkline-zone' })
+
+      // Centres X de chaque note (pour largeur des sparklines)
+      const centersX = vexNotes.map(sn => (sn.getNoteHeadBeginX() + sn.getNoteHeadEndX()) / 2)
+
+      vexNotes.forEach((sn, i) => {
+        const note    = displayedNotes[i]
+        const cx      = centersX[i]
+        const targetY = sn.getYs()[0]
+        const couleur = tog.couleur ? couleurEcart(note.muCents) : NEUTRAL_HEAD
+        const offset  = Math.max(-maxOffset, Math.min(maxOffset, note.muCents * MU_COEFF))
+        const headY   = targetY + offset
+
+        // 1. Nom de la note (toujours affiché — pas de toggle dédié)
+        const nameT = svgEl('text', {
+          x: cx, y: STAVE_Y - 14, 'text-anchor': 'middle',
+          'font-size': '11', fill: NEUTRAL_TEXT, 'font-family': 'Arial, sans-serif',
         })
-        svg.querySelectorAll('text').forEach(t => { t.style.fill = STAVE_COL })
+        nameT.textContent = vexKeyToLabel(keys[i])
+        gNames.appendChild(nameT)
+
+        // 2. Halo de variabilité
+        if (tog.halo) {
+          const ryO = Math.min(28, 9 + note.sigmaCents * 0.7)
+          const rxO = ryO * 0.5
+          const haloCol = tog.couleur ? couleur : STAVE_COL
+          gHalos.appendChild(svgEl('ellipse', {
+            cx, cy: headY, rx: rxO, ry: ryO, fill: haloCol, opacity: '0.16',
+          }))
+          gHalos.appendChild(svgEl('ellipse', {
+            cx, cy: headY, rx: rxO * 0.62, ry: ryO * 0.62, fill: haloCol, opacity: '0.26',
+          }))
+        }
+
+        // 3. Contour cible (position théorique, sans déplacement)
+        if (tog.cible) {
+          gTargets.appendChild(svgEl('ellipse', {
+            cx, cy: targetY, rx: 9, ry: 7, fill: 'none',
+            stroke: TARGET_COL, 'stroke-width': '1', 'stroke-dasharray': '2,2',
+            transform: `rotate(-20 ${cx} ${targetY})`,
+          }))
+        }
+
+        // 4. Tête de note redessinée
+        gHeads.appendChild(svgEl('ellipse', {
+          cx, cy: headY, rx: 9, ry: 7, fill: couleur,
+          transform: `rotate(-20 ${cx} ${headY})`,
+        }))
+
+        // 5. Valeur en cents
+        if (tog.valeurs) {
+          const valT = svgEl('text', {
+            x: cx, y: VALUES_Y, 'text-anchor': 'middle',
+            'font-size': '11', 'font-weight': '500',
+            fill: tog.couleur ? couleur : NEUTRAL_TEXT, 'font-family': 'Arial, sans-serif',
+          })
+          valT.textContent = fmtCents(note.muCents)
+          gValues.appendChild(valT)
+        }
+      })
+
+      // 6 + 7. Sparklines + ligne 0¢
+      if (tog.sparkline) {
+        gSpark.appendChild(svgEl('line', {
+          x1: 10, y1: ZERO_Y, x2: staveWidth - 10, y2: ZERO_Y,
+          stroke: ZERO_COL, 'stroke-width': '1', 'stroke-dasharray': '2,3',
+        }))
+        const zlab = svgEl('text', {
+          x: 4, y: ZERO_Y + 3, 'font-size': '9', fill: ZERO_COL, 'font-family': 'Arial, sans-serif',
+        })
+        zlab.textContent = '0¢'
+        gSpark.appendChild(zlab)
 
         vexNotes.forEach((sn, i) => {
-          const note    = displayedNotes[i]
-          const x       = sn.getAbsoluteX()
-          const yCenter = staveY + 50
-          const couleur = couleurJustesse(note.muCents, seuil)
-          const barH    = Math.min(note.sigmaCents * 2 * 1.5, 40)
-          if (barH < 2) return
-
-          const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect')
-          rect.setAttribute('x',       x - 2)
-          rect.setAttribute('y',       yCenter - barH / 2)
-          rect.setAttribute('width',   4)
-          rect.setAttribute('height',  barH)
-          rect.setAttribute('fill',    couleur)
-          rect.setAttribute('opacity', '0.45')
-          rect.setAttribute('rx',      2)
-          svg.appendChild(rect)
+          const note = displayedNotes[i]
+          const pts  = downsample(note.centsSeries, 20)
+          if (pts.length < 2) return
+          const cx = centersX[i]
+          let w = PX_PER_NOTE
+          if (i > 0)                    w = Math.min(w, Math.abs(cx - centersX[i - 1]) * 0.9)
+          if (i < centersX.length - 1)  w = Math.min(w, Math.abs(centersX[i + 1] - cx) * 0.9)
+          const x0 = cx - w / 2
+          const couleur = tog.couleur ? couleurEcart(note.muCents) : NEUTRAL_TEXT
+          const coords = pts.map((c, j) => {
+            const x = x0 + (w * j) / (pts.length - 1)
+            const cl = Math.max(-SPARK_SCALE, Math.min(SPARK_SCALE, c))
+            const y = ZERO_Y - (cl / SPARK_SCALE) * SPARK_HALF
+            return `${x.toFixed(1)},${y.toFixed(1)}`
+          }).join(' ')
+          gSpark.appendChild(svgEl('polyline', {
+            points: coords, fill: 'none', stroke: couleur, 'stroke-width': '1.2',
+          }))
         })
       }
+
+      layer.appendChild(gNames)
+      layer.appendChild(gHalos)
+      layer.appendChild(gTargets)
+      layer.appendChild(gHeads)
+      layer.appendChild(gValues)
+      layer.appendChild(gSpark)
+      svg.appendChild(layer)
     } catch (err) {
       console.warn('AccordeurStaff VexFlow:', err.message ?? err)
     }
-  }, [notes, seuil, transpoKey, tonicName, staveWidth, height]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [notes, transpoKey, tonicName, staveWidth, height, tog]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const TOGGLES = [
+    { k: 'couleur',   label: 'Couleur' },
+    { k: 'halo',      label: 'Halo' },
+    { k: 'cible',     label: 'Cible' },
+    { k: 'sparkline', label: 'Sparkline' },
+    { k: 'valeurs',   label: 'Valeurs ¢' },
+  ]
 
   return (
-    <div className="w-full overflow-x-auto overflow-y-hidden" style={{ maxWidth: containerWidth }}>
-      <div ref={ref} style={{ width: staveWidth, minWidth: staveWidth }} />
+    <div className="w-full" style={{ maxWidth: containerWidth }}>
+      <div className="flex flex-wrap gap-2 mb-3">
+        {TOGGLES.map(({ k, label }) => (
+          <button
+            key={k}
+            onClick={() => toggle(k)}
+            style={{
+              minHeight: 44,
+              padding: '6px 14px',
+              borderRadius: 10,
+              fontSize: 13,
+              fontWeight: 500,
+              border: `1px solid ${tog[k] ? '#7c3aed' : '#1f2937'}`,
+              background: tog[k] ? 'rgba(124,58,237,0.18)' : '#0a0f1a',
+              color: tog[k] ? '#c084fc' : '#6b7280',
+            }}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      <div className="w-full overflow-x-auto overflow-y-hidden">
+        <div ref={ref} style={{ width: staveWidth, minWidth: staveWidth }} />
+      </div>
     </div>
   )
 }

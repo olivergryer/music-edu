@@ -371,12 +371,12 @@ export function calculerEcarts(segments, referentiel, tonikMidi, diapason = 442,
         return centsTempere(f.hz, diapason)
       })
 
-    if (!centsList.length) return { ...seg, muCents: 0, sigmaCents: 0 }
+    if (!centsList.length) return { ...seg, muCents: 0, sigmaCents: 0, centsSeries: [] }
 
     const mu    = centsList.reduce((a, b) => a + b, 0) / centsList.length
     const sigma = Math.sqrt(centsList.reduce((a, b) => a + (b - mu) ** 2, 0) / centsList.length)
 
-    return { ...seg, muCents: mu, sigmaCents: sigma }
+    return { ...seg, muCents: mu, sigmaCents: sigma, centsSeries: centsList }
   })
 }
 

@@ -1,14 +1,14 @@
 # Module Accordeur — référence technique
 
 ## Fichiers
-- `AccordeurPage.jsx` (~1300 lignes) — accordeur chromatique
+- `AccordeurPage.jsx` (~1800 lignes) — accordeur chromatique
 - `AccordeurStaff.jsx` — portée VexFlow
 - `accordeurUtils.js` — pitch, cents, FFT, structures toniques
 - `SpectrePaneau.jsx` — panneau spectre FFT coulissant
-- `sampleEngine.js` — samples R2 (load, onset, loop crossfade, playback)
 - `GenerateurAccordPage.jsx` — route `/accordeur/generateur`
 - `GenerateurAccord.jsx` — ancien composant embarqué (non utilisé, conservé)
 - `JeuGamme.jsx` — jeu gamme (importé mais commenté dans AccordeurPage)
+- `TourGuide.jsx` — composant partagé tour guidé (utilisé aussi par Rythme et Théorie)
 - Dépendance : `pitchy` (McLeod pitch detection)
 
 ## Pipeline détection
@@ -20,12 +20,34 @@
 - **Live** : RAF 100 ms · note + octave + cents + VuMètre arc SVG ±50¢ · `liveParamsRef` pour réactivité sans redémarrer mic · autostart au montage · libère le micro au démontage
 - **Enregistrement** : post-recording → segmentation → µ/σ cents · portée VexFlow (notePx=52 desktop / 26 mobile) · toggle portée/tableau · graphes canvas · scores X/N + qualité %
 
+## Tutorial & aide (`AccordeurPage`)
+
+### Tutorial carousel (`AccordeurTutorial`)
+- 5 slides, affiché une seule fois — persisté `acc_tuto_v1` (localStorage)
+- Slide 2 interactif : sélection **Live / Enregistrement** → appliqué via `basculerMode()`
+- `onDone({ modeLive })` → force `instrument = 'oscillator'` + `accordeur_instrument_preference`
+- Bouton "Ignorer" disponible sur chaque slide
+
+### Bouton ? (header)
+- Ouvre `HelpModal` (inline dans `AccordeurPage`) : 2 boutons
+  - **Relancer le tutoriel** → `setShowTutorial(true)`
+  - **Bulles explicatives** → `setShowTour(true)` → lance `TourGuide`
+- States : `showTutorial`, `showHelp`, `showTour`
+
+### TourGuide steps (AccordeurPage)
+`data-tour` sur : `toggle-mode` · `struct-ref` · `lien-generateur` · `btn-reglages`
+
+### `TourGuide.jsx` (composant partagé `src/`)
+- Props : `steps [{tourId, title, desc}]`, `onDone`
+- Overlay 4-rects sombres + highlight ring violet autour de `[data-tour="id"]`
+- Tooltip positionné auto (au-dessus ou en-dessous), dots de progression, prev/next
+
 ## Interface AccordeurPage
 
 ### Header
 - Gauche : ← Tessitura
 - Centre : "Accordeur" + lien vers `/accordeur/generateur` (icône tablature)
-- Droite : ⚙ bouton → ouvre le **Drawer Réglages**
+- Droite : bouton **?** (aide) + bouton **⚙** → ouvre le **Drawer Réglages**
 
 ### Drawer Réglages (overlay slide-in droite, `width: min(420px, 94vw)`, `zIndex: 50`)
 Contient 4 sections :
@@ -106,16 +128,17 @@ return chordMidis.map(midi => {
 Remplace `sampleEngine.js` (supprimé). Dépendance : **Tone.js** (`npm install tone`).
 
 ### Instruments
-| Clé | Label | Tessiture MIDI |
-|-----|-------|----------------|
-| `oscillator` | Sinusoïde | 0–127 (virtuel) |
-| `flute` | Flûte | 59–97 |
-| `oboe` | Hautbois | 58–92 |
-| `clarinet` | Clarinette | 50–95 |
-| `saxophone` | Saxophone alto | 49–80 |
-| `bassoon` | Basson | 34–74 |
+| Clé | Label | Tessiture MIDI | État |
+|-----|-------|----------------|------|
+| `oscillator` | Sinusoïde | 0–127 (virtuel) | actif |
+| `flute` | Flûte | 59–97 | désactivé (bientôt) |
+| `oboe` | Hautbois | 58–92 | désactivé (bientôt) |
+| `clarinet` | Clarinette | 50–95 | désactivé (bientôt) |
+| `saxophone` | Saxophone alto | 49–80 | désactivé (bientôt) |
+| `bassoon` | Basson | 34–74 | désactivé (bientôt) |
 
-Clé localStorage préférence : `accordeur_instrument_preference` (partagée AccordeurPage ↔ GenerateurAccordPage, défaut `'flute'`).
+Sons bois grisés dans le `<select>` via `disabled` + label "(bientôt)" — AccordeurPage ET GenerateurAccordPage.
+Clé localStorage préférence : `accordeur_instrument_preference` (partagée AccordeurPage ↔ GenerateurAccordPage, défaut `'oscillator'`).
 
 ### Chargement — `Tone.ToneAudioBuffers`
 Source : CDN MusyngKite (`gleitz.github.io/midi-js-soundfonts/MusyngKite/<instrument>-mp3/`).
@@ -176,6 +199,18 @@ IDs stables : `default-0`…`default-11`, `default-enh-1/3/6/8/10`.
 ## AccordeurStaff
 Props : `notes`, `seuil`, `transpoKey`, `tonicName`, `containerWidth`, `height`, `notePx`.
 Altérations VexFlow via `accTracker` (gère les bécarres). Portée grise : SVG post-processing (`querySelectorAll`). Barres σ en SVG natif.
+
+### Dimensionnement portée
+```js
+const PX_PER_NOTE       = 28   // espacement minimum par note
+const MAX_NOTES_DISPLAY = 30   // troncature si phrase trop longue
+
+const displayedNotes = notes.slice(0, MAX_NOTES_DISPLAY)
+const staveWidth = Math.max(containerWidth - 4, displayedNotes.length * PX_PER_NOTE + STAVE_MARGIN)
+```
+- Largeur relative au nombre de notes (pas aux beats absolus) — évite scroll excessif sur longues phrases
+- `Formatter.format([voice], noteWidth)` distribue proportionnellement selon les valeurs rythmiques VexFlow dans l'espace alloué
+- Notes > 30 tronquées silencieusement
 
 ## Spectre FFT (`SpectrePaneau.jsx`)
 Canvas log-scale 50 Hz→4 kHz, marqueurs harmoniques f1..f10.

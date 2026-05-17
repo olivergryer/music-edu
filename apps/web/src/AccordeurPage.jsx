@@ -1624,7 +1624,7 @@ export default function AccordeurPage() {
 
             {vue === 'portee' && (
               <div className="relative bg-surface border border-app rounded-xl p-4 mb-4">
-                <AccordeurStaff notes={notes} seuil={seuil} transpoKey={transpoKey} tonicName={_tonicDisplayName} containerWidth={524} height={180} notePx={window.innerWidth <= 540 ? 26 : 52} />
+                <AccordeurStaff notes={notes} seuil={seuil} transpoKey={transpoKey} tonicName={_tonicDisplayName} containerWidth={524} height={250} notePx={window.innerWidth <= 540 ? 26 : 52} />
                 {dirty && (
                   <div className="absolute inset-0 rounded-xl flex items-center justify-center" style={{ background: 'rgba(13,16,38,0.72)' }}>
                     <Btn onClick={recalculer} className="text-sm px-7 py-2.5">↻ Recalculer</Btn>
