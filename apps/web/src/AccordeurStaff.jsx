@@ -37,18 +37,21 @@ const STAVE_MARGIN      = 140
 const PX_PER_NOTE       = 28
 const MAX_NOTES_DISPLAY = 30
 
-const STAVE_COL    = '#9ca3af'
-const NEUTRAL_HEAD = '#e5e7eb'
-const NEUTRAL_TEXT = '#9ca3af'
-const TARGET_COL   = '#6b7280'
-const ZERO_COL     = '#3f4658'
+// Couleurs sensibles au thème light/dark (variables CSS)
+const STAVE_COL    = 'var(--text-muted)'
+const NEUTRAL_HEAD = 'var(--text)'
+const NEUTRAL_TEXT = 'var(--text-muted)'
+const TARGET_COL   = 'var(--text-muted)'
+const ZERO_COL     = 'var(--border-c)'
 
 const STAVE_Y      = 58
-const VALUES_Y     = 132
-const ZERO_Y       = 188
-const SPARK_HALF   = 18    // px pour ±SPARK_SCALE cents
-const SPARK_SCALE  = 30    // ¢ pleine échelle sparkline
-const MU_COEFF     = 0.4   // px de déplacement vertical par cent (à calibrer)
+const VALUES_Y     = 182    // descendu de 5 interlignes (~50px)
+const ZERO_Y       = 238
+const SPARK_HALF   = 18     // px pour ±SPARK_SCALE cents
+const SPARK_SCALE  = 50     // ¢ pleine échelle sparkline
+const MU_COEFF     = 0.4    // px de déplacement vertical par cent (à calibrer)
+const HEAD_RX      = 7.6    // tête de note : plus elliptique, −20% vs initial
+const HEAD_RY      = 4.8
 
 const TOGGLE_KEY   = 'accordeur_visu_toggles'
 const DEFAULT_TOG  = { couleur: true, halo: true, cible: true, sparkline: true, valeurs: true }
@@ -111,7 +114,7 @@ function svgEl(tag, attrs) {
   return e
 }
 
-export default function AccordeurStaff({ notes, transpoKey = 'C', tonicName = 'Do', containerWidth = 500, height = 250, notePx = 52 }) {
+export default function AccordeurStaff({ notes, transpoKey = 'C', tonicName = 'Do', containerWidth = 500, height = 300, notePx = 52 }) {
   const ref = useRef(null)
 
   const [tog, setTog] = useState(() => {
@@ -242,7 +245,7 @@ export default function AccordeurStaff({ notes, transpoKey = 'C', tonicName = 'D
         // 3. Contour cible (position théorique, sans déplacement)
         if (tog.cible) {
           gTargets.appendChild(svgEl('ellipse', {
-            cx, cy: targetY, rx: 9, ry: 7, fill: 'none',
+            cx, cy: targetY, rx: HEAD_RX, ry: HEAD_RY, fill: 'none',
             stroke: TARGET_COL, 'stroke-width': '1', 'stroke-dasharray': '2,2',
             transform: `rotate(-20 ${cx} ${targetY})`,
           }))
@@ -250,7 +253,7 @@ export default function AccordeurStaff({ notes, transpoKey = 'C', tonicName = 'D
 
         // 4. Tête de note redessinée
         gHeads.appendChild(svgEl('ellipse', {
-          cx, cy: headY, rx: 9, ry: 7, fill: couleur,
+          cx, cy: headY, rx: HEAD_RX, ry: HEAD_RY, fill: couleur,
           transform: `rotate(-20 ${cx} ${headY})`,
         }))
 
@@ -333,9 +336,9 @@ export default function AccordeurStaff({ notes, transpoKey = 'C', tonicName = 'D
               borderRadius: 10,
               fontSize: 13,
               fontWeight: 500,
-              border: `1px solid ${tog[k] ? '#7c3aed' : '#1f2937'}`,
-              background: tog[k] ? 'rgba(124,58,237,0.18)' : '#0a0f1a',
-              color: tog[k] ? '#c084fc' : '#6b7280',
+              border: `1px solid ${tog[k] ? '#7c3aed' : 'var(--border-c)'}`,
+              background: tog[k] ? 'rgba(124,58,237,0.18)' : 'var(--surface)',
+              color: tog[k] ? '#c084fc' : 'var(--text-muted)',
             }}
           >
             {label}
