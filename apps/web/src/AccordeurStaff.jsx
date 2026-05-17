@@ -27,8 +27,9 @@ function bestOctaveShift(midis) {
   return best
 }
 
-const STAVE_MARGIN = 140
-const PX_PER_BEAT  = 28  // pixels par beat (quarter note)
+const STAVE_MARGIN      = 140
+const PX_PER_NOTE       = 28   // espacement minimum par note
+const MAX_NOTES_DISPLAY = 30   // troncature si phrase trop longue
 
 // Durée réelle (ms) → type VexFlow + valeur en beats
 function durationToVex(ms) {
@@ -42,11 +43,11 @@ function durationToVex(ms) {
 export default function AccordeurStaff({ notes, seuil = 10, transpoKey = 'C', tonicName = 'Do', containerWidth = 500, height = 180, notePx = 52 }) {
   const ref = useRef(null)
 
-  const totalBeats = notes?.reduce((acc, n) => acc + durationToVex(Math.max(200, n.finMs - n.debutMs)).beats, 0) ?? 0
-  const staveWidth = Math.max(containerWidth - 4, totalBeats * PX_PER_BEAT + STAVE_MARGIN)
+  const displayedNotes = notes?.slice(0, MAX_NOTES_DISPLAY) ?? []
+  const staveWidth = Math.max(containerWidth - 4, displayedNotes.length * PX_PER_NOTE + STAVE_MARGIN)
 
   useEffect(() => {
-    if (!ref.current || !notes?.length) return
+    if (!ref.current || !displayedNotes.length) return
     ref.current.innerHTML = ''
 
     try {
@@ -59,7 +60,7 @@ export default function AccordeurStaff({ notes, seuil = 10, transpoKey = 'C', to
       const vexScale = buildEnharmonicVexScale(tonicName)
 
       // ── Octave-fit ───────────────────────────────────────────────────────────
-      const midisTranspo = notes.map(n => transposerMidi(n.midiCible, transpoKey))
+      const midisTranspo = displayedNotes.map(n => transposerMidi(n.midiCible, transpoKey))
       const octaveShift  = bestOctaveShift(midisTranspo)
 
       const staveY = 36
@@ -81,7 +82,7 @@ export default function AccordeurStaff({ notes, seuil = 10, transpoKey = 'C', to
 
       // ── StaveNotes ───────────────────────────────────────────────────────────
       const accTracker = {}
-      const vexNotes = notes.map(note => {
+      const vexNotes = displayedNotes.map(note => {
         const midiDisplay = transposerMidi(note.midiCible, transpoKey) + octaveShift
         const key         = midiToVexKey(midiDisplay, vexScale)
         const couleur     = couleurJustesse(note.muCents, seuil)
@@ -119,7 +120,7 @@ export default function AccordeurStaff({ notes, seuil = 10, transpoKey = 'C', to
         return sn
       })
 
-      const totalBeatsLocal = notes.reduce((acc, n) => acc + durationToVex(Math.max(200, n.finMs - n.debutMs)).beats, 0)
+      const totalBeatsLocal = displayedNotes.reduce((acc, n) => acc + durationToVex(Math.max(200, n.finMs - n.debutMs)).beats, 0)
       const voice = new Voice({ num_beats: totalBeatsLocal, beat_value: 4 })
       voice.setMode(Voice.Mode.SOFT)
       voice.addTickables(vexNotes)
@@ -143,7 +144,7 @@ export default function AccordeurStaff({ notes, seuil = 10, transpoKey = 'C', to
         svg.querySelectorAll('text').forEach(t => { t.style.fill = STAVE_COL })
 
         vexNotes.forEach((sn, i) => {
-          const note    = notes[i]
+          const note    = displayedNotes[i]
           const x       = sn.getAbsoluteX()
           const yCenter = staveY + 50
           const couleur = couleurJustesse(note.muCents, seuil)
@@ -164,7 +165,7 @@ export default function AccordeurStaff({ notes, seuil = 10, transpoKey = 'C', to
     } catch (err) {
       console.warn('AccordeurStaff VexFlow:', err.message ?? err)
     }
-  }, [notes, seuil, transpoKey, tonicName, staveWidth, height])
+  }, [notes, seuil, transpoKey, tonicName, staveWidth, height]) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="w-full overflow-x-auto overflow-y-hidden" style={{ maxWidth: containerWidth }}>
