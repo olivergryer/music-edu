@@ -115,18 +115,26 @@ function downsample(arr, n) {
 const SVGNS = 'http://www.w3.org/2000/svg'
 function svgEl(tag, attrs) {
   const e = document.createElementNS(SVGNS, tag)
-  for (const k in attrs) {
-    // fill/stroke via style — les attributs de présentation SVG n'acceptent pas var(...)
-    if (k === 'fill' || k === 'stroke') e.style[k] = attrs[k]
-    else e.setAttribute(k, attrs[k])
-  }
+  for (const k in attrs) e.setAttribute(k, attrs[k])
   return e
 }
 
 export default function AccordeurStaff({ notes, transpoKey = 'C', tonicName = 'Do', containerWidth = 500, height = 300, notePx = 52 }) {
   const ref = useRef(null)
+  const wrapRef = useRef(null)
   const { dark } = useTheme()
   const C = themePalette(dark)
+
+  // Largeur réelle disponible (mobile : écran étroit, pas la valeur prop fixe)
+  const [boxW, setBoxW] = useState(containerWidth)
+  useEffect(() => {
+    if (!wrapRef.current) return
+    const measure = () => setBoxW(wrapRef.current?.clientWidth ?? containerWidth)
+    measure()
+    const ro = new ResizeObserver(measure)
+    ro.observe(wrapRef.current)
+    return () => ro.disconnect()
+  }, [containerWidth])
 
   const [tog, setTog] = useState(() => {
     try {
@@ -142,7 +150,8 @@ export default function AccordeurStaff({ notes, transpoKey = 'C', tonicName = 'D
   })
 
   const displayedNotes = notes?.slice(0, MAX_NOTES_DISPLAY) ?? []
-  const staveWidth = Math.max(containerWidth - 4, displayedNotes.length * PX_PER_NOTE + STAVE_MARGIN)
+  const effW = Math.min(containerWidth, boxW)
+  const staveWidth = Math.max(effW - 4, displayedNotes.length * PX_PER_NOTE + STAVE_MARGIN)
 
   useEffect(() => {
     if (!ref.current || !displayedNotes.length) return
@@ -202,12 +211,15 @@ export default function AccordeurStaff({ notes, transpoKey = 'C', tonicName = 'D
       svg.querySelectorAll('path').forEach(p => {
         const s = p.getAttribute('stroke') ?? ''
         const f = p.getAttribute('fill') ?? ''
-        if (!s || s === '#000000' || s === 'black') p.style.stroke = C.stave
-        if (!f || f === '#000000' || f === 'black') p.style.fill = C.stave
+        if (!s || s === '#000000' || s === 'black') p.setAttribute('stroke', C.stave)
+        if (!f || f === '#000000' || f === 'black') p.setAttribute('fill', C.stave)
         const w = parseFloat(p.getAttribute('stroke-width') || '1')
         p.setAttribute('stroke-width', (w * 0.7).toFixed(2))
       })
-      svg.querySelectorAll('text').forEach(t => { t.style.fill = C.stave })
+      svg.querySelectorAll('text').forEach(t => {
+        t.setAttribute('fill', C.stave)
+        t.style.fill = C.stave
+      })
 
       // Masque les têtes de notes natives — redessinées par la couche custom
       svg.querySelectorAll('.vf-notehead').forEach(n => { n.style.opacity = '0' })
@@ -335,7 +347,7 @@ export default function AccordeurStaff({ notes, transpoKey = 'C', tonicName = 'D
   ]
 
   return (
-    <div className="w-full" style={{ maxWidth: containerWidth }}>
+    <div ref={wrapRef} className="w-full" style={{ maxWidth: containerWidth }}>
       <div className="flex flex-wrap gap-2 mb-3">
         {TOGGLES.map(({ k, label }) => (
           <button
