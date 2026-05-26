@@ -1987,7 +1987,13 @@ export default function RythmApp() {
 
           {/* GRILLE act 3 — 4 portées */}
           {activity === 3 && phase !== "idle" && choices.length > 0 && (
-            <div className="w-full">
+            <div
+              className="w-full"
+              style={choiceCols === 2
+                /* paysage : déborde le cap max-w-xl (576) pour des cellules larges ; le parent flex items-center recentre */
+                ? { width: 'min(94vw, 960px)', maxWidth: 'none' }
+                : undefined}
+            >
               <div className="text-center text-[11px] text-app-muted mb-2.5 flex items-center justify-center gap-2">
                 {phase==="countdown" ? (
                   <span className="text-[40px] font-black leading-none" style={{ color: '#4A6CF7' }}>{countdownN}</span>
@@ -2037,8 +2043,8 @@ export default function RythmApp() {
                         figures={c.figs}
                         timeSig={c.timeSig}
                         activeIdx={-1}
-                        width={choiceCols === 1 ? 520 : 260}
-                        height={100}
+                        width={choiceCols === 1 ? 520 : 440}
+                        height={120}
                         showClef={false}
                         showTimeSig={true}
                       />

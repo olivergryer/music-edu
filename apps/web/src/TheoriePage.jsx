@@ -432,30 +432,8 @@ function HelpModalTheorie({ onTuto, onTour, onClose }) {
   )
 }
 
-function HomeScreen({ onMode }) {
-  const cardCls = "bg-surface border border-app rounded-2xl p-6 mb-4"
-  return (
-    <div>
-      <h2 className="text-xl font-black mb-1" style={{ color: '#8B5CF6' }}>Théorie</h2>
-      <p className="text-sm text-app-muted mb-6">Quiz de théorie musicale</p>
-      {[
-        { mode: 'entrainement', label: 'Entraînement', desc: '10 questions · catégories au choix · feedback immédiat après chaque réponse' },
-        { mode: 'examen', label: 'Examen', desc: '40 questions · toutes catégories · seuil de passage 35/40 · pas de feedback pendant le test' },
-      ].map(({ mode, label, desc }) => (
-        <div key={mode} className={cardCls} data-tour="mode-cards">
-          <div className="text-base font-extrabold mb-2" style={{ color: '#8B5CF6' }}>{label}</div>
-          <div className="text-xs text-app-muted mb-4 leading-relaxed">{desc}</div>
-          <button className="rounded-xl px-5 py-2.5 text-sm font-bold text-white border-none" style={{ background: '#8B5CF6' }} onClick={() => onMode(mode)}>
-            Commencer →
-          </button>
-        </div>
-      ))}
-    </div>
-  )
-}
-
-// ── Configuration ──────────────────────────────────────────────────────────────
-function SetupScreen({ mode, questions, onStart, onLoadCSV, csvCount, templateQuestions }) {
+// ── Page de préparation (page unique) ───────────────────────────────────────────
+function SetupScreen({ questions, onStart, onLoadCSV, csvCount, templateQuestions }) {
   const [level, setLevel] = useState('C1/2')
   const [cats, setCats] = useState([])
   const fileRef = useRef()
@@ -480,7 +458,10 @@ function SetupScreen({ mode, questions, onStart, onLoadCSV, csvCount, templateQu
   }
   return (
     <div>
-      <h2 className="text-xl font-black mb-4" style={{ color: '#8B5CF6' }}>Configuration</h2>
+      <h2 className="text-xl font-black mb-1" style={{ color: '#8B5CF6' }}>Théorie</h2>
+      <p className="text-sm text-app-muted mb-5">Quiz de théorie musicale</p>
+
+      {/* Niveau */}
       <div className="bg-surface border border-app rounded-2xl p-5 mb-4" data-tour="niveau-select">
         <div className="text-xs font-bold mb-3" style={{ color: '#8B5CF6' }}>Niveau</div>
         <div className="flex flex-wrap gap-1.5">
@@ -498,42 +479,56 @@ function SetupScreen({ mode, questions, onStart, onLoadCSV, csvCount, templateQu
         </div>
         <div className="text-[11px] text-app-muted mt-2">Inclut toutes les questions jusqu'au niveau sélectionné.</div>
       </div>
-      {mode === 'entrainement' && (
-        <div className="bg-surface border border-app rounded-2xl p-5 mb-4" data-tour="cats-select">
-          <div className="text-xs font-bold mb-3" style={{ color: '#8B5CF6' }}>
-            Catégories <span className="font-normal text-app-muted">(vide = toutes)</span>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {CATEGORIES.map(c => {
-              const disabled = !availableCats.has(c.id)
-              const active = cats.includes(c.id)
-              return (
-                <button
-                  key={c.id}
-                  onClick={() => toggleCat(c.id)}
-                  className="rounded-full px-3.5 py-1.5 text-xs font-semibold border-2 transition-colors"
-                  style={{
-                    background: active ? '#3b0764' : 'var(--surface-2)',
-                    borderColor: active ? '#8B5CF6' : 'var(--border-c)',
-                    color: active ? '#8B5CF6' : disabled ? 'var(--border-c)' : 'var(--text-muted)',
-                    opacity: disabled ? 0.35 : 1,
-                    cursor: disabled ? 'default' : 'pointer',
-                  }}
-                >{c.label}</button>
-              )
-            })}
-          </div>
-          <div className="text-[11px] text-app-muted mt-2">Les catégories grisées n'ont pas encore de questions à ce niveau.</div>
-        </div>
-      )}
-      <button
-        className="rounded-xl px-7 py-3.5 text-base font-bold text-white border-none"
-        style={{ background: '#8B5CF6' }}
-        onClick={() => onStart(level, cats)}
-      >
-        Lancer le quiz →
-      </button>
 
+      {/* Catégories */}
+      <div className="bg-surface border border-app rounded-2xl p-5 mb-4" data-tour="cats-select">
+        <div className="text-xs font-bold mb-3" style={{ color: '#8B5CF6' }}>
+          Catégories <span className="font-normal text-app-muted">(vide = toutes)</span>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {CATEGORIES.map(c => {
+            const disabled = !availableCats.has(c.id)
+            const active = cats.includes(c.id)
+            return (
+              <button
+                key={c.id}
+                onClick={() => toggleCat(c.id)}
+                className="rounded-full px-3.5 py-1.5 text-xs font-semibold border-2 transition-colors"
+                style={{
+                  background: active ? '#3b0764' : 'var(--surface-2)',
+                  borderColor: active ? '#8B5CF6' : 'var(--border-c)',
+                  color: active ? '#8B5CF6' : disabled ? 'var(--border-c)' : 'var(--text-muted)',
+                  opacity: disabled ? 0.35 : 1,
+                  cursor: disabled ? 'default' : 'pointer',
+                }}
+              >{c.label}</button>
+            )
+          })}
+        </div>
+        <div className="text-[11px] text-app-muted mt-2">Grisées = pas encore de questions à ce niveau. Catégories appliquées en Entraînement ; l'Examen couvre tout.</div>
+      </div>
+
+      {/* Choix du mode = lancement */}
+      <div className="grid grid-cols-2 gap-3" data-tour="mode-cards">
+        <button
+          onClick={() => onStart('entrainement', level, cats)}
+          className="rounded-2xl p-4 text-left border-2 transition-colors"
+          style={{ background: 'var(--surface)', borderColor: '#8B5CF6' }}
+        >
+          <div className="text-sm font-extrabold mb-1" style={{ color: '#8B5CF6' }}>Entraînement →</div>
+          <div className="text-[11px] text-app-muted leading-snug">10 questions · feedback immédiat</div>
+        </button>
+        <button
+          onClick={() => onStart('examen', level, cats)}
+          className="rounded-2xl p-4 text-left border-2 transition-colors"
+          style={{ background: '#8B5CF6', borderColor: '#8B5CF6' }}
+        >
+          <div className="text-sm font-extrabold mb-1 text-white">Examen →</div>
+          <div className="text-[11px] leading-snug" style={{ color: 'rgba(255,255,255,0.85)' }}>40 questions · seuil 35/40</div>
+        </button>
+      </div>
+
+      {/* Import (discret, bas de page) */}
       <div className="mt-10 pt-4 border-t border-app">
         <div className="text-[11px] text-app-muted leading-relaxed mb-2">
           Enseignant ? Tu peux créer tes propres questions : télécharge le modèle, édite-le dans un tableur, puis ré-importe-le (.csv UTF-8).
@@ -769,7 +764,7 @@ function ResultScreen({ session, mode, onReplay }) {
 
 // ── Page principale ────────────────────────────────────────────────────────────
 export default function TheoriePage() {
-  const [screen, setScreen] = useState('home')
+  const [screen, setScreen] = useState('setup')
   const [mode, setMode] = useState(null)
   const [allQuestions, setAllQuestions] = useState([])
   const [csvQuestions, setCsvQuestions] = useState([])
@@ -789,9 +784,10 @@ export default function TheoriePage() {
     return [...allQuestions.filter(q => !csvIds.has(q.id)), ...csvQuestions]
   }, [allQuestions, csvQuestions])
 
-  function handleStart(level, categories) {
-    const pool = buildPool(mergedQuestions, mode, level, categories)
+  function handleStart(m, level, categories) {
+    const pool = buildPool(mergedQuestions, m, level, categories)
     if (pool.length === 0) { alert('Aucune question ne correspond à cette sélection. Élargis le niveau ou les catégories.'); return }
+    setMode(m)
     setSession({ pool, currentIdx: 0, answers: [] })
     setScreen('quiz')
   }
@@ -809,9 +805,9 @@ export default function TheoriePage() {
   }
 
   const THEORIE_TOUR_STEPS = [
-    { tourId:'mode-cards',    title:'Modes de jeu',    desc:'Entraînement pour un feedback immédiat après chaque réponse. Examen pour simuler une vraie évaluation avec seuil 35/40.' },
     { tourId:'niveau-select', title:'Niveau',          desc:'Choisis le niveau maximum des questions incluses, du débutant (C1/1) au niveau avancé (C3).' },
     { tourId:'cats-select',   title:'Catégories',      desc:'Concentre-toi sur un thème précis ou laisse vide pour inclure toutes les catégories.' },
+    { tourId:'mode-cards',    title:'Lancer',          desc:'Entraînement pour un feedback immédiat après chaque réponse. Examen pour simuler une vraie évaluation avec seuil 35/40.' },
     { tourId:'quiz-question', title:'Question',        desc:'20 secondes par question. Répondre dans les temps donne 1 pt, hors délai 0,5 pt.' },
   ]
 
@@ -836,11 +832,11 @@ export default function TheoriePage() {
               className="bg-surface border border-app rounded-lg cursor-pointer flex items-center justify-center"
               style={{ width:32, height:32, fontWeight:700, fontSize:15, color:'var(--text-muted)' }}
             >?</button>
-            {screen !== 'home' && (
+            {screen !== 'setup' && (
               <button
-                onClick={() => { setScreen('home'); setMode(null); setSession(null) }}
+                onClick={() => { setScreen('setup'); setMode(null); setSession(null) }}
                 className="bg-transparent border-none cursor-pointer text-app-muted p-1.5 flex items-center"
-                title="Retour à l'accueil"
+                title="Retour aux réglages"
               >
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <circle cx="12" cy="12" r="3"/>
@@ -852,13 +848,12 @@ export default function TheoriePage() {
         </div>
 
         {showTutorial && <TheorieTutorial onDone={handleTutorialDone} />}
-        {screen === 'home' && !showTutorial && <HomeScreen onMode={m => { setMode(m); setScreen('setup') }} />}
-        {screen === 'setup' && <SetupScreen mode={mode} questions={mergedQuestions} onStart={handleStart} onLoadCSV={setCsvQuestions} csvCount={csvQuestions.length} templateQuestions={allQuestions} />}
+        {screen === 'setup' && !showTutorial && <SetupScreen questions={mergedQuestions} onStart={handleStart} onLoadCSV={setCsvQuestions} csvCount={csvQuestions.length} templateQuestions={allQuestions} />}
         {screen === 'quiz' && session && <QuizScreen key={session.currentIdx} session={session} mode={mode} onAnswer={handleAnswer} onNext={handleNext} />}
-        {screen === 'result' && session && <ResultScreen session={session} mode={mode} onReplay={() => { setSession(null); setMode(null); setScreen('home') }} />}
+        {screen === 'result' && session && <ResultScreen session={session} mode={mode} onReplay={() => { setSession(null); setMode(null); setScreen('setup') }} />}
         {showHelp && (
           <HelpModalTheorie
-            onTuto={() => { setShowHelp(false); setScreen('home'); setMode(null); setSession(null); setShowTutorial(true) }}
+            onTuto={() => { setShowHelp(false); setScreen('setup'); setMode(null); setSession(null); setShowTutorial(true) }}
             onTour={() => { setShowHelp(false); setShowTour(true) }}
             onClose={() => setShowHelp(false)}
           />

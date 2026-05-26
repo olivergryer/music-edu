@@ -140,8 +140,9 @@ export default function RythmStaff({
       // Largeur naturelle nécessaire pour afficher la mesure sans chevauchement.
       // drawWidth ≥ renderWidth : si la mesure dense déborde, on dessine plus large
       // puis le SVG est mis à l'échelle (viewBox) pour tenir dans le conteneur.
-      // facteur de sécurité : preCalc ignore ligatures/crochets → on élargit un peu
-      const neededW = noteStartX + minNotesW * 1.15 + 22;
+      // largeur min honnête de VexFlow (pas de sur-inflation → évite la réduction inutile).
+      // getBBox plus bas étend le viewBox si le contenu réel dépasse (garantie anti-clipping).
+      const neededW = noteStartX + minNotesW + 16;
       const drawWidth = compact
         ? renderWidth
         : Math.max(renderWidth, Math.ceil(neededW));
