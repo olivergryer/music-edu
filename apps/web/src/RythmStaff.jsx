@@ -109,10 +109,16 @@ export default function RythmStaff({
 
     try {
       const renderer = new Renderer(ref.current, Renderer.Backends.SVG);
+      renderer.resize(renderWidth, height);
       const ctx = renderer.getContext();
       ctx.setFont("Arial", 10);
 
       const staveY = height >= 150 ? 24 : Math.max(4, Math.round(height / 2 - 60));
+      const stave  = new Stave(10, staveY, renderWidth - 20);
+      if (showClef)    stave.addClef("treble");
+      if (showTimeSig) stave.addTimeSignature(timeSig);
+      stave.setStyle({ strokeStyle: "#4b5563", fillStyle: "#4b5563" });
+      stave.setContext(ctx).draw();
 
       const vexNotes = figures.map((fig, i) =>
         makeVexNote(fig, i, activeIdx, scoreGrades)
@@ -127,37 +133,13 @@ export default function RythmStaff({
       const DECO = "#4b5563";
       const beams = buildBeams(figures, vexNotes, timeSig);
 
-      const formatter = new Formatter().joinVoices([voice]);
-      const minNotesW = formatter.preCalculateMinTotalWidth([voice]); // largeur min des notes
-
-      // Stave provisoire pour mesurer la position de départ des notes (clé + chiffrage)
-      const stave = new Stave(10, staveY, Math.max(renderWidth, 120) - 20);
-      if (showClef)    stave.addClef("treble");
-      if (showTimeSig) stave.addTimeSignature(timeSig);
-      stave.setContext(ctx);
-      const noteStartX = stave.getNoteStartX();
-
-      // Largeur naturelle nécessaire pour afficher la mesure sans chevauchement.
-      // drawWidth ≥ renderWidth : si la mesure dense déborde, on dessine plus large
-      // puis le SVG est mis à l'échelle (viewBox) pour tenir dans le conteneur.
-      // largeur min honnête de VexFlow (pas de sur-inflation → évite la réduction inutile).
-      // getBBox plus bas étend le viewBox si le contenu réel dépasse (garantie anti-clipping).
-      const neededW = noteStartX + minNotesW + 16;
-      const drawWidth = compact
-        ? renderWidth
-        : Math.max(renderWidth, Math.ceil(neededW));
-
-      const availableWidth = drawWidth - 20 - (noteStartX - 10) - 10;
+      const availableWidth = stave.getX() + stave.getWidth() - stave.getNoteStartX() - 10;
+      // compact = limite la largeur de formatage pour éviter l'étirement des notes
       const formatWidth = compact
         ? Math.min(availableWidth, figures.length * 55 + 20)
         : availableWidth;
 
-      renderer.resize(drawWidth, height);
-      stave.setWidth(drawWidth - 20);
-      stave.setStyle({ strokeStyle: "#4b5563", fillStyle: "#4b5563" });
-      stave.setContext(ctx).draw();
-
-      formatter.format([voice], formatWidth);
+      new Formatter().joinVoices([voice]).format([voice], formatWidth);
       voice.draw(ctx, stave);
 
       // ── Dessin des ligatures ──────────────────────────────────────────────────
@@ -222,24 +204,19 @@ export default function RythmStaff({
           });
         }
 
-        // ── Auto-fit : viewBox calé sur l'étendue RÉELLE du contenu ───────────
-        // getBBox() mesure tout ce qui a été dessiné (notes, ligatures, hampes,
-        // crochets de triolets, dots) — couvre ce que preCalculateMinTotalWidth
-        // sous-estime. Garantit zéro clipping horizontal ET vertical.
-        let vbX = 0, vbY = 0, vbW = drawWidth, vbH = height;
+        // ── Réduction adaptative UNIQUEMENT si la mesure déborde la largeur dispo ──
+        // Cas normal (contenu ≤ renderWidth) : on ne touche à rien → taille native.
+        // Écran trop étroit + mesure dense : on réduit juste ce qu'il faut (jamais en-dessous).
         try {
           const bb = svg.getBBox();
-          const pad = 4;
-          vbX = Math.min(0, Math.floor(bb.x - pad));
-          vbY = Math.min(0, Math.floor(bb.y - pad));
-          vbW = Math.max(drawWidth, Math.ceil(bb.x + bb.width + pad)) - vbX;
-          vbH = Math.max(height,    Math.ceil(bb.y + bb.height + pad)) - vbY;
-        } catch { /* getBBox indispo : on garde drawWidth/height */ }
-        svg.setAttribute("viewBox", `${vbX} ${vbY} ${vbW} ${vbH}`);
-        svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
-        svg.setAttribute("width", "100%");
-        svg.setAttribute("height", "100%");
-        svg.style.display = "block";
+          const contentW = Math.ceil(bb.x + bb.width + 4);
+          if (contentW > renderWidth) {
+            svg.setAttribute("viewBox", `0 0 ${contentW} ${height}`);
+            svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
+            svg.setAttribute("width", String(renderWidth));
+            svg.setAttribute("height", String(height));
+          }
+        } catch { /* getBBox indispo : on garde le rendu natif */ }
       }
     } catch (err) {
       console.warn("VexFlow:", err.message ?? err);

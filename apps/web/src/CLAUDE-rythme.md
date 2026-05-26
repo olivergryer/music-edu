@@ -35,7 +35,8 @@
 - Offset optimal calculé en results : `optOffset = clamp(-mean(tap−expected), −200, 200)`
 - `scoreDevs` prop RythmStaff : figIdx → dev signé ms · `sessionBpm` requis
 - `compact` prop RythmStaff : limite formatWidth (usage dans SettingsPage catalogue)
-- RythmStaff **auto-fit** : rend à `drawWidth = max(renderWidth, noteStartX + minNotesW*1.15 + 22)` puis `viewBox` calé sur **`getBBox()` réel** (après dessin complet, dots inclus) + `preserveAspectRatio="xMidYMid meet"` width/height 100% → remplit le conteneur, zéro clipping H et V. `preCalculateMinTotalWidth` seul sous-estime (ligatures, crochets triolets, hampes) → getBBox indispensable. `width` prop = cap max (div `maxWidth`). `compact` garde drawWidth=renderWidth.
+- RythmStaff rend à taille **native** : SVG `renderWidth × height` px (`renderWidth = min(conteneur, width)` via ResizeObserver). `width` prop = cap max (div `maxWidth`, `overflow:hidden`).
+- **Réduction adaptative downscale-only** : après dessin, `getBBox()` ; si `contentW > renderWidth` (mesure dense + écran étroit) → viewBox + `meet` réduit juste ce qu'il faut. Sinon AUCUN scaling → taille native (jamais artificiellement petit). Adaptatif sur tout device.
 - Résultats : boutons **▶ Mes taps** + **▶ Solution** — appellent forced=true (indépendants des toggles son)
 
 ## Scoring act 3 & 4 (QCM)
