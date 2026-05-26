@@ -109,16 +109,10 @@ export default function RythmStaff({
 
     try {
       const renderer = new Renderer(ref.current, Renderer.Backends.SVG);
-      renderer.resize(renderWidth, height);
       const ctx = renderer.getContext();
       ctx.setFont("Arial", 10);
 
       const staveY = height >= 150 ? 24 : Math.max(4, Math.round(height / 2 - 60));
-      const stave  = new Stave(10, staveY, renderWidth - 20);
-      if (showClef)    stave.addClef("treble");
-      if (showTimeSig) stave.addTimeSignature(timeSig);
-      stave.setStyle({ strokeStyle: "#4b5563", fillStyle: "#4b5563" });
-      stave.setContext(ctx).draw();
 
       const vexNotes = figures.map((fig, i) =>
         makeVexNote(fig, i, activeIdx, scoreGrades)
@@ -133,13 +127,35 @@ export default function RythmStaff({
       const DECO = "#4b5563";
       const beams = buildBeams(figures, vexNotes, timeSig);
 
-      const availableWidth = stave.getX() + stave.getWidth() - stave.getNoteStartX() - 10;
-      // compact = limite la largeur de formatage pour éviter l'étirement des notes
+      const formatter = new Formatter().joinVoices([voice]);
+      const minNotesW = formatter.preCalculateMinTotalWidth([voice]); // largeur min des notes
+
+      // Stave provisoire pour mesurer la position de départ des notes (clé + chiffrage)
+      const stave = new Stave(10, staveY, Math.max(renderWidth, 120) - 20);
+      if (showClef)    stave.addClef("treble");
+      if (showTimeSig) stave.addTimeSignature(timeSig);
+      stave.setContext(ctx);
+      const noteStartX = stave.getNoteStartX();
+
+      // Largeur naturelle nécessaire pour afficher la mesure sans chevauchement.
+      // drawWidth ≥ renderWidth : si la mesure dense déborde, on dessine plus large
+      // puis le SVG est mis à l'échelle (viewBox) pour tenir dans le conteneur.
+      const neededW = noteStartX + minNotesW + 18;
+      const drawWidth = compact
+        ? renderWidth
+        : Math.max(renderWidth, Math.ceil(neededW));
+
+      const availableWidth = drawWidth - 20 - (noteStartX - 10) - 10;
       const formatWidth = compact
         ? Math.min(availableWidth, figures.length * 55 + 20)
         : availableWidth;
 
-      new Formatter().joinVoices([voice]).format([voice], formatWidth);
+      renderer.resize(drawWidth, height);
+      stave.setWidth(drawWidth - 20);
+      stave.setStyle({ strokeStyle: "#4b5563", fillStyle: "#4b5563" });
+      stave.setContext(ctx).draw();
+
+      formatter.format([voice], formatWidth);
       voice.draw(ctx, stave);
 
       // ── Dessin des ligatures ──────────────────────────────────────────────────
@@ -180,6 +196,14 @@ export default function RythmStaff({
       if (svg) {
         svg.style.background = "transparent";
         svg.querySelectorAll("text").forEach(t => { t.style.fill = "#6b7280"; });
+
+        // Auto-fit : le SVG remplit le conteneur et se met à l'échelle proportionnellement.
+        // drawWidth ≥ conteneur → réduction sans clipping · drawWidth = conteneur → échelle 1.
+        svg.setAttribute("viewBox", `0 0 ${drawWidth} ${height}`);
+        svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
+        svg.setAttribute("width", "100%");
+        svg.setAttribute("height", "100%");
+        svg.style.display = "block";
 
         // ── Points d'impact temporel (remplacent les flèches) ────────────────
         // Dot coloré à gauche de la note = trop tôt, à droite = trop tard

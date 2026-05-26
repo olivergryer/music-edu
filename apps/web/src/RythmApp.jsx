@@ -712,6 +712,21 @@ export default function RythmApp() {
     return () => clearTimeout(t);
   }, [extremeMode]);
 
+  // Act 3/4 : nombre de propositions par ligne selon orientation (portrait=1, paysage=2)
+  const [choiceCols, setChoiceCols] = useState(
+    typeof window !== "undefined" && window.innerWidth > window.innerHeight ? 2 : 1
+  );
+  useEffect(() => {
+    const update = () => setChoiceCols(window.innerWidth > window.innerHeight ? 2 : 1);
+    update();
+    window.addEventListener("resize", update);
+    window.addEventListener("orientationchange", update);
+    return () => {
+      window.removeEventListener("resize", update);
+      window.removeEventListener("orientationchange", update);
+    };
+  }, []);
+
   // Act 3 & 4
   const [choices,     setChoices]     = useState([]);
   const [correctIdx,  setCorrectIdx]  = useState(0);
@@ -1246,6 +1261,15 @@ export default function RythmApp() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => () => { clearTids(); cancelAnimationFrame(rafRef.current); stopMic(); audioTidsRef.current.forEach(clearTimeout); }, []);
 
+  // Lance le jeu après tutorial interactif (attend que les closures de startGame soient fraîches)
+  // Doit rester AVANT tout early return (Rules of Hooks)
+  useEffect(() => {
+    if (pendingTutoStartRef.current) {
+      pendingTutoStartRef.current = false;
+      startSession();
+    }
+  });
+
 
   // ── Page réglages ──────────────────────────────────────────────────────────
   if (currentPage === "settings") {
@@ -1306,14 +1330,6 @@ export default function RythmApp() {
     setBeatFlash(false); setMetroDotFlash(false); setCountdownN(1);
     startGame();
   };
-
-  // Lance le jeu après tutorial interactif (attend que les closures de startGame soient fraîches)
-  useEffect(() => {
-    if (pendingTutoStartRef.current) {
-      pendingTutoStartRef.current = false;
-      startSession();
-    }
-  });
 
   // ── Modal réglages ─────────────────────────────────────────────────────────
   const formulaCountModal = selectedFormulas.size;
@@ -1648,7 +1664,6 @@ export default function RythmApp() {
   const vexFigs    = pattern?.figs ?? [];
   const canStart   = phase === "idle" || phase === "results";
   const isPlaying  = phase === "playing";
-  const choiceCols = typeof window !== "undefined" && window.innerWidth < 380 ? 1 : 2;
 
   const handleNext = () => {
     if (!canStart) return;
@@ -2022,7 +2037,7 @@ export default function RythmApp() {
                         figures={c.figs}
                         timeSig={c.timeSig}
                         activeIdx={-1}
-                        width={choiceCols === 1 ? 336 : 168}
+                        width={choiceCols === 1 ? 520 : 260}
                         height={100}
                         showClef={false}
                         showTimeSig={true}

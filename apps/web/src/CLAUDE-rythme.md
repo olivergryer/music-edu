@@ -35,6 +35,7 @@
 - Offset optimal calculé en results : `optOffset = clamp(-mean(tap−expected), −200, 200)`
 - `scoreDevs` prop RythmStaff : figIdx → dev signé ms · `sessionBpm` requis
 - `compact` prop RythmStaff : limite formatWidth (usage dans SettingsPage catalogue)
+- RythmStaff **auto-fit** : rend à `drawWidth = max(renderWidth, noteStartX + preCalculateMinTotalWidth + 18)` puis SVG `viewBox` + `preserveAspectRatio="xMidYMid meet"` width/height 100% → remplit le conteneur, mesure dense réduite sans clipping. `width` prop = cap max (div `maxWidth`). `compact` garde drawWidth=renderWidth.
 - Résultats : boutons **▶ Mes taps** + **▶ Solution** — appellent forced=true (indépendants des toggles son)
 
 ## Scoring act 3 & 4 (QCM)
@@ -70,6 +71,7 @@
 - "Commencer !" applique les choix et lance le jeu directement
 - `handleTutorialDone(selections)` : `selections=null` si "Ignorer" (pas de lancement jeu) ; sinon `{ activity, inputMode, level }`
 - Lancement différé via `pendingTutoStartRef` (ref flag) + `useEffect` sans deps — attend que `startGame` ait des closures fraîches après les setters d'état
+- ⚠️ ce `useEffect` (et tout hook) DOIT rester avant l'early return `if (currentPage==="settings")` sinon crash Rules of Hooks (page réglages vierge)
 - Toggle thème dark/light disponible pendant le tuto via le bouton global (ThemeContext)
 
 ## Persistance réglages (localStorage)
@@ -92,7 +94,8 @@ Groupes : `binary` (4/4) ou `ternary` (12/8) · `totalMs = 4 * beatMs` pour les 
 
 ## Points d'attention
 - VexFlow 5 : `Beam.draw()` n'appelle pas `applyStyle()` → couleur ligatures via `ctx.setFillStyle/setStrokeStyle` avant draw
-- VexFlow `staveY` : **offset réel = +40px** — `getYForLine(0) = staveY + 40`, `getYForLine(4) = staveY + 80`. Formule correcte pour centrer : `staveY = max(4, round(height/2 - 60))`. Pour h<150 seulement (h≥150 → staveY=24 hardcodé). Pour h=90 la ligne du bas sortirait du SVG → utiliser h≥100 pour les petits blocs (act 3 choices : `height={100}`, width 168/336).
+- VexFlow `staveY` : **offset réel = +40px** — `getYForLine(0) = staveY + 40`, `getYForLine(4) = staveY + 80`. Formule correcte pour centrer : `staveY = max(4, round(height/2 - 60))`. Pour h<150 seulement (h≥150 → staveY=24 hardcodé). Pour h=90 la ligne du bas sortirait du SVG → utiliser h≥100 pour les petits blocs (act 3 choices : `height={100}`, width cap 260 en paysage / 520 en portrait).
+- Act 3 : `choiceCols` piloté par orientation (`innerWidth > innerHeight` → 2 cols paysage, sinon 1 col portrait) + listener `resize`/`orientationchange`. Hook AVANT early return.
 - `staveY` dans `RythmStaff.jsx` : `height >= 150 ? 24 : Math.max(4, Math.round(height / 2 - 60))`
 - RythmStaff div : `height: height` (prop) en style explicite — empêche le flex-stretch dans les cartes
 - Chunk size warning build = normal (VexFlow volumineux)

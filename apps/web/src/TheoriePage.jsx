@@ -99,6 +99,53 @@ function parseTheorieCSV(csvText) {
   }).filter(q => q.id && q.question && q.reponse_correcte)
 }
 
+// ── Export template CSV (questions livrées + readme) ───────────────────────────
+const CSV_COLUMNS = ['id', 'niveau', 'categorie', 'type', 'question', 'reponse_correcte', 'reponse_fausse_1', 'reponse_fausse_2', 'reponse_fausse_3', 'reponses_acceptees', 'temps_limite', 'explication']
+
+function escapeCsv(val) {
+  const s = val == null ? '' : String(val)
+  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
+}
+
+function buildTemplateCSV(questions) {
+  const readme = [
+    '# TEMPLATE QUESTIONS THÉORIE — Tessitura',
+    '# Édite ce fichier dans Google Sheets ou Excel, puis ré-importe-le (.csv UTF-8).',
+    '# Les lignes commençant par # sont ignorées à l\'import — supprime-les ou garde-les.',
+    '#',
+    '# COLONNES (ne pas renommer la ligne d\'en-tête ci-dessous) :',
+    '#   id                 identifiant unique (ex: Q001). Même id qu\'une question livrée = remplace celle-ci.',
+    '#   niveau             C1/1 C1/2 C1/3 C1/4 C2/1 C2/2 C2/3 C2/4 C3',
+    '#   categorie          vocabulaire_italien vocabulaire_technique notation_partition tonalites_alterations',
+    '#                      intervalles rythme_mesure harmonie_accords cadences formes_musicales histoire_styles compositeurs',
+    '#   type               qcm | vrai_faux | texte',
+    '#   question           énoncé affiché',
+    '#   reponse_correcte   bonne réponse (vrai_faux : Vrai ou Faux)',
+    '#   reponse_fausse_1/2/3  distracteurs — qcm uniquement, laisser vide sinon',
+    '#   reponses_acceptees variantes acceptées (type texte), séparées par | — ex: do|ut',
+    '#   temps_limite       secondes, vide = défaut (20s, texte 30s)',
+    '#   explication        affichée après la réponse (optionnel)',
+    '#',
+    '# Un qcm a besoin de 4 choix : 1 correcte + 3 fausses.',
+  ]
+  const header = CSV_COLUMNS.join(',')
+  const rows = questions
+    .filter(q => ['qcm', 'vrai_faux', 'texte'].includes(q.type))
+    .map(q => CSV_COLUMNS.map(c => escapeCsv(q[c])).join(','))
+  return [...readme, header, ...rows].join('\n')
+}
+
+function downloadTemplateCSV(questions) {
+  const csv = '﻿' + buildTemplateCSV(questions)
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = 'questions-theorie-template.csv'
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
 // ── Timer bar (animation via ref) ──────────────────────────────────────────────
 function TimerBar({ limit, timedOut, revealed }) {
   const barRef = useRef()
@@ -385,7 +432,7 @@ function HelpModalTheorie({ onTuto, onTour, onClose }) {
   )
 }
 
-function HomeScreen({ onMode, onLoadCSV, csvCount }) {
+function HomeScreen({ onMode, onLoadCSV, csvCount, templateQuestions }) {
   const fileRef = useRef()
   function handleFile(e) {
     const file = e.target.files[0]
@@ -415,15 +462,25 @@ function HomeScreen({ onMode, onLoadCSV, csvCount }) {
         </div>
       ))}
       <div className="bg-surface border border-app rounded-2xl p-5">
-        <div className="text-xs font-bold text-app-muted mb-2">Importer des questions CSV</div>
+        <div className="text-xs font-bold text-app-muted mb-2">Tes propres questions</div>
         <div className="text-xs text-app-muted mb-3 leading-relaxed">
-          Exporte ton Google Sheets en .csv (UTF-8) et importe-le ici.
+          Télécharge le modèle (questions livrées + notice), édite-le dans Google Sheets ou Excel, puis ré-importe-le en .csv (UTF-8).
           {csvCount > 0 && <span className="ml-2 text-success">✓ {csvCount} question{csvCount > 1 ? 's' : ''} importée{csvCount > 1 ? 's' : ''}</span>}
         </div>
         <input ref={fileRef} type="file" accept=".csv" className="hidden" onChange={handleFile} />
-        <button className="rounded-xl px-4 py-2 text-xs font-bold text-app border border-app bg-surface-2" onClick={() => fileRef.current.click()}>
-          Choisir un fichier CSV
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button
+            className="rounded-xl px-4 py-2 text-xs font-bold text-white border-none disabled:opacity-50"
+            style={{ background: '#8B5CF6' }}
+            disabled={!templateQuestions?.length}
+            onClick={() => downloadTemplateCSV(templateQuestions)}
+          >
+            ↓ Télécharger le modèle
+          </button>
+          <button className="rounded-xl px-4 py-2 text-xs font-bold text-app border border-app bg-surface-2" onClick={() => fileRef.current.click()}>
+            Choisir un fichier CSV
+          </button>
+        </div>
       </div>
     </div>
   )
@@ -791,7 +848,7 @@ export default function TheoriePage() {
         </div>
 
         {showTutorial && <TheorieTutorial onDone={handleTutorialDone} />}
-        {screen === 'home' && !showTutorial && <HomeScreen onMode={m => { setMode(m); setScreen('setup') }} onLoadCSV={setCsvQuestions} csvCount={csvQuestions.length} />}
+        {screen === 'home' && !showTutorial && <HomeScreen onMode={m => { setMode(m); setScreen('setup') }} onLoadCSV={setCsvQuestions} csvCount={csvQuestions.length} templateQuestions={allQuestions} />}
         {screen === 'setup' && <SetupScreen mode={mode} questions={mergedQuestions} onStart={handleStart} />}
         {screen === 'quiz' && session && <QuizScreen key={session.currentIdx} session={session} mode={mode} onAnswer={handleAnswer} onNext={handleNext} />}
         {screen === 'result' && session && <ResultScreen session={session} mode={mode} onReplay={() => { setSession(null); setMode(null); setScreen('home') }} />}
