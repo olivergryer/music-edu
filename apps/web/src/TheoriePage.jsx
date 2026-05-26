@@ -267,7 +267,7 @@ function TheorieTutorial({ onDone }) {
           {CATEGORIES.map((cat, i) => (
             <div key={cat.id} style={{ background:'rgba(139,92,246,0.1)', border:'2px solid rgba(139,92,246,0.3)', borderRadius:14, padding:'14px 10px', textAlign:'center' }}>
               <div style={{ width:10, height:10, borderRadius:5, background:CAT_COLORS[i], margin:'0 auto 8px' }} />
-              <div style={{ fontSize:10, fontWeight:700, color:'#c4b5fd', lineHeight:1.3 }}>{cat.label}</div>
+              <div style={{ fontSize:10, fontWeight:700, color:T_ACC, lineHeight:1.3 }}>{cat.label}</div>
             </div>
           ))}
         </div>
@@ -276,15 +276,15 @@ function TheorieTutorial({ onDone }) {
     if (slide === 1) {
       return (
         <div style={{ width:280 }}>
-          <div style={{ fontSize:11, color:'#a78bfa', fontWeight:700, marginBottom:12, textAlign:'center' }}>Sélectionne ton niveau</div>
+          <div style={{ fontSize:11, color:T_ACC, fontWeight:700, marginBottom:12, textAlign:'center' }}>Sélectionne ton niveau</div>
           <div style={{ display:'flex', flexWrap:'wrap', gap:8, justifyContent:'center' }}>
             {LEVELS.map(l => {
               const sel = level === l
               return (
                 <button key={l} onClick={() => setLevel(l)} style={{
                   padding:'8px 14px', borderRadius:20, border:'none', cursor:'pointer',
-                  background: sel ? T_ACC : 'rgba(139,92,246,0.1)',
-                  color: sel ? '#fff' : '#a78bfa',
+                  background: sel ? T_ACC : 'rgba(139,92,246,0.12)',
+                  color: sel ? '#fff' : T_ACC,
                   fontSize:12, fontWeight:700, transition:'all 0.15s',
                   boxShadow: sel ? '0 4px 12px rgba(139,92,246,0.4)' : 'none',
                 }}>{l}</button>
@@ -298,16 +298,16 @@ function TheorieTutorial({ onDone }) {
     if (slide === 2) {
       return (
         <div style={{ width:280 }}>
-          <div style={{ fontSize:11, color:'#a78bfa', fontWeight:700, marginBottom:12, textAlign:'center' }}>Catégories <span style={{ fontWeight:400, color:'#6b7280' }}>(vide = toutes)</span></div>
+          <div style={{ fontSize:11, color:T_ACC, fontWeight:700, marginBottom:12, textAlign:'center' }}>Catégories <span style={{ fontWeight:400, color:'var(--text-muted)' }}>(vide = toutes)</span></div>
           <div style={{ display:'flex', flexWrap:'wrap', gap:8, justifyContent:'center' }}>
             {CATEGORIES.map((c, i) => {
               const active = cats.includes(c.id)
               return (
                 <button key={c.id} onClick={() => toggleCat(c.id)} style={{
                   padding:'8px 14px', borderRadius:20,
-                  border:`2px solid ${active ? CAT_COLORS[i] : 'rgba(139,92,246,0.2)'}`,
-                  background: active ? `${CAT_COLORS[i]}22` : 'rgba(255,255,255,0.03)',
-                  color: active ? CAT_COLORS[i] : '#6b7280',
+                  border:`2px solid ${active ? CAT_COLORS[i] : 'rgba(139,92,246,0.25)'}`,
+                  background: active ? `${CAT_COLORS[i]}22` : 'var(--surface-2)',
+                  color: active ? CAT_COLORS[i] : 'var(--text-muted)',
                   fontSize:11, fontWeight:700, cursor:'pointer', transition:'all 0.15s',
                 }}>{c.label}</button>
               )
@@ -328,15 +328,15 @@ function TheorieTutorial({ onDone }) {
             return (
               <div key={m.id} role="button" onClick={() => setSelMode(m.id)} style={{
                 borderRadius:16, padding:'16px 18px', cursor:'pointer',
-                background: sel ? 'rgba(139,92,246,0.18)' : 'rgba(255,255,255,0.03)',
-                border:`2px solid ${sel ? T_ACC : 'rgba(255,255,255,0.08)'}`,
+                background: sel ? 'rgba(139,92,246,0.18)' : 'var(--surface-2)',
+                border:`2px solid ${sel ? T_ACC : 'var(--border-c)'}`,
                 transition:'all 0.15s',
               }}>
                 <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:4 }}>
-                  <span style={{ fontSize:14, fontWeight:800, color: sel ? '#c4b5fd' : '#6b7280' }}>{m.label}</span>
+                  <span style={{ fontSize:14, fontWeight:800, color: sel ? T_ACC : 'var(--text-muted)' }}>{m.label}</span>
                   {sel && <div style={{ width:10, height:10, borderRadius:5, background:T_ACC }}/>}
                 </div>
-                <div style={{ fontSize:11, color: sel ? '#a78bfa' : '#6b7280', lineHeight:1.4 }}>{m.desc}</div>
+                <div style={{ fontSize:11, color: sel ? T_ACC : 'var(--text-muted)', lineHeight:1.4 }}>{m.desc}</div>
               </div>
             )
           })}
@@ -357,7 +357,7 @@ function TheorieTutorial({ onDone }) {
   return (
     <div style={{
       position:'fixed', inset:0, zIndex:100,
-      background:'#030712', color:'#f9fafb',
+      background:'var(--bg)', color:'var(--text)',
       display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'space-between',
       padding:'24px 20px 80px', overflowY:'auto',
     }}>
@@ -367,7 +367,7 @@ function TheorieTutorial({ onDone }) {
           {Array.from({ length: TUTO_TOTAL }).map((_, i) => (
             <div key={i} style={{
               width: i===slide ? 20 : 7, height:7, borderRadius:4,
-              background: i <= slide ? T_ACC : 'rgba(255,255,255,0.1)',
+              background: i <= slide ? T_ACC : 'var(--border-c)',
               transition:'width 0.25s, background 0.25s',
             }}/>
           ))}
@@ -384,8 +384,8 @@ function TheorieTutorial({ onDone }) {
 
       {/* Text */}
       <div style={{ width:'100%', maxWidth:400, textAlign:'center', marginBottom:32 }}>
-        <div style={{ fontSize:22, fontWeight:900, color:'#f9fafb', marginBottom:10 }}>{title}</div>
-        <div style={{ fontSize:14, fontWeight:500, color:'#d1d5db', lineHeight:1.6 }}>{body}</div>
+        <div style={{ fontSize:22, fontWeight:900, color:'var(--text)', marginBottom:10 }}>{title}</div>
+        <div style={{ fontSize:14, fontWeight:500, color:'var(--text-muted)', lineHeight:1.6 }}>{body}</div>
       </div>
 
       {/* Navigation */}
@@ -413,11 +413,11 @@ function HelpModalTheorie({ onTuto, onTour, onClose }) {
       <div style={{
         position:'fixed', top:'50%', left:'50%', transform:'translate(-50%,-50%)',
         zIndex:201, width:'min(320px, 90vw)',
-        background:'#0a0f1a', border:'1.5px solid rgba(139,92,246,0.3)',
+        background:'var(--surface)', border:'1.5px solid rgba(139,92,246,0.3)',
         borderRadius:20, padding:'28px 24px', textAlign:'center',
       }}>
-        <div style={{ fontSize:18, fontWeight:900, color:'#f9fafb', marginBottom:6 }}>Aide</div>
-        <div style={{ fontSize:12, color:'#6b7280', marginBottom:24 }}>Comment puis-je t'aider ?</div>
+        <div style={{ fontSize:18, fontWeight:900, color:'var(--text)', marginBottom:6 }}>Aide</div>
+        <div style={{ fontSize:12, color:'var(--text-muted)', marginBottom:24 }}>Comment puis-je t'aider ?</div>
         <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
           <button onClick={onTuto} style={{ padding:'14px 0', borderRadius:14, border:'none', background:'linear-gradient(135deg,#7C3AED,#8B5CF6)', color:'#fff', fontSize:14, fontWeight:800, cursor:'pointer' }}>
             ▶ Relancer le tutoriel
@@ -426,24 +426,13 @@ function HelpModalTheorie({ onTuto, onTour, onClose }) {
             Bulles explicatives
           </button>
         </div>
-        <button onClick={onClose} style={{ marginTop:16, background:'none', border:'none', color:'#6b7280', fontSize:12, cursor:'pointer' }}>Fermer</button>
+        <button onClick={onClose} style={{ marginTop:16, background:'none', border:'none', color:'var(--text-muted)', fontSize:12, cursor:'pointer' }}>Fermer</button>
       </div>
     </>
   )
 }
 
-function HomeScreen({ onMode, onLoadCSV, csvCount, templateQuestions }) {
-  const fileRef = useRef()
-  function handleFile(e) {
-    const file = e.target.files[0]
-    if (!file) return
-    const reader = new FileReader()
-    reader.onload = ev => {
-      try { onLoadCSV(parseTheorieCSV(ev.target.result)) } catch (err) { alert('Erreur CSV : ' + err.message) }
-    }
-    reader.readAsText(file, 'UTF-8')
-    e.target.value = ''
-  }
+function HomeScreen({ onMode }) {
   const cardCls = "bg-surface border border-app rounded-2xl p-6 mb-4"
   return (
     <div>
@@ -461,35 +450,15 @@ function HomeScreen({ onMode, onLoadCSV, csvCount, templateQuestions }) {
           </button>
         </div>
       ))}
-      <div className="bg-surface border border-app rounded-2xl p-5">
-        <div className="text-xs font-bold text-app-muted mb-2">Tes propres questions</div>
-        <div className="text-xs text-app-muted mb-3 leading-relaxed">
-          Télécharge le modèle (questions livrées + notice), édite-le dans Google Sheets ou Excel, puis ré-importe-le en .csv (UTF-8).
-          {csvCount > 0 && <span className="ml-2 text-success">✓ {csvCount} question{csvCount > 1 ? 's' : ''} importée{csvCount > 1 ? 's' : ''}</span>}
-        </div>
-        <input ref={fileRef} type="file" accept=".csv" className="hidden" onChange={handleFile} />
-        <div className="flex flex-wrap gap-2">
-          <button
-            className="rounded-xl px-4 py-2 text-xs font-bold text-white border-none disabled:opacity-50"
-            style={{ background: '#8B5CF6' }}
-            disabled={!templateQuestions?.length}
-            onClick={() => downloadTemplateCSV(templateQuestions)}
-          >
-            ↓ Télécharger le modèle
-          </button>
-          <button className="rounded-xl px-4 py-2 text-xs font-bold text-app border border-app bg-surface-2" onClick={() => fileRef.current.click()}>
-            Choisir un fichier CSV
-          </button>
-        </div>
-      </div>
     </div>
   )
 }
 
 // ── Configuration ──────────────────────────────────────────────────────────────
-function SetupScreen({ mode, questions, onStart }) {
+function SetupScreen({ mode, questions, onStart, onLoadCSV, csvCount, templateQuestions }) {
   const [level, setLevel] = useState('C1/2')
   const [cats, setCats] = useState([])
+  const fileRef = useRef()
   const availableCats = useMemo(
     () => new Set(CATEGORIES.filter(cat => catHasQuestions(questions, level, cat)).map(c => c.id)),
     [questions, level]
@@ -498,6 +467,16 @@ function SetupScreen({ mode, questions, onStart }) {
   function toggleCat(id) {
     if (!availableCats.has(id)) return
     setCats(prev => prev.includes(id) ? prev.filter(c => c !== id) : [...prev, id])
+  }
+  function handleFile(e) {
+    const file = e.target.files[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = ev => {
+      try { onLoadCSV(parseTheorieCSV(ev.target.result)) } catch (err) { alert('Erreur CSV : ' + err.message) }
+    }
+    reader.readAsText(file, 'UTF-8')
+    e.target.value = ''
   }
   return (
     <div>
@@ -554,6 +533,31 @@ function SetupScreen({ mode, questions, onStart }) {
       >
         Lancer le quiz →
       </button>
+
+      <div className="mt-10 pt-4 border-t border-app">
+        <div className="text-[11px] text-app-muted leading-relaxed mb-2">
+          Enseignant ? Tu peux créer tes propres questions : télécharge le modèle, édite-le dans un tableur, puis ré-importe-le (.csv UTF-8).
+          {csvCount > 0 && <span className="ml-1 text-success">✓ {csvCount} importée{csvCount > 1 ? 's' : ''}</span>}
+        </div>
+        <input ref={fileRef} type="file" accept=".csv" className="hidden" onChange={handleFile} />
+        <div className="flex flex-wrap gap-3 text-[11px] font-bold">
+          <button
+            className="underline disabled:opacity-40 disabled:no-underline"
+            style={{ color: '#8B5CF6', background: 'none', border: 'none', padding: 0 }}
+            disabled={!templateQuestions?.length}
+            onClick={() => downloadTemplateCSV(templateQuestions)}
+          >
+            ↓ Télécharger le modèle
+          </button>
+          <button
+            className="underline text-app-muted"
+            style={{ background: 'none', border: 'none', padding: 0 }}
+            onClick={() => fileRef.current.click()}
+          >
+            Importer un fichier
+          </button>
+        </div>
+      </div>
     </div>
   )
 }
@@ -848,8 +852,8 @@ export default function TheoriePage() {
         </div>
 
         {showTutorial && <TheorieTutorial onDone={handleTutorialDone} />}
-        {screen === 'home' && !showTutorial && <HomeScreen onMode={m => { setMode(m); setScreen('setup') }} onLoadCSV={setCsvQuestions} csvCount={csvQuestions.length} templateQuestions={allQuestions} />}
-        {screen === 'setup' && <SetupScreen mode={mode} questions={mergedQuestions} onStart={handleStart} />}
+        {screen === 'home' && !showTutorial && <HomeScreen onMode={m => { setMode(m); setScreen('setup') }} />}
+        {screen === 'setup' && <SetupScreen mode={mode} questions={mergedQuestions} onStart={handleStart} onLoadCSV={setCsvQuestions} csvCount={csvQuestions.length} templateQuestions={allQuestions} />}
         {screen === 'quiz' && session && <QuizScreen key={session.currentIdx} session={session} mode={mode} onAnswer={handleAnswer} onNext={handleNext} />}
         {screen === 'result' && session && <ResultScreen session={session} mode={mode} onReplay={() => { setSession(null); setMode(null); setScreen('home') }} />}
         {showHelp && (

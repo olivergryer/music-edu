@@ -140,7 +140,8 @@ export default function RythmStaff({
       // Largeur naturelle nécessaire pour afficher la mesure sans chevauchement.
       // drawWidth ≥ renderWidth : si la mesure dense déborde, on dessine plus large
       // puis le SVG est mis à l'échelle (viewBox) pour tenir dans le conteneur.
-      const neededW = noteStartX + minNotesW + 18;
+      // facteur de sécurité : preCalc ignore ligatures/crochets → on élargit un peu
+      const neededW = noteStartX + minNotesW * 1.15 + 22;
       const drawWidth = compact
         ? renderWidth
         : Math.max(renderWidth, Math.ceil(neededW));
@@ -197,14 +198,6 @@ export default function RythmStaff({
         svg.style.background = "transparent";
         svg.querySelectorAll("text").forEach(t => { t.style.fill = "#6b7280"; });
 
-        // Auto-fit : le SVG remplit le conteneur et se met à l'échelle proportionnellement.
-        // drawWidth ≥ conteneur → réduction sans clipping · drawWidth = conteneur → échelle 1.
-        svg.setAttribute("viewBox", `0 0 ${drawWidth} ${height}`);
-        svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
-        svg.setAttribute("width", "100%");
-        svg.setAttribute("height", "100%");
-        svg.style.display = "block";
-
         // ── Points d'impact temporel (remplacent les flèches) ────────────────
         // Dot coloré à gauche de la note = trop tôt, à droite = trop tard
         if (scoreDevs && sessionBpm) {
@@ -227,6 +220,25 @@ export default function RythmStaff({
             svg.appendChild(dot);
           });
         }
+
+        // ── Auto-fit : viewBox calé sur l'étendue RÉELLE du contenu ───────────
+        // getBBox() mesure tout ce qui a été dessiné (notes, ligatures, hampes,
+        // crochets de triolets, dots) — couvre ce que preCalculateMinTotalWidth
+        // sous-estime. Garantit zéro clipping horizontal ET vertical.
+        let vbX = 0, vbY = 0, vbW = drawWidth, vbH = height;
+        try {
+          const bb = svg.getBBox();
+          const pad = 4;
+          vbX = Math.min(0, Math.floor(bb.x - pad));
+          vbY = Math.min(0, Math.floor(bb.y - pad));
+          vbW = Math.max(drawWidth, Math.ceil(bb.x + bb.width + pad)) - vbX;
+          vbH = Math.max(height,    Math.ceil(bb.y + bb.height + pad)) - vbY;
+        } catch { /* getBBox indispo : on garde drawWidth/height */ }
+        svg.setAttribute("viewBox", `${vbX} ${vbY} ${vbW} ${vbH}`);
+        svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
+        svg.setAttribute("width", "100%");
+        svg.setAttribute("height", "100%");
+        svg.style.display = "block";
       }
     } catch (err) {
       console.warn("VexFlow:", err.message ?? err);
