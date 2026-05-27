@@ -6,6 +6,7 @@ import RythmStaff from "./RythmStaff";
 import SettingsPage from "./SettingsPage";
 import useSheetData from "./useSheetData";
 import useProgressFirebase, { TROPHIES as TROPHIES_IMPORT } from "./hooks/useProgressFirebase";
+import { generateDistractorSet, deriveLevel } from "./rythmDistractors";
 
 // ─── Figures de base ──────────────────────────────────────────────────────────
 const q  = { dur:"q"  };
@@ -118,117 +119,8 @@ function shuffle(arr) {
   return a;
 }
 
-// Génère un variant du pattern cible en changeant exactement un temps (formule 1 temps)
-function generateDistractorVariant(target, pool) {
-  const isCompound = target.timeSig === "12/8";
-  const group = isCompound ? "ternary" : "binary";
-  const beatPool1 = pool.filter(f => f.group === group && f.beats === 1);
-
-  if (!target.formulaSlots) return generateMeasure(target.timeSig, pool);
-
-  const changeableSlots = target.formulaSlots
-    .map((slot, i) => ({ ...slot, idx: i }))
-    .filter(slot => slot.formula && slot.beats === 1);
-
-  if (changeableSlots.length === 0 || beatPool1.length <= 1) {
-    return generateMeasure(target.timeSig, pool);
-  }
-
-  const slot = changeableSlots[Math.floor(Math.random() * changeableSlots.length)];
-  const alternatives = beatPool1.filter(f => f.id !== slot.formula.id);
-  if (alternatives.length === 0) return generateMeasure(target.timeSig, pool);
-
-  const slotNotes = noteCount(slot.formula.figs);
-  const sameCount = alternatives.filter(f => noteCount(f.figs) === slotNotes);
-  const pool2 = sameCount.length > 0 ? sameCount : alternatives;
-  const newFormula = pool2[Math.floor(Math.random() * pool2.length)];
-  const newSlots = target.formulaSlots.map((s, i) =>
-    i === slot.idx ? { ...s, formula: newFormula } : s
-  );
-  const newFigs = newSlots.flatMap(s => s.formula ? s.formula.figs.map(f => ({ ...f })) : []);
-
-  return { timeSig: target.timeSig, name: "Aléatoire", figs: newFigs, formulaSlots: newSlots };
-}
-
-// Nombre de notes jouées (figures non-silences)
-function noteCount(figs) {
-  return figs.filter(f => !f.rest).length;
-}
-
-// Distracteur par permutation des slots du pattern cible.
-// Multiset de formules conservé → même nombre de notes garanti.
-function generateDistractorPermutation(target) {
-  const slots = target.formulaSlots;
-  if (!slots || slots.length < 2) return null;
-  const formulas = slots.map(s => s.formula).filter(Boolean);
-  if (formulas.length < 2) return null;
-
-  let perm;
-  if (Math.random() < 0.5) {
-    perm = shuffle(formulas);                                  // permutation aléatoire
-  } else {
-    const off = 1 + Math.floor(Math.random() * (formulas.length - 1));
-    perm = formulas.map((_, i) => formulas[(i + off) % formulas.length]); // rotation circulaire
-  }
-
-  let beat = 0;
-  const newSlots = perm.map(f => {
-    const s = { formula: f, startBeat: beat, beats: f.beats };
-    beat += f.beats;
-    return s;
-  });
-  const newFigs = newSlots.flatMap(s => s.formula.figs.map(f => ({ ...f })));
-  return { timeSig: target.timeSig, name: "Aléatoire", figs: newFigs, formulaSlots: newSlots };
-}
-
-// Empreinte des onsets non-silences (en unités de noires × 1000 pour éviter float)
-function attackFingerprint(figs) {
-  let pos = 0;
-  return figs
-    .map(fig => { const onset = pos; pos += figDur(fig); return { onset, rest: fig.rest }; })
-    .filter(({ rest }) => !rest)
-    .map(({ onset }) => Math.round(onset * 1000))
-    .join(",");
-}
-
-function generateDistractors(target, pool, n = 3) {
-  const key    = p => p.figs.map(f => f.dur + (f.triplet ? "t" : "")).join(",");
-  const targetKey     = key(target);
-  const targetAttacks = attackFingerprint(target.figs);
-  const targetNotes   = noteCount(target.figs);
-  const result = [];
-
-  // Accepte un candidat : distinct de la cible, non-homorythme, pas vide/1 note, non doublon
-  const accept = (c) => {
-    if (!c) return false;
-    const ck = key(c);
-    if (ck === targetKey) return false;
-    if (attackFingerprint(c.figs) === targetAttacks) return false;
-    if (noteCount(c.figs) <= 1) return false;
-    return result.every(d => key(d) !== ck);
-  };
-
-  const fill = (gen, requireSameNotes) => {
-    let attempts = 0;
-    while (result.length < n && attempts < 80) {
-      attempts++;
-      const c = gen();
-      if (!accept(c)) continue;
-      if (requireSameNotes && noteCount(c.figs) !== targetNotes) continue;
-      result.push(c);
-    }
-  };
-
-  // 1) Permutations des slots — même nombre de notes garanti
-  fill(() => generateDistractorPermutation(target), false);
-  // 2) Variant : un temps changé, nombre de notes préservé
-  fill(() => generateDistractorVariant(target, pool), true);
-  // 3) Fallback : mesures aléatoires, gardées seulement si même nombre de notes
-  fill(() => generateMeasure(target.timeSig, pool), true);
-  // 4) Dernier recours : variant sans contrainte de nombre de notes (garantit 4 choix)
-  fill(() => generateDistractorVariant(target, pool), false);
-  return result;
-}
+// Distracteurs act 3/4 : moteur de mutations typées piloté par DISTRACTOR_CONFIG.
+// Voir ./rythmDistractors.ts (generateDistractorSet / deriveLevel / audibleFingerprint).
 
 // ─── Tempi musicaux standards ─────────────────────────────────────────────────
 const TEMPI = [50,54,56,58,60,63,66,69,72,76,80,84,88,92,96,
@@ -713,18 +605,16 @@ export default function RythmApp() {
   }, [extremeMode]);
 
   // Act 3/4 : nombre de propositions par ligne selon orientation (portrait=1, paysage=2)
+  // matchMedia = fiable au changement d'orientation (innerWidth peut être périmé sur orientationchange)
   const [choiceCols, setChoiceCols] = useState(
-    typeof window !== "undefined" && window.innerWidth > window.innerHeight ? 2 : 1
+    typeof window !== "undefined" && window.matchMedia("(orientation: landscape)").matches ? 2 : 1
   );
   useEffect(() => {
-    const update = () => setChoiceCols(window.innerWidth > window.innerHeight ? 2 : 1);
+    const mq = window.matchMedia("(orientation: landscape)");
+    const update = () => setChoiceCols(mq.matches ? 2 : 1);
     update();
-    window.addEventListener("resize", update);
-    window.addEventListener("orientationchange", update);
-    return () => {
-      window.removeEventListener("resize", update);
-      window.removeEventListener("orientationchange", update);
-    };
+    mq.addEventListener("change", update);
+    return () => mq.removeEventListener("change", update);
   }, []);
 
   // Act 3 & 4
@@ -733,6 +623,7 @@ export default function RythmApp() {
   const [selectedIdx, setSelectedIdx] = useState(null);
   const [pendingIdx,  setPendingIdx]  = useState(null);
   const [act4CountN,  setAct4CountN]  = useState(null);
+  const [act34Error,  setAct34Error]  = useState(null); // act 3/4 : génération distracteurs impossible
 
   // Série de 10
   const [seriesMode,   setSeriesMode]   = useState(false);
@@ -828,6 +719,9 @@ export default function RythmApp() {
     }
   }, [formulaCatalog]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Efface l'erreur de génération act 3/4 dès que la sélection ou l'activité change.
+  useEffect(() => { setAct34Error(null); }, [selectedFormulas, activity]);
+
   // Sélectionne toutes les formules de C1/1 jusqu'au niveau cliqué (cumulatif)
   const selectLevel = useCallback(level => {
     const ids = new Set();
@@ -870,6 +764,26 @@ export default function RythmApp() {
       g.gain.setValueAtTime(0.3, ac.currentTime);
       g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.14);
       o.start(ac.currentTime); o.stop(ac.currentTime + 0.15);
+    } catch(_) {}
+  }, [getCtx]);
+
+  // Note du rythme TENUE — résonne ~durée de la note (act 3/4) : distingue
+  // une note tenue d'une attaque+silence à l'oreille (essentiel pour holdRestSwap).
+  const rhythmSustain = useCallback((durMs, forced = false) => {
+    if (!forced && !rhythmSoundRef.current) return;
+    try {
+      const ac = getCtx();
+      const o  = ac.createOscillator(), g = ac.createGain();
+      o.type = 'triangle';
+      o.connect(g); g.connect(ac.destination);
+      o.frequency.value = 330;
+      const t   = ac.currentTime;
+      const dur = Math.max(0.1, durMs / 1000);
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.3, t + 0.01);     // attaque brève
+      g.gain.setValueAtTime(0.3, Math.max(t + 0.02, t + dur - 0.06));
+      g.gain.exponentialRampToValueAtTime(0.001, t + dur);    // release court
+      o.start(t); o.stop(t + dur + 0.02);
     } catch(_) {}
   }, [getCtx]);
 
@@ -961,13 +875,18 @@ export default function RythmApp() {
   const clearTids = () => { tidsRef.current.forEach(clearTimeout); tidsRef.current = []; };
   const tid       = (fn, ms) => { const id = setTimeout(fn, ms); tidsRef.current.push(id); return id; };
 
-  const playPatternAudio = useCallback((pat, bpmVal, delayMs = 0, forced = false) => {
+  // sustain=true : lecture tenue (chaque note résonne ~sa durée) — act 3/4.
+  const playPatternAudio = useCallback((pat, bpmVal, delayMs = 0, forced = false, sustain = false) => {
     audioTidsRef.current.forEach(clearTimeout);
     audioTidsRef.current = [];
     const { timestamps, totalMs } = toTimestamps(pat.figs, bpmVal, pat.timeSig);
+    const isCompound = ["12/8", "6/8", "9/8"].includes(pat.timeSig);
+    const quarterMs  = isCompound ? (60000 / bpmVal) / 1.5 : 60000 / bpmVal;
     pat.figs.forEach((fig, i) => {
       if (!fig.rest) {
-        const id = setTimeout(() => rhythmBeep(false, forced), delayMs + timestamps[i]);
+        const id = sustain
+          ? setTimeout(() => rhythmSustain(figDur(fig) * quarterMs * 0.9, forced), delayMs + timestamps[i])
+          : setTimeout(() => rhythmBeep(false, forced), delayMs + timestamps[i]);
         audioTidsRef.current.push(id);
       }
     });
@@ -981,7 +900,7 @@ export default function RythmApp() {
       }, delayMs + k * beatMs);
       audioTidsRef.current.push(id);
     }
-  }, [rhythmBeep]);
+  }, [rhythmBeep, rhythmSustain]);
 
   const randomPattern = useCallback(() => {
     const pool = formulaCatalog.filter(f => selectedFormulas.has(f.id));
@@ -1016,11 +935,18 @@ export default function RythmApp() {
     const beatMs = 60000 / bpm;
     const { timestamps, totalMs } = toTimestamps(pat.figs, bpm, pat.timeSig);
 
-    // ── Activités 3 & 4 : choix parmi 4 ──────────────────────────────────
+    // ── Activités 3 & 4 : choix parmi 4 (3 en dernier recours) ──────────
     if (activity === 3 || activity === 4) {
-      const pool = formulaCatalog.filter(f => selectedFormulas.has(f.id));
-      const distract = generateDistractors(pat, pool, 3);
-      const shuffled = shuffle([pat, ...distract]);
+      const level = deriveLevel(selectedFormulas, levelOrder, levelFormulaIds);
+      const res   = generateDistractorSet(pat, { selectedFormulas, formulaCatalog, level });
+      if (res.blocked) {
+        // Génération impossible (sélection trop pauvre) → blocage propre, pas de jeu.
+        setAct34Error("Pas assez de figures pour générer 3 réponses distinctes dans ce mode. Sélectionne davantage de figures.");
+        setPhase("idle"); setPattern(null);
+        return;
+      }
+      setAct34Error(null);
+      const shuffled = shuffle([pat, ...res.distractors]);
       const corrIdx  = shuffled.indexOf(pat);
       setPattern(pat); setSessionBpm(bpm);
       setChoices(shuffled); setCorrectIdx(corrIdx);
@@ -1028,13 +954,13 @@ export default function RythmApp() {
       setScores([]); setEarnedPts(0); setProgress(0); setActiveIdx(-1);
       setRevealed(activity === 4);
       if (activity === 3) {
-        // Décompte 3,4 puis lecture audio
+        // Décompte 3,4 puis lecture audio (tenue)
         setPhase("countdown"); setCountdownN(3);
         pulse(false);
         tid(() => { setCountdownN(4); pulse(false); }, beatMs);
         tid(() => {
           setPhase("playing");
-          playPatternAudio(pat, bpm);
+          playPatternAudio(pat, bpm, 0, false, true);
           // Flash bordures des 4 réponses sur chaque beat
           for (let k = 0; k < 4; k++) {
             tid(() => {
@@ -1167,7 +1093,7 @@ export default function RythmApp() {
         setPhase("results");
       }, totalMs + beatMs * 0.6);
     }, 4 * beatMs);
-  }, [randomPattern, actualBpm, pulse, rhythmBeep, rhythmPulse, revealBeat, activity, flashOffsetMs, formulaCatalog, selectedFormulas, playPatternAudio]);
+  }, [randomPattern, actualBpm, pulse, rhythmBeep, rhythmPulse, revealBeat, activity, flashOffsetMs, formulaCatalog, selectedFormulas, playPatternAudio, levelOrder, levelFormulaIds]);
 
   // ── Choix act 3 & 4 ───────────────────────────────────────────────────────
   const handleChoice = useCallback((idx) => {
@@ -1823,6 +1749,25 @@ export default function RythmApp() {
                   modifier
                 </span>
               </p>
+              {(activity===3 || activity===4) && act34Error && (
+                <div
+                  className="mt-3 mx-auto rounded-xl text-[12px] font-semibold leading-snug"
+                  style={{
+                    maxWidth: 320, padding: '10px 12px',
+                    background: 'rgba(251,191,36,0.12)',
+                    border: '1px solid #fbbf24', color: '#fbbf24',
+                  }}
+                >
+                  {act34Error}
+                  <div
+                    onClick={() => { setOpenAccordion("niveau"); setSettingsModalOpen(true); }}
+                    className="cursor-pointer underline mt-1.5"
+                    style={{ color: '#4A6CF7' }}
+                  >
+                    Ouvrir les réglages
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -2001,7 +1946,7 @@ export default function RythmApp() {
                   <>
                     <span>{phase==="playing" ? "Quelle portée ?" : "Résultat"} · {sessionBpm} BPM</span>
                     <button
-                      onClick={() => playPatternAudio(choices[correctIdx], sessionBpm)}
+                      onClick={() => playPatternAudio(choices[correctIdx], sessionBpm, 0, false, true)}
                       className="rounded border-none px-2.5 py-0.5 text-white text-[10px] font-bold cursor-pointer"
                       style={{ background: '#4A6CF7' }}
                     >▶ Rejouer</button>
@@ -2093,7 +2038,7 @@ export default function RythmApp() {
                       onPointerDown={e => e.stopPropagation()}
                       onClick={() => {
                         if (phase !== "playing") return;
-                        playPatternAudio(c, sessionBpm);
+                        playPatternAudio(c, sessionBpm, 0, false, true);
                         setPendingIdx(i);
                         // Comptage des temps synchronisé avec l'audio
                         setAct4CountN(1);
