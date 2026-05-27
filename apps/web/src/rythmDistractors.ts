@@ -12,6 +12,9 @@
 // puis on rejette tout résultat qui ne correspond pas à des formules sélectionnées.
 // Les sémantiques de mutation sont « best-effort » (le filtre est le garde-fou dur).
 
+import { figDur, groupOf, beatQuarters } from "./rhythmGrid.ts";
+import type { Fig, Cell } from "./rhythmGrid.ts";
+
 // ─── Table de difficulté (fournie) ───────────────────────────────────────────
 // nMutations BAS = distracteurs proches = PLUS difficile.
 export const DISTRACTOR_CONFIG = {
@@ -50,25 +53,12 @@ export const LEVEL_TO_CONFIG: Record<string, string> = {
 };
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-type Fig = { dur: string; rest?: boolean; triplet?: boolean };
 type Formula = { id: string; name?: string; group: "binary" | "ternary"; beats: number; figs: Fig[] };
 type Measure = { timeSig: string; name: string; figs: Fig[] };
-type Cell = "A" | "H" | "R"; // attack · hold (prolongation) · rest (silence)
 type Grid = { cells: Cell[]; triplet: boolean };
 type MutationType = "shiftAttack" | "dottedSwap" | "binaryTernarySwap" | "holdRestSwap" | "addRemoveAttack";
 
-// ─── Durées (dupliqué de RythmApp pour rester autonome) ───────────────────────
-const DUR_Q: Record<string, number> = {
-  w: 4, h: 2, hd: 3, q: 1, qd: 1.5,
-  "8": 0.5, "8d": 0.75, "16": 0.25,
-  wr: 4, hr: 2, qr: 1, "8r": 0.5, "16r": 0.25,
-};
-function figDur(fig: Fig): number {
-  const raw = fig.dur.replace(/r$/, "");
-  const base = raw.endsWith("d") ? raw.slice(0, -1) : raw;
-  const dur = DUR_Q[raw] ?? DUR_Q[base] ?? 1;
-  return fig.triplet ? dur * (2 / 3) : dur;
-}
+// figDur · groupOf · beatQuarters : importés de rhythmGrid (modèle partagé).
 
 // ─── Helpers aléatoires ───────────────────────────────────────────────────────
 function shuffle<T>(arr: T[]): T[] {
@@ -119,17 +109,12 @@ export function deriveLevel(
 }
 
 // ─── Grille ⇄ figures (par unité de formule, 1–2 temps, auto-contenue) ────────
-function groupOf(timeSig: string): "binary" | "ternary" {
-  return ["12/8", "6/8", "9/8"].includes(timeSig) ? "ternary" : "binary";
-}
 // Représentation FIXE à la double-croche (binaire /4, ternaire /6) + triolet /3.
 // finestUnit ne pilote QUE le pas de déplacement (shiftAttack / dottedSwap / addRemove).
+// (groupOf / beatQuarters viennent de rhythmGrid ; cellsPerBeat est propre au matching.)
 function cellsPerBeat(group: "binary" | "ternary", triplet: boolean): number {
   if (triplet) return 3;            // triolet binaire : 3 cellules / temps
   return group === "ternary" ? 6 : 4;
-}
-function beatQuarters(group: "binary" | "ternary"): number {
-  return group === "ternary" ? 1.5 : 1;
 }
 
 function figsToGrid(figs: Fig[], group: "binary" | "ternary"): Grid {
