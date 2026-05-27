@@ -7,6 +7,7 @@ import SettingsPage from "./SettingsPage";
 import useSheetData from "./useSheetData";
 import useProgressFirebase, { TROPHIES as TROPHIES_IMPORT } from "./hooks/useProgressFirebase";
 import { generateDistractorSet, deriveLevel } from "./rythmDistractors";
+import { buildPalette, scoreActivity5, gridContextFor } from "./rythmActivity5";
 
 // ─── Figures de base ──────────────────────────────────────────────────────────
 const q  = { dur:"q"  };
@@ -624,6 +625,8 @@ export default function RythmApp() {
   const [pendingIdx,  setPendingIdx]  = useState(null);
   const [act4CountN,  setAct4CountN]  = useState(null);
   const [act34Error,  setAct34Error]  = useState(null); // act 3/4 : génération distracteurs impossible
+  const [act5Palette, setAct5Palette] = useState([]);   // act 5 : cellules (formules) proposées
+  const [act5Placed,  setAct5Placed]  = useState([]);   // act 5 : cellules posées par l'élève (séquence)
 
   // Série de 10
   const [seriesMode,   setSeriesMode]   = useState(false);
@@ -935,6 +938,20 @@ export default function RythmApp() {
     const beatMs = 60000 / bpm;
     const { timestamps, totalMs } = toTimestamps(pat.figs, bpm, pat.timeSig);
 
+    // ── Activité 5 : écoute puis reconstitue par tap-to-place ──────────────
+    if (activity === 5) {
+      const { palette } = buildPalette({
+        solution: pat, selectedFormulas, formulaCatalog, levelOrder, levelFormulaIds,
+      });
+      setPattern(pat); setSessionBpm(bpm);
+      setAct5Palette(palette); setAct5Placed([]);
+      setScores([]); setEarnedPts(0); setProgress(0); setActiveIdx(-1);
+      setSelectedIdx(null); setRevealed(false);
+      setPhase("building");
+      playPatternAudio(pat, bpm, 400, false, true); // lecture tenue de la solution (portée cachée)
+      return;
+    }
+
     // ── Activités 3 & 4 : choix parmi 4 (3 en dernier recours) ──────────
     if (activity === 3 || activity === 4) {
       const level = deriveLevel(selectedFormulas, levelOrder, levelFormulaIds);
@@ -1107,6 +1124,27 @@ export default function RythmApp() {
     setRevealed(true);
     setPhase("results");
   }, [phase, correctIdx]);
+
+  // ── Act 5 : pose/retire une cellule + validation (scoring partiel) ──────────
+  const placeCell = useCallback((formula) => {
+    if (phase !== "building") return;
+    setAct5Placed(prev => [...prev, formula]);
+  }, [phase]);
+  const removeCell = useCallback((idx) => {
+    if (phase !== "building") return;
+    setAct5Placed(prev => prev.filter((_, i) => i !== idx));
+  }, [phase]);
+  const handleValidateAct5 = useCallback(() => {
+    if (phase !== "building" || !pattern) return;
+    audioTidsRef.current.forEach(clearTimeout); audioTidsRef.current = [];
+    const answerFigs = act5Placed.flatMap(f => f.figs.map(x => ({ ...x })));
+    const { group, finestUnit } = gridContextFor(pattern.timeSig, selectedFormulas, levelOrder, levelFormulaIds);
+    const { pct } = scoreActivity5(pattern.figs, answerFigs, group, finestUnit);
+    setEarnedPts(pct);
+    setTotalPts(prev => prev + pct);
+    setRevealed(true);
+    setPhase("results");
+  }, [phase, pattern, act5Placed, selectedFormulas, levelOrder, levelFormulaIds]);
 
   // ── Tap ────────────────────────────────────────────────────────────────────
   const handleTap = useCallback((e) => {
@@ -1571,7 +1609,8 @@ export default function RythmApp() {
   const playableCount = pattern?.figs.filter(f => !f.rest).length ?? 1;
   const rawMax        = playableCount * 100;
   const bonusMult     = 1 + REVEAL_BONUS[revealBeat] / 100;
-  const maxPts        = Math.round(rawMax * bonusMult * (scoreWasExtreme ? 2 : 1));
+  // Act 5 : earnedPts EST déjà un pourcentage (scoring partiel) → maxPts = 100.
+  const maxPts        = activity === 5 ? 100 : Math.round(rawMax * bonusMult * (scoreWasExtreme ? 2 : 1));
   const pct           = maxPts ? Math.round((earnedPts / maxPts) * 100) : 0;
   const medal         = pct >= 90 ? "🥇" : pct >= 70 ? "🥈" : pct >= 50 ? "🥉" : "🎯";
 
@@ -2079,6 +2118,100 @@ export default function RythmApp() {
                     ? "✓ Bonne réponse ! +100 pts"
                     : `✕ Mauvaise réponse. La bonne réponse était ${String.fromCharCode(65+correctIdx)}.`}
                 </div>
+              )}
+            </div>
+          )}
+
+          {/* act 5 — reconstitution par tap-to-place */}
+          {activity === 5 && (phase === "building" || phase === "results") && pattern && (
+            <div className="w-full">
+              {phase === "building" && (
+                <>
+                  <div className="text-center text-[11px] text-app-muted mb-2 flex items-center justify-center gap-2.5">
+                    <span>Reconstitue le rythme · {sessionBpm} BPM</span>
+                    <button
+                      onPointerDown={e => e.stopPropagation()}
+                      onClick={() => playPatternAudio(pattern, sessionBpm, 0, false, true)}
+                      className="rounded border-none px-2.5 py-0.5 text-white text-[10px] font-bold cursor-pointer"
+                      style={{ background: '#4A6CF7' }}
+                    >▶ Réécouter</button>
+                  </div>
+
+                  {/* Portée en construction */}
+                  <div
+                    className="rounded-2xl overflow-hidden mb-2"
+                    style={{ background: 'var(--surface)', padding: '10px 6px 6px', border: '2px solid var(--border-c)', minHeight: 90 }}
+                  >
+                    {act5Placed.length > 0 ? (
+                      <RythmStaff figures={act5Placed.flatMap(f => f.figs)} timeSig={pattern.timeSig} activeIdx={-1} />
+                    ) : (
+                      <div className="text-center text-[12px] text-app-muted py-8">Touche les cellules ci-dessous pour les poser ici</div>
+                    )}
+                  </div>
+
+                  {/* Cellules posées (tap = retirer) */}
+                  {act5Placed.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 justify-center mb-3">
+                      {act5Placed.map((f, i) => (
+                        <button
+                          key={i}
+                          onPointerDown={e => e.stopPropagation()}
+                          onClick={() => removeCell(i)}
+                          className="rounded-lg border px-2 py-1 text-[11px] font-bold cursor-pointer flex items-center gap-1"
+                          style={{ background: 'rgba(74,108,247,0.12)', borderColor: 'rgba(74,108,247,0.4)', color: '#4A6CF7' }}
+                        >{f.name ?? f.id}<span style={{ opacity: 0.7 }}>✕</span></button>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Palette de cellules disponibles (tap = poser) */}
+                  <div className="text-[11px] text-app-muted text-center mb-1.5">Cellules disponibles</div>
+                  <div className="flex flex-wrap gap-2 justify-center mb-3">
+                    {act5Palette.map((f, i) => (
+                      <div
+                        key={`${f.id}-${i}`}
+                        role="button"
+                        onPointerDown={e => e.stopPropagation()}
+                        onClick={() => placeCell(f)}
+                        className="rounded-xl bg-surface cursor-pointer"
+                        style={{ border: '2px solid var(--border-c)', padding: '4px', width: 136 }}
+                      >
+                        <RythmStaff figures={f.figs} timeSig={pattern.timeSig} activeIdx={-1} width={128} height={100} showClef={false} showTimeSig={false} />
+                      </div>
+                    ))}
+                  </div>
+
+                  <button
+                    onPointerDown={e => e.stopPropagation()}
+                    onClick={handleValidateAct5}
+                    disabled={act5Placed.length === 0}
+                    className="w-full border-none rounded-2xl text-sm font-bold disabled:cursor-default cursor-pointer"
+                    style={{
+                      padding: '12px 0',
+                      background: act5Placed.length > 0 ? 'linear-gradient(135deg,#4A6CF7,#8B5CF6)' : 'var(--surface-2)',
+                      color: act5Placed.length > 0 ? '#fff' : 'var(--text-muted)',
+                      transition: 'all 0.2s',
+                    }}
+                  >Valider</button>
+                </>
+              )}
+
+              {phase === "results" && (
+                <>
+                  <div className="text-center mb-2">
+                    <div className="text-3xl font-black" style={{ color: '#4A6CF7' }}>{medal} {pct}%</div>
+                  </div>
+                  <div className="text-[11px] text-app-muted mb-1">Ta réponse</div>
+                  <div className="rounded-2xl overflow-hidden mb-2" style={{ background: 'var(--surface)', padding: '10px 6px 6px', border: '2px solid var(--border-c)', minHeight: 90 }}>
+                    {act5Placed.length > 0
+                      ? <RythmStaff figures={act5Placed.flatMap(f => f.figs)} timeSig={pattern.timeSig} activeIdx={-1} />
+                      : <div className="text-center text-[12px] text-app-muted py-8">(aucune cellule posée)</div>}
+                  </div>
+                  <div className="text-[11px] text-app-muted mb-1">Solution</div>
+                  <div className="rounded-2xl overflow-hidden" style={{ background: 'var(--surface)', padding: '10px 6px 6px', border: '2px solid #22C55E' }}>
+                    <RythmStaff figures={pattern.figs} timeSig={pattern.timeSig} activeIdx={-1} />
+                  </div>
+                </>
               )}
             </div>
           )}
