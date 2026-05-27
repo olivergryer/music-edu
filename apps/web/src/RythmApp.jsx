@@ -181,6 +181,7 @@ const ACTIVITIES   = [
   { id:2, label:"Reproduire entendu" },
   { id:3, label:"Reconnaître écrit" },
   { id:4, label:"Reconnaître joué" },
+  { id:5, label:"Reconstituer" },
 ];
 
 // ─── Métronome visuel ────────────────────────────────────────────────────────
@@ -342,6 +343,18 @@ const ACT_ICONS = {
       <path d="M22 20l16 8-16 8V20z" fill="currentColor"/>
     </svg>
   ),
+  5: (
+    /* Cellules posées sur une portée + une cellule en cours de pose (flèche bas) */
+    <svg width="56" height="56" viewBox="0 0 56 56" fill="none">
+      {[20,26,32,38,44].map(y => (
+        <line key={y} x1="6" y1={y} x2="50" y2={y} stroke="currentColor" strokeWidth="1" opacity="0.4"/>
+      ))}
+      <rect x="9"  y="27" width="11" height="11" rx="3" fill="currentColor" opacity="0.85"/>
+      <rect x="22" y="27" width="11" height="11" rx="3" fill="currentColor" opacity="0.85"/>
+      <rect x="35" y="9"  width="11" height="11" rx="3" stroke="currentColor" strokeWidth="2" fill="none"/>
+      <path d="M40.5 22 v5 m-3 -2.5 l3 3 l3 -3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+    </svg>
+  ),
 };
 
 const ACT_SHORT = {
@@ -349,6 +362,7 @@ const ACT_SHORT = {
   2: "Reproduis ce que tu entends",
   3: "Identifie le rythme entendu parmi les 4 rythmes écrits",
   4: "Identifie le rythme écrit parmi les 4 rythmes entendus",
+  5: "Reconstitue le rythme entendu en posant des cellules",
 };
 
 const TUTO_TOTAL = 4;
@@ -388,7 +402,7 @@ function TutorialOverlay({ onDone, levelOrder, activity: initActivity, inputMode
     if (slide === 0) {
       return (
         <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, width:280 }}>
-          {[1,2,3,4].map(id => (
+          {[1,2,3,4,5].map(id => (
             <div key={id} style={{ background:'rgba(74,108,247,0.1)', border:'2px solid rgba(74,108,247,0.4)', borderRadius:14, padding:'16px 8px 12px', display:'flex', flexDirection:'column', alignItems:'center', color:'#c084fc' }}>
               {ACT_ICONS[id]}
               <div style={{ fontSize:10, color:'#a5b4fc', marginTop:8, lineHeight:1.3, textAlign:'center' }}>{ACTIVITIES[id-1].label}</div>
@@ -401,7 +415,7 @@ function TutorialOverlay({ onDone, levelOrder, activity: initActivity, inputMode
     if (slide === 1) {
       return (
         <div style={{ display:'flex', flexDirection:'column', gap:8, width:280 }}>
-          {[1,2,3,4].map(i => {
+          {[1,2,3,4,5].map(i => {
             const sel = tutoActivity === i;
             return (
               <div key={i} role="button" onClick={() => setTutoActivity(i)} style={{
@@ -1498,10 +1512,11 @@ export default function RythmApp() {
           <div className="w-full max-w-xl">
             <div className="text-3xl font-black mb-5" style={{ color: '#4A6CF7' }}>Rythme</div>
 
-            {/* 2×2 grid activités */}
+            {/* grille activités (dernière carte pleine largeur si nombre impair) */}
             <div className="grid grid-cols-2 gap-3 mb-5" data-tour="activite-grid">
-              {ACTIVITIES.map(a => {
+              {ACTIVITIES.map((a, idx) => {
                 const sel = activity === a.id;
+                const fullWidth = ACTIVITIES.length % 2 === 1 && idx === ACTIVITIES.length - 1;
                 return (
                   <div key={a.id}
                     role="button"
@@ -1513,6 +1528,7 @@ export default function RythmApp() {
                       background: sel ? 'rgba(74,108,247,0.1)' : 'var(--surface)',
                       color: sel ? '#c084fc' : '#6b7280',
                       minHeight: 100,
+                      gridColumn: fullWidth ? '1 / -1' : undefined,
                     }}
                   >
                     {ACT_ICONS[a.id]}
@@ -1769,13 +1785,14 @@ export default function RythmApp() {
           {phase==="idle" && (
             <div className="text-center px-5">
               <div className="text-5xl mb-2.5">
-                {activity===1?"🥁":activity===2?"👂":activity===3?"🎵":"🎼"}
+                {activity===1?"🥁":activity===2?"👂":activity===3?"🎵":activity===4?"🎼":"🧩"}
               </div>
               <p className="text-app-muted text-sm leading-relaxed" style={{ maxWidth: 300 }}>
                 {activity===1 && "Un rythme aléatoire s'affiche sur la portée. Reproduis-le en tapant sur le bouton au bon moment."}
                 {activity===2 && "Écoute le rythme et reproduis-le en tapant. La portée reste cachée pendant le jeu."}
                 {activity===3 && "Écoute le rythme joué et identifie la bonne portée parmi 4 propositions."}
                 {activity===4 && "Observe la portée et identifie parmi 4 lectures audio celle qui correspond."}
+                {activity===5 && "Écoute le rythme, puis reconstitue-le en posant des cellules rythmiques sur la portée. Score partiel selon la justesse."}
               </p>
               <p className="text-[11px] text-app-muted mt-1.5">
                 {formulaCount} formule{formulaCount>1?"s":""} sélectionnée{formulaCount>1?"s":""}

@@ -5,17 +5,19 @@
 - `RythmStaff.jsx` — rendu VexFlow SVG, ResizeObserver mobile
 - `SettingsPage.jsx` — réglages avancés : catalogue formules + Google Sheets + offset flash calibration
 
-## 4 activités
+## 5 activités
 1. **Reproduire vu** — portée visible, l'élève tape/chante
 2. **Reproduire entendu** — portée cachée pendant jeu, révélée après
 3. **Reconnaître écrit** — rythme joué, 4 portées proposées, clic
 4. **Reconnaître joué** — portée affichée, 4 boutons audio A/B/C/D
+5. **Reconstituer** — rythme entendu (tenu), reconstruit par **tap-to-place** de cellules sur une portée vide, score **partiel**
 
 ## Machine à états (`phase`)
 `idle` → `countdown` → (`listening` act 2 seulement) → `playing` → `results`
 
 - Act 2 : après `listening`, retour `countdown` beat muet (`countdownN=null`) puis beats 3 & 4 sonores
 - Act 4 : pas de countdown, `setPhase("playing")` direct
+- Act 5 : pas de countdown, `idle` → **`building`** (joue la solution tenue, portée cachée ; pose libre) → `results`
 
 ## Audio
 - `beep(strong)` : métronome (sine 1000/700 Hz, 80 ms)
@@ -54,6 +56,14 @@ Moteur de mutations typées piloté par une **table de difficulté par niveau** 
 - **Blocage propre** : si <2 distracteurs uniques après tous les replis → `blocked:true` → `startGame` set `act34Error` + reste en `idle` (bannière warning + lien réglages). `act34Error` effacé par `useEffect([selectedFormulas, activity])`.
 - `audibleFingerprint(figs)` = `(onset:durée)` des notes non-silences → distingue tenue vs attaque+silence (remplace l'ancien `attackFingerprint`). **Nécessite la lecture tenue** (sinon hold/silence identiques à l'oreille).
 - Anciens `generateDistractors` / `generateDistractorPermutation` / `generateDistractorVariant` / `attackFingerprint` / `noteCount` **supprimés**.
+
+## Activité 5 — reconstituer (tap-to-place)
+- **Flux** `building` : joue la solution tenue (`playPatternAudio(...,sustain=true)`), portée cachée. L'élève **tape** une cellule de la palette → ajoutée en fin de séquence (`act5Placed`) ; **tape** une cellule posée → retirée. « ▶ Réécouter » **libre** (sans malus). « Valider » → scoring.
+- **Modèle de grille partagé** : `rhythmGrid.ts` (`figDur`, `groupOf`, `beatQuarters`, `attackCount`, `toTimelineCells`). `rythmDistractors.ts` en importe les primitives (le matching distracteurs garde sa propre représentation interne /4–/6).
+- **Palette** `rythmActivity5.ts` `buildPalette()` : toutes les cellules de la solution (toujours constructible) + jusqu'à **N proches** par cellule (même temps, même nb d'attaques, issus de la sélection). N = `PALETTE_DISTRACTORS[clé]` (0 en C1/1 → 4 en C3). Repli silencieux loggé si < N proches.
+- **Scoring partiel** `scoreActivity5()` : `toTimelineCells` (grille uniforme `ticksPerBeat = base×3`, absorbe les triolets) pour solution ET réponse, comparaison case à case ; `pct = identiques / max(longueurs)`. Réponse plus courte → cases manquantes = silence ; plus longue → l'excès gonfle le dénominateur (pénalité sur-remplissage). **Jamais figure par figure.** `earnedPts = pct`, `maxPts = 100`.
+- **Tests** `node --test` (`npm test`) : `rythmActivity5.test.ts` (scoring + palette). Imports `.ts` explicites entre modules (`allowImportingTsExtensions` déjà actif) → résolus par Vite ET node --test.
+- **Intégration** : `ACTIVITIES`/`ACT_ICONS[5]`/`ACT_SHORT[5]`, grille home (dernière carte pleine largeur si nombre impair), tuto slides `[1..5]`, son forcé via `activity >= 2`.
 
 ## Mode Extrême (act 1)
 - `extremeMode = activity===1 && !rhythmSoundOn && !flashBorderOn` — son rythme ET flash off
