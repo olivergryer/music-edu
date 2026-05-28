@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import IntervalleStaff from './IntervalleStaff.jsx'
 import TourGuide from './TourGuide'
+import ConsigneOverlay, { consigneSeen } from './ConsigneOverlay'
 
 const CATEGORIES = [
   { id: 'vocabulaire_musical',    label: 'Vocabulaire musical',    includes: ['vocabulaire_italien', 'vocabulaire_technique', 'notation_partition'] },
@@ -774,6 +775,7 @@ export default function TheoriePage() {
   })
   const [showHelp, setShowHelp] = useState(false)
   const [showTour, setShowTour] = useState(false)
+  const [showConsigne, setShowConsigne] = useState(false) // overlay consigne avant quiz
 
   useEffect(() => {
     fetch('/data/questions.json').then(r => r.json()).then(setAllQuestions).catch(() => setAllQuestions([]))
@@ -789,7 +791,9 @@ export default function TheoriePage() {
     if (pool.length === 0) { alert('Aucune question ne correspond à cette sélection. Élargis le niveau ou les catégories.'); return }
     setMode(m)
     setSession({ pool, currentIdx: 0, answers: [] })
-    setScreen('quiz')
+    // Consigne d'arrivée (1ʳᵉ fois / non masquée) avant de lancer le quiz
+    if (consigneSeen('theorie')) setScreen('quiz')
+    else setShowConsigne(true)
   }
 
   function handleTutorialDone(selections) {
@@ -859,6 +863,23 @@ export default function TheoriePage() {
           />
         )}
         {showTour && <TourGuide steps={THEORIE_TOUR_STEPS} onDone={() => setShowTour(false)} />}
+        {showConsigne && (
+          <ConsigneOverlay
+            storageKey="theorie"
+            icon="🎯"
+            title={mode === 'examen' ? "Mode Examen" : "Mode Entraînement"}
+            lines={[
+              "Réponds aux questions de théorie musicale.",
+              mode === 'examen'
+                ? "40 questions, seuil de réussite 35/40."
+                : "Feedback immédiat après chaque réponse.",
+              "20 secondes par question : à temps = 1 pt, hors délai = 0,5 pt.",
+            ]}
+            startLabel="Commencer le quiz"
+            onStart={() => { setShowConsigne(false); setScreen('quiz') }}
+            onClose={() => setShowConsigne(false)}
+          />
+        )}
       </div>
     </div>
   )

@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import TourGuide from './TourGuide'
 import { PitchDetector } from 'pitchy'
 import AccordeurStaff from './AccordeurStaff'
+import ConsigneOverlay, { consigneSeen } from './ConsigneOverlay'
 import SpectrePaneau from './SpectrePaneau'
 import GenerateurAccord from './GenerateurAccord'
 import JeuGamme from './JeuGamme'
@@ -641,6 +642,7 @@ export default function AccordeurPage() {
   const [showReglages, setShowReglages] = useState(false)
   const [warnRef,      setWarnRef]      = useState(false)
   const [showTutorial, setShowTutorial] = useState(() => { try { return !localStorage.getItem(ACC_TUTO_KEY) } catch { return true } })
+  const [showConsigne, setShowConsigne] = useState(() => !consigneSeen('accordeur')) // consigne d'arrivée (après le tuto)
   const [showHelp,     setShowHelp]     = useState(false)
   const [showTour,     setShowTour]     = useState(false)
   const warnRefTimer = useRef(null)
@@ -1902,6 +1904,21 @@ export default function AccordeurPage() {
         />
       )}
       {showTutorial && <AccordeurTutorial onDone={sel => handleTutorialDone(sel)} />}
+      {!showTutorial && showConsigne && (
+        <ConsigneOverlay
+          storageKey="accordeur"
+          icon="🎻"
+          title="Accordeur"
+          lines={[
+            "Joue ou chante une note tenue : l'accordeur affiche la justesse en cents (±50¢).",
+            "Choisis une tonique pour activer les référentiels tempéré / harmonique.",
+          ]}
+          warning={{ tone: "mic", text: "Autorise l'accès au micro et place-toi dans un endroit calme." }}
+          startLabel="J'ai compris"
+          onStart={() => setShowConsigne(false)}
+          onClose={() => setShowConsigne(false)}
+        />
+      )}
       {showHelp && (
         <HelpModal
           onTuto={() => { setShowHelp(false); setShowTutorial(true) }}

@@ -4,6 +4,7 @@ import TourGuide from "./TourGuide";
 import { useTheme } from "./ThemeContext";
 import RythmStaff from "./RythmStaff";
 import SettingsPage from "./SettingsPage";
+import ConsigneOverlay, { consigneSeen } from "./ConsigneOverlay";
 import useSheetData from "./useSheetData";
 import useProgressFirebase, { TROPHIES as TROPHIES_IMPORT } from "./hooks/useProgressFirebase";
 import { generateDistractorSet, deriveNiveau } from "./rythmDistractors";
@@ -366,6 +367,16 @@ const ACT_SHORT = {
   5: "Reconstitue le rythme entendu en posant des cellules",
 };
 
+// Consignes synthétiques affichées à l'arrivée sur chaque activité (overlay).
+const CONSIGNES_RYTHME = {
+  1: ["Un rythme s'affiche sur la portée.", "Reproduis-le en tapant (ou au micro) au bon moment, en suivant le tempo."],
+  2: ["Écoute le rythme : la portée reste cachée.", "Reproduis-le ensuite en tapant au bon moment."],
+  3: ["Écoute le rythme joué.", "Choisis, parmi les 4 portées, celle qui correspond."],
+  4: ["Observe la portée affichée.", "Écoute les 4 lectures A/B/C/D et choisis celle qui correspond."],
+  5: ["Écoute le rythme, puis reconstitue-le en posant les cellules sur la portée.", "Valide pour voir ton score."],
+};
+const RYTHME_SOUND_WARNING = { tone: "sound", text: "Monte le volume et désactive le mode silencieux de ton appareil — le son est nécessaire." };
+
 const TUTO_TOTAL = 4;
 
 function TutorialOverlay({ onDone, niveauOrder, activity: initActivity, inputMode: initInputMode }) {
@@ -567,6 +578,7 @@ export default function RythmApp() {
     return !localStorage.getItem(`rythm-tuto-${TUTORIAL_VERSION}`);
   });
   const [showHelp,        setShowHelp]        = useState(false);
+  const [showConsigne,    setShowConsigne]    = useState(false); // overlay consigne d'arrivée (home)
   const [showTour,        setShowTour]        = useState(false);
   const [selectedFormulas,setSelectedFormulas] = useState(() => {
     const s = loadSettings();
@@ -1324,6 +1336,18 @@ export default function RythmApp() {
     startGame();
   };
 
+  // Lancement depuis la home : affiche la consigne d'arrivée (1ʳᵉ fois / non masquée), sinon lance.
+  const requestStart = () => {
+    if (consigneSeen(`rythme-${activity}`)) { startSession(); return; }
+    setShowConsigne(true);
+  };
+  // Déverrouillage audio best-effort (geste utilisateur) + lancement.
+  const startFromConsigne = () => {
+    try { const ac = getCtx(); ac.resume?.(); } catch (_) {}
+    setShowConsigne(false);
+    startSession();
+  };
+
   // ── Modal réglages ─────────────────────────────────────────────────────────
   const formulaCountModal = selectedFormulas.size;
   const SettingsModal = settingsModalOpen && (
@@ -1573,13 +1597,26 @@ export default function RythmApp() {
 
             {/* CTA Commencer */}
             <button
-              onClick={startSession}
+              onClick={requestStart}
               data-tour="btn-commencer"
               className="w-full border-none rounded-2xl cursor-pointer text-white text-base font-bold"
               style={{ padding: '18px 0', background: 'linear-gradient(135deg,#4A6CF7,#8B5CF6)', boxShadow: '0 8px 32px rgba(74,108,247,0.4)' }}
             >{seriesMode ? "▶ Commencer la série" : "▶ Commencer"}</button>
           </div>
         </div>
+
+        {showConsigne && (
+          <ConsigneOverlay
+            storageKey={`rythme-${activity}`}
+            icon={activity===1?"🥁":activity===2?"👂":activity===3?"🎵":activity===4?"🎼":"🧩"}
+            title={ACTIVITIES[activity - 1]?.label ?? "Activité"}
+            lines={CONSIGNES_RYTHME[activity] ?? []}
+            warning={RYTHME_SOUND_WARNING}
+            startLabel={seriesMode ? "▶ Commencer la série" : "▶ Commencer"}
+            onStart={startFromConsigne}
+            onClose={() => setShowConsigne(false)}
+          />
+        )}
       </>
     );
   }
