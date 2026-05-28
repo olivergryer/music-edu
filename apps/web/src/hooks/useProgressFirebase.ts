@@ -31,12 +31,12 @@ interface AddSessionParams {
 
 interface AddSessionResult {
   newTrophies: string[]
-  leveledUp: boolean
+  rankedUp: boolean
 }
 
-// ─── Niveaux XP ───────────────────────────────────────────────────────────────
+// ─── Rangs XP (cross-module) ───────────────────────────────────────────────────────────────
 
-export const XP_LEVELS = [
+export const RANKS = [
   { id: 'Apprenti',      xp: 0 },
   { id: 'Musicien',      xp: 2500 },
   { id: 'Instrumentiste',xp: 6000 },
@@ -46,12 +46,12 @@ export const XP_LEVELS = [
   { id: 'Maestro',       xp: 140000 },
 ]
 
-export function getLevel(xp: number) {
-  return [...XP_LEVELS].reverse().find(l => xp >= l.xp) ?? XP_LEVELS[0]
+export function getRank(xp: number) {
+  return [...RANKS].reverse().find(l => xp >= l.xp) ?? RANKS[0]
 }
 
-export function getNextLevel(xp: number) {
-  return XP_LEVELS.find(l => l.xp > xp) ?? null
+export function getNextRank(xp: number) {
+  return RANKS.find(l => l.xp > xp) ?? null
 }
 
 // ─── Trophées ─────────────────────────────────────────────────────────────────
@@ -90,20 +90,20 @@ export const TROPHIES = [
   {
     id: 'do_majeur',
     icon: '🎹', label: 'Do majeur',
-    hint: 'Atteindre le niveau Soliste',
-    check: (s: ProgressState) => XP_LEVELS.findIndex(l => l.id === getLevel(s.xp).id) >= 3,
+    hint: 'Atteindre le rang Soliste',
+    check: (s: ProgressState) => RANKS.findIndex(l => l.id === getRank(s.xp).id) >= 3,
   },
   {
     id: 'diapason',
     icon: '🎺', label: 'Diapason',
-    hint: 'Atteindre le niveau Maestro',
-    check: (s: ProgressState) => XP_LEVELS.findIndex(l => l.id === getLevel(s.xp).id) >= 6,
+    hint: 'Atteindre le rang Maestro',
+    check: (s: ProgressState) => RANKS.findIndex(l => l.id === getRank(s.xp).id) >= 6,
   },
   {
     id: 'concert',
     icon: '🎻', label: 'Concert',
-    hint: 'Atteindre le niveau Maestro',
-    check: (s: ProgressState) => getLevel(s.xp).id === 'Maestro',
+    hint: 'Atteindre le rang Maestro',
+    check: (s: ProgressState) => getRank(s.xp).id === 'Maestro',
   },
   {
     id: 'perfect_series',
@@ -200,13 +200,13 @@ export default function useProgressFirebase() {
   }, [user])
 
   const addSession = useCallback(async ({ module, xpEarned, medal, meta = {} }: AddSessionParams): Promise<AddSessionResult> => {
-    if (!user || !loaded) return { newTrophies: [], leveledUp: false }
+    if (!user || !loaded) return { newTrophies: [], rankedUp: false }
 
     const prev = dataRef.current
-    const levelBefore = getLevel(prev.xp).id
+    const rankBefore = getRank(prev.xp).id
     const newStreak   = updateStreak(prev.streak)
     const newXp       = prev.xp + xpEarned
-    const levelAfter  = getLevel(newXp).id
+    const rankAfter  = getRank(newXp).id
 
     let moduleUpdate: ProgressState['modules']
     if (module === 'rythme') {
@@ -247,13 +247,13 @@ export default function useProgressFirebase() {
       createdAt: serverTimestamp(),
     })
 
-    return { newTrophies: newTrophyIds, leveledUp: levelAfter !== levelBefore }
+    return { newTrophies: newTrophyIds, rankedUp: rankAfter !== rankBefore }
   }, [user, loaded])
 
   return {
     xp: data.xp,
-    level: getLevel(data.xp),
-    nextLevel: getNextLevel(data.xp),
+    rank: getRank(data.xp),
+    nextRank: getNextRank(data.xp),
     streak: data.streak,
     trophies: data.trophies,
     modules: data.modules,

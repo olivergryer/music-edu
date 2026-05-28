@@ -267,11 +267,11 @@ function SeriesEndScreen({ xpLog, medals, totalXp, dominantMedal, perfectSeries,
           </div>
         )}
 
-        {/* Level-up */}
-        {result?.leveledUp && (
+        {/* Montée de rang XP */}
+        {result?.rankedUp && (
           <div className="rounded-2xl p-3.5 mb-4 text-center border" style={{ background: 'rgba(74,108,247,0.08)', borderColor: '#4A6CF7' }}>
             <div className="text-2xl mb-1">🎉</div>
-            <div className="text-sm font-bold" style={{ color: '#4A6CF7' }}>Niveau supérieur !</div>
+            <div className="text-sm font-bold" style={{ color: '#4A6CF7' }}>Rang supérieur !</div>
           </div>
         )}
 

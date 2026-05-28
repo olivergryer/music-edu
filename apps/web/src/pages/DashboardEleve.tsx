@@ -4,7 +4,7 @@ import { collection, query, orderBy, limit, getDocs, doc, getDoc, updateDoc, arr
 import { signOut } from 'firebase/auth'
 import { db, auth } from '../lib/firebase'
 import { useAuth } from '../auth/AuthProvider'
-import useProgressFirebase, { TROPHIES, getNextLevel } from '../hooks/useProgressFirebase'
+import useProgressFirebase, { TROPHIES, getNextRank } from '../hooks/useProgressFirebase'
 
 interface HistoryEntry {
   date: string
@@ -30,17 +30,17 @@ const labelCls = "text-xs font-bold text-app-muted uppercase tracking-widest mb-
 
 export default function DashboardEleve() {
   const { user, profile } = useAuth()
-  const { xp, level, nextLevel, streak, trophies, modules } = useProgressFirebase()
+  const { xp, rank, nextRank, streak, trophies, modules } = useProgressFirebase()
   const [history, setHistory] = useState<HistoryEntry[]>([])
   const [hoveredTrophy, setHoveredTrophy] = useState<string | null>(null)
   const [teacherInput, setTeacherInput] = useState('')
   const [teacherMsg, setTeacherMsg] = useState('')
   const [teacherLoading, setTeacherLoading] = useState(false)
 
-  const nextLv = getNextLevel(xp)
-  const xpInLevel = xp - level.xp
-  const xpNeeded = nextLv ? nextLv.xp - level.xp : 1
-  const pct = Math.min(100, Math.round((xpInLevel / xpNeeded) * 100))
+  const nextLv = getNextRank(xp)
+  const xpInRank = xp - rank.xp
+  const xpNeeded = nextLv ? nextLv.xp - rank.xp : 1
+  const pct = Math.min(100, Math.round((xpInRank / xpNeeded) * 100))
 
   const profCodes: string[] = (profile as unknown as { profCodes?: string[] })?.profCodes ?? []
   const profNames: Record<string, string> = (profile as unknown as { profNames?: Record<string, string> })?.profNames ?? {}
@@ -112,12 +112,12 @@ export default function DashboardEleve() {
 
         <h1 className="text-xl font-black text-app mb-5">Tableau de bord</h1>
 
-        {/* Niveau + XP */}
+        {/* Rang + XP */}
         <div className={cardCls}>
           <div className="flex justify-between items-center mb-3">
             <div>
-              <div className={labelCls}>Niveau</div>
-              <div className="text-3xl font-black" style={{ color: '#8B5CF6' }}>{level.id}</div>
+              <div className={labelCls}>Rang</div>
+              <div className="text-3xl font-black" style={{ color: '#8B5CF6' }}>{rank.id}</div>
             </div>
             <div className="text-right">
               <div className={labelCls}>XP total</div>
@@ -131,8 +131,8 @@ export default function DashboardEleve() {
             />
           </div>
           <div className="flex justify-between text-xs text-app-muted">
-            <span>{xpInLevel} / {xpNeeded} XP</span>
-            <span>{nextLv ? `Prochain : ${nextLv.id}` : 'Niveau maximum'}</span>
+            <span>{xpInRank} / {xpNeeded} XP</span>
+            <span>{nextLv ? `Prochain : ${nextLv.id}` : 'Rang maximum'}</span>
           </div>
         </div>
 

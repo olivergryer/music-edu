@@ -123,7 +123,7 @@ test("palette : cellule à 0 attaque n'a que des proches à 0 attaque", () => {
 });
 
 test("palette : quota saturé C3 (N=4) → source + 4 proches, pas de repli", () => {
-  const all = Object.values(LEVEL_FORMULA_IDS).flat();
+  const all = Object.values(NIVEAU_FORMULA_IDS).flat();
   const { palette, fallbackLogged } = call(all, ["ee", "ee", "ee", "ee"]);
   // ee (2 attaques, 1 temps) a 4 proches : x2a..x2d
   assert.deepEqual(ids(palette), new Set(["ee", "x2a", "x2b", "x2c", "x2d"]));
@@ -132,7 +132,7 @@ test("palette : quota saturé C3 (N=4) → source + 4 proches, pas de repli", ()
 });
 
 test("palette : repli si une cellule a moins de N proches → fallbackLogged", () => {
-  const all = Object.values(LEVEL_FORMULA_IDS).flat();
+  const all = Object.values(NIVEAU_FORMULA_IDS).flat();
   // C3 N=4 ; source q1 (1 attaque) n'a que 2 proches : eer, ere
   const { palette, fallbackLogged } = call(all, ["q1", "q1", "q1", "q1"]);
   assert.deepEqual(ids(palette), new Set(["q1", "eer", "ere"]));

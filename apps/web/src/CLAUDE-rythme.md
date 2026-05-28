@@ -48,7 +48,7 @@
 
 ## Distracteurs act 3 & 4 — `rythmDistractors.ts`
 Moteur de mutations typées piloté par une **table de difficulté par niveau** (`DISTRACTOR_CONFIG`, 9 clés `C1/1…C3`).
-- **Niveau dérivé de la sélection** (pas de niveau stocké) : `deriveLevel()` = dernier niveau dont toutes les formules cumulées sont sélectionnées (logique `isLevelActive`), défaut `Apprenti`. Mapping 7 niveaux → 9 clés via `LEVEL_TO_CONFIG`.
+- **Niveau (cycle) dérivé de la sélection** (pas de niveau stocké) : `deriveNiveau()` = plus haut niveau `C1/1…C3` dont toutes les formules cumulées sont sélectionnées (logique `isNiveauActif`), défaut niveau le plus bas. Le niveau EST une clé C → indexe `DISTRACTOR_CONFIG` directement (plus de mapping). ⚠️ Niveau (cycle) ≠ Rang XP — voir CLAUDE.md.
 - **Config par clé** : `nMutations` (BAS = proche = plus dur), `finestUnit` (`"8"`/`"16"`, pas de déplacement), `lockAttackCount`, `mutations[]`.
 - **Grille libre + filtre** : on grille une unité de formule (1–2 temps, auto-contenue), on mute, puis on **rejette** si le résultat ne se décompose pas en formules de la **sélection active** (`matchGridToSelection`). Représentation FIXE double-croche (binaire /4, ternaire /6) + triolet /3 ; `finestUnit` ne pilote que le pas.
 - **Mutations** : `shiftAttack` (±pas) · `dottedSwap` (onset interne ±1 cellule) · `binaryTernarySwap` (ee↔ttt /2↔/3) · `holdRestSwap` (attaque+silence↔tenue) · `addRemoveAttack` (change le nb d'attaques ; interdit si `lockAttackCount`).
@@ -60,13 +60,12 @@ Moteur de mutations typées piloté par une **table de difficulté par niveau** 
 ## Activité 5 — reconstituer (tap-to-place)
 - **Flux** `building` : joue la solution tenue (`playPatternAudio(...,sustain=true)`), portée cachée. L'élève **tape** une cellule de la palette → ajoutée en fin de séquence (`act5Placed`) ; **tape** une cellule posée → retirée. « ▶ Réécouter » **libre** (sans malus). « Valider » → scoring.
 - **Modèle de grille partagé** : `rhythmGrid.ts` (`figDur`, `groupOf`, `beatQuarters`, `attackCount`, `toTimelineCells`). `rythmDistractors.ts` en importe les primitives (le matching distracteurs garde sa propre représentation interne /4–/6).
-- **Palette** `rythmActivity5.ts` `buildPalette()` : toutes les cellules de la solution (toujours constructible) + jusqu'à **N proches** par cellule (même temps, même nb d'attaques, issus de la sélection). N = `PALETTE_DISTRACTORS[clé]` (0 en C1/1 → 4 en C3). Repli silencieux loggé si < N proches.
+- **Palette** `rythmActivity5.ts` `buildPalette()` : toutes les cellules de la solution (toujours constructible) + jusqu'à **N proches** par cellule (même temps, même nb d'attaques, issus de la sélection). N = `PALETTE_DISTRACTORS[niveau]` (niveau = clé C directe ; 0 en C1/1·C1/2 → 4 en C2/x·C3). Repli silencieux loggé si < N proches.
 - **Conformité mesure** (`measureStatus`) : à la validation, si la somme des durées ≠ 4 temps (incomplète/trop longue) → **exercice NON VALIDE** : 0 point, pas de %, **trait oblique rouge sur la métrique** (`RythmStaff strikeMeter`). Indicateur live en `building` (complète/incomplète/trop longue).
 - **Scoring partiel** `scoreActivity5()` (mesures CONFORMES uniquement) : `toTimelineCells` (grille uniforme `ticksPerBeat = base×3`, absorbe les triolets, finestUnit fixé `"16"`) pour solution ET réponse, comparaison case à case ; `pct = identiques / max(longueurs)`. **Jamais figure par figure.** `earnedPts = pct`, `maxPts = 100`.
 - **UI** : portée `building` toujours affichée (métrique dès le départ, `compact` = pas de re-scaling/étirement VexFlow), cellules de palette **sans card**, tap-to-place.
 - **Tests** `node --test` (`npm test`) : `rythmActivity5.test.ts` (scoring + palette). Imports `.ts` explicites entre modules (`allowImportingTsExtensions` déjà actif) → résolus par Vite ET node --test.
 - **Intégration** : `ACTIVITIES`/`ACT_ICONS[5]`/`ACT_SHORT[5]`, grille home (dernière carte pleine largeur si nombre impair), tuto slides `[1..5]`, son forcé via `activity >= 2`.
-- ⚠️ **À clarifier** : la difficulté est actuellement clé-ée par cycle C1/1…C3 via `LEVEL_TO_CONFIG` (mappé depuis le niveau XP Apprenti…Maestro) — **conceptuellement faux** (XP ≠ cycle). Le nombre de leurres `N` de la palette en dépend → en cours de refonte.
 
 ## Mode Extrême (act 1)
 - `extremeMode = activity===1 && !rhythmSoundOn && !flashBorderOn` — son rythme ET flash off
@@ -74,10 +73,9 @@ Moteur de mutations typées piloté par une **table de difficulté par niveau** 
 - `scoreWasExtreme` fige l'état au calcul du score (`maxPts` ×2 aussi → `pct` ≤ 100%)
 - Animation overlay `extreme-pop` (keyframe `index.css`) + badge "⚡ ×2 Extrême" dans results
 
-## Niveaux XP (Parcours musicien)
-`Apprenti → Musicien → Instrumentiste → Soliste → Concertiste → Virtuose → Maestro`
-- `LEVEL_ORDER` + `LEVEL_FORMULA_IDS` dans `RythmApp.jsx` (sélection formules par niveau)
-- Seuils XP : `hooks/useProgressFirebase.ts` (0 / 2500 / 6000 / 12500 / 45000 / 80000 / 140000)
+## Rang XP (cross-module) ≠ Niveau (cycle)  — voir CLAUDE.md
+- **Rang** (XP, cross-module) : `Apprenti → … → Maestro`. `RANKS`/`getRank` dans `hooks/useProgressFirebase.ts`, seuils XP (0 / 2500 / 6000 / 12500 / 45000 / 80000 / 140000). Affiché « Rang » dans les dashboards.
+- **Niveau** (cycle scolaire, spécifique rythme) : `C1/1…C3`. Source = colonne `niveau` du CSV → `niveauOrder`/`niveauFormulaIds` (fallback hardcodé `NIVEAUX`/`NIVEAU_FORMULA_IDS` dans `RythmApp.jsx`). `deriveNiveau` = plus haut cycle entièrement sélectionné. Pilote la difficulté distracteurs/leurres (clé directe).
 
 ## Navigation & pages
 `currentPage` state : `"home"` | `"game"` | `"settings"` | `"series-end"`

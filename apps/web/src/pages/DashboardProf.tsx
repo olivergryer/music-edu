@@ -4,7 +4,7 @@ import { collection, query, where, getDocs, orderBy, limit } from 'firebase/fire
 import { signOut } from 'firebase/auth'
 import { db, auth } from '../lib/firebase'
 import { useAuth } from '../auth/AuthProvider'
-import { getLevel } from '../hooks/useProgressFirebase'
+import { getRank } from '../hooks/useProgressFirebase'
 
 interface EleveProgress {
   xp: number
@@ -120,13 +120,13 @@ export default function DashboardProf() {
 
         {eleves.map(e => {
           const prog = e.progress ?? DEFAULT_PROGRESS
-          const lvl = getLevel(prog.xp)
+          const rank = getRank(prog.xp)
           return (
             <div key={e.uid} className="bg-surface border border-app rounded-2xl px-5 py-4 mb-3">
               <div className="flex justify-between items-center mb-3">
                 <div className="text-base font-bold text-app">{e.displayName}</div>
                 <div className="flex gap-2.5 items-center">
-                  <span className="text-xs font-bold" style={{ color: '#8B5CF6' }}>{lvl.id}</span>
+                  <span className="text-xs font-bold" style={{ color: '#8B5CF6' }}>{rank.id}</span>
                   <span className="text-xs text-app-muted">{prog.xp} XP</span>
                   <span className="text-xs" style={{ color: prog.streak.current > 0 ? '#FF8B3D' : 'var(--text-muted)' }}>
                     {prog.streak.current}j

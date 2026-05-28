@@ -83,6 +83,10 @@ teacherCodes/{code}
 - `RythmApp.jsx` — fichier sensible (~2100 lignes), ne modifier que sur demande explicite
 - CSV `/public/formules-rythme-template.csv` — source de vérité formules rythme, ajouter dans le CSV pas dans le code
 
+## Vocabulaire — deux notions distinctes (ne pas confondre)
+- **Rang** = expérience **cross-module** (XP). Noms `Apprenti…Maestro`, seuils XP. Code : `RANKS`/`getRank`/`getNextRank` dans `hooks/useProgressFirebase.ts`. Affiché « Rang » dans les dashboards.
+- **Niveau** = **cycle scolaire** `C1/1…C3` (par module), définit les formules/contenus. Rythme : colonne `niveau` du CSV → `niveauOrder`/`niveauFormulaIds`, `deriveNiveau`. Théorie : `LEVELS=['C1/1'…'C3']`. **Indexe directement** `DISTRACTOR_CONFIG`/`PALETTE_DISTRACTORS` (pas de mapping). Tu peux être Virtuose (Rang) en C1/1 (Niveau).
+
 ## Workflow
 - **Plan avant code** — `/plan` avant toute feature non triviale, attendre validation
 - **Spec d'abord** — ne pas anticiper des détails non spécifiés

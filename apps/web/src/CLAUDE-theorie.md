@@ -16,7 +16,7 @@
 
 ## Catégories & niveaux
 - 6 catégories UI (merged)
-- Niveaux difficulté : `C1/1 → C1/2 → ... → C3` (filtre contenu questions — distinct des niveaux XP)
+- Niveaux difficulté (= cycle) : `C1/1 → C1/2 → ... → C3` (filtre contenu questions — **distinct du Rang XP** cross-module Apprenti…Maestro ; voir CLAUDE.md)
 - Timer CSS natif via ref (pas state) pour ne pas re-render
 - Limites par défaut : 20s (QCM/VF/VexFlow), 30s (texte) — surpassable via `temps_limite` dans question
 - Timer freeze au choix : `TimerBar` capte `revealed` prop → `getBoundingClientRect()` → freeze CSS
