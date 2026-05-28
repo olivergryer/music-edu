@@ -85,6 +85,7 @@ export default function RythmStaff({
   showClef     = true,
   showTimeSig  = true,
   compact      = false,
+  strikeMeter  = false,
 }) {
   const ref         = useRef(null);
   const [renderWidth, setRenderWidth] = useState(null);
@@ -104,7 +105,7 @@ export default function RythmStaff({
   }, [width]);
 
   useEffect(() => {
-    if (!ref.current || !figures?.length || !renderWidth) return;
+    if (!ref.current || !figures || !renderWidth) return;
     ref.current.innerHTML = "";
 
     try {
@@ -119,6 +120,25 @@ export default function RythmStaff({
       if (showTimeSig) stave.addTimeSignature(timeSig);
       stave.setStyle({ strokeStyle: "#4b5563", fillStyle: "#4b5563" });
       stave.setContext(ctx).draw();
+
+      // Trait oblique rouge sur la métrique (act 5 : mesure non conforme → indication fausse)
+      if (strikeMeter && showTimeSig) {
+        const x1 = stave.getX() + (showClef ? 32 : 6);
+        const x2 = Math.max(x1 + 14, stave.getNoteStartX() - 3);
+        const yT = stave.getYForLine(0) - 4;
+        const yB = stave.getYForLine(4) + 4;
+        ctx.save();
+        ctx.setLineWidth(3);
+        ctx.setStrokeStyle("#f87171");
+        ctx.beginPath();
+        ctx.moveTo(x1, yB);
+        ctx.lineTo(x2, yT);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      // Portée vide (act 5, départ) : on affiche la métrique seule, pas de voix.
+      if (figures.length === 0) return;
 
       const vexNotes = figures.map((fig, i) =>
         makeVexNote(fig, i, activeIdx, scoreGrades)
@@ -221,7 +241,7 @@ export default function RythmStaff({
     } catch (err) {
       console.warn("VexFlow:", err.message ?? err);
     }
-  }, [figures, timeSig, activeIdx, scoreGrades, scoreDevs, sessionBpm, renderWidth, height, showClef, showTimeSig, compact]);
+  }, [figures, timeSig, activeIdx, scoreGrades, scoreDevs, sessionBpm, renderWidth, height, showClef, showTimeSig, compact, strikeMeter]);
 
   return <div ref={ref} style={{ width:"100%", maxWidth:width, height:height, overflow:"hidden" }} />;
 }

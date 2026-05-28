@@ -2,11 +2,23 @@
 // Scoring PARTIEL par alignement sur une grille timeline (cases attack/hold/rest),
 // et génération de la palette de cellules (formules) proposées à l'élève.
 
-import { toTimelineCells, groupOf, attackCount } from "./rhythmGrid.ts";
+import { toTimelineCells, groupOf, attackCount, figDur, beatQuarters } from "./rhythmGrid.ts";
 import type { Fig } from "./rhythmGrid.ts";
 import { deriveLevel, LEVEL_TO_CONFIG, DISTRACTOR_CONFIG } from "./rythmDistractors.ts";
 
+export { groupOf } from "./rhythmGrid.ts";
+
 type Formula = { id: string; name?: string; group: "binary" | "ternary"; beats: number; figs: Fig[] };
+
+// Conformité de la mesure reconstruite (act 5) : la somme des durées doit valoir
+// exactement 4 temps. Sinon l'exercice est NON VALIDE (ni %, ni point).
+export function measureStatus(figs: Fig[], timeSig: string): "incomplete" | "complete" | "over" {
+  const group = groupOf(timeSig);
+  const totalQ = figs.reduce((s, f) => s + figDur(f), 0);
+  const expectedQ = 4 * beatQuarters(group);
+  if (Math.abs(totalQ - expectedQ) < 1e-6) return "complete";
+  return totalQ < expectedQ - 1e-6 ? "incomplete" : "over";
+}
 
 function shuffle<T>(arr: T[]): T[] {
   const a = [...arr];

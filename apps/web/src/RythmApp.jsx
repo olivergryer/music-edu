@@ -7,7 +7,7 @@ import SettingsPage from "./SettingsPage";
 import useSheetData from "./useSheetData";
 import useProgressFirebase, { TROPHIES as TROPHIES_IMPORT } from "./hooks/useProgressFirebase";
 import { generateDistractorSet, deriveLevel } from "./rythmDistractors";
-import { buildPalette, scoreActivity5, gridContextFor } from "./rythmActivity5";
+import { buildPalette, scoreActivity5, measureStatus, groupOf } from "./rythmActivity5";
 
 // ─── Figures de base ──────────────────────────────────────────────────────────
 const q  = { dur:"q"  };
@@ -641,6 +641,7 @@ export default function RythmApp() {
   const [act34Error,  setAct34Error]  = useState(null); // act 3/4 : génération distracteurs impossible
   const [act5Palette, setAct5Palette] = useState([]);   // act 5 : cellules (formules) proposées
   const [act5Placed,  setAct5Placed]  = useState([]);   // act 5 : cellules posées par l'élève (séquence)
+  const [act5Invalid, setAct5Invalid] = useState(false);// act 5 : mesure non conforme à la validation
 
   // Série de 10
   const [seriesMode,   setSeriesMode]   = useState(false);
@@ -958,7 +959,7 @@ export default function RythmApp() {
         solution: pat, selectedFormulas, formulaCatalog, levelOrder, levelFormulaIds,
       });
       setPattern(pat); setSessionBpm(bpm);
-      setAct5Palette(palette); setAct5Placed([]);
+      setAct5Palette(palette); setAct5Placed([]); setAct5Invalid(false);
       setScores([]); setEarnedPts(0); setProgress(0); setActiveIdx(-1);
       setSelectedIdx(null); setRevealed(false);
       setPhase("building");
@@ -1152,13 +1153,22 @@ export default function RythmApp() {
     if (phase !== "building" || !pattern) return;
     audioTidsRef.current.forEach(clearTimeout); audioTidsRef.current = [];
     const answerFigs = act5Placed.flatMap(f => f.figs.map(x => ({ ...x })));
-    const { group, finestUnit } = gridContextFor(pattern.timeSig, selectedFormulas, levelOrder, levelFormulaIds);
-    const { pct } = scoreActivity5(pattern.figs, answerFigs, group, finestUnit);
+    // Mesure non conforme (incomplète ou trop longue) → exercice NON VALIDE : 0 point, pas de %.
+    if (measureStatus(answerFigs, pattern.timeSig) !== "complete") {
+      setAct5Invalid(true);
+      setEarnedPts(0);
+      setRevealed(true);
+      setPhase("results");
+      return;
+    }
+    setAct5Invalid(false);
+    const group = groupOf(pattern.timeSig);
+    const { pct } = scoreActivity5(pattern.figs, answerFigs, group, "16"); // grille fine (double-croche)
     setEarnedPts(pct);
     setTotalPts(prev => prev + pct);
     setRevealed(true);
     setPhase("results");
-  }, [phase, pattern, act5Placed, selectedFormulas, levelOrder, levelFormulaIds]);
+  }, [phase, pattern, act5Placed]);
 
   // ── Tap ────────────────────────────────────────────────────────────────────
   const handleTap = useCallback((e) => {
@@ -1629,6 +1639,10 @@ export default function RythmApp() {
   const maxPts        = activity === 5 ? 100 : Math.round(rawMax * bonusMult * (scoreWasExtreme ? 2 : 1));
   const pct           = maxPts ? Math.round((earnedPts / maxPts) * 100) : 0;
   const medal         = pct >= 90 ? "🥇" : pct >= 70 ? "🥈" : pct >= 50 ? "🥉" : "🎯";
+
+  // Act 5 : figures posées + conformité de la mesure (pour l'indicateur live et la validation)
+  const act5Figs = activity === 5 ? act5Placed.flatMap(f => f.figs) : [];
+  const act5Stat = activity === 5 && pattern ? measureStatus(act5Figs, pattern.timeSig) : "complete";
 
   const gradeMap = {};
   const devMap   = {};
@@ -2145,7 +2159,7 @@ export default function RythmApp() {
               {phase === "building" && (
                 <>
                   <div className="text-center text-[11px] text-app-muted mb-2 flex items-center justify-center gap-2.5">
-                    <span>Reconstitue le rythme · {sessionBpm} BPM</span>
+                    <span>Reconstitue le rythme · {pattern.timeSig} · {sessionBpm} BPM</span>
                     <button
                       onPointerDown={e => e.stopPropagation()}
                       onClick={() => playPatternAudio(pattern, sessionBpm, 0, false, true)}
@@ -2154,16 +2168,18 @@ export default function RythmApp() {
                     >▶ Réécouter</button>
                   </div>
 
-                  {/* Portée en construction */}
+                  {/* Portée en construction — métrique visible dès le départ, pas de re-scaling (compact) */}
                   <div
-                    className="rounded-2xl overflow-hidden mb-2"
-                    style={{ background: 'var(--surface)', padding: '10px 6px 6px', border: '2px solid var(--border-c)', minHeight: 90 }}
+                    className="rounded-2xl overflow-hidden mb-1"
+                    style={{ background: 'var(--surface)', padding: '10px 6px 6px', border: '2px solid var(--border-c)' }}
                   >
-                    {act5Placed.length > 0 ? (
-                      <RythmStaff figures={act5Placed.flatMap(f => f.figs)} timeSig={pattern.timeSig} activeIdx={-1} />
-                    ) : (
-                      <div className="text-center text-[12px] text-app-muted py-8">Touche les cellules ci-dessous pour les poser ici</div>
-                    )}
+                    <RythmStaff figures={act5Figs} timeSig={pattern.timeSig} activeIdx={-1} showClef={false} showTimeSig={true} compact={true} />
+                  </div>
+
+                  {/* Indicateur de conformité de la mesure */}
+                  <div className="text-center text-[11px] font-bold mb-2"
+                    style={{ color: act5Stat === "complete" ? '#34d399' : act5Stat === "over" ? '#f87171' : '#fbbf24' }}>
+                    {act5Stat === "complete" ? "● Mesure complète" : act5Stat === "over" ? "⚠ Mesure trop longue" : "○ Mesure incomplète"}
                   </div>
 
                   {/* Cellules posées (tap = retirer) */}
@@ -2181,7 +2197,7 @@ export default function RythmApp() {
                     </div>
                   )}
 
-                  {/* Palette de cellules disponibles (tap = poser) */}
+                  {/* Palette de cellules disponibles (tap = poser) — sans card */}
                   <div className="text-[11px] text-app-muted text-center mb-1.5">Cellules disponibles</div>
                   <div className="flex flex-wrap gap-2 justify-center mb-3">
                     {act5Palette.map((f, i) => (
@@ -2190,10 +2206,10 @@ export default function RythmApp() {
                         role="button"
                         onPointerDown={e => e.stopPropagation()}
                         onClick={() => placeCell(f)}
-                        className="rounded-xl bg-surface cursor-pointer"
-                        style={{ border: '2px solid var(--border-c)', padding: '4px', width: 136 }}
+                        className="cursor-pointer"
+                        style={{ width: 128 }}
                       >
-                        <RythmStaff figures={f.figs} timeSig={pattern.timeSig} activeIdx={-1} width={128} height={100} showClef={false} showTimeSig={false} />
+                        <RythmStaff figures={f.figs} timeSig={pattern.timeSig} activeIdx={-1} width={124} height={100} showClef={false} showTimeSig={false} compact={true} />
                       </div>
                     ))}
                   </div>
@@ -2215,18 +2231,27 @@ export default function RythmApp() {
 
               {phase === "results" && (
                 <>
-                  <div className="text-center mb-2">
-                    <div className="text-3xl font-black" style={{ color: '#4A6CF7' }}>{medal} {pct}%</div>
-                  </div>
+                  {act5Invalid ? (
+                    <div className="text-center mb-2">
+                      <div className="text-lg font-black" style={{ color: '#f87171' }}>✕ Exercice non valide</div>
+                      <div className="text-[12px] text-app-muted mt-1">
+                        {act5Stat === "over" ? "Mesure trop longue" : "Mesure incomplète"} — la métrique n'est pas respectée. Aucun point.
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-center mb-2">
+                      <div className="text-3xl font-black" style={{ color: '#4A6CF7' }}>{medal} {pct}%</div>
+                    </div>
+                  )}
                   <div className="text-[11px] text-app-muted mb-1">Ta réponse</div>
-                  <div className="rounded-2xl overflow-hidden mb-2" style={{ background: 'var(--surface)', padding: '10px 6px 6px', border: '2px solid var(--border-c)', minHeight: 90 }}>
+                  <div className="rounded-2xl overflow-hidden mb-2" style={{ background: 'var(--surface)', padding: '10px 6px 6px', border: `2px solid ${act5Invalid ? '#f87171' : 'var(--border-c)'}` }}>
                     {act5Placed.length > 0
-                      ? <RythmStaff figures={act5Placed.flatMap(f => f.figs)} timeSig={pattern.timeSig} activeIdx={-1} />
+                      ? <RythmStaff figures={act5Figs} timeSig={pattern.timeSig} activeIdx={-1} showClef={false} compact={true} strikeMeter={act5Invalid} />
                       : <div className="text-center text-[12px] text-app-muted py-8">(aucune cellule posée)</div>}
                   </div>
                   <div className="text-[11px] text-app-muted mb-1">Solution</div>
                   <div className="rounded-2xl overflow-hidden" style={{ background: 'var(--surface)', padding: '10px 6px 6px', border: '2px solid #22C55E' }}>
-                    <RythmStaff figures={pattern.figs} timeSig={pattern.timeSig} activeIdx={-1} />
+                    <RythmStaff figures={pattern.figs} timeSig={pattern.timeSig} activeIdx={-1} showClef={false} />
                   </div>
                 </>
               )}
