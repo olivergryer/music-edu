@@ -87,6 +87,7 @@ teacherCodes/{code}
 - **Plan avant code** — `/plan` avant toute feature non triviale, attendre validation
 - **Spec d'abord** — ne pas anticiper des détails non spécifiés
 - **Une session par module** — ne pas mélanger les modules
+- **Toujours travailler sur `main`** — committer directement sur `main`, ne PAS créer de branche de feature (déploiement Vercel via push depuis `main`)
 
 ## Commandes
 ```bash
