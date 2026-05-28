@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 
 const LS_KEY = "rhythmSheetId";
 
-function levelToInt(str) {
+function niveauToInt(str) {
   const m = str.match(/^C(\d)(?:\/(\d))?$/);
   if (!m) return 99;
   return parseInt(m[1]) * 10 + parseInt(m[2] ?? "0");
@@ -55,25 +55,25 @@ function parseSheetCSV(csvText) {
   // lines[0] = header row, rest = data
   const rows = lines.slice(1).map(parseCSVRow);
 
-  const formulaCatalog = rows.map(([id, name, group, beats, level, figs]) => ({
+  const formulaCatalog = rows.map(([id, name, group, beats, niveau, figs]) => ({
     id:    id.trim(),
     name:  name.trim(),
     group: group.trim(),
     beats: parseInt(beats),
-    level: level.trim(),
+    niveau: niveau.trim(),
     figs:  parseFigs(figs ?? ""),
   }));
 
-  const levelOrder = [...new Set(rows.map(r => r[4]?.trim()).filter(Boolean))]
-    .sort((a, b) => levelToInt(a) - levelToInt(b));
+  const niveauOrder = [...new Set(rows.map(r => r[4]?.trim()).filter(Boolean))]
+    .sort((a, b) => niveauToInt(a) - niveauToInt(b));
 
-  const levelFormulaIds = {};
-  levelOrder.forEach(lv => { levelFormulaIds[lv] = []; });
+  const niveauFormulaIds = {};
+  niveauOrder.forEach(lv => { niveauFormulaIds[lv] = []; });
   formulaCatalog.forEach(f => {
-    if (levelFormulaIds[f.level]) levelFormulaIds[f.level].push(f.id);
+    if (niveauFormulaIds[f.niveau]) niveauFormulaIds[f.niveau].push(f.id);
   });
 
-  return { formulaCatalog, levelOrder, levelFormulaIds };
+  return { formulaCatalog, niveauOrder, niveauFormulaIds };
 }
 
 export default function useSheetData(defaultCatalog, localCsvPath) {

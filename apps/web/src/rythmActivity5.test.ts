@@ -84,15 +84,16 @@ const CAT: any[] = [
   F("h2", 2, [h]),        // 1 attaque, 2 temps
 ];
 const byId = (id: string) => CAT.find((f) => f.id === id);
-const LEVEL_ORDER = ["Apprenti", "Musicien", "Instrumentiste", "Soliste", "Concertiste", "Virtuose", "Maestro"];
-const LEVEL_FORMULA_IDS: Record<string, string[]> = {
-  Apprenti: ["q1", "ee", "qr"],
-  Musicien: ["eer", "ere"],
-  Instrumentiste: ["qr2"],
-  Soliste: ["x2a", "x2b"],
-  Concertiste: ["h2"],
-  Virtuose: ["x2c"],
-  Maestro: ["x2d"],
+// Niveaux = cycles C1/1…C3 (clés directes de PALETTE_DISTRACTORS).
+const NIVEAU_ORDER = ["C1/1", "C1/2", "C1/3", "C1/4", "C2/2", "C2/3", "C3"];
+const NIVEAU_FORMULA_IDS: Record<string, string[]> = {
+  "C1/1": ["q1", "ee", "qr"],
+  "C1/2": ["eer", "ere"],
+  "C1/3": ["qr2"],
+  "C1/4": ["x2a", "x2b"],
+  "C2/2": ["h2"],
+  "C2/3": ["x2c"],
+  "C3": ["x2d"],
 };
 const sol = (ids: string[]) => ({ timeSig: "4/4", formulaSlots: ids.map((id) => ({ formula: byId(id) })) });
 const call = (selIds: string[], solIds: string[]) =>
@@ -100,8 +101,8 @@ const call = (selIds: string[], solIds: string[]) =>
     solution: sol(solIds),
     selectedFormulas: new Set(selIds),
     formulaCatalog: CAT,
-    levelOrder: LEVEL_ORDER,
-    levelFormulaIds: LEVEL_FORMULA_IDS,
+    niveauOrder: NIVEAU_ORDER,
+    niveauFormulaIds: NIVEAU_FORMULA_IDS,
   });
 const ids = (fs: any[]) => new Set(fs.map((f) => f.id));
 

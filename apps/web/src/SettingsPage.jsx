@@ -110,8 +110,8 @@ function SheetSourceSection({ sheetId, sheetStatus, sheetError, onSheetLoad, onS
 }
 
 export default function SettingsPage({
-  formulaCatalog, levelOrder, levelFormulaIds,
-  selectedFormulas, onToggle, onLevelSelect, onClose,
+  formulaCatalog, niveauOrder, niveauFormulaIds,
+  selectedFormulas, onToggle, onNiveauSelect, onClose,
   sheetId, sheetStatus, sheetError, onSheetLoad, onSheetReset,
   flashOffsetMs, onFlashOffsetChange,
   revealBeat, onRevealBeatChange,
@@ -121,11 +121,11 @@ export default function SettingsPage({
   const binaryFormulas  = formulaCatalog.filter(f => f.group === "binary");
   const ternaryFormulas = formulaCatalog.filter(f => f.group === "ternary");
 
-  function isLevelActive(level) {
+  function isNiveauActif(niveau) {
     const cumIds = [];
-    for (const lv of levelOrder) {
-      (levelFormulaIds[lv] ?? []).forEach(id => cumIds.push(id));
-      if (lv === level) break;
+    for (const lv of niveauOrder) {
+      (niveauFormulaIds[lv] ?? []).forEach(id => cumIds.push(id));
+      if (lv === niveau) break;
     }
     return cumIds.length > 0 && cumIds.every(id => selectedFormulas.has(id));
   }
@@ -196,13 +196,13 @@ export default function SettingsPage({
       <div className={sectionCls}>
         <span className={labelCls}>Sélection par niveau</span>
         <div className="flex flex-wrap gap-1.5">
-          {levelOrder.map(level => {
-            const active = isLevelActive(level);
-            const hasFormulas = (levelFormulaIds[level] ?? []).length > 0;
+          {niveauOrder.map(niveau => {
+            const active = isNiveauActif(niveau);
+            const hasFormulas = (niveauFormulaIds[niveau] ?? []).length > 0;
             return (
               <button
-                key={level}
-                onClick={() => onLevelSelect(level)}
+                key={niveau}
+                onClick={() => onNiveauSelect(niveau)}
                 disabled={!hasFormulas}
                 className="px-3.5 py-1.5 rounded-full text-xs font-bold border-none transition-all duration-150"
                 style={{
@@ -211,7 +211,7 @@ export default function SettingsPage({
                   cursor: hasFormulas ? 'pointer' : 'default',
                   boxShadow: active ? '0 0 10px rgba(74,108,247,0.4)' : 'none',
                 }}
-              >{level}</button>
+              >{niveau}</button>
             );
           })}
         </div>

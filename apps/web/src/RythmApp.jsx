@@ -6,7 +6,7 @@ import RythmStaff from "./RythmStaff";
 import SettingsPage from "./SettingsPage";
 import useSheetData from "./useSheetData";
 import useProgressFirebase, { TROPHIES as TROPHIES_IMPORT } from "./hooks/useProgressFirebase";
-import { generateDistractorSet, deriveLevel } from "./rythmDistractors";
+import { generateDistractorSet, deriveNiveau } from "./rythmDistractors";
 import { buildPalette, scoreActivity5, measureStatus, groupOf } from "./rythmActivity5";
 
 // ─── Figures de base ──────────────────────────────────────────────────────────
@@ -57,25 +57,26 @@ export const FORMULA_CATALOG = [
   { id:"ter_qde_qde", name:"♩. + ♩.",         group:"ternary", beats:2, figs:[qd,qd]       },
 ];
 
-// ─── Formules introduites à chaque niveau ─────────────────────────────────────
-export const LEVEL_ORDER = [
-  "Apprenti", "Musicien", "Instrumentiste", "Soliste",
-  "Concertiste", "Virtuose", "Maestro",
+// ─── Formules introduites à chaque NIVEAU (cycle C1/1…C3) ─────────────────────
+// Fallback hardcodé si le CSV ne charge pas. Clé-é par cycle (≠ Rang XP) pour rester
+// cohérent avec la colonne `niveau` du CSV. (Source de vérité = le CSV.)
+export const NIVEAUX = [
+  "C1/1", "C1/2", "C1/3", "C1/4", "C2/2", "C2/3", "C3",
 ];
 
-export const LEVEL_FORMULA_IDS = {
-  "Apprenti":      ["bin_q","bin_qr","bin_h","bin_hr","bin_ee",
-                    "ter_qd","ter_eee","ter_qe","ter_eq"],
-  "Musicien":      ["bin_qde","bin_eqd","ter_ree","ter_eer","ter_qde_qde"],
-  "Instrumentiste":["bin_ttt"],
-  "Soliste":       ["bin_ssss","bin_ess","bin_sse","bin_sser"],
-  "Concertiste":   ["ter_hd"],
-  "Virtuose":      ["bin_ere","bin_eer","bin_eqe","ter_ere"],
-  "Maestro":       [],
+export const NIVEAU_FORMULA_IDS = {
+  "C1/1": ["bin_q","bin_qr","bin_h","bin_hr","bin_ee",
+           "ter_qd","ter_eee","ter_qe","ter_eq"],
+  "C1/2": ["bin_qde","bin_eqd","ter_ree","ter_eer","ter_qde_qde"],
+  "C1/3": ["bin_ttt"],
+  "C1/4": ["bin_ssss","bin_ess","bin_sse","bin_sser"],
+  "C2/2": ["ter_hd"],
+  "C2/3": ["bin_ere","bin_eer","bin_eqe","ter_ere"],
+  "C3":   [],
 };
 
-// Formules actives par défaut : Apprenti
-const DEFAULT_SELECTED = new Set(LEVEL_FORMULA_IDS["Apprenti"]);
+// Formules actives par défaut : niveau le plus bas (C1/1)
+const DEFAULT_SELECTED = new Set(NIVEAU_FORMULA_IDS["C1/1"]);
 
 // ─── Générateur aléatoire temps par temps ────────────────────────────────────
 function generateMeasure(timeSig, formulaPool) {
@@ -121,7 +122,7 @@ function shuffle(arr) {
 }
 
 // Distracteurs act 3/4 : moteur de mutations typées piloté par DISTRACTOR_CONFIG.
-// Voir ./rythmDistractors.ts (generateDistractorSet / deriveLevel / audibleFingerprint).
+// Voir ./rythmDistractors.ts (generateDistractorSet / deriveNiveau / audibleFingerprint).
 
 // ─── Tempi musicaux standards ─────────────────────────────────────────────────
 const TEMPI = [50,54,56,58,60,63,66,69,72,76,80,84,88,92,96,
@@ -367,14 +368,14 @@ const ACT_SHORT = {
 
 const TUTO_TOTAL = 4;
 
-function TutorialOverlay({ onDone, levelOrder, activity: initActivity, inputMode: initInputMode }) {
+function TutorialOverlay({ onDone, niveauOrder, activity: initActivity, inputMode: initInputMode }) {
   const [slide, setSlide] = useState(0);
   const { dark } = useTheme();
 
   const [tutoActivity,  setTutoActivity]  = useState(initActivity || 1);
   const [tutoInputMode, setTutoInputMode] = useState(initInputMode || "tap");
-  const levels = levelOrder.length > 0 ? levelOrder : LEVEL_ORDER;
-  const [tutoLevel, setTutoLevel] = useState(levels[0] ?? null);
+  const niveaux = niveauOrder.length > 0 ? niveauOrder : NIVEAUX;
+  const [tutoNiveau, setTutoNiveau] = useState(niveaux[0] ?? null);
 
   const SLIDES = [
     {
@@ -474,10 +475,10 @@ function TutorialOverlay({ onDone, levelOrder, activity: initActivity, inputMode
     if (slide === 3) {
       return (
         <div style={{ display:'flex', flexWrap:'wrap', gap:8, justifyContent:'center', width:280 }}>
-          {levels.map(lv => {
-            const sel = tutoLevel === lv;
+          {niveaux.map(lv => {
+            const sel = tutoNiveau === lv;
             return (
-              <div key={lv} role="button" onClick={() => setTutoLevel(lv)} style={{
+              <div key={lv} role="button" onClick={() => setTutoNiveau(lv)} style={{
                 padding:'10px 18px', borderRadius:24, fontSize:13, fontWeight:700, cursor:'pointer',
                 background: sel ? '#4A6CF7' : (dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'),
                 color: sel ? '#fff' : (dark ? '#9ca3af' : '#6b7280'),
@@ -539,7 +540,7 @@ function TutorialOverlay({ onDone, levelOrder, activity: initActivity, inputMode
           >← Précédent</button>
         )}
         <button
-          onClick={() => slide < TUTO_TOTAL - 1 ? setSlide(s => s + 1) : onDone({ activity: tutoActivity, inputMode: tutoInputMode, level: tutoLevel })}
+          onClick={() => slide < TUTO_TOTAL - 1 ? setSlide(s => s + 1) : onDone({ activity: tutoActivity, inputMode: tutoInputMode, niveau: tutoNiveau })}
           style={{ flex:2, padding:'14px 0', borderRadius:16, border:'none', background:'linear-gradient(135deg,#4A6CF7,#8B5CF6)', color:'#fff', fontSize:15, fontWeight:900, cursor:'pointer', boxShadow:'0 8px 24px rgba(74,108,247,0.35)' }}
         >{slide < TUTO_TOTAL - 1 ? "Suivant →" : "▶ Commencer !"}</button>
       </div>
@@ -550,10 +551,10 @@ function TutorialOverlay({ onDone, levelOrder, activity: initActivity, inputMode
 // ─── Composant principal ──────────────────────────────────────────────────────
 export default function RythmApp() {
   const {
-    formulaCatalog, levelOrder, levelFormulaIds,
+    formulaCatalog, niveauOrder, niveauFormulaIds,
     sheetId, sheetStatus, sheetError, setSheetId: _setSheetId, resetToDefault: _resetToDefault,
   } = useSheetData(
-    { formulaCatalog: FORMULA_CATALOG, levelOrder: LEVEL_ORDER, levelFormulaIds: LEVEL_FORMULA_IDS },
+    { formulaCatalog: FORMULA_CATALOG, niveauOrder: NIVEAUX, niveauFormulaIds: NIVEAU_FORMULA_IDS },
     "/formules-rythme-template.csv"
   );
 
@@ -650,7 +651,7 @@ export default function RythmApp() {
   const [seriesMedals, setSeriesMedals] = useState([]);
   const seriesBaseBpmRef               = useRef(null);
   const seriesIdxRef                   = useRef(0);
-  // Résultat addSession (trophées + level-up) — affiché dans series-end
+  // Résultat addSession (trophées + montée de rang XP) — affiché dans series-end
   const [seriesResult, setSeriesResult] = useState(null);
 
   // Microphone
@@ -695,11 +696,11 @@ export default function RythmApp() {
     }
     setShowTutorial(false);
     if (!selections) return; // "Ignorer"
-    const { activity: a, inputMode: im, level: lv } = selections;
+    const { activity: a, inputMode: im, niveau: lv } = selections;
     setActivity(a);
     if (im === "mic") { setInputMode("mic"); startMic(); }
     else { setInputMode("tap"); stopMic(); }
-    if (lv) selectLevel(lv);
+    if (lv) selectNiveau(lv);
     pendingTutoStartRef.current = true; // startSession fires after next render (fresh closures)
   };
 
@@ -732,8 +733,8 @@ export default function RythmApp() {
   useEffect(() => {
     if (!userSheetLoadRef.current) return;
     userSheetLoadRef.current = false;
-    if (levelOrder.length > 0) {
-      setSelectedFormulas(new Set(levelFormulaIds[levelOrder[0]] ?? []));
+    if (niveauOrder.length > 0) {
+      setSelectedFormulas(new Set(niveauFormulaIds[niveauOrder[0]] ?? []));
     }
   }, [formulaCatalog]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -741,14 +742,14 @@ export default function RythmApp() {
   useEffect(() => { setAct34Error(null); }, [selectedFormulas, activity]);
 
   // Sélectionne toutes les formules de C1/1 jusqu'au niveau cliqué (cumulatif)
-  const selectLevel = useCallback(level => {
+  const selectNiveau = useCallback(niveau => {
     const ids = new Set();
-    for (const lv of levelOrder) {
-      (levelFormulaIds[lv] ?? []).forEach(id => ids.add(id));
-      if (lv === level) break;
+    for (const lv of niveauOrder) {
+      (niveauFormulaIds[lv] ?? []).forEach(id => ids.add(id));
+      if (lv === niveau) break;
     }
     setSelectedFormulas(ids);
-  }, [levelOrder, levelFormulaIds]);
+  }, [niveauOrder, niveauFormulaIds]);
 
   // ── Audio ──────────────────────────────────────────────────────────────────
   const getCtx = useCallback(() => {
@@ -956,7 +957,7 @@ export default function RythmApp() {
     // ── Activité 5 : écoute puis reconstitue par tap-to-place ──────────────
     if (activity === 5) {
       const { palette } = buildPalette({
-        solution: pat, selectedFormulas, formulaCatalog, levelOrder, levelFormulaIds,
+        solution: pat, selectedFormulas, formulaCatalog, niveauOrder, niveauFormulaIds,
       });
       setPattern(pat); setSessionBpm(bpm);
       setAct5Palette(palette); setAct5Placed([]); setAct5Invalid(false);
@@ -969,8 +970,8 @@ export default function RythmApp() {
 
     // ── Activités 3 & 4 : choix parmi 4 (3 en dernier recours) ──────────
     if (activity === 3 || activity === 4) {
-      const level = deriveLevel(selectedFormulas, levelOrder, levelFormulaIds);
-      const res   = generateDistractorSet(pat, { selectedFormulas, formulaCatalog, level });
+      const niveau = deriveNiveau(selectedFormulas, niveauOrder, niveauFormulaIds);
+      const res    = generateDistractorSet(pat, { selectedFormulas, formulaCatalog, niveau });
       if (res.blocked) {
         // Génération impossible (sélection trop pauvre) → blocage propre, pas de jeu.
         setAct34Error("Pas assez de figures pour générer 3 réponses distinctes dans ce mode. Sélectionne davantage de figures.");
@@ -1125,7 +1126,7 @@ export default function RythmApp() {
         setPhase("results");
       }, totalMs + beatMs * 0.6);
     }, 4 * beatMs);
-  }, [randomPattern, actualBpm, pulse, rhythmBeep, rhythmPulse, revealBeat, activity, flashOffsetMs, formulaCatalog, selectedFormulas, playPatternAudio, levelOrder, levelFormulaIds]);
+  }, [randomPattern, actualBpm, pulse, rhythmBeep, rhythmPulse, revealBeat, activity, flashOffsetMs, formulaCatalog, selectedFormulas, playPatternAudio, niveauOrder, niveauFormulaIds]);
 
   // ── Choix act 3 & 4 ───────────────────────────────────────────────────────
   const handleChoice = useCallback((idx) => {
@@ -1264,11 +1265,11 @@ export default function RythmApp() {
     return (
       <SettingsPage
         formulaCatalog={formulaCatalog}
-        levelOrder={levelOrder}
-        levelFormulaIds={levelFormulaIds}
+        niveauOrder={niveauOrder}
+        niveauFormulaIds={niveauFormulaIds}
         selectedFormulas={selectedFormulas}
         onToggle={toggleFormula}
-        onLevelSelect={selectLevel}
+        onNiveauSelect={selectNiveau}
         onClose={() => setCurrentPage("home")}
         sheetId={sheetId}
         sheetStatus={sheetStatus}
@@ -1293,11 +1294,11 @@ export default function RythmApp() {
   }
 
   // ── Helpers home page ─────────────────────────────────────────────────────
-  const isLevelActive = (level) => {
+  const isNiveauActif = (niveau) => {
     const cumIds = [];
-    for (const lv of levelOrder) {
-      (levelFormulaIds[lv] ?? []).forEach(id => cumIds.push(id));
-      if (lv === level) break;
+    for (const lv of niveauOrder) {
+      (niveauFormulaIds[lv] ?? []).forEach(id => cumIds.push(id));
+      if (lv === niveau) break;
     }
     return cumIds.length > 0 && cumIds.every(id => selectedFormulas.has(id));
   };
@@ -1414,13 +1415,13 @@ export default function RythmApp() {
               {open && key==="niveau" && (
                 <div style={{ padding:'12px 14px 4px' }}>
                   <div style={{ display:'flex', flexWrap:'wrap', gap:6, marginBottom:10 }}>
-                    {levelOrder.map(level => {
-                      const active = isLevelActive(level);
-                      const hasF = (levelFormulaIds[level] ?? []).length > 0;
+                    {niveauOrder.map(niveau => {
+                      const active = isNiveauActif(niveau);
+                      const hasF = (niveauFormulaIds[niveau] ?? []).length > 0;
                       return (
-                        <button key={level} onClick={() => selectLevel(level)} disabled={!hasF}
+                        <button key={niveau} onClick={() => selectNiveau(niveau)} disabled={!hasF}
                           style={{ padding:'6px 14px', borderRadius:20, border:'none', background: active ? '#4A6CF7' : 'var(--surface-2)', color: active ? '#fff' : hasF ? 'var(--text-muted)' : 'var(--border-c)', fontSize:11, fontWeight:700, cursor: hasF ? 'pointer' : 'default' }}
-                        >{level}</button>
+                        >{niveau}</button>
                       );
                     })}
                   </div>
@@ -1478,7 +1479,7 @@ export default function RythmApp() {
   if (currentPage === "home") {
     return (
       <>
-        {showTutorial && <TutorialOverlay onDone={handleTutorialDone} levelOrder={levelOrder} activity={activity} inputMode={inputMode} />}
+        {showTutorial && <TutorialOverlay onDone={handleTutorialDone} niveauOrder={niveauOrder} activity={activity} inputMode={inputMode} />}
         {showHelp && (
           <>
             <div onClick={() => setShowHelp(false)} style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.6)', zIndex:200 }}/>

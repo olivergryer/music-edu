@@ -87,7 +87,8 @@ teacherCodes/{code}
 - **Plan avant code** — `/plan` avant toute feature non triviale, attendre validation
 - **Spec d'abord** — ne pas anticiper des détails non spécifiés
 - **Une session par module** — ne pas mélanger les modules
-- **Toujours travailler sur `main`** — committer directement sur `main`, ne PAS créer de branche de feature (déploiement Vercel via push depuis `main`)
+- **Toujours travailler sur `main`** — ne PAS créer de branche de feature
+- **Ne pas committer ni pusher** — l'utilisateur gère `git commit` + `git push` lui-même (déploiement Vercel). Laisser les modifications dans le working tree.
 
 ## Commandes
 ```bash

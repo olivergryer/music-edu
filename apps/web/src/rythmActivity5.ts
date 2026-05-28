@@ -4,7 +4,7 @@
 
 import { toTimelineCells, groupOf, attackCount, figDur, beatQuarters } from "./rhythmGrid.ts";
 import type { Fig } from "./rhythmGrid.ts";
-import { deriveLevel, LEVEL_TO_CONFIG, DISTRACTOR_CONFIG } from "./rythmDistractors.ts";
+import { deriveNiveau } from "./rythmDistractors.ts";
 
 export { groupOf } from "./rhythmGrid.ts";
 
@@ -45,14 +45,13 @@ export function buildPalette(opts: {
   solution: { timeSig: string; formulaSlots?: { formula: Formula | null }[] };
   selectedFormulas: Set<string>;
   formulaCatalog: Formula[];
-  levelOrder: string[];
-  levelFormulaIds: Record<string, string[]>;
+  niveauOrder: string[];
+  niveauFormulaIds: Record<string, string[]>;
 }): { palette: Formula[]; fallbackLogged: boolean } {
-  const { solution, selectedFormulas, formulaCatalog, levelOrder, levelFormulaIds } = opts;
+  const { solution, selectedFormulas, formulaCatalog, niveauOrder, niveauFormulaIds } = opts;
   const group = groupOf(solution.timeSig);
-  const level = deriveLevel(selectedFormulas, levelOrder, levelFormulaIds);
-  const configKey = LEVEL_TO_CONFIG[level] ?? "C1/1";
-  const N = PALETTE_DISTRACTORS[configKey] ?? 0;
+  const niveau = deriveNiveau(selectedFormulas, niveauOrder, niveauFormulaIds);
+  const N = PALETTE_DISTRACTORS[niveau] ?? 0; // niveau = clé C1/1…C3 directe
 
   const selFormulas = formulaCatalog.filter((f) => selectedFormulas.has(f.id) && f.group === group);
 
@@ -81,7 +80,7 @@ export function buildPalette(opts: {
     if (neighbors.length < N) {
       fallbackLogged = true;
       console.warn(
-        `[palette act5] repli : cellule "${src.id}" n'a que ${neighbors.length} proche(s) (< ${N}) au niveau ${level} / ${configKey}`,
+        `[palette act5] repli : cellule "${src.id}" n'a que ${neighbors.length} proche(s) (< ${N}) au niveau ${niveau}`,
       );
     }
     for (const nb of neighbors.slice(0, N)) {
@@ -113,21 +112,4 @@ export function scoreActivity5(
   }
   const pct = denom > 0 ? Math.round((identical / denom) * 100) : 0;
   return { pct, identical, denom };
-}
-
-// finestUnit du niveau dérivé de la sélection (réutilise DISTRACTOR_CONFIG).
-export function finestUnitForLevel(level: string): string {
-  const key = LEVEL_TO_CONFIG[level] ?? "C1/1";
-  return DISTRACTOR_CONFIG[key as keyof typeof DISTRACTOR_CONFIG]?.finestUnit ?? "16";
-}
-
-// Helper pratique : finestUnit + group depuis une mesure solution + une sélection.
-export function gridContextFor(
-  solutionTimeSig: string,
-  selectedIds: Iterable<string>,
-  levelOrder: string[],
-  levelFormulaIds: Record<string, string[]>,
-): { group: "binary" | "ternary"; finestUnit: string; level: string } {
-  const level = deriveLevel(selectedIds, levelOrder, levelFormulaIds);
-  return { group: groupOf(solutionTimeSig), finestUnit: finestUnitForLevel(level), level };
 }

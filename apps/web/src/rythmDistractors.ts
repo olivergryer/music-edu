@@ -41,16 +41,8 @@ export const DISTRACTOR_CONFIG = {
 // Ordre des clés (pour le repli (b) « niveau ≥ C1/3 »).
 const CONFIG_ORDER = ["C1/1", "C1/2", "C1/3", "C1/4", "C2/1", "C2/2", "C2/3", "C2/4", "C3"];
 
-// Mapping 7 niveaux du Parcours musicien → 9 clés de config (monotone).
-export const LEVEL_TO_CONFIG: Record<string, string> = {
-  "Apprenti": "C1/1",
-  "Musicien": "C1/2",
-  "Instrumentiste": "C1/3",
-  "Soliste": "C1/4",
-  "Concertiste": "C2/2",
-  "Virtuose": "C2/3",
-  "Maestro": "C3",
-};
+// Le NIVEAU (cycle) dérivé EST déjà une clé C1/1…C3 (issue du CSV / fallback ré-aligné),
+// donc il indexe DISTRACTOR_CONFIG / PALETTE_DISTRACTORS directement — pas de mapping.
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type Formula = { id: string; name?: string; group: "binary" | "ternary"; beats: number; figs: Fig[] };
@@ -86,26 +78,28 @@ export function audibleFingerprint(figs: Fig[]): string {
   return parts.join(",");
 }
 
-// ─── Dérivation du niveau depuis la sélection ─────────────────────────────────
-// Dernier niveau dont TOUTES les formules cumulées sont sélectionnées (logique
-// identique à isLevelActive). Défaut : premier niveau (Apprenti) si aucun couvert.
-export function deriveLevel(
+// ─── Dérivation du NIVEAU (cycle C1/1…C3) depuis la sélection ──────────────────
+// Niveau = cycle scolaire (≠ Rang XP cross-module). Le plus haut niveau dont TOUTES
+// les formules du subset (cumulatif) sont sélectionnées. Ajouter des formules partielles
+// du niveau suivant ne fait PAS monter le niveau tant que ce subset n'est pas complet.
+// Défaut : niveau le plus bas si aucun subset complet.
+export function deriveNiveau(
   selectedIds: Iterable<string>,
-  levelOrder: string[],
-  levelFormulaIds: Record<string, string[]>,
+  niveauOrder: string[],
+  niveauFormulaIds: Record<string, string[]>,
 ): string {
   const sel = new Set(selectedIds);
-  let best = levelOrder[0];
+  let best = niveauOrder[0];
   let found = false;
   const cum: string[] = [];
-  for (const lv of levelOrder) {
-    (levelFormulaIds[lv] ?? []).forEach((id) => cum.push(id));
+  for (const lv of niveauOrder) {
+    (niveauFormulaIds[lv] ?? []).forEach((id) => cum.push(id));
     if (cum.length > 0 && cum.every((id) => sel.has(id))) {
       best = lv;
       found = true;
     }
   }
-  return found ? best : levelOrder[0];
+  return found ? best : niveauOrder[0];
 }
 
 // ─── Grille ⇄ figures (par unité de formule, 1–2 temps, auto-contenue) ────────
@@ -376,17 +370,18 @@ export type DistractorResult = {
   distractors: Measure[];
   blocked: boolean;
   choiceCount: number; // 4 (1 + 3 distracteurs) ou 3 (1 + 2) en dernier recours
-  level: string;
+  niveau: string;
   configKey: string;
 };
 
 export function generateDistractorSet(
   target: { timeSig: string; figs: Fig[]; formulaSlots?: { formula: Formula | null; beats: number }[] },
-  opts: { selectedFormulas: Set<string>; formulaCatalog: Formula[]; level: string },
+  opts: { selectedFormulas: Set<string>; formulaCatalog: Formula[]; niveau: string },
 ): DistractorResult {
-  const { selectedFormulas, formulaCatalog, level } = opts;
+  const { selectedFormulas, formulaCatalog, niveau } = opts;
   const group = groupOf(target.timeSig);
-  const configKey = LEVEL_TO_CONFIG[level] ?? "C1/1";
+  // Le niveau EST une clé C1/1…C3 → indexe DISTRACTOR_CONFIG directement.
+  const configKey = niveau in DISTRACTOR_CONFIG ? niveau : "C1/1";
   const config = DISTRACTOR_CONFIG[configKey as keyof typeof DISTRACTOR_CONFIG] ?? DISTRACTOR_CONFIG["C1/1"];
 
   const selFormulas = formulaCatalog.filter((f) => selectedFormulas.has(f.id));
@@ -425,14 +420,14 @@ export function generateDistractorSet(
 
   // Repli (a) : nMutations + 1
   if (found.length < 3) {
-    console.warn(`[distractors] repli (a) nMutations ${config.nMutations}→${config.nMutations + 1} (niveau ${level} / ${configKey})`);
+    console.warn(`[distractors] repli (a) nMutations ${config.nMutations}→${config.nMutations + 1} (niveau ${niveau} / ${configKey})`);
     collect(config.nMutations + 1, baseTypes, 300);
   }
 
   // Repli (b) : si bloqué et niveau ≥ C1/3, autoriser temporairement addRemoveAttack
   if (found.length < 3 && CONFIG_ORDER.indexOf(configKey) >= 2) {
     const relaxed = Array.from(new Set([...baseTypes, "addRemoveAttack"])) as MutationType[];
-    console.warn(`[distractors] repli (b) addRemoveAttack autorisé temporairement (niveau ${level} / ${configKey})`);
+    console.warn(`[distractors] repli (b) addRemoveAttack autorisé temporairement (niveau ${niveau} / ${configKey})`);
     collect(config.nMutations + 1, relaxed, 400);
   }
 
@@ -441,10 +436,10 @@ export function generateDistractorSet(
   let blocked = false;
   if (found.length < 3) {
     if (found.length >= 2) {
-      console.warn(`[distractors] repli (c) 3 propositions au lieu de 4 (niveau ${level} / ${configKey})`);
+      console.warn(`[distractors] repli (c) 3 propositions au lieu de 4 (niveau ${niveau} / ${configKey})`);
       choiceCount = 3;
     } else {
-      console.warn(`[distractors] BLOCAGE act 3/4 : < 2 distracteurs audibles uniques (niveau ${level} / ${configKey}) — sélection trop pauvre`);
+      console.warn(`[distractors] BLOCAGE act 3/4 : < 2 distracteurs audibles uniques (niveau ${niveau} / ${configKey}) — sélection trop pauvre`);
       blocked = true;
     }
   }
@@ -453,7 +448,7 @@ export function generateDistractorSet(
     distractors: found.slice(0, choiceCount - 1),
     blocked,
     choiceCount,
-    level,
+    niveau,
     configKey,
   };
 }
