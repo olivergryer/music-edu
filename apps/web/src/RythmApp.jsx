@@ -643,6 +643,7 @@ export default function RythmApp() {
   const [act5Palette, setAct5Palette] = useState([]);   // act 5 : cellules (formules) proposées
   const [act5Placed,  setAct5Placed]  = useState([]);   // act 5 : cellules posées par l'élève (séquence)
   const [act5Invalid, setAct5Invalid] = useState(false);// act 5 : mesure non conforme à la validation
+  const [act5CountN,  setAct5CountN]  = useState(null); // act 5 : décompte avant lecture (3, 4)
 
   // Série de 10
   const [seriesMode,   setSeriesMode]   = useState(false);
@@ -964,7 +965,10 @@ export default function RythmApp() {
       setScores([]); setEarnedPts(0); setProgress(0); setActiveIdx(-1);
       setSelectedIdx(null); setRevealed(false);
       setPhase("building");
-      playPatternAudio(pat, bpm, 400, false, true); // lecture tenue de la solution (portée cachée)
+      // Décompte beats 3 & 4 (flash bordure) puis lecture tenue (flash sur chaque temps)
+      setAct5CountN(3); pulse(false);
+      tid(() => { setAct5CountN(4); pulse(false); }, beatMs);
+      tid(() => { setAct5CountN(null); playPatternAudio(pat, bpm, 0, false, true); }, 2 * beatMs);
       return;
     }
 
@@ -2159,20 +2163,27 @@ export default function RythmApp() {
             <div className="w-full">
               {phase === "building" && (
                 <>
-                  <div className="text-center text-[11px] text-app-muted mb-2 flex items-center justify-center gap-2.5">
-                    <span>Reconstitue le rythme · {pattern.timeSig} · {sessionBpm} BPM</span>
-                    <button
-                      onPointerDown={e => e.stopPropagation()}
-                      onClick={() => playPatternAudio(pattern, sessionBpm, 0, false, true)}
-                      className="rounded border-none px-2.5 py-0.5 text-white text-[10px] font-bold cursor-pointer"
-                      style={{ background: '#4A6CF7' }}
-                    >▶ Réécouter</button>
+                  <div className="text-center text-[11px] text-app-muted mb-2 flex items-center justify-center gap-2.5" style={{ minHeight: 30 }}>
+                    {act5CountN !== null ? (
+                      <span className="text-[28px] font-black leading-none" style={{ color: '#4A6CF7' }}>{act5CountN}</span>
+                    ) : (
+                      <>
+                        <span>Reconstitue le rythme · {pattern.timeSig} · {sessionBpm} BPM</span>
+                        <button
+                          onPointerDown={e => e.stopPropagation()}
+                          onClick={() => playPatternAudio(pattern, sessionBpm, 0, false, true)}
+                          className="rounded border-none px-2.5 py-0.5 text-white text-[10px] font-bold cursor-pointer"
+                          style={{ background: '#4A6CF7' }}
+                        >▶ Réécouter</button>
+                      </>
+                    )}
                   </div>
 
-                  {/* Portée en construction — métrique visible dès le départ, pas de re-scaling (compact) */}
+                  {/* Portée en construction — métrique dès le départ, pas de re-scaling (compact) ;
+                      bordure flash pendant le décompte + la lecture du rythme */}
                   <div
-                    className="rounded-2xl overflow-hidden mb-1"
-                    style={{ background: 'var(--surface)', padding: '10px 6px 6px', border: '2px solid var(--border-c)' }}
+                    className="rounded-2xl overflow-hidden mb-1 transition-colors duration-150"
+                    style={{ background: 'var(--surface)', padding: '10px 6px 6px', border: `2px solid ${beatFlash ? '#4A6CF7' : 'var(--border-c)'}` }}
                   >
                     <RythmStaff figures={act5Figs} timeSig={pattern.timeSig} activeIdx={-1} showClef={false} showTimeSig={true} compact={true} />
                   </div>
@@ -2183,17 +2194,18 @@ export default function RythmApp() {
                     {act5Stat === "complete" ? "● Mesure complète" : act5Stat === "over" ? "⚠ Mesure trop longue" : "○ Mesure incomplète"}
                   </div>
 
-                  {/* Cellules posées (tap = retirer) */}
+                  {/* Cellules posées (tap = retirer) — pastilles compactes numérotées, scroll horizontal */}
                   {act5Placed.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5 justify-center mb-3">
+                    <div className="flex gap-1.5 mb-3 overflow-x-auto" style={{ paddingBottom: 3 }}>
                       {act5Placed.map((f, i) => (
                         <button
                           key={i}
                           onPointerDown={e => e.stopPropagation()}
                           onClick={() => removeCell(i)}
-                          className="rounded-lg border px-2 py-1 text-[11px] font-bold cursor-pointer flex items-center gap-1"
-                          style={{ background: 'rgba(74,108,247,0.12)', borderColor: 'rgba(74,108,247,0.4)', color: '#4A6CF7' }}
-                        >{f.name ?? f.id}<span style={{ opacity: 0.7 }}>✕</span></button>
+                          title={f.name ?? f.id}
+                          className="rounded-md border text-[10px] font-bold cursor-pointer flex items-center gap-1 flex-shrink-0"
+                          style={{ background: 'rgba(74,108,247,0.12)', borderColor: 'rgba(74,108,247,0.4)', color: '#4A6CF7', padding: '3px 7px' }}
+                        ><span>{i + 1}</span><span style={{ opacity: 0.7 }}>✕</span></button>
                       ))}
                     </div>
                   )}
@@ -2241,7 +2253,7 @@ export default function RythmApp() {
                     </div>
                   ) : (
                     <div className="text-center mb-2">
-                      <div className="text-3xl font-black" style={{ color: '#4A6CF7' }}>{medal} {pct}%</div>
+                      <div className="text-3xl font-black" style={{ color: '#4A6CF7' }}>{medal} +{earnedPts} pts</div>
                     </div>
                   )}
                   <div className="text-[11px] text-app-muted mb-1">Ta réponse</div>
