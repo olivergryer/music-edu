@@ -1191,7 +1191,7 @@ export default function RythmApp() {
   // ── Calcul des résultats ───────────────────────────────────────────────────
   useEffect(() => {
     if (phase !== "results" || !pattern) return;
-    if (activity === 3 || activity === 4) return;
+    if (activity !== 1 && activity !== 2) return; // scoring tap : act 1 & 2 seulement (pas act 3/4/5)
     const beatMs = 60000 / sessionBpm;
     const { timestamps } = toTimestamps(pattern.figs, sessionBpm, pattern.timeSig);
     const playable = pattern.figs
@@ -1696,7 +1696,7 @@ export default function RythmApp() {
     {SettingsModal}
     <div
       className="bg-app text-app min-h-dvh flex flex-col items-center px-3.5 py-3 pb-6 select-none"
-      style={{ touchAction: phase === 'results' ? 'pan-y' : 'none' }}
+      style={{ touchAction: (phase === 'results' || activity === 5) ? 'pan-y' : 'none' }}
       onPointerDown={(e) => {
         const isTapPhase =
           (phase === 'playing' ||
@@ -2179,6 +2179,23 @@ export default function RythmApp() {
                     )}
                   </div>
 
+                  {/* Bouton retour arrière (annule la dernière cellule) — style Apple, au-dessus de la portée */}
+                  <div className="flex justify-end mb-1.5" style={{ minHeight: 34 }}>
+                    {act5Placed.length > 0 && (
+                      <button
+                        onPointerDown={e => e.stopPropagation()}
+                        onClick={() => removeCell(act5Placed.length - 1)}
+                        className="flex items-center gap-1.5 rounded-full text-[12px] font-semibold cursor-pointer"
+                        style={{ background: 'var(--surface-2)', color: '#4A6CF7', padding: '6px 14px', border: '1px solid var(--border-c)' }}
+                      >
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M9 14 4 9l5-5" /><path d="M4 9h11a5 5 0 0 1 0 10h-1" />
+                        </svg>
+                        Annuler
+                      </button>
+                    )}
+                  </div>
+
                   {/* Portée en construction — métrique dès le départ, pas de re-scaling (compact) ;
                       bordure flash pendant le décompte + la lecture du rythme */}
                   <div
@@ -2194,25 +2211,9 @@ export default function RythmApp() {
                     {act5Stat === "complete" ? "● Mesure complète" : act5Stat === "over" ? "⚠ Mesure trop longue" : "○ Mesure incomplète"}
                   </div>
 
-                  {/* Cellules posées (tap = retirer) — pastilles compactes numérotées, scroll horizontal */}
-                  {act5Placed.length > 0 && (
-                    <div className="flex gap-1.5 mb-3 overflow-x-auto" style={{ paddingBottom: 3 }}>
-                      {act5Placed.map((f, i) => (
-                        <button
-                          key={i}
-                          onPointerDown={e => e.stopPropagation()}
-                          onClick={() => removeCell(i)}
-                          title={f.name ?? f.id}
-                          className="rounded-md border text-[10px] font-bold cursor-pointer flex items-center gap-1 flex-shrink-0"
-                          style={{ background: 'rgba(74,108,247,0.12)', borderColor: 'rgba(74,108,247,0.4)', color: '#4A6CF7', padding: '3px 7px' }}
-                        ><span>{i + 1}</span><span style={{ opacity: 0.7 }}>✕</span></button>
-                      ))}
-                    </div>
-                  )}
-
                   {/* Palette de cellules disponibles (tap = poser) — sans card */}
                   <div className="text-[11px] text-app-muted text-center mb-1.5">Cellules disponibles</div>
-                  <div className="flex flex-wrap gap-2 justify-center mb-3">
+                  <div className="flex flex-wrap gap-1.5 justify-center mb-3">
                     {act5Palette.map((f, i) => (
                       <div
                         key={`${f.id}-${i}`}
@@ -2220,9 +2221,9 @@ export default function RythmApp() {
                         onPointerDown={e => e.stopPropagation()}
                         onClick={() => placeCell(f)}
                         className="cursor-pointer"
-                        style={{ width: 128 }}
+                        style={{ width: 86 }}
                       >
-                        <RythmStaff figures={f.figs} timeSig={pattern.timeSig} activeIdx={-1} width={124} height={100} showClef={false} showTimeSig={false} compact={true} />
+                        <RythmStaff figures={f.figs} timeSig={pattern.timeSig} activeIdx={-1} width={82} height={84} showClef={false} showTimeSig={false} compact={true} />
                       </div>
                     ))}
                   </div>

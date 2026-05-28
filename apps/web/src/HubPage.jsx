@@ -35,7 +35,7 @@ function ModuleCard({ label, desc, active, color }) {
 }
 
 export default function HubPage() {
-  const { xp, level, streak, trophies } = useProgressFirebase()
+  const { xp, rank, streak, trophies } = useProgressFirebase()
   const { user, profile } = useAuth()
   const { dark } = useTheme()
 
@@ -73,7 +73,7 @@ export default function HubPage() {
               {xp > 0 && <span className="font-semibold text-app">{xp} XP</span>}
               {xp > 0 && (
                 <span className="font-bold text-sm px-2 py-0.5 rounded-full" style={{ background: '#8B5CF620', color: '#8B5CF6' }}>
-                  {level.id}
+                  {rank.id}
                 </span>
               )}
               {trophies.length > 0 && <span className="text-app-muted">{trophies.length} trophées</span>}
