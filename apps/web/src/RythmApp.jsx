@@ -1740,6 +1740,11 @@ export default function RythmApp() {
           className="bg-surface-2 border border-app rounded-lg font-bold text-xs cursor-pointer px-2.5 py-1"
           style={{ color: '#4A6CF7' }}
         >← Activités</button>
+        {activity === 5 && (phase === "building" || phase === "results") && (
+          <span className="text-[12px] font-bold text-app truncate px-2" style={{ maxWidth: 200 }}>
+            Reconstitue le rythme{pattern ? ` · ${pattern.timeSig}` : ""}
+          </span>
+        )}
         <div className="flex gap-2 items-center">
           <div className="bg-surface-2 border border-app rounded-full px-2.5 py-0.5 text-xs text-app font-bold">⭐ {totalPts}</div>
           <button
@@ -2163,36 +2168,32 @@ export default function RythmApp() {
             <div className="w-full">
               {phase === "building" && (
                 <>
-                  <div className="text-center text-[11px] text-app-muted mb-2 flex items-center justify-center gap-2.5" style={{ minHeight: 30 }}>
+                  {/* Une seule ligne d'actions : décompte OU [Réécouter] [Annuler] (style Apple) */}
+                  <div className="flex items-center justify-center gap-2 mb-1.5" style={{ minHeight: 38 }}>
                     {act5CountN !== null ? (
                       <span className="text-[28px] font-black leading-none" style={{ color: '#4A6CF7' }}>{act5CountN}</span>
                     ) : (
                       <>
-                        <span>Reconstitue le rythme · {pattern.timeSig} · {sessionBpm} BPM</span>
                         <button
                           onPointerDown={e => e.stopPropagation()}
                           onClick={() => playPatternAudio(pattern, sessionBpm, 0, false, true)}
-                          className="rounded border-none px-2.5 py-0.5 text-white text-[10px] font-bold cursor-pointer"
-                          style={{ background: '#4A6CF7' }}
+                          className="flex items-center gap-1.5 rounded-full text-[12px] font-semibold cursor-pointer text-white"
+                          style={{ background: '#4A6CF7', padding: '6px 16px' }}
                         >▶ Réécouter</button>
+                        {act5Placed.length > 0 && (
+                          <button
+                            onPointerDown={e => e.stopPropagation()}
+                            onClick={() => removeCell(act5Placed.length - 1)}
+                            className="flex items-center gap-1.5 rounded-full text-[12px] font-semibold cursor-pointer"
+                            style={{ background: 'var(--surface-2)', color: '#4A6CF7', padding: '6px 14px', border: '1px solid var(--border-c)' }}
+                          >
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M9 14 4 9l5-5" /><path d="M4 9h11a5 5 0 0 1 0 10h-1" />
+                            </svg>
+                            Annuler
+                          </button>
+                        )}
                       </>
-                    )}
-                  </div>
-
-                  {/* Bouton retour arrière (annule la dernière cellule) — style Apple, au-dessus de la portée */}
-                  <div className="flex justify-end mb-1.5" style={{ minHeight: 34 }}>
-                    {act5Placed.length > 0 && (
-                      <button
-                        onPointerDown={e => e.stopPropagation()}
-                        onClick={() => removeCell(act5Placed.length - 1)}
-                        className="flex items-center gap-1.5 rounded-full text-[12px] font-semibold cursor-pointer"
-                        style={{ background: 'var(--surface-2)', color: '#4A6CF7', padding: '6px 14px', border: '1px solid var(--border-c)' }}
-                      >
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M9 14 4 9l5-5" /><path d="M4 9h11a5 5 0 0 1 0 10h-1" />
-                        </svg>
-                        Annuler
-                      </button>
                     )}
                   </div>
 
@@ -2220,10 +2221,13 @@ export default function RythmApp() {
                         role="button"
                         onPointerDown={e => e.stopPropagation()}
                         onClick={() => placeCell(f)}
-                        className="cursor-pointer"
-                        style={{ width: 86 }}
+                        className="cursor-pointer overflow-hidden"
+                        style={{ width: 87, height: 70 }}
                       >
-                        <RythmStaff figures={f.figs} timeSig={pattern.timeSig} activeIdx={-1} width={82} height={84} showClef={false} showTimeSig={false} compact={true} />
+                        {/* rendu à taille « correcte » puis scale uniforme → notation proportionnelle */}
+                        <div style={{ width: 124, transformOrigin: 'top left', transform: 'scale(0.7)' }}>
+                          <RythmStaff figures={f.figs} timeSig={pattern.timeSig} activeIdx={-1} width={124} height={100} showClef={false} showTimeSig={false} compact={true} />
+                        </div>
                       </div>
                     ))}
                   </div>
