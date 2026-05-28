@@ -43,16 +43,16 @@ export default function ConsigneOverlay({
         style={{
           position: "fixed", top: "50%", left: "50%", transform: "translate(-50%,-50%)",
           zIndex: 301, width: "min(340px, 92vw)", maxHeight: "88vh", overflowY: "auto",
-          background: "#0a0f1a", border: "1.5px solid rgba(74,108,247,0.3)", borderRadius: 20,
+          background: "var(--surface)", border: "1.5px solid rgba(74,108,247,0.3)", borderRadius: 20,
           padding: "26px 22px 20px", textAlign: "center",
         }}
       >
         {icon && <div style={{ fontSize: 38, lineHeight: 1, marginBottom: 6 }}>{icon}</div>}
-        <div style={{ fontSize: 18, fontWeight: 900, color: "#f9fafb", marginBottom: 12 }}>{title}</div>
+        <div style={{ fontSize: 18, fontWeight: 900, color: "var(--text)", marginBottom: 12 }}>{title}</div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 16, textAlign: "left" }}>
           {lines.map((l, i) => (
-            <div key={i} style={{ fontSize: 13, lineHeight: 1.45, color: "#cbd5e1" }}>{l}</div>
+            <div key={i} style={{ fontSize: 13, lineHeight: 1.45, color: "var(--text-muted)" }}>{l}</div>
           ))}
         </div>
 

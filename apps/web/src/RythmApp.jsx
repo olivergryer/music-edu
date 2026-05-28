@@ -172,6 +172,111 @@ function scoreTap(actual, expected, beatMs) {
 }
 const GRADE_COLOR = { perfect:"#a78bfa", good:"#34d399", ok:"#fbbf24", miss:"#f87171" };
 
+// ─── Analyse tempo (régression affine tap ≈ a·attendu + b) ──────────────────────
+// Constantes tunables — ajuster pour calibrer l'indulgence tempo du scoring.
+const MIN_TAPS_FOR_TEMPO = 4;     // sous ce nb de frappes appariées : pas d'analyse tempo
+const TEMPO_COMP_LIMIT   = 0.10;  // tempo compensé jusqu'à ±10% (au-delà, l'excès est pénalisé)
+const TEMPO_MALUS_COEFF  = 1.0;   // malus global = |erreur tempo| × ce coeff (proportionnel)
+const TEMPO_MALUS_MAX    = 0.5;   // plafond du malus (50% du score)
+
+// Régression des moindres carrés sur les paires (attendu ts, frappe tap).
+// Retourne pente a (>1 = ralentit, <1 = presse) et ordonnée b (offset au départ).
+function fitAffine(pairs) {
+  const n = pairs.length;
+  const meanTs  = pairs.reduce((s, p) => s + p.ts,  0) / n;
+  const meanTap = pairs.reduce((s, p) => s + p.tap, 0) / n;
+  let num = 0, den = 0;
+  for (const { ts, tap } of pairs) {
+    num += (ts - meanTs) * (tap - meanTap);
+    den += (ts - meanTs) ** 2;
+  }
+  const a = den > 0 ? num / den : 1;
+  const b = meanTap - a * meanTs;
+  return { a, b };
+}
+const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+
+// ─── Bilan visuel act 1 & 2 : dispersion des frappes + diagnostics ──────────────
+function DiagRow({ label, value, color }) {
+  return (
+    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'baseline', gap:10, fontSize:12, padding:'2px 0' }}>
+      <span style={{ color:'var(--text-muted)', fontWeight:600 }}>{label}</span>
+      <span style={{ color, fontWeight:800, textAlign:'right' }}>{value}</span>
+    </div>
+  );
+}
+
+function TapTimeline({ scores, beatMs, analysis }) {
+  const pts = (scores ?? [])
+    .map((s, i) => ({ i, dev: s.dev, grade: s.grade }))
+    .filter(p => p.dev !== null && p.dev !== undefined);
+  if (pts.length === 0 || !beatMs) return null;
+
+  const half = beatMs * 0.5;                 // demi-échelle de l'axe (ms)
+  const pos  = dev => clamp(50 + (dev / half) * 50, 3, 97);
+  const okHalf   = (beatMs * 0.30 / half) * 50;  // % depuis le centre
+  const goodHalf = (beatMs * 0.18 / half) * 50;
+
+  // Diagnostics
+  const a = analysis ?? {};
+  const tempoColor = !a.hasTempo ? 'var(--text-muted)'
+    : Math.abs(a.tempoErr) < 0.02 ? '#34d399'
+    : Math.abs(a.tempoErr) < TEMPO_COMP_LIMIT ? '#fbbf24' : '#f87171';
+  const tempoPct = a.hasTempo ? Math.round(Math.abs(a.tempoErr) * 100) : 0;
+  const tempoText = !a.hasTempo ? '—'
+    : Math.abs(a.tempoErr) < 0.02 ? 'Tempo juste'
+    : (a.tempoErr > 0 ? `Tu presses (~${tempoPct}% trop vite)` : `Tu ralentis (~${tempoPct}% trop lent)`)
+      + (a.malusPts > 0 ? ` (−${a.malusPts} pts)` : '');
+
+  const off = a.offsetMs ?? 0;
+  const offColor = Math.abs(off) <= 20 ? '#34d399' : '#fbbf24';
+  const offText = Math.abs(off) <= 20 ? 'Bien calé'
+    : off < 0 ? `~${Math.abs(off)} ms en avance` : `~${off} ms en retard`;
+
+  const r = a.regularityStd != null && beatMs ? a.regularityStd / beatMs : null;
+  const regColor = r == null ? 'var(--text-muted)'
+    : r < 0.05 ? '#34d399' : r < 0.12 ? '#34d399' : r < 0.20 ? '#fbbf24' : '#f87171';
+  const regText = r == null ? '—'
+    : r < 0.05 ? 'Très régulier' : r < 0.12 ? 'Régulier' : r < 0.20 ? 'Assez régulier' : 'Irrégulier';
+
+  return (
+    <div style={{ marginTop: 12 }}>
+      {/* Bande de dispersion */}
+      <div style={{
+        position:'relative', height:52, borderRadius:12, overflow:'hidden',
+        background:'var(--surface-2)', border:'1px solid var(--border-c)',
+      }}>
+        {/* zone ok (ambre) */}
+        <div style={{ position:'absolute', top:0, bottom:0, left:`${50-okHalf}%`, width:`${okHalf*2}%`, background:'#fbbf2422' }}/>
+        {/* zone good (vert) */}
+        <div style={{ position:'absolute', top:0, bottom:0, left:`${50-goodHalf}%`, width:`${goodHalf*2}%`, background:'#34d39926' }}/>
+        {/* ligne centrale = pile */}
+        <div style={{ position:'absolute', top:4, bottom:4, left:'50%', width:2, marginLeft:-1, background:'var(--text-muted)', opacity:0.5 }}/>
+        {/* points */}
+        {pts.map(p => (
+          <div key={p.i} style={{
+            position:'absolute', width:9, height:9, borderRadius:'50%',
+            left:`${pos(p.dev)}%`, top:`${12 + ((p.i * 11) % 28)}px`,
+            transform:'translate(-50%,-50%)',
+            background: GRADE_COLOR[p.grade] ?? 'var(--text-muted)',
+            border:'1px solid var(--surface)',
+          }}/>
+        ))}
+      </div>
+      {/* légende */}
+      <div style={{ display:'flex', justifyContent:'space-between', fontSize:10, color:'var(--text-muted)', marginTop:4, padding:'0 2px' }}>
+        <span>◀ en avance</span><span>pile</span><span>en retard ▶</span>
+      </div>
+      {/* diagnostics */}
+      <div style={{ marginTop:10, textAlign:'left', borderTop:'1px solid var(--border-c)', paddingTop:8 }}>
+        <DiagRow label="Tempo"      value={tempoText} color={tempoColor} />
+        <DiagRow label="Décalage"   value={offText}   color={offColor} />
+        <DiagRow label="Régularité" value={regText}   color={regColor} />
+      </div>
+    </div>
+  );
+}
+
 // ─── Constantes ───────────────────────────────────────────────────────────────
 // Probabilité de tirer une mesure binaire quand les deux groupes sont disponibles.
 // 0.7 = 70% binaire / 30% ternaire. Modifier pour ajuster l'équilibre.
@@ -613,7 +718,7 @@ export default function RythmApp() {
   const [beatStrong,   setBeatStrong]   = useState(false);
   const [metroDotFlash,setMetroDotFlash]= useState(false);
   const [flashOffsetMs,   setFlashOffsetMs]   = useState(-50);
-  const [detectedOffset,  setDetectedOffset]  = useState(null);
+  const [tapAnalysis,     setTapAnalysis]     = useState(null);
   const [rhythmSoundOn, setRhythmSoundOn] = useState(true);
   const [tapSoundOn,    setTapSoundOn]    = useState(true);
   const rhythmSoundRef = useRef(true);
@@ -1210,29 +1315,54 @@ export default function RythmApp() {
       .map((fig, i) => ({ fig, ts: timestamps[i] }))
       .filter(({ fig }) => !fig.rest);
 
-    // Offset optimal : minimise somme des carrés des écarts (= -moyenne des erreurs)
+    // Régression affine tap ≈ a·attendu + b : a = tempo (pente), b = offset constant.
     const paired = playable
       .map(({ ts }, i) => ({ ts, tap: tapTimesRef.current[i] }))
       .filter(({ tap }) => tap !== undefined);
-    const meanErr = paired.length > 0
-      ? paired.reduce((sum, { tap, ts }) => sum + (tap - ts), 0) / paired.length
-      : 0;
-    const optOffset = Math.max(-200, Math.min(200, -meanErr));
-    setDetectedOffset(Math.round(optOffset));
+    const meanTs  = paired.length ? paired.reduce((s, p) => s + p.ts,  0) / paired.length : 0;
+    const meanErr = paired.length ? paired.reduce((s, p) => s + (p.tap - p.ts), 0) / paired.length : 0;
+    const tsSpread = paired.length ? Math.max(...paired.map(p => p.ts)) - Math.min(...paired.map(p => p.ts)) : 0;
+    const hasTempo = paired.length >= MIN_TAPS_FOR_TEMPO && tsSpread >= beatMs;
+
+    const fit   = hasTempo ? fitAffine(paired) : { a: 1, b: meanErr };
+    const slope = fit.a;
+    // Compensation : pente bornée à ±TEMPO_COMP_LIMIT (au-delà, l'excès n'est pas compensé)
+    const aComp = clamp(slope, 1 / (1 + TEMPO_COMP_LIMIT), 1 / (1 - TEMPO_COMP_LIMIT));
+    // Intercept recentré sur le barycentre (meanTs, meanErr+meanTs) après bornage de la pente
+    const bComp = clamp((meanErr + meanTs) - aComp * meanTs, -200, 200);
+    const tempoErr = hasTempo ? (1 / slope - 1) : 0; // >0 = presse, <0 = ralentit
 
     const s = playable.map(({ ts }, i) => {
       const tap = tapTimesRef.current[i];
       if (tap === undefined) return { label:"Manqué ✕", pts:0, grade:"miss", dev:null };
-      return scoreTap(tap + optOffset, ts, beatMs);
+      return scoreTap(tap, aComp * ts + bComp, beatMs);
     });
     setScores(s);
+
+    // Régularité = écart-type des résidus de score (notes jouées)
+    const devs = s.filter(x => x.dev != null).map(x => x.dev);
+    const devMean = devs.length ? devs.reduce((a, b) => a + b, 0) / devs.length : 0;
+    const regularityStd = devs.length
+      ? Math.sqrt(devs.reduce((a, d) => a + (d - devMean) ** 2, 0) / devs.length)
+      : 0;
+
     const raw    = s.reduce((sum, x) => sum + x.pts, 0);
     const bonus  = REVEAL_BONUS[revealBeat] / 100;
     const extremeMult = extremeMode ? 2 : 1;   // Mode Extrême : score x2 (cumul avec bonus révélation)
     setScoreWasExtreme(extremeMode);
     const earned = Math.round(raw * (1 + bonus) * extremeMult);
-    setEarnedPts(earned);
-    setTotalPts(prev => prev + earned);
+    // Malus de tempo proportionnel (s'applique toujours quand le tempo est analysé)
+    const malusFrac = hasTempo ? Math.min(TEMPO_MALUS_MAX, Math.abs(tempoErr) * TEMPO_MALUS_COEFF) : 0;
+    const earnedFinal = Math.round(earned * (1 - malusFrac));
+    setEarnedPts(earnedFinal);
+    setTotalPts(prev => prev + earnedFinal);
+    setTapAnalysis({
+      hasTempo,
+      tempoErr,
+      offsetMs: Math.round(fit.b),
+      regularityStd: Math.round(regularityStd),
+      malusPts: earned - earnedFinal,
+    });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, activity]);
 
@@ -2023,11 +2153,7 @@ export default function RythmApp() {
                   </div>
                 ))}
               </div>
-              {detectedOffset !== null && Math.abs(detectedOffset) > 15 && (
-                <div className="text-[9px] text-app-muted mt-2">
-                  Décalage compensé : {detectedOffset > 0 ? "+" : ""}{detectedOffset} ms
-                </div>
-              )}
+              <TapTimeline scores={scores} beatMs={60000 / sessionBpm} analysis={tapAnalysis} />
               {tapTimes.length > 0 && (
                 <div className="flex gap-2 justify-center mt-3">
                   <button

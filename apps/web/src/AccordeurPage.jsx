@@ -83,15 +83,15 @@ function AccordeurTutorial({ onDone }) {
             return (
               <div key={String(o.id)} role="button" onClick={() => setModeLive(o.id)} style={{
                 borderRadius: 16, padding: '16px 18px', cursor: 'pointer',
-                background: sel ? 'rgba(255,139,61,0.15)' : 'rgba(255,255,255,0.03)',
-                border: `2px solid ${sel ? ACC_COLOR : 'rgba(255,255,255,0.08)'}`,
+                background: sel ? 'rgba(255,139,61,0.15)' : 'var(--surface-2)',
+                border: `2px solid ${sel ? ACC_COLOR : 'var(--border-c)'}`,
                 transition: 'all 0.15s',
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                  <span style={{ fontSize: 14, fontWeight: 800, color: sel ? '#ffb385' : '#6b7280' }}>{o.label}</span>
+                  <span style={{ fontSize: 14, fontWeight: 800, color: sel ? ACC_COLOR : 'var(--text-muted)' }}>{o.label}</span>
                   {sel && <div style={{ width: 10, height: 10, borderRadius: 5, background: ACC_COLOR }}/>}
                 </div>
-                <div style={{ fontSize: 11, color: sel ? '#ffd0a8' : '#6b7280', lineHeight: 1.4 }}>{o.desc}</div>
+                <div style={{ fontSize: 11, color: sel ? ACC_COLOR : 'var(--text-muted)', lineHeight: 1.4 }}>{o.desc}</div>
               </div>
             )
           })}
@@ -106,11 +106,11 @@ function AccordeurTutorial({ onDone }) {
             { label: 'Harmonique', desc: 'Intonation juste 5-limite',   color: ACC_COLOR },
             { label: 'Utilisateur',desc: 'Tempérament personnalisé',    color: '#c084fc' },
           ].map((r, i) => (
-            <div key={r.label} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', borderRadius: 12, background: i === 0 ? 'rgba(255,139,61,0.12)' : 'rgba(255,255,255,0.03)', border: `1.5px solid ${i === 0 ? ACC_COLOR : 'rgba(255,255,255,0.07)'}` }}>
+            <div key={r.label} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', borderRadius: 12, background: i === 0 ? 'rgba(255,139,61,0.12)' : 'var(--surface-2)', border: `1.5px solid ${i === 0 ? ACC_COLOR : 'var(--border-c)'}` }}>
               <div style={{ width: 8, height: 8, borderRadius: 4, background: r.color, flexShrink: 0 }}/>
               <div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: '#e5e7eb' }}>{r.label}</div>
-                <div style={{ fontSize: 10, color: '#6b7280', marginTop: 2 }}>{r.desc}</div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>{r.label}</div>
+                <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 2 }}>{r.desc}</div>
               </div>
             </div>
           ))}
@@ -140,9 +140,9 @@ function AccordeurTutorial({ onDone }) {
               { label: 'Score', val: '4/5', color: '#34d399' },
               { label: 'Qualité', val: '83%', color: ACC_COLOR },
             ].map(s => (
-              <div key={s.label} style={{ flex: 1, textAlign: 'center', padding: '10px 0', borderRadius: 10, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
+              <div key={s.label} style={{ flex: 1, textAlign: 'center', padding: '10px 0', borderRadius: 10, background: 'var(--surface-2)', border: '1px solid var(--border-c)' }}>
                 <div style={{ fontSize: 20, fontWeight: 900, color: s.color }}>{s.val}</div>
-                <div style={{ fontSize: 10, color: '#6b7280', marginTop: 2 }}>{s.label}</div>
+                <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 2 }}>{s.label}</div>
               </div>
             ))}
           </div>
@@ -183,7 +183,7 @@ function AccordeurTutorial({ onDone }) {
   return (
     <div style={{
       position: 'fixed', inset: 0, zIndex: 100,
-      background: '#030712', color: '#f9fafb',
+      background: 'var(--bg)', color: 'var(--text)',
       display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'space-between',
       padding: '24px 20px 80px', overflowY: 'auto',
     }}>
@@ -193,7 +193,7 @@ function AccordeurTutorial({ onDone }) {
           {Array.from({ length: TUTO_TOTAL_ACC }).map((_, i) => (
             <div key={i} style={{
               width: i === slide ? 20 : 7, height: 7, borderRadius: 4,
-              background: i <= slide ? ACC_COLOR : 'rgba(255,255,255,0.1)',
+              background: i <= slide ? ACC_COLOR : 'var(--border-c)',
               transition: 'width 0.25s, background 0.25s',
             }}/>
           ))}
@@ -210,8 +210,8 @@ function AccordeurTutorial({ onDone }) {
 
       {/* Text */}
       <div style={{ width: '100%', maxWidth: 400, textAlign: 'center', marginBottom: 32 }}>
-        <div style={{ fontSize: 22, fontWeight: 900, color: '#f9fafb', marginBottom: 10 }}>{title}</div>
-        <div style={{ fontSize: 14, fontWeight: 500, color: '#d1d5db', lineHeight: 1.6 }}>{body}</div>
+        <div style={{ fontSize: 22, fontWeight: 900, color: 'var(--text)', marginBottom: 10 }}>{title}</div>
+        <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-muted)', lineHeight: 1.6 }}>{body}</div>
       </div>
 
       {/* Navigation */}
