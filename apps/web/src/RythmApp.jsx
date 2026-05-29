@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { Link } from "react-router-dom";
 import TourGuide from "./TourGuide";
 import { useTheme, ThemeToggleInline } from "./ThemeContext";
+import useSwipe from "./hooks/useSwipe";
 import RythmStaff from "./RythmStaff";
 import SettingsPage from "./SettingsPage";
 import ConsigneOverlay, { consigneSeen } from "./ConsigneOverlay";
@@ -218,8 +219,8 @@ function TapDiagnostics({ beatMs, analysis }) {
       + (a.malusPts > 0 ? ` (−${a.malusPts} pts)` : '');
 
   const off = a.offsetMs ?? 0;
-  const offColor = Math.abs(off) <= 20 ? '#34d399' : '#fbbf24';
-  const offText = Math.abs(off) <= 20 ? 'Bien calé'
+  const offColor = Math.abs(off) <= 100 ? '#34d399' : '#fbbf24';
+  const offText = Math.abs(off) <= 100 ? 'Bien calé'
     : off < 0 ? `~${Math.abs(off)} ms en avance` : `~${off} ms en retard`;
 
   const r = a.regularityStd != null && beatMs ? a.regularityStd / beatMs : null;
@@ -462,6 +463,10 @@ const TUTO_TOTAL = 4;
 function TutorialOverlay({ onDone, niveauOrder, activity: initActivity, inputMode: initInputMode }) {
   const [slide, setSlide] = useState(0);
   const { dark } = useTheme();
+  const swipe = useSwipe({
+    onSwipeLeft:  () => setSlide(s => Math.min(s + 1, TUTO_TOTAL - 1)),
+    onSwipeRight: () => setSlide(s => Math.max(s - 1, 0)),
+  });
 
   const [tutoActivity,  setTutoActivity]  = useState(initActivity || 1);
   const [tutoInputMode, setTutoInputMode] = useState(initInputMode || "tap");
@@ -586,7 +591,7 @@ function TutorialOverlay({ onDone, niveauOrder, activity: initActivity, inputMod
   }
 
   return (
-    <div style={{
+    <div {...swipe} style={{
       position:'fixed', inset:0, zIndex:100,
       background: dark ? '#030712' : '#f9fafb',
       color: dark ? '#f9fafb' : '#111827',
@@ -1608,30 +1613,47 @@ export default function RythmApp() {
     </div>
   );
 
+  // ── Aide (modal + bulles) — partagée accueil ET en-jeu ───────────────────────
+  const helpTourSteps = currentPage === "home"
+    ? [
+        { tourId:'activite-grid',       title:'Activités',  desc:'4 exercices : frapper le rythme, compléter, identifier ou composer. Choisis selon ton niveau.' },
+        { tourId:'btn-reglages-rythme', title:'Réglages',   desc:'Configure le tempo, le mode de saisie (TAP ou micro) et les niveaux de formules.' },
+        { tourId:'btn-commencer',       title:'Commencer',  desc:'Lance l\'exercice avec les réglages en cours. Possible de jouer en série de 10 pour un score global.' },
+      ]
+    : [
+        { tourId:'jeu-zone',     title:'Zone de jeu', desc:'Le rythme s\'affiche ici. Selon l\'activité, tu le tapes, le composes ou choisis la bonne réponse.' },
+        { tourId:'jeu-reglages', title:'Réglages',    desc:'Ajuste le tempo, le mode de saisie (TAP ou micro) et les niveaux sans quitter l\'exercice.' },
+        { tourId:'jeu-retour',   title:'Activités',   desc:'Reviens à la liste des exercices à tout moment.' },
+      ];
+
+  const HelpOverlay = (
+    <>
+      {showHelp && (
+        <>
+          <div onClick={() => setShowHelp(false)} style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.6)', zIndex:200 }}/>
+          <div style={{ position:'fixed', top:'50%', left:'50%', transform:'translate(-50%,-50%)', zIndex:201, width:'min(320px, 90vw)', background:'var(--surface)', border:'1.5px solid rgba(74,108,247,0.3)', borderRadius:20, padding:'28px 24px', textAlign:'center' }}>
+            <div style={{ fontSize:18, fontWeight:900, color:'var(--text)', marginBottom:6 }}>Aide</div>
+            <div style={{ fontSize:12, color:'var(--text-muted)', marginBottom:24 }}>Comment puis-je t'aider ?</div>
+            <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+              {currentPage === "home" && (
+                <button onClick={() => { setShowHelp(false); setShowTutorial(true); }} style={{ padding:'14px 0', borderRadius:14, border:'none', background:'linear-gradient(135deg,#3b82f6,#4A6CF7)', color:'#fff', fontSize:14, fontWeight:800, cursor:'pointer' }}>▶ Relancer le tutoriel</button>
+              )}
+              <button onClick={() => { setShowHelp(false); setShowTour(true); }} style={{ padding:'14px 0', borderRadius:14, border:'2px solid rgba(74,108,247,0.35)', background:'none', color:'#4A6CF7', fontSize:14, fontWeight:800, cursor:'pointer' }}>Bulles explicatives</button>
+            </div>
+            <button onClick={() => setShowHelp(false)} style={{ marginTop:16, background:'none', border:'none', color:'var(--text-muted)', fontSize:12, cursor:'pointer' }}>Fermer</button>
+          </div>
+        </>
+      )}
+      {showTour && <TourGuide steps={helpTourSteps} onDone={() => setShowTour(false)} />}
+    </>
+  );
+
   // ── Page accueil ───────────────────────────────────────────────────────────
   if (currentPage === "home") {
     return (
       <>
         {showTutorial && <TutorialOverlay onDone={handleTutorialDone} niveauOrder={niveauOrder} activity={activity} inputMode={inputMode} />}
-        {showHelp && (
-          <>
-            <div onClick={() => setShowHelp(false)} style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.6)', zIndex:200 }}/>
-            <div style={{ position:'fixed', top:'50%', left:'50%', transform:'translate(-50%,-50%)', zIndex:201, width:'min(320px, 90vw)', background:'#0a0f1a', border:'1.5px solid rgba(74,108,247,0.3)', borderRadius:20, padding:'28px 24px', textAlign:'center' }}>
-              <div style={{ fontSize:18, fontWeight:900, color:'#f9fafb', marginBottom:6 }}>Aide</div>
-              <div style={{ fontSize:12, color:'#6b7280', marginBottom:24 }}>Comment puis-je t'aider ?</div>
-              <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
-                <button onClick={() => { setShowHelp(false); setShowTutorial(true); }} style={{ padding:'14px 0', borderRadius:14, border:'none', background:'linear-gradient(135deg,#3b82f6,#4A6CF7)', color:'#fff', fontSize:14, fontWeight:800, cursor:'pointer' }}>▶ Relancer le tutoriel</button>
-                <button onClick={() => { setShowHelp(false); setShowTour(true); }} style={{ padding:'14px 0', borderRadius:14, border:'2px solid rgba(74,108,247,0.35)', background:'none', color:'#4A6CF7', fontSize:14, fontWeight:800, cursor:'pointer' }}>Bulles explicatives</button>
-              </div>
-              <button onClick={() => setShowHelp(false)} style={{ marginTop:16, background:'none', border:'none', color:'#6b7280', fontSize:12, cursor:'pointer' }}>Fermer</button>
-            </div>
-          </>
-        )}
-        {showTour && <TourGuide steps={[
-          { tourId:'activite-grid',       title:'Activités',  desc:'4 exercices : frapper le rythme, compléter, identifier ou composer. Choisis selon ton niveau.' },
-          { tourId:'btn-reglages-rythme', title:'Réglages',   desc:'Configure le tempo, le mode de saisie (TAP ou micro) et les niveaux de formules.' },
-          { tourId:'btn-commencer',       title:'Commencer',  desc:'Lance l\'exercice avec les réglages en cours. Possible de jouer en série de 10 pour un score global.' },
-        ]} onDone={() => setShowTour(false)} />}
+        {HelpOverlay}
         {SettingsModal}
         <div className="bg-app text-app min-h-dvh flex flex-col items-center px-3.5 py-3 pb-8 select-none">
           {/* Header */}
@@ -1842,6 +1864,7 @@ export default function RythmApp() {
   return (
     <>
     {SettingsModal}
+    {HelpOverlay}
     <div
       className="bg-app text-app min-h-dvh flex flex-col items-center px-3.5 py-3 pb-6 select-none"
       style={{ touchAction: (phase === 'results' || activity === 5) ? 'pan-y' : 'none' }}
@@ -1888,6 +1911,7 @@ export default function RythmApp() {
             setPattern(null);
           }}
           onPointerDown={e => e.stopPropagation()}
+          data-tour="jeu-retour"
           className="bg-surface-2 border border-app rounded-lg font-bold text-xs cursor-pointer px-2.5 py-1"
           style={{ color: '#4A6CF7' }}
         >← Activités</button>
@@ -1899,6 +1923,13 @@ export default function RythmApp() {
         <div className="flex gap-2 items-center">
           <div className="bg-surface-2 border border-app rounded-full px-2.5 py-0.5 text-xs text-app font-bold">⭐ {totalPts}</div>
           <ThemeToggleInline />
+          <button
+            onPointerDown={e => e.stopPropagation()}
+            onClick={e => { e.stopPropagation(); setShowHelp(true); }}
+            title="Aide"
+            className="bg-surface-2 border border-app rounded-lg cursor-pointer flex items-center justify-center"
+            style={{ width:32, height:32, fontWeight:700, fontSize:15, color:'var(--text-muted)' }}
+          >?</button>
           <button
             onPointerDown={e => e.stopPropagation()}
             onClick={e => {
@@ -1913,6 +1944,7 @@ export default function RythmApp() {
               setOpenAccordion("saisie");
               setSettingsModalOpen(true);
             }}
+            data-tour="jeu-reglages"
             className="bg-surface-2 border border-app rounded-xl text-app-muted text-lg cursor-pointer px-2 py-0.5 leading-none"
             title="Réglages"
           >⚙</button>
@@ -1921,7 +1953,7 @@ export default function RythmApp() {
 
 
       {/* ── ZONE PRINCIPALE ── */}
-      <div className="flex-1 w-full max-w-xl flex gap-2.5 items-stretch">
+      <div className="flex-1 w-full max-w-xl flex gap-2.5 items-stretch" data-tour="jeu-zone">
 
         {/* Contenu central */}
         <div className="flex-1 flex flex-col items-center justify-center gap-4 min-w-0">
@@ -2082,8 +2114,16 @@ export default function RythmApp() {
                     sessionBpm={sessionBpm}
                   />
                   {phase==="results" && scores.length > 0 && (
-                    <div style={{ display:'flex', justifyContent:'center', gap:8, fontSize:9, color:'var(--text-muted)', marginTop:2 }}>
-                      <span>◀ en avance</span><span>·</span><span>pile</span><span>·</span><span>en retard ▶</span>
+                    <div style={{ display:'flex', justifyContent:'center', marginTop:2 }}>
+                      {/* Mini-réplique d'un marqueur : explique le dessin sous chaque note */}
+                      <svg width="170" height="30" style={{ display:'block' }}>
+                        <line x1="24" y1="9" x2="146" y2="9" stroke="#9ca3af" strokeOpacity="0.35" />
+                        <line x1="85" y1="4" x2="85" y2="14" stroke="#9ca3af" strokeOpacity="0.6" />
+                        <circle cx="105" cy="9" r="3.2" fill="#34d399" />
+                        <text x="24"  y="27" fontSize="8" textAnchor="start"  style={{ fill:'var(--text-muted)' }}>en avance</text>
+                        <text x="85"  y="27" fontSize="8" textAnchor="middle" style={{ fill:'var(--text-muted)' }}>pile</text>
+                        <text x="146" y="27" fontSize="8" textAnchor="end"    style={{ fill:'var(--text-muted)' }}>en retard</text>
+                      </svg>
                     </div>
                   )}
                 </div>

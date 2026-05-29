@@ -10,21 +10,14 @@ const DUR_Q = {
 const BEAT_SIZE = { "4/4":1, "3/4":1, "2/4":1, "12/8":1.5, "6/8":1.5, "9/8":1.5 };
 const BEAMABLE  = new Set(["8","16"]);
 
-function noteColor(idx, activeIdx, scoreGrades) {
-  if (scoreGrades) {
-    const g = scoreGrades[idx];
-    if (g === "perfect") return "#a78bfa";
-    if (g === "good")    return "#34d399";
-    if (g === "ok")      return "#fbbf24";
-    if (g === "miss")    return "#f87171";
-    return "#4b5563";
-  }
+// Couleur classique : le grade est porté par les points sous la portée (pas de redondance)
+function noteColor() {
   return "#4b5563";
 }
 
 function makeVexNote(figure, idx, activeIdx, scoreGrades) {
   const isRest = figure.rest || false;
-  const color  = noteColor(idx, activeIdx, scoreGrades);
+  const color  = noteColor();
   const raw    = figure.dur;
   const hasDot = raw.endsWith("d") && !raw.endsWith("rd");
   const baseForVex = hasDot ? raw.slice(0, -1) : raw;
@@ -71,7 +64,12 @@ function buildBeams(figures, vexNotes, timeSig) {
   return beams;
 }
 
-const DEV_COLORS = { perfect:"#a78bfa", good:"#34d399", ok:"#fbbf24", miss:"#f87171" };
+// Points du graphe de décalage : teintes désaturées + halo coloré (rendu moderne, moins plat).
+const DOT_FILL = { perfect:"#b3a4e6", good:"#62cda3", ok:"#ecc873", miss:"#ef9a9a" };
+const DOT_GLOW = {
+  perfect:"rgba(167,139,250,0.55)", good:"rgba(52,211,153,0.5)",
+  ok:"rgba(251,191,36,0.5)",       miss:"rgba(248,113,113,0.5)",
+};
 
 export default function RythmStaff({
   figures,
@@ -243,8 +241,10 @@ export default function RythmStaff({
                 const dot = document.createElementNS(NS, "circle");
                 dot.setAttribute("cx", cx);
                 dot.setAttribute("cy", stripY);
-                dot.setAttribute("r", "3.4");
-                dot.style.fill = DEV_COLORS[grade] ?? "#6b7280";
+                dot.setAttribute("r", "3.6");
+                dot.style.fill = DOT_FILL[grade] ?? "#9ca3af";
+                dot.style.opacity = "0.88";
+                dot.style.filter = `drop-shadow(0 0 3px ${DOT_GLOW[grade] ?? "rgba(156,163,175,0.5)"})`;
                 svg.appendChild(dot);
               }
             });

@@ -92,10 +92,17 @@ export function buildPalette(opts: {
 }
 
 // ─── Scoring partiel ──────────────────────────────────────────────────────────
-// Compare solution et réponse case à case sur la même grille (finestUnit du niveau).
-// - réponse plus courte → cases manquantes = silence (donc fausses si la solution joue)
-// - réponse plus longue → l'excès n'est pas comparé mais gonfle le dénominateur (pénalité)
-// pct = cases identiques / max(longueurs). JAMAIS figure par figure.
+// Score sur l'accord des ATTAQUES (onsets) et des SILENCES, mesurés en indice de
+// Jaccard sur la grille timeline. Les prolongations (H) communes sont NEUTRES :
+// elles ne sont ni récompensées ni pénalisées → un remplissage au hasard (dont la
+// grille est majoritairement « tenue ») n'obtient plus de score de base gonflé.
+//   jA = attaques communes / attaques de l'union ; jR = idem pour les silences.
+//   pct = ONSET_WEIGHT·jA + (1−ONSET_WEIGHT)·jR.
+// Un H en solution face à un A/R en réponse (et inversement) est pénalisé via jA/jR.
+// `identical`/`denom` (accord case à case brut) restent retournés pour info.
+// Constante tunable : poids relatif des attaques vs silences dans le score.
+export const ONSET_WEIGHT = 0.6;
+
 export function scoreActivity5(
   solutionFigs: Fig[],
   answerFigs: Fig[],
@@ -105,11 +112,21 @@ export function scoreActivity5(
   const sol = toTimelineCells(solutionFigs, group, finestUnit);
   const ans = toTimelineCells(answerFigs, group, finestUnit);
   const denom = Math.max(sol.length, ans.length);
+
+  const cellAt = (arr: Cell[], i: number): Cell => (i < arr.length ? arr[i] : "R");
+
   let identical = 0;
-  for (let i = 0; i < sol.length; i++) {
-    const ansCell = i < ans.length ? ans[i] : "R"; // au-delà de la réponse = silence
-    if (sol[i] === ansCell) identical++;
+  let aInter = 0, aUnion = 0, rInter = 0, rUnion = 0;
+  for (let i = 0; i < denom; i++) {
+    const s = cellAt(sol, i), a = cellAt(ans, i);
+    if (s === a) identical++;
+    const sA = s === "A", aA = a === "A";
+    const sR = s === "R", aR = a === "R";
+    if (sA || aA) { aUnion++; if (sA && aA) aInter++; }
+    if (sR || aR) { rUnion++; if (sR && aR) rInter++; }
   }
-  const pct = denom > 0 ? Math.round((identical / denom) * 100) : 0;
+  const jA = aUnion > 0 ? aInter / aUnion : 1; // pas d'attaque des deux côtés → accord parfait
+  const jR = rUnion > 0 ? rInter / rUnion : 1; // pas de silence des deux côtés → accord parfait
+  const pct = Math.round(100 * (ONSET_WEIGHT * jA + (1 - ONSET_WEIGHT) * jR));
   return { pct, identical, denom };
 }

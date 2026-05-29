@@ -66,6 +66,14 @@ test("scoring : blanche (note tenue) ≠ noire+silence", () => {
   assert.ok(diff.pct < 100, `reçu ${diff.pct}`);
 });
 
+test("scoring strict : tenues communes ne gonflent pas le score (onsets faux)", () => {
+  // 2 blanches (attaques temps 1 & 3) vs 4 noires (attaque chaque temps) :
+  // beaucoup de cases « tenue » communes, mais les attaques diffèrent → score bas,
+  // pas le ~96% d'un comptage case-par-case naïf.
+  const r = scoreActivity5([h, h], [q, q, q, q], "binary", "16");
+  assert.ok(r.pct <= 75, `attendu ≤75 (onsets partiellement faux), reçu ${r.pct}`);
+});
+
 // ─── buildPalette ─────────────────────────────────────────────────────────────
 const er = { dur: "8r", rest: true };
 const F = (id: string, beats: number, figs: any[]): any => ({ id, group: "binary", beats, figs });

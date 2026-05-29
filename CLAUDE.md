@@ -60,7 +60,10 @@ teacherCodes/{code}
 
 ## Fichiers transverses
 - `hooks/useProgressFirebase.ts` — progression Firebase (XP, niveaux, trophées, streak)
+- `hooks/useSwipe.js` — swipe hook partagé (`onSwipeLeft`, `onSwipeRight`, `onTap`, seuil 50px) — utilisé dans TourGuide + 3 carousels tuto
 - `auth/AuthProvider.tsx` — `useAuth()` → `{ user, profile, loading }`
+- `ThemeContext.tsx` — `useTheme()` + `ThemeToggleInline` (inline dans headers modules) + `ThemeProvider`
+- `TourGuide.jsx` — overlay tour guidé : tap ou swipe gauche = étape suivante, overlay bloquant + scrollIntoView
 - `useSheetData.js` — chargement CSV Google Sheets (rythme)
 - `useProgress.js` — **MORT**, non utilisé, ne pas importer
 
@@ -82,6 +85,9 @@ teacherCodes/{code}
 - `vercel.json` — ne jamais supprimer `"rewrites": [{"source":"/(.*)", "destination":"/index.html"}]`
 - `RythmApp.jsx` — fichier sensible (~2100 lignes), ne modifier que sur demande explicite
 - CSV `/public/formules-rythme-template.csv` — source de vérité formules rythme, ajouter dans le CSV pas dans le code
+- Toggle dark/light : **flottant** sur Hub `/` seulement (`ThemeToggleFloating` conditionné sur `pathname`), **inline** dans header des modules via `ThemeToggleInline`
+- `vite.config.js` injecte `__BUILD_DATE__` (dernier commit git) → affiché dans footer HubPage
+- PWA : `manifest.json` + `icon-192x192.png` + `icon-512x512.png` (`purpose: "any maskable"`) + `apple-touch-icon` dans `index.html`
 
 ## Vocabulaire — deux notions distinctes (ne pas confondre)
 - **Rang** = expérience **cross-module** (XP). Noms `Apprenti…Maestro`, seuils XP. Code : `RANKS`/`getRank`/`getNextRank` dans `hooks/useProgressFirebase.ts`. Affiché « Rang » dans les dashboards.

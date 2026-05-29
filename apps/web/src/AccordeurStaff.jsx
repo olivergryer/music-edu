@@ -35,7 +35,8 @@ function bestOctaveShift(midis) {
 }
 
 const STAVE_MARGIN      = 140
-const PX_PER_NOTE       = 28
+const PX_PER_NOTE       = 28   // plancher minimal d'espacement par note
+const PX_PER_BEAT       = 56   // espacement proportionnel à la durée (à calibrer)
 const MAX_NOTES_DISPLAY = 30
 
 // Palette résolue en hex selon le thème (var() ne fonctionne pas en attribut SVG)
@@ -121,20 +122,8 @@ function svgEl(tag, attrs) {
 
 export default function AccordeurStaff({ notes, transpoKey = 'C', tonicName = 'Do', containerWidth = 500, height = 300, notePx = 52 }) {
   const ref = useRef(null)
-  const wrapRef = useRef(null)
   const { dark } = useTheme()
   const C = themePalette(dark)
-
-  // Largeur réelle disponible (mobile : écran étroit, pas la valeur prop fixe)
-  const [boxW, setBoxW] = useState(containerWidth)
-  useEffect(() => {
-    if (!wrapRef.current) return
-    const measure = () => setBoxW(wrapRef.current?.clientWidth ?? containerWidth)
-    measure()
-    const ro = new ResizeObserver(measure)
-    ro.observe(wrapRef.current)
-    return () => ro.disconnect()
-  }, [containerWidth])
 
   const [tog, setTog] = useState(() => {
     try {
@@ -150,8 +139,11 @@ export default function AccordeurStaff({ notes, transpoKey = 'C', tonicName = 'D
   })
 
   const displayedNotes = notes?.slice(0, MAX_NOTES_DISPLAY) ?? []
-  const effW = Math.min(containerWidth, boxW)
-  const staveWidth = Math.max(effW - 4, displayedNotes.length * PX_PER_NOTE + STAVE_MARGIN)
+  // Largeur proportionnelle à la durée totale (compact), plancher par note
+  const totalBeats = displayedNotes.reduce(
+    (a, n) => a + durationToVex(Math.max(200, n.finMs - n.debutMs)).beats, 0)
+  const contentW   = Math.max(totalBeats * PX_PER_BEAT, displayedNotes.length * PX_PER_NOTE)
+  const staveWidth  = STAVE_MARGIN + contentW
 
   useEffect(() => {
     if (!ref.current || !displayedNotes.length) return
@@ -193,8 +185,6 @@ export default function AccordeurStaff({ notes, transpoKey = 'C', tonicName = 'D
         return sn
       })
 
-      const totalBeats = displayedNotes.reduce(
-        (acc, n) => acc + durationToVex(Math.max(200, n.finMs - n.debutMs)).beats, 0)
       const voice = new Voice({ num_beats: totalBeats, beat_value: 4 })
       voice.setMode(Voice.Mode.SOFT)
       voice.addTickables(vexNotes)
@@ -221,8 +211,8 @@ export default function AccordeurStaff({ notes, transpoKey = 'C', tonicName = 'D
         t.style.fill = C.stave
       })
 
-      // Masque les têtes de notes natives — redessinées par la couche custom
-      svg.querySelectorAll('.vf-notehead').forEach(n => { n.style.opacity = '0' })
+      // Masque têtes + altérations natives — redessinées par la couche custom
+      svg.querySelectorAll('.vf-notehead, .vf-accidental').forEach(n => { n.style.opacity = '0' })
 
       // ── Couche personnalisée ─────────────────────────────────────────────────
       const layer = svgEl('g', { class: 'custom-layer' })
@@ -230,6 +220,7 @@ export default function AccordeurStaff({ notes, transpoKey = 'C', tonicName = 'D
       const gHalos  = svgEl('g', { class: 'halos' })
       const gTargets = svgEl('g', { class: 'targets' })
       const gHeads  = svgEl('g', { class: 'heads' })
+      const gAcc    = svgEl('g', { class: 'accidentals' })
       const gValues = svgEl('g', { class: 'values' })
       const gSpark  = svgEl('g', { class: 'sparkline-zone' })
 
@@ -252,26 +243,29 @@ export default function AccordeurStaff({ notes, transpoKey = 'C', tonicName = 'D
         nameT.textContent = vexKeyToLabel(keys[i])
         gNames.appendChild(nameT)
 
-        // 2. Halo de variabilité
+        // 2. Halo de variabilité — une seule ellipse douce, opacité ∝ σ
         if (tog.halo) {
-          const ryO = Math.min(28, 9 + note.sigmaCents * 0.7)
+          const ryO = 6 + Math.min(note.sigmaCents, 40) * 0.5
           const rxO = ryO * 0.5
-          const haloCol = tog.couleur ? couleur : C.stave
+          const op  = 0.12 + Math.min(note.sigmaCents / 30, 1) * 0.18
           gHalos.appendChild(svgEl('ellipse', {
-            cx, cy: headY, rx: rxO, ry: ryO, fill: haloCol, opacity: '0.16',
-          }))
-          gHalos.appendChild(svgEl('ellipse', {
-            cx, cy: headY, rx: rxO * 0.62, ry: ryO * 0.62, fill: haloCol, opacity: '0.26',
+            cx, cy: headY, rx: rxO, ry: ryO,
+            fill: tog.couleur ? couleur : C.stave, opacity: op.toFixed(3),
           }))
         }
 
-        // 3. Contour cible (position théorique, sans déplacement)
+        // 3. Repère de position cible + trait de liaison (lisibilité de l'écart μ)
         if (tog.cible) {
-          gTargets.appendChild(svgEl('ellipse', {
-            cx, cy: targetY, rx: HEAD_RX, ry: HEAD_RY, fill: 'none',
-            stroke: C.target, 'stroke-width': '1', 'stroke-dasharray': '2,2',
-            transform: `rotate(-20 ${cx} ${targetY})`,
+          gTargets.appendChild(svgEl('line', {
+            x1: cx - HEAD_RX, y1: targetY, x2: cx + HEAD_RX, y2: targetY,
+            stroke: C.target, 'stroke-width': '1',
           }))
+          if (Math.abs(headY - targetY) > 1) {
+            gTargets.appendChild(svgEl('line', {
+              x1: cx, y1: targetY, x2: cx, y2: headY,
+              stroke: C.target, 'stroke-width': '1', opacity: '0.5',
+            }))
+          }
         }
 
         // 4. Tête de note redessinée
@@ -279,6 +273,18 @@ export default function AccordeurStaff({ notes, transpoKey = 'C', tonicName = 'D
           cx, cy: headY, rx: HEAD_RX, ry: HEAD_RY, fill: couleur,
           transform: `rotate(-20 ${cx} ${headY})`,
         }))
+
+        // 4b. Altération redessinée (alignée sur la tête déplacée)
+        const vexPart = keys[i].split('/')[0]
+        const glyph   = vexPart.includes('#') ? '♯' : (vexPart.length > 1 ? '♭' : null)
+        if (glyph) {
+          const accT = svgEl('text', {
+            x: cx - HEAD_RX - 5, y: headY + 4, 'text-anchor': 'end',
+            'font-size': '14', fill: couleur, 'font-family': 'Arial, sans-serif',
+          })
+          accT.textContent = glyph
+          gAcc.appendChild(accT)
+        }
 
         // 5. Valeur en cents
         if (tog.valeurs) {
@@ -330,6 +336,7 @@ export default function AccordeurStaff({ notes, transpoKey = 'C', tonicName = 'D
       layer.appendChild(gHalos)
       layer.appendChild(gTargets)
       layer.appendChild(gHeads)
+      layer.appendChild(gAcc)
       layer.appendChild(gValues)
       layer.appendChild(gSpark)
       svg.appendChild(layer)
@@ -347,7 +354,7 @@ export default function AccordeurStaff({ notes, transpoKey = 'C', tonicName = 'D
   ]
 
   return (
-    <div ref={wrapRef} className="w-full" style={{ maxWidth: containerWidth }}>
+    <div className="w-full" style={{ maxWidth: containerWidth }}>
       <div className="flex flex-wrap gap-2 mb-3">
         {TOGGLES.map(({ k, label }) => (
           <button

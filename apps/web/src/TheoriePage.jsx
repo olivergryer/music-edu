@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { ThemeToggleInline } from './ThemeContext'
+import useSwipe from './hooks/useSwipe'
 import IntervalleStaff from './IntervalleStaff.jsx'
 import TourGuide from './TourGuide'
 import ConsigneOverlay, { consigneSeen } from './ConsigneOverlay'
@@ -257,6 +258,10 @@ function TheorieTutorial({ onDone }) {
   const [level, setLevel]       = useState('C1/2')
   const [cats, setCats]         = useState([])
   const [selMode, setSelMode]   = useState('entrainement')
+  const swipe = useSwipe({
+    onSwipeLeft:  () => setSlide(s => Math.min(s + 1, TUTO_TOTAL - 1)),
+    onSwipeRight: () => setSlide(s => Math.max(s - 1, 0)),
+  })
 
   function toggleCat(id) {
     setCats(prev => prev.includes(id) ? prev.filter(c => c !== id) : [...prev, id])
@@ -357,7 +362,7 @@ function TheorieTutorial({ onDone }) {
   const { title, body } = SLIDES[slide]
 
   return (
-    <div style={{
+    <div {...swipe} style={{
       position:'fixed', inset:0, zIndex:100,
       background:'var(--bg)', color:'var(--text)',
       display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'space-between',

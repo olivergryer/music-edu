@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
+import useSwipe from './hooks/useSwipe'
 import { ThemeToggleInline } from './ThemeContext'
 import TourGuide from './TourGuide'
 import { PitchDetector } from 'pitchy'
@@ -40,10 +41,6 @@ const USER_PRESETS_KEY        = 'acc_temperament_presets'
 // Canvas colors (dark, used only in canvas 2D API)
 const C_BG      = '#0D1026'
 const C_SURFACE = '#131929'
-const C_ACCENT  = '#4A6CF7'
-const C_MUTED   = '#4b5563'
-const C_MUTED2  = '#6b7280'
-const C_TRITONE = '#FF8B3D'
 
 // ─── Tutorial ────────────────────────────────────────────────────────────────────
 const ACC_TUTO_KEY = 'acc_tuto_v1'
@@ -53,6 +50,11 @@ const ACC_COLOR = '#FF8B3D'
 function AccordeurTutorial({ onDone }) {
   const [slide, setSlide] = useState(0)
   const [modeLive, setModeLive] = useState(true)
+  const TOTAL = 5
+  const swipe = useSwipe({
+    onSwipeLeft:  () => setSlide(s => Math.min(s + 1, TOTAL - 1)),
+    onSwipeRight: () => setSlide(s => Math.max(s - 1, 0)),
+  })
 
   function renderVisual() {
     if (slide === 0) {
@@ -182,7 +184,7 @@ function AccordeurTutorial({ onDone }) {
   const { title, body } = SLIDES[slide]
 
   return (
-    <div style={{
+    <div {...swipe} style={{
       position: 'fixed', inset: 0, zIndex: 100,
       background: 'var(--bg)', color: 'var(--text)',
       display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'space-between',
@@ -308,130 +310,6 @@ function Btn({ children, onClick, disabled, variant = 'primary', className = '' 
     >
       {children}
     </button>
-  )
-}
-
-// ─── Graphe canvas centré sur 0 ─────────────────────────────────────────────────
-function GrapheCents({ data, labelX, couleurs, tritoneMask, width = 460, height = 90, title }) {
-  const ref = useRef(null)
-  const [tooltip, setTooltip] = useState(null)
-
-  useEffect(() => {
-    const canvas = ref.current
-    if (!canvas || !data?.length) return
-    const ctx2 = canvas.getContext('2d')
-    const W = width, H = height
-    ctx2.clearRect(0, 0, W, H)
-
-    ctx2.fillStyle = C_SURFACE
-    ctx2.fillRect(0, 0, W, H)
-
-    ctx2.strokeStyle = '#374151'
-    ctx2.lineWidth   = 1
-    ctx2.setLineDash([4, 4])
-    ctx2.beginPath()
-    ctx2.moveTo(0, H / 2)
-    ctx2.lineTo(W, H / 2)
-    ctx2.stroke()
-    ctx2.setLineDash([])
-
-    const maxAbs = Math.max(30, ...data.map(d => Math.abs(d.value)))
-    const scale  = (H / 2 - 8) / maxAbs
-
-    if (Array.isArray(data[0]?.value)) {
-      ctx2.strokeStyle = couleurs?.[0] ?? C_ACCENT
-      ctx2.lineWidth   = 1.5
-      ctx2.beginPath()
-      data.forEach((pt, i) => {
-        const x = (i / (data.length - 1)) * W
-        const y = H / 2 - pt.value * scale
-        i === 0 ? ctx2.moveTo(x, y) : ctx2.lineTo(x, y)
-      })
-      ctx2.stroke()
-    } else {
-      const barW = Math.max(8, W / data.length - 4)
-      data.forEach((pt, i) => {
-        const x    = (i + 0.5) * (W / data.length)
-        const barH = Math.abs(pt.value) * scale
-        const y    = pt.value >= 0 ? H / 2 - barH : H / 2
-        ctx2.fillStyle = couleurs?.[i] ?? C_ACCENT
-        ctx2.beginPath()
-        ctx2.roundRect?.(x - barW / 2, y, barW, barH || 1, 3) ?? ctx2.rect(x - barW / 2, y, barW, barH || 1)
-        ctx2.fill()
-
-        if (tritoneMask?.[i]) {
-          ctx2.fillStyle = C_TRITONE
-          ctx2.font      = 'bold 11px Inter,sans-serif'
-          ctx2.textAlign = 'center'
-          const markerY  = pt.value >= 0 ? H / 2 - barH - 10 : H / 2 + barH + 12
-          ctx2.fillText('?', x, Math.max(12, Math.min(H - 4, markerY)))
-        }
-
-        if (labelX?.[i]) {
-          ctx2.fillStyle = C_MUTED2
-          ctx2.font      = '9px Inter,sans-serif'
-          ctx2.textAlign = 'center'
-          ctx2.fillText(labelX[i], x, H - 2)
-        }
-      })
-    }
-
-    if (title) {
-      ctx2.fillStyle = C_MUTED
-      ctx2.font      = '9px Inter,sans-serif'
-      ctx2.textAlign = 'left'
-      ctx2.fillText(title, 4, 10)
-    }
-
-    ;[-30, -20, -10, 10, 20, 30].forEach(c => {
-      const y = H / 2 - c * scale
-      if (y < 0 || y > H) return
-      ctx2.strokeStyle = '#1f2937'
-      ctx2.lineWidth   = 0.5
-      ctx2.beginPath()
-      ctx2.moveTo(0, y)
-      ctx2.lineTo(W, y)
-      ctx2.stroke()
-      ctx2.fillStyle  = '#374151'
-      ctx2.font       = '8px Inter,sans-serif'
-      ctx2.textAlign  = 'right'
-      ctx2.fillText(`${c > 0 ? '+' : ''}${c}¢`, W - 2, y - 1)
-    })
-  }, [data, couleurs, labelX, tritoneMask, width, height, title])
-
-  const handleMouseMove = (e) => {
-    if (!tritoneMask?.some(Boolean) || !data?.length) { setTooltip(null); return }
-    const rect = ref.current.getBoundingClientRect()
-    const mouseX = (e.clientX - rect.left) * (width / rect.width)
-    const idx = Math.floor(mouseX / (width / data.length))
-    if (idx >= 0 && idx < data.length && tritoneMask[idx]) {
-      setTooltip({ x: e.clientX - rect.left, y: e.clientY - rect.top })
-    } else {
-      setTooltip(null)
-    }
-  }
-
-  return (
-    <div className="relative inline-block">
-      <canvas
-        ref={ref} width={width} height={height}
-        className="rounded-lg block"
-        onMouseMove={handleMouseMove}
-        onMouseLeave={() => setTooltip(null)}
-      />
-      {tooltip && (
-        <div
-          className="absolute text-xs rounded-lg pointer-events-none z-10 leading-snug border"
-          style={{
-            left: tooltip.x + 10, top: Math.max(0, tooltip.y - 38),
-            background: '#1f2937', color: '#f9fafb',
-            padding: '5px 8px', maxWidth: 210, border: '1px solid #374151',
-          }}
-        >
-          Intervalle ambigu en intonation pure — deux valeurs possibles (±9.8 ¢)
-        </div>
-      )}
-    </div>
   )
 }
 
@@ -630,9 +508,6 @@ export default function AccordeurPage() {
 
   const [dirty,      setDirty]      = useState(false)
   const [vue,        setVue]        = useState('portee')
-  const [showCourbe, setShowCourbe] = useState(true)
-  const [showBarres, setShowBarres] = useState(true)
-  const [showSigma,  setShowSigma]  = useState(true)
 
   const [structures,    setStructures]    = useState(() => lireStructures())
   const [showStructMgr, setShowStructMgr] = useState(false)
@@ -1024,16 +899,12 @@ export default function AccordeurPage() {
   const _tonicDisplayName = NOTE_NAMES_FR[_tonicDisplayPC]
   const enharmonicScale   = buildEnharmonicScale(_tonicDisplayName)
 
-  const couleurs = notes.map(n => couleurJustesse(n.muCents, seuil))
   const labelsX  = notes.map(n => {
     const midiDisp = n.midiCible + _transpoOffset
     const pc       = ((midiDisp % 12) + 12) % 12
     const oct      = Math.floor(midiDisp / 12) - 1
     return `${enharmonicScale[pc]}${oct}`
   })
-  const dataBarres = notes.map((n, i) => ({ value: n.muCents, label: labelsX[i] }))
-  const dataSigma  = notes.map((n, i) => ({ value: n.sigmaCents, label: labelsX[i] }))
-  const dataCourbe = courbe.map(p => ({ value: p.cents }))
 
   const muMoyen    = notes.length ? (notes.reduce((a, n) => a + n.muCents, 0) / notes.length).toFixed(1) : null
   const sigmaMoyen = notes.length ? (notes.reduce((a, n) => a + n.sigmaCents, 0) / notes.length).toFixed(1) : null
@@ -1472,17 +1343,6 @@ export default function AccordeurPage() {
             <div className="text-app-muted text-sm py-5">Analyse en cours…</div>
           )}
 
-          {!modeLive && phase === 'resultats' && (
-            <Btn variant="secondary" onClick={() => {
-              stopVersionJusteRef.current?.()
-              recordingBlobRef.current = null
-              setHasRecordingBlob(false)
-              setPhase('pret'); setNotes([]); setCourbe([])
-              serieRef.current = []; audioBufferRef.current = null
-            }} className="text-sm">
-              ↺ Nouveau
-            </Btn>
-          )}
 
           {erreur && <div className="text-red-400 text-xs mt-3">{erreur}</div>}
 
@@ -1609,6 +1469,26 @@ export default function AccordeurPage() {
         {/* ── Résultats ── */}
         {phase === 'resultats' && notes.length > 0 && (
           <>
+            <div className="flex items-center justify-between mb-3">
+              <button
+                onClick={() => {
+                  stopVersionJusteRef.current?.()
+                  recordingBlobRef.current = null
+                  setHasRecordingBlob(false)
+                  setPhase('pret'); setNotes([]); setCourbe([])
+                  serieRef.current = []; audioBufferRef.current = null
+                }}
+                className="rounded-lg border font-bold text-xs px-4 py-2 cursor-pointer"
+                style={{ background: 'var(--surface)', color: '#FF8B3D', borderColor: '#FF8B3D' }}
+              >
+                ↺ Nouvel enregistrement
+              </button>
+              <span className="text-app-muted text-xs">
+                μ <strong className="text-app">{muMoyen}¢</strong>
+                &nbsp;&nbsp;σ <strong className="text-app">{sigmaMoyen}¢</strong>
+              </span>
+            </div>
+
             <div className="flex gap-1.5 mb-3">
               {[['portee', 'Portée'], ['tableau', 'Tableau']].map(([v, label]) => (
                 <button key={v} onClick={() => setVue(v)}
@@ -1620,10 +1500,6 @@ export default function AccordeurPage() {
                   }}
                 >{label}</button>
               ))}
-              <span className="ml-auto text-app-muted text-xs self-center">
-                μ <strong className="text-app">{muMoyen}¢</strong>
-                &nbsp;&nbsp;σ <strong className="text-app">{sigmaMoyen}¢</strong>
-              </span>
             </div>
 
             {vue === 'portee' && (
@@ -1712,26 +1588,6 @@ export default function AccordeurPage() {
                 <em>En pratique : si votre phrase contient un La dans un contexte de IIe degré, la référence affichée peut différer de l'intonation pure idéale de ~21 cents.</em>
               </div>
             )}
-
-            <div className="flex gap-2 mb-3 flex-wrap">
-              {[
-                { key: 'courbe', label: 'Courbe brute', val: showCourbe, set: setShowCourbe },
-                { key: 'barres', label: 'μ par note',   val: showBarres, set: setShowBarres },
-                { key: 'sigma',  label: 'σ par note',   val: showSigma,  set: setShowSigma  },
-              ].map(({ key, label, val, set }) => (
-                <button key={key} onClick={() => set(v => !v)}
-                  className="px-3 py-1.5 rounded-lg border-none text-xs font-bold cursor-pointer transition-colors"
-                  style={{
-                    background: val ? '#FF8B3D' : 'var(--surface-2)',
-                    color:      val ? '#fff' : 'var(--text-muted)',
-                  }}
-                >{label}</button>
-              ))}
-            </div>
-
-            {showCourbe && courbe.length > 0 && <div className="mb-3"><GrapheCents data={dataCourbe} couleurs={[C_ACCENT]} width={500} height={90} title="Écart continu (¢)" /></div>}
-            {showBarres && <div className="mb-3"><GrapheCents data={dataBarres} couleurs={couleurs} labelX={labelsX} width={500} height={100} title="Écart moyen μ par note (¢)" /></div>}
-            {showSigma  && <div className="mb-3"><GrapheCents data={dataSigma} couleurs={couleurs} labelX={labelsX} width={500} height={100} title="Déviation σ par note (¢)" /></div>}
 
             <div className="text-center pt-2">
               <Btn onClick={sauvegarderResultats}>Sauvegarder cette session</Btn>
