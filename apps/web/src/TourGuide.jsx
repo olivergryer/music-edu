@@ -13,11 +13,10 @@ export default function TourGuide({ steps, onDone }) {
     if (!step) return
     const el = document.querySelector(`[data-tour="${step.tourId}"]`)
     if (!el) { setRect(null); return }
-    el.scrollIntoView({ block: 'center', behavior: 'smooth' })
     const tid = setTimeout(() => {
       setRect(el.getBoundingClientRect())
       setVp({ w: window.innerWidth, h: window.innerHeight })
-    }, 350)
+    }, 100)
     return () => clearTimeout(tid)
   }, [idx, steps])
 
@@ -41,17 +40,6 @@ export default function TourGuide({ steps, onDone }) {
   const right  = rect ? Math.min(w, rect.right  + PAD) : w
   const bottom = rect ? Math.min(h, rect.bottom + PAD) : h
 
-  // 4-rect overlay
-  const rects = rect
-    ? [
-        { t: 0,      l: 0,     W: w,         H: top          },
-        { t: bottom, l: 0,     W: w,         H: h - bottom   },
-        { t: top,    l: 0,     W: left,      H: bottom - top },
-        { t: top,    l: right, W: w - right, H: bottom - top },
-      ]
-    : [{ t: 0, l: 0, W: w, H: h }]
-
-  // Tooltip position
   const TOOLTIP_W = Math.min(300, w - 32)
   const spaceBelow = h - bottom - 8
   const spaceAbove = top - 8
@@ -67,32 +55,23 @@ export default function TourGuide({ steps, onDone }) {
     position: 'fixed',
     left: tipLeft,
     width: TOOLTIP_W,
-    ...(tipTop    !== undefined ? { top: tipTop }           : {}),
-    ...(tipBottom !== undefined ? { bottom: tipBottom }     : {}),
-    ...(!rect     ? { top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: TOOLTIP_W } : {}),
+    ...(tipTop    !== undefined ? { top: tipTop }       : {}),
+    ...(tipBottom !== undefined ? { bottom: tipBottom } : {}),
+    ...(!rect ? { top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: TOOLTIP_W } : {}),
     background: '#0a0f1a',
     border: `1.5px solid rgba(192,132,252,0.45)`,
     borderRadius: 16,
     padding: '16px 18px',
     boxShadow: '0 8px 32px rgba(0,0,0,0.7)',
     zIndex: 10001,
+    pointerEvents: 'auto',
   }
 
-  function next() { stepIdx < steps.length - 1 ? setIdx(i => i + 1) : onDone() }
-  function prev() { setIdx(i => i - 1) }
   const stepIdx = idx
 
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 10000, pointerEvents: 'none' }}>
-      {/* Dark overlay */}
-      {rects.map((r, i) => (
-        <div key={i} style={{
-          position: 'fixed', top: r.t, left: r.l, width: r.W, height: r.H,
-          background: 'rgba(3,7,18,0.82)',
-        }} />
-      ))}
-
-      {/* Highlight ring */}
+      {/* Highlight ring only — no blocking overlay */}
       {rect && (
         <div style={{
           position: 'fixed',
@@ -105,7 +84,7 @@ export default function TourGuide({ steps, onDone }) {
       )}
 
       {/* Tooltip */}
-      <div style={{ ...tipStyle, pointerEvents: 'auto' }}>
+      <div style={tipStyle}>
         {/* Dots */}
         <div style={{ display: 'flex', gap: 5, marginBottom: 12 }}>
           {steps.map((_, i) => (
@@ -125,14 +104,7 @@ export default function TourGuide({ steps, onDone }) {
         </div>
 
         <div style={{ display: 'flex', gap: 8 }}>
-          {stepIdx > 0 && (
-            <button onClick={prev} style={{
-              flex: 1, padding: '9px 0', borderRadius: 10,
-              border: `1.5px solid rgba(192,132,252,0.3)`, background: 'none',
-              color: ACC, fontSize: 12, fontWeight: 700, cursor: 'pointer',
-            }}>← Préc.</button>
-          )}
-          <button onClick={next} style={{
+          <button onClick={stepIdx < steps.length - 1 ? () => setIdx(i => i + 1) : onDone} style={{
             flex: 2, padding: '9px 0', borderRadius: 10, border: 'none',
             background: 'linear-gradient(135deg,#7c3aed,#c084fc)',
             color: '#fff', fontSize: 12, fontWeight: 800, cursor: 'pointer',

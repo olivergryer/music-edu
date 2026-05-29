@@ -214,7 +214,10 @@ export default function RythmStaff({
           const scored = [];
           vexNotes.forEach((note, idx) => {
             if (scoreGrades?.[idx] == null) return; // silences / notes non scorées
-            scored.push({ x: note.getAbsoluteX(), dev: scoreDevs[idx], grade: scoreGrades[idx] });
+            // Centre de la tête de note (getAbsoluteX vise le bord gauche)
+            const xL = note.getNoteHeadBeginX?.() ?? note.getAbsoluteX();
+            const xR = note.getNoteHeadEndX?.() ?? (xL + 10);
+            scored.push({ x: (xL + xR) / 2, dev: scoreDevs[idx], grade: scoreGrades[idx] });
           });
 
           if (scored.length > 0) {
@@ -236,7 +239,7 @@ export default function RythmStaff({
               addLine(x - w, stripY, x + w, stripY, "#9ca3af", 0.30);    // axe tôt/tard
               addLine(x, stripY - 3, x, stripY + 3, "#9ca3af", 0.55);    // repère « pile »
               if (dev != null) {
-                const cx  = x + Math.max(-1, Math.min(1, dev / halfMs)) * w;
+                const cx  = x + Math.max(-1, Math.min(1, (dev / halfMs) * 2)) * w;
                 const dot = document.createElementNS(NS, "circle");
                 dot.setAttribute("cx", cx);
                 dot.setAttribute("cy", stripY);

@@ -19,6 +19,7 @@ export default function ConsigneOverlay({
   title,
   icon,
   lines = [],
+  controls = [],     // [{ icon: ReactNode, name, desc }] — boutons de l'exercice à détailler
   warning,           // { tone: "sound" | "mic", text } | undefined
   startLabel = "Commencer",
   onStart,
@@ -55,6 +56,24 @@ export default function ConsigneOverlay({
             <div key={i} style={{ fontSize: 13, lineHeight: 1.45, color: "var(--text-muted)" }}>{l}</div>
           ))}
         </div>
+
+        {controls.length > 0 && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 16, textAlign: "left" }}>
+            {controls.map((c, i) => (
+              <div key={i} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <span style={{
+                  flexShrink: 0, width: 30, height: 28, borderRadius: 8,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  background: "var(--surface-2)", border: "1px solid var(--border-c)", fontSize: 13,
+                }}>{c.icon}</span>
+                <span style={{ fontSize: 12, lineHeight: 1.4 }}>
+                  <b style={{ color: "var(--text)" }}>{c.name}</b>
+                  <span style={{ color: "var(--text-muted)" }}> — {c.desc}</span>
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
 
         {warning && (
           <div

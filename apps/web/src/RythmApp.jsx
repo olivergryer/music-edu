@@ -442,6 +442,21 @@ const CONSIGNES_RYTHME = {
 };
 const RYTHME_SOUND_WARNING = { tone: "sound", text: "Monte le volume et désactive le mode silencieux de ton appareil — le son est nécessaire." };
 
+// Boutons de l'exercice détaillés dans la consigne d'arrivée (icônes identiques à l'UI).
+const CONSIGNE_CONTROLS = {
+  rhythmSound: { icon: "🔊", name: "Son du rythme", desc: "Active ou coupe la lecture sonore du rythme à reproduire." },
+  flash: {
+    icon: (
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
+        <path d="M13 2L4.5 13.5H11L10 22L19.5 10.5H13L13 2Z" fill="#4A6CF7" />
+      </svg>
+    ),
+    name: "Flash",
+    desc: "Fait clignoter le cadre à chaque temps — un repère visuel du tempo.",
+  },
+  tapSound: { icon: "🥁", name: "Son du tap", desc: "Active ou coupe le son joué à chacune de tes frappes." },
+};
+
 const TUTO_TOTAL = 4;
 
 function TutorialOverlay({ onDone, niveauOrder, activity: initActivity, inputMode: initInputMode }) {
@@ -1702,6 +1717,11 @@ export default function RythmApp() {
             icon={activity===1?"🥁":activity===2?"👂":activity===3?"🎵":activity===4?"🎼":"🧩"}
             title={ACTIVITIES[activity - 1]?.label ?? "Activité"}
             lines={CONSIGNES_RYTHME[activity] ?? []}
+            controls={[
+              ...(activity === 1 ? [CONSIGNE_CONTROLS.rhythmSound] : []),
+              ...((activity === 1 || activity === 2) ? [CONSIGNE_CONTROLS.flash] : []),
+              ...((inputMode === "tap" && (activity === 1 || activity === 2)) ? [CONSIGNE_CONTROLS.tapSound] : []),
+            ]}
             warning={RYTHME_SOUND_WARNING}
             startLabel={seriesMode ? "▶ Commencer la série" : "▶ Commencer"}
             onStart={startFromConsigne}
@@ -1847,7 +1867,10 @@ export default function RythmApp() {
     >
 
       {/* ── HEADER ── */}
-      <div className="w-full max-w-xl flex justify-between items-center mb-2.5">
+      <div
+        className="w-full max-w-xl flex justify-between items-center mb-2.5"
+        onPointerDown={e => e.stopPropagation()}
+      >
         <button
           onClick={() => {
             clearTids();
