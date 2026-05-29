@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { AuthProvider, useAuth } from './auth/AuthProvider'
 import { ThemeProvider, useTheme } from './ThemeContext'
 import HubPage from './HubPage'
@@ -20,45 +20,28 @@ function ProtectedRoute({ children }) {
   return children
 }
 
-function ThemeToggle() {
+function ThemeToggleFloating() {
   const { dark, toggle } = useTheme()
+  const { pathname } = useLocation()
+  if (pathname !== '/') return null
   return (
     <button
       onClick={toggle}
       aria-label={dark ? 'Passer en mode clair' : 'Passer en mode sombre'}
       style={{
-        position: 'fixed',
-        bottom: 24,
-        right: 16,
-        zIndex: 9999,
-        width: 36,
-        height: 36,
-        minHeight: 36,
-        padding: 0,
-        border: 'none',
-        borderRadius: '50%',
-        background: 'none',
-        cursor: 'pointer',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+        position: 'fixed', bottom: 24, right: 16, zIndex: 9999,
+        width: 36, height: 36, minHeight: 36, padding: 0,
+        border: 'none', borderRadius: '50%', background: 'none',
+        cursor: 'pointer', display: 'flex', alignItems: 'center',
+        justifyContent: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
       }}
     >
       <svg width="34" height="34" viewBox="0 0 34 34" fill="none">
         <circle cx="17" cy="17" r="16" stroke="var(--border-c)" strokeWidth="1.5" />
-        {/* Left half: dark */}
         <path d="M17 1 A16 16 0 0 0 17 33 Z" fill="#0D1026" />
-        {/* Right half: light */}
         <path d="M17 1 A16 16 0 0 1 17 33 Z" fill="#F4F5F7" />
         <circle cx="17" cy="17" r="16" stroke="var(--border-c)" strokeWidth="1.5" fill="none" />
-        {/* Indicator dot on active side */}
-        <circle
-          cx={dark ? 11 : 23}
-          cy="17"
-          r="3"
-          fill={dark ? '#F4F5F7' : '#0D1026'}
-        />
+        <circle cx={dark ? 11 : 23} cy="17" r="3" fill={dark ? '#F4F5F7' : '#0D1026'} />
       </svg>
     </button>
   )
@@ -88,7 +71,7 @@ export default function App() {
     <ThemeProvider>
       <BrowserRouter>
         <AuthProvider>
-          <ThemeToggle />
+          <ThemeToggleFloating />
           <AppRoutes />
         </AuthProvider>
       </BrowserRouter>

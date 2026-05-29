@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { Link } from 'react-router-dom'
+import { ThemeToggleInline } from './ThemeContext'
 import IntervalleStaff from './IntervalleStaff.jsx'
 import TourGuide from './TourGuide'
 import ConsigneOverlay, { consigneSeen } from './ConsigneOverlay'
@@ -830,6 +831,7 @@ export default function TheoriePage() {
             ← Tessitura
           </Link>
           <div style={{ display:'flex', gap:6, alignItems:'center' }}>
+            <ThemeToggleInline />
             <button
               onClick={() => setShowHelp(true)}
               title="Aide"

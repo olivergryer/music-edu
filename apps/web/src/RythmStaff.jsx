@@ -201,27 +201,51 @@ export default function RythmStaff({
         svg.style.background = "transparent";
         svg.querySelectorAll("text").forEach(t => { t.style.fill = "#6b7280"; });
 
-        // ── Points d'impact temporel (remplacent les flèches) ────────────────
-        // Dot coloré à gauche de la note = trop tôt, à droite = trop tard
+        // ── Bande de décalage par note, sous la portée ───────────────────────
+        // Chaque note a son mini-axe tôt(gauche)/tard(droite) centré sous elle,
+        // aligné verticalement avec la tête de note → correspondance immédiate.
         if (scoreDevs && sessionBpm) {
-          const beatMs = 60000 / sessionBpm;
+          const beatMs  = 60000 / sessionBpm;
+          const halfMs  = beatMs * 0.5;
+          const bottomY = stave.getYForLine(4);
+          const stripY  = bottomY + 22;
+          const NS      = "http://www.w3.org/2000/svg";
+
+          const scored = [];
           vexNotes.forEach((note, idx) => {
-            const dev   = scoreDevs[idx];
-            const grade = scoreGrades?.[idx];
-            if (dev == null || grade == null || grade === "miss") return;
-            const x        = note.getAbsoluteX();
-            const absDev   = Math.abs(dev);
-            const offsetPx = 6 + Math.round(Math.min(absDev, beatMs * 0.5) / (beatMs * 0.5) * 18);
-            const cx       = x + (dev < 0 ? -offsetPx : offsetPx);
-            const color    = DEV_COLORS[grade] ?? "#6b7280";
-            const dot      = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-            dot.setAttribute("cx", cx);
-            dot.setAttribute("cy", staveY - 6);
-            dot.setAttribute("r", "4");
-            dot.style.fill    = color;
-            dot.style.opacity = "0.9";
-            svg.appendChild(dot);
+            if (scoreGrades?.[idx] == null) return; // silences / notes non scorées
+            scored.push({ x: note.getAbsoluteX(), dev: scoreDevs[idx], grade: scoreGrades[idx] });
           });
+
+          if (scored.length > 0) {
+            const xs = scored.map(s => s.x).sort((a, b) => a - b);
+            let minGap = Infinity;
+            for (let k = 1; k < xs.length; k++) minGap = Math.min(minGap, xs[k] - xs[k - 1]);
+            const w = scored.length < 2 ? 16 : Math.max(6, Math.min(16, minGap * 0.42));
+
+            const addLine = (x1, y1, x2, y2, stroke, op) => {
+              const l = document.createElementNS(NS, "line");
+              l.setAttribute("x1", x1); l.setAttribute("y1", y1);
+              l.setAttribute("x2", x2); l.setAttribute("y2", y2);
+              l.style.stroke = stroke; l.style.strokeWidth = 1; l.style.opacity = op;
+              svg.appendChild(l);
+            };
+
+            scored.forEach(({ x, dev, grade }) => {
+              addLine(x, bottomY + 3, x, stripY - 5, "#9ca3af", 0.22);   // guide note → marqueur
+              addLine(x - w, stripY, x + w, stripY, "#9ca3af", 0.30);    // axe tôt/tard
+              addLine(x, stripY - 3, x, stripY + 3, "#9ca3af", 0.55);    // repère « pile »
+              if (dev != null) {
+                const cx  = x + Math.max(-1, Math.min(1, dev / halfMs)) * w;
+                const dot = document.createElementNS(NS, "circle");
+                dot.setAttribute("cx", cx);
+                dot.setAttribute("cy", stripY);
+                dot.setAttribute("r", "3.4");
+                dot.style.fill = DEV_COLORS[grade] ?? "#6b7280";
+                svg.appendChild(dot);
+              }
+            });
+          }
         }
 
         // ── Réduction adaptative UNIQUEMENT si la mesure déborde la largeur dispo ──

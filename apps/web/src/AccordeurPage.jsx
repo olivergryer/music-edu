@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
+import { ThemeToggleInline } from './ThemeContext'
 import TourGuide from './TourGuide'
 import { PitchDetector } from 'pitchy'
 import AccordeurStaff from './AccordeurStaff'
@@ -1097,7 +1098,8 @@ export default function AccordeurPage() {
               </svg>
             </Link>
           </div>
-          <div style={{ display: 'flex', gap: 6 }}>
+          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+            <ThemeToggleInline />
             <button
               onClick={() => setShowHelp(true)}
               title="Aide"

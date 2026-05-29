@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Link } from "react-router-dom";
 import TourGuide from "./TourGuide";
-import { useTheme } from "./ThemeContext";
+import { useTheme, ThemeToggleInline } from "./ThemeContext";
 import RythmStaff from "./RythmStaff";
 import SettingsPage from "./SettingsPage";
 import ConsigneOverlay, { consigneSeen } from "./ConsigneOverlay";
@@ -206,18 +206,7 @@ function DiagRow({ label, value, color }) {
   );
 }
 
-function TapTimeline({ scores, beatMs, analysis }) {
-  const pts = (scores ?? [])
-    .map((s, i) => ({ i, dev: s.dev, grade: s.grade }))
-    .filter(p => p.dev !== null && p.dev !== undefined);
-  if (pts.length === 0 || !beatMs) return null;
-
-  const half = beatMs * 0.5;                 // demi-échelle de l'axe (ms)
-  const pos  = dev => clamp(50 + (dev / half) * 50, 3, 97);
-  const okHalf   = (beatMs * 0.30 / half) * 50;  // % depuis le centre
-  const goodHalf = (beatMs * 0.18 / half) * 50;
-
-  // Diagnostics
+function TapDiagnostics({ beatMs, analysis }) {
   const a = analysis ?? {};
   const tempoColor = !a.hasTempo ? 'var(--text-muted)'
     : Math.abs(a.tempoErr) < 0.02 ? '#34d399'
@@ -240,39 +229,10 @@ function TapTimeline({ scores, beatMs, analysis }) {
     : r < 0.05 ? 'Très régulier' : r < 0.12 ? 'Régulier' : r < 0.20 ? 'Assez régulier' : 'Irrégulier';
 
   return (
-    <div style={{ marginTop: 12 }}>
-      {/* Bande de dispersion */}
-      <div style={{
-        position:'relative', height:52, borderRadius:12, overflow:'hidden',
-        background:'var(--surface-2)', border:'1px solid var(--border-c)',
-      }}>
-        {/* zone ok (ambre) */}
-        <div style={{ position:'absolute', top:0, bottom:0, left:`${50-okHalf}%`, width:`${okHalf*2}%`, background:'#fbbf2422' }}/>
-        {/* zone good (vert) */}
-        <div style={{ position:'absolute', top:0, bottom:0, left:`${50-goodHalf}%`, width:`${goodHalf*2}%`, background:'#34d39926' }}/>
-        {/* ligne centrale = pile */}
-        <div style={{ position:'absolute', top:4, bottom:4, left:'50%', width:2, marginLeft:-1, background:'var(--text-muted)', opacity:0.5 }}/>
-        {/* points */}
-        {pts.map(p => (
-          <div key={p.i} style={{
-            position:'absolute', width:9, height:9, borderRadius:'50%',
-            left:`${pos(p.dev)}%`, top:`${12 + ((p.i * 11) % 28)}px`,
-            transform:'translate(-50%,-50%)',
-            background: GRADE_COLOR[p.grade] ?? 'var(--text-muted)',
-            border:'1px solid var(--surface)',
-          }}/>
-        ))}
-      </div>
-      {/* légende */}
-      <div style={{ display:'flex', justifyContent:'space-between', fontSize:10, color:'var(--text-muted)', marginTop:4, padding:'0 2px' }}>
-        <span>◀ en avance</span><span>pile</span><span>en retard ▶</span>
-      </div>
-      {/* diagnostics */}
-      <div style={{ marginTop:10, textAlign:'left', borderTop:'1px solid var(--border-c)', paddingTop:8 }}>
-        <DiagRow label="Tempo"      value={tempoText} color={tempoColor} />
-        <DiagRow label="Décalage"   value={offText}   color={offColor} />
-        <DiagRow label="Régularité" value={regText}   color={regColor} />
-      </div>
+    <div style={{ marginTop:12, textAlign:'left', borderTop:'1px solid var(--border-c)', paddingTop:10 }}>
+      <DiagRow label="Tempo"      value={tempoText} color={tempoColor} />
+      <DiagRow label="Décalage"   value={offText}   color={offColor} />
+      <DiagRow label="Régularité" value={regText}   color={regColor} />
     </div>
   );
 }
@@ -1662,7 +1622,8 @@ export default function RythmApp() {
           {/* Header */}
           <div className="w-full max-w-xl flex justify-between items-center mb-4">
             <Link to="/" className="bg-surface-2 border border-app rounded-lg px-2.5 py-1 font-bold text-xs no-underline" style={{ color: '#4A6CF7' }}>← Tessitura</Link>
-            <div style={{ display:'flex', gap:6 }}>
+            <div style={{ display:'flex', gap:6, alignItems:'center' }}>
+              <ThemeToggleInline />
               <button
                 onClick={() => setShowHelp(true)}
                 title="Aide"
@@ -1914,6 +1875,7 @@ export default function RythmApp() {
         )}
         <div className="flex gap-2 items-center">
           <div className="bg-surface-2 border border-app rounded-full px-2.5 py-0.5 text-xs text-app font-bold">⭐ {totalPts}</div>
+          <ThemeToggleInline />
           <button
             onPointerDown={e => e.stopPropagation()}
             onClick={e => {
@@ -2093,9 +2055,14 @@ export default function RythmApp() {
                     timeSig={pattern.timeSig}
                     activeIdx={isPlaying ? activeIdx : -1}
                     scoreGrades={phase==="results" ? gradeMap : undefined}
-                    scoreDevs={undefined}
+                    scoreDevs={phase==="results" ? devMap : undefined}
                     sessionBpm={sessionBpm}
                   />
+                  {phase==="results" && scores.length > 0 && (
+                    <div style={{ display:'flex', justifyContent:'center', gap:8, fontSize:9, color:'var(--text-muted)', marginTop:2 }}>
+                      <span>◀ en avance</span><span>·</span><span>pile</span><span>·</span><span>en retard ▶</span>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div
@@ -2153,7 +2120,7 @@ export default function RythmApp() {
                   </div>
                 ))}
               </div>
-              <TapTimeline scores={scores} beatMs={60000 / sessionBpm} analysis={tapAnalysis} />
+              <TapDiagnostics beatMs={60000 / sessionBpm} analysis={tapAnalysis} />
               {tapTimes.length > 0 && (
                 <div className="flex gap-2 justify-center mt-3">
                   <button
