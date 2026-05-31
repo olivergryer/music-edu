@@ -197,6 +197,31 @@ function fitAffine(pairs) {
 }
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 
+// ─── Accentuation des temps d'une mesure classique ────────────────────────────
+// Boost de volume appliqué UNIQUEMENT aux notes qui tombent SUR un temps (pas aux
+// subdivisions internes). Reflète la hiérarchie métrique : temps fort > 3e temps >
+// temps faibles.
+const BEAT_WEIGHTS = {
+  4: [1.30, 1.05, 1.20, 1.05], // 4/4, 12/8 (4 temps musicaux)
+  3: [1.30, 1.05, 1.05],       // 3/4, 9/8
+  2: [1.30, 1.05],             // 2/4, 6/8
+};
+function beatsPerMeasure(timeSig) {
+  if (timeSig === "3/4" || timeSig === "9/8") return 3;
+  if (timeSig === "2/4" || timeSig === "6/8") return 2;
+  return 4;
+}
+// Renvoie le multiplicateur de volume pour une note d'onset `ts` (ms) avec un
+// `beatMs` (durée d'un temps musical). Off-beat → 1.0.
+function beatVolMult(timeSig, ts, beatMs) {
+  const bpm = beatsPerMeasure(timeSig);
+  const weights = BEAT_WEIGHTS[bpm] ?? [1, 1, 1, 1];
+  const pos = ts / beatMs;
+  const idx = Math.round(pos);
+  if (Math.abs(pos - idx) * beatMs >= 5) return 1.0; // tolérance 5 ms : note hors temps
+  return weights[idx % bpm] ?? 1.0;
+}
+
 // ─── Bilan visuel act 1 & 2 : dispersion des frappes + diagnostics ──────────────
 function DiagRow({ label, value, color }) {
   return (
@@ -942,7 +967,7 @@ export default function RythmApp() {
   }, [getCtx]);
 
   // Note du rythme — triangle chaud, plus long
-  const rhythmBeep = useCallback((strong = false, forced = false) => {
+  const rhythmBeep = useCallback((strong = false, forced = false, volMult = 1) => {
     if (!forced && !rhythmSoundRef.current) return;
     try {
       const ac = getCtx();
@@ -950,7 +975,7 @@ export default function RythmApp() {
       o.type = 'triangle';
       o.connect(g); g.connect(ac.destination);
       o.frequency.value = strong ? 440 : 330;
-      g.gain.setValueAtTime(0.3, ac.currentTime);
+      g.gain.setValueAtTime(0.3 * volMult, ac.currentTime);
       g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.14);
       o.start(ac.currentTime); o.stop(ac.currentTime + 0.15);
     } catch(_) {}
@@ -958,7 +983,7 @@ export default function RythmApp() {
 
   // Note du rythme TENUE — résonne ~durée de la note (act 3/4) : distingue
   // une note tenue d'une attaque+silence à l'oreille (essentiel pour holdRestSwap).
-  const rhythmSustain = useCallback((durMs, forced = false) => {
+  const rhythmSustain = useCallback((durMs, forced = false, volMult = 1) => {
     if (!forced && !rhythmSoundRef.current) return;
     try {
       const ac = getCtx();
@@ -968,9 +993,10 @@ export default function RythmApp() {
       o.frequency.value = 330;
       const t   = ac.currentTime;
       const dur = Math.max(0.1, durMs / 1000);
+      const peak = 0.3 * volMult;
       g.gain.setValueAtTime(0.0001, t);
-      g.gain.exponentialRampToValueAtTime(0.3, t + 0.01);     // attaque brève
-      g.gain.setValueAtTime(0.3, Math.max(t + 0.02, t + dur - 0.06));
+      g.gain.exponentialRampToValueAtTime(peak, t + 0.01);     // attaque brève
+      g.gain.setValueAtTime(peak, Math.max(t + 0.02, t + dur - 0.06));
       g.gain.exponentialRampToValueAtTime(0.001, t + dur);    // release court
       o.start(t); o.stop(t + dur + 0.02);
     } catch(_) {}
@@ -1025,8 +1051,8 @@ export default function RythmApp() {
     setTimeout(() => setBeatFlash(false), strong ? 160 : 110);
   }, [beep]);
 
-  const rhythmPulse = useCallback((strong = false) => {
-    rhythmBeep(strong);
+  const rhythmPulse = useCallback((strong = false, volMult = 1) => {
+    rhythmBeep(strong, false, volMult);
     setBeatStrong(strong);
     setBeatFlash(true);
     setTimeout(() => setBeatFlash(false), strong ? 160 : 110);
@@ -1108,15 +1134,16 @@ export default function RythmApp() {
     const { timestamps, totalMs } = toTimestamps(pat.figs, bpmVal, pat.timeSig);
     const isCompound = ["12/8", "6/8", "9/8"].includes(pat.timeSig);
     const quarterMs  = isCompound ? (60000 / bpmVal) / 1.5 : 60000 / bpmVal;
+    const beatMs = 60000 / bpmVal;
     pat.figs.forEach((fig, i) => {
       if (!fig.rest) {
+        const vol = beatVolMult(pat.timeSig, timestamps[i], beatMs);
         const id = sustain
-          ? setTimeout(() => rhythmSustain(figDur(fig) * quarterMs * 0.9, forced), delayMs + timestamps[i])
-          : setTimeout(() => rhythmBeep(false, forced), delayMs + timestamps[i]);
+          ? setTimeout(() => rhythmSustain(figDur(fig) * quarterMs * 0.9, forced, vol), delayMs + timestamps[i])
+          : setTimeout(() => rhythmBeep(false, forced, vol), delayMs + timestamps[i]);
         audioTidsRef.current.push(id);
       }
     });
-    const beatMs = 60000 / bpmVal;
     const nBeats = Math.round(totalMs / beatMs);
     for (let k = 0; k < nBeats; k++) {
       const id = setTimeout(() => {
@@ -1237,7 +1264,10 @@ export default function RythmApp() {
         setPhase("listening"); setCountdownN(1);
         setBeatStrong(true); setBeatFlash(true); setTimeout(() => setBeatFlash(false), 160);
         timestamps.forEach((ts, i) => {
-          if (!pat.figs[i].rest) tid(() => rhythmBeep(false), ts);
+          if (!pat.figs[i].rest) {
+            const vol = beatVolMult(pat.timeSig, ts, beatMs);
+            tid(() => rhythmBeep(false, false, vol), ts);
+          }
         });
         [1,2,3].forEach(k => {
           tid(() => {
@@ -1312,14 +1342,14 @@ export default function RythmApp() {
     tid(() => {
       // Visual flash beat 1 toujours, son seulement si pas silence
       setBeatFlash(true); setTimeout(() => setBeatFlash(false), 160);
-      if (!pat.figs[0]?.rest) rhythmBeep(false);
+      if (!pat.figs[0]?.rest) rhythmBeep(false, false, beatVolMult(pat.timeSig, 0, beatMs));
       setPhase("playing");
       startRef.current = performance.now();
 
       timestamps.forEach((ts, i) => {
         tid(() => {
           setActiveIdx(i);
-          if (i > 0 && !pat.figs[i].rest) rhythmPulse(false);
+          if (i > 0 && !pat.figs[i].rest) rhythmPulse(false, beatVolMult(pat.timeSig, ts, beatMs));
         }, ts);
       });
 

@@ -7,13 +7,20 @@
 
 import { useEffect, useRef, useState } from "react";
 
-const MIN_DETECT      = 0.005;  // ignore noise below this when detecting a tap
-const PEAK_WINDOW_MS  = 100;    // fenêtre de capture du pic après franchissement
-const TAP_COOLDOWN_MS = 250;    // ms entre deux frappes captées
-const AMBIENT_MS      = 1500;   // durée de mesure du bruit ambiant
-const TAP_TARGET      = 4;      // nb de frappes par stage
-const MAX_THRESHOLD   = 0.05;   // plafond (= max du slider)
-const TRANSITION_MS   = 1200;   // pause entre piano et forte (laisse retomber la résonance)
+// Détection à hystérésis : un peak est émis au moment où le signal retombe
+// (release-edge) → fonctionne aussi bien pour les frappes courtes que pour les sons
+// tenus (chant, instrument soutenu) — une note tenue = 1 seule détection, peak
+// retenu = max RMS sur toute sa durée.
+const ONSET_NOISE_MULT   = 2.5;   // seuil d'attaque ≥ bruit ambiant × ce facteur
+const RELEASE_NOISE_MULT = 1.5;   // seuil de relâchement (hystérésis)
+const ONSET_FLOOR        = 0.005; // valeur plancher des seuils
+const RELEASE_FLOOR      = 0.003;
+const RELEASE_HOLD_MS    = 60;    // signal sous le release pendant ce temps → fin de note
+const COOLDOWN_MS        = 80;    // anti-bounce entre deux notes
+const AMBIENT_MS         = 1500;  // durée de mesure du bruit ambiant
+const TAP_TARGET         = 4;     // nb de frappes par stage
+const MAX_THRESHOLD      = 0.05;  // plafond (= max du slider)
+const TRANSITION_MS      = 1200;  // pause entre piano et forte (laisse retomber la résonance)
 
 export default function MicCalibration({ analyserRef, ensureMic, stopMic, inputMode, onApply, onClose }) {
   const [stage, setStage]         = useState("intro"); // intro | ambient | piano | forte | done | error
@@ -50,8 +57,12 @@ export default function MicCalibration({ analyserRef, ensureMic, stopMic, inputM
   // Boucle de lecture RMS + détection de pics selon le stage en cours
   useEffect(() => {
     let dead = false;
-    let inPeak = false, peakStart = 0, peakMax = 0, lastEnd = 0;
+    let state = "silent";              // "silent" | "sounding"
+    let peakMax = 0, belowSince = 0, lastEnd = 0;
     let ambientStart = 0, ambientSum = 0, ambientCount = 0;
+    let ambientMean = 0;
+    let onsetTh   = ONSET_FLOOR;
+    let releaseTh = RELEASE_FLOOR;
     let lastStage = "";
 
     function tick() {
@@ -69,7 +80,7 @@ export default function MicCalibration({ analyserRef, ensureMic, stopMic, inputM
 
       // Réinitialisation à chaque changement de stage (notamment après « Refaire »)
       if (st !== lastStage) {
-        inPeak = false; peakStart = 0; peakMax = 0; lastEnd = 0;
+        state = "silent"; peakMax = 0; belowSince = 0; lastEnd = 0;
         ambientStart = 0; ambientSum = 0; ambientCount = 0;
         lastStage = st;
       }
@@ -78,36 +89,46 @@ export default function MicCalibration({ analyserRef, ensureMic, stopMic, inputM
         if (ambientStart === 0) ambientStart = now;
         ambientSum += rms; ambientCount++;
         if (now - ambientStart >= AMBIENT_MS) {
-          const mean = ambientCount > 0 ? ambientSum / ambientCount : 0;
-          setAmbientRms(mean);
-          ambientStart = 0; ambientSum = 0; ambientCount = 0;
+          ambientMean = ambientCount > 0 ? ambientSum / ambientCount : 0;
+          setAmbientRms(ambientMean);
+          // Seuils adaptés au bruit ambiant (avec plancher)
+          onsetTh   = Math.max(ONSET_FLOOR,   ambientMean * ONSET_NOISE_MULT);
+          releaseTh = Math.max(RELEASE_FLOOR, ambientMean * RELEASE_NOISE_MULT);
           setStage("piano");
         }
       } else if (st === "piano" || st === "forte") {
-        if (!inPeak && rms > MIN_DETECT && (now - lastEnd) > TAP_COOLDOWN_MS) {
-          inPeak = true; peakStart = now; peakMax = rms;
-        } else if (inPeak) {
+        if (state === "silent") {
+          if (rms > onsetTh && (now - lastEnd) > COOLDOWN_MS) {
+            state = "sounding"; peakMax = rms; belowSince = 0;
+          }
+        } else {
           if (rms > peakMax) peakMax = rms;
-          if (now - peakStart > PEAK_WINDOW_MS) {
-            const captured = peakMax;
-            inPeak = false; lastEnd = now;
-            if (st === "piano") {
-              setPianoPeaks(prev => {
-                const next = [...prev, captured];
-                if (next.length >= TAP_TARGET) {
-                  setStage("wait");
-                  clearTimeout(transitionRef.current);
-                  transitionRef.current = setTimeout(() => setStage("forte"), TRANSITION_MS);
-                }
-                return next;
-              });
-            } else {
-              setFortePeaks(prev => {
-                const next = [...prev, captured];
-                if (next.length >= TAP_TARGET) setStage("done");
-                return next;
-              });
+          if (rms < releaseTh) {
+            if (belowSince === 0) belowSince = now;
+            else if (now - belowSince >= RELEASE_HOLD_MS) {
+              // Fin de note confirmée → on émet le pic max captuté pendant toute sa durée
+              const captured = peakMax;
+              state = "silent"; lastEnd = now; belowSince = 0;
+              if (st === "piano") {
+                setPianoPeaks(prev => {
+                  const next = [...prev, captured];
+                  if (next.length >= TAP_TARGET) {
+                    setStage("wait");
+                    clearTimeout(transitionRef.current);
+                    transitionRef.current = setTimeout(() => setStage("forte"), TRANSITION_MS);
+                  }
+                  return next;
+                });
+              } else {
+                setFortePeaks(prev => {
+                  const next = [...prev, captured];
+                  if (next.length >= TAP_TARGET) setStage("done");
+                  return next;
+                });
+              }
             }
+          } else {
+            belowSince = 0; // signal remonte → reset compteur de release
           }
         }
       }
