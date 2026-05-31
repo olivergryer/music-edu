@@ -201,10 +201,17 @@ const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 // Boost de volume appliqué UNIQUEMENT aux notes qui tombent SUR un temps (pas aux
 // subdivisions internes). Reflète la hiérarchie métrique : temps fort > 3e temps >
 // temps faibles.
+// Activités 1-4 : accentuation plus marquée.
 const BEAT_WEIGHTS = {
-  4: [2.0, 1.4, 1.8, 1.4], // 4/4, 12/8 (4 temps musicaux)
-  3: [2.0, 1.4, 1.4],      // 3/4, 9/8
-  2: [2.0, 1.4],           // 2/4, 6/8
+  4: [2.5, 1.6, 2.1, 1.6], // 4/4, 12/8 (4 temps musicaux)
+  3: [2.5, 1.6, 1.6],      // 3/4, 9/8
+  2: [2.5, 1.6],           // 2/4, 6/8
+};
+// Activité 5 : accentuation plus douce (rythme tenu, écoute longue).
+const BEAT_WEIGHTS_ACT5 = {
+  4: [2.0, 1.4, 1.8, 1.4],
+  3: [2.0, 1.4, 1.4],
+  2: [2.0, 1.4],
 };
 function beatsPerMeasure(timeSig) {
   if (timeSig === "3/4" || timeSig === "9/8") return 3;
@@ -213,9 +220,10 @@ function beatsPerMeasure(timeSig) {
 }
 // Renvoie le multiplicateur de volume pour une note d'onset `ts` (ms) avec un
 // `beatMs` (durée d'un temps musical). Off-beat → 1.0.
-function beatVolMult(timeSig, ts, beatMs) {
+function beatVolMult(timeSig, ts, beatMs, isAct5 = false) {
   const bpm = beatsPerMeasure(timeSig);
-  const weights = BEAT_WEIGHTS[bpm] ?? [1, 1, 1, 1];
+  const table = isAct5 ? BEAT_WEIGHTS_ACT5 : BEAT_WEIGHTS;
+  const weights = table[bpm] ?? [1, 1, 1, 1];
   const pos = ts / beatMs;
   const idx = Math.round(pos);
   if (Math.abs(pos - idx) * beatMs >= 5) return 1.0; // tolérance 5 ms : note hors temps
@@ -1128,7 +1136,7 @@ export default function RythmApp() {
   const tid       = (fn, ms) => { const id = setTimeout(fn, ms); tidsRef.current.push(id); return id; };
 
   // sustain=true : lecture tenue (chaque note résonne ~sa durée) — act 3/4.
-  const playPatternAudio = useCallback((pat, bpmVal, delayMs = 0, forced = false, sustain = false) => {
+  const playPatternAudio = useCallback((pat, bpmVal, delayMs = 0, forced = false, sustain = false, isAct5 = false) => {
     audioTidsRef.current.forEach(clearTimeout);
     audioTidsRef.current = [];
     const { timestamps, totalMs } = toTimestamps(pat.figs, bpmVal, pat.timeSig);
@@ -1137,7 +1145,7 @@ export default function RythmApp() {
     const beatMs = 60000 / bpmVal;
     pat.figs.forEach((fig, i) => {
       if (!fig.rest) {
-        const vol = beatVolMult(pat.timeSig, timestamps[i], beatMs);
+        const vol = beatVolMult(pat.timeSig, timestamps[i], beatMs, isAct5);
         const id = sustain
           ? setTimeout(() => rhythmSustain(figDur(fig) * quarterMs * 0.9, forced, vol), delayMs + timestamps[i])
           : setTimeout(() => rhythmBeep(false, forced, vol), delayMs + timestamps[i]);
@@ -1201,7 +1209,7 @@ export default function RythmApp() {
       // Décompte beats 3 & 4 (flash bordure) puis lecture tenue (flash sur chaque temps)
       setAct5CountN(3); pulse(false);
       tid(() => { setAct5CountN(4); pulse(false); }, beatMs);
-      tid(() => { setAct5CountN(null); playPatternAudio(pat, bpm, 0, false, true); }, 2 * beatMs);
+      tid(() => { setAct5CountN(null); playPatternAudio(pat, bpm, 0, false, true, true); }, 2 * beatMs);
       return;
     }
 
@@ -2555,7 +2563,7 @@ export default function RythmApp() {
                       <>
                         <button
                           onPointerDown={e => e.stopPropagation()}
-                          onClick={() => playPatternAudio(pattern, sessionBpm, 0, false, true)}
+                          onClick={() => playPatternAudio(pattern, sessionBpm, 0, false, true, true)}
                           className="flex items-center gap-1.5 rounded-full text-[12px] font-semibold cursor-pointer text-white"
                           style={{ background: '#4A6CF7', padding: '6px 16px' }}
                         >▶ Réécouter</button>
