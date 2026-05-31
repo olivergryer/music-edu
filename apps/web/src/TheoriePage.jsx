@@ -249,14 +249,20 @@ function TexteQuestion({ value, onChange, onSubmit, revealed, correct }) {
 // ── Accueil ────────────────────────────────────────────────────────────────────
 // ── Tutorial ───────────────────────────────────────────────────────────────────
 const THEORIE_TUTO_KEY = 'theorie_tuto_v1'
+const THEORIE_LEVEL_KEY = 'theorie_level_v1'
+
+function loadStoredLevel() {
+  try { const v = localStorage.getItem(THEORIE_LEVEL_KEY); return LEVELS.includes(v) ? v : 'C1/2' } catch { return 'C1/2' }
+}
 const TUTO_TOTAL = 4
 const T_ACC = '#8B5CF6'
 const CAT_COLORS = ['#8B5CF6','#7C3AED','#A78BFA','#6D28D9','#C4B5FD','#DDD6FE']
 
 function TheorieTutorial({ onDone }) {
   const [slide, setSlide]       = useState(0)
-  const [level, setLevel]       = useState('C1/2')
+  const [level, setLevel]       = useState(loadStoredLevel)
   const [cats, setCats]         = useState([])
+  useEffect(() => { try { localStorage.setItem(THEORIE_LEVEL_KEY, level) } catch {} }, [level])
   const [selMode, setSelMode]   = useState('entrainement')
   const swipe = useSwipe({
     onSwipeLeft:  () => setSlide(s => Math.min(s + 1, TUTO_TOTAL - 1)),
@@ -441,8 +447,9 @@ function HelpModalTheorie({ onTuto, onTour, onClose }) {
 
 // ── Page de préparation (page unique) ───────────────────────────────────────────
 function SetupScreen({ questions, onStart, onLoadCSV, csvCount, templateQuestions }) {
-  const [level, setLevel] = useState('C1/2')
+  const [level, setLevel] = useState(loadStoredLevel)
   const [cats, setCats] = useState([])
+  useEffect(() => { try { localStorage.setItem(THEORIE_LEVEL_KEY, level) } catch {} }, [level])
   const fileRef = useRef()
   const availableCats = useMemo(
     () => new Set(CATEGORIES.filter(cat => catHasQuestions(questions, level, cat)).map(c => c.id)),

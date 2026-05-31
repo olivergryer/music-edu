@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Link } from "react-router-dom";
-import TourGuide from "./TourGuide";
 import { useTheme, ThemeToggleInline } from "./ThemeContext";
 import useSwipe from "./hooks/useSwipe";
 import RythmStaff from "./RythmStaff";
@@ -443,6 +442,16 @@ const CONSIGNES_RYTHME = {
 };
 const RYTHME_SOUND_WARNING = { tone: "sound", text: "Monte le volume et désactive le mode silencieux de ton appareil — le son est nécessaire." };
 
+// Sections de la popup d'explications avancées des réglages (depuis le bouton "?").
+const REGLAGES_SECTIONS = [
+  { title: "Saisie",         body: "TAP : touche l'écran au rythme. Micro : chante, frappe ou joue à l'instrument — la détection sonore valide chaque attaque." },
+  { title: "Tempo",          body: "Fixe (BPM choisi) ou variable (BPM tiré au hasard dans une plage min–max à chaque exercice)." },
+  { title: "Niveau",         body: "Sélectionne les formules rythmiques par cycle scolaire (C1/1 → C3). Pilote la difficulté des rythmes et des distracteurs (act. 3, 4, 5)." },
+  { title: "Mode Extrême",   body: "Activité 1 : son du rythme et flash bordure désactivés → score ×2. Cumulable avec le bonus de révélation." },
+  { title: "Révélation",     body: "Activité 1 uniquement : la portée n'apparaît qu'au temps 1, 2, 3 ou 4 du rythme. Plus tardif = bonus de score (+10 %, +20 %, +50 %)." },
+  { title: "Boutons en jeu", body: "Son du rythme, Flash et Son du tap : (dés)activables en cours d'exercice — détaillés dans la consigne d'arrivée." },
+];
+
 // Boutons de l'exercice détaillés dans la consigne d'arrivée (icônes identiques à l'UI).
 const CONSIGNE_CONTROLS = {
   rhythmSound: { icon: "🔊", name: "Son du rythme", desc: "Active ou coupe la lecture sonore du rythme à reproduire." },
@@ -662,9 +671,10 @@ export default function RythmApp() {
     if (ENABLE_TUTORIAL === true) return true;
     return !localStorage.getItem(`rythm-tuto-${TUTORIAL_VERSION}`);
   });
-  const [showHelp,        setShowHelp]        = useState(false);
-  const [showConsigne,    setShowConsigne]    = useState(false); // overlay consigne d'arrivée (home)
-  const [showTour,        setShowTour]        = useState(false);
+  const [showHelp,         setShowHelp]         = useState(false);
+  const [showConsigne,     setShowConsigne]     = useState(false); // overlay consigne d'arrivée (home + revue depuis "?")
+  const [consigneReviewing,setConsigneReviewing]= useState(false); // true = consigne ouverte pour relecture (depuis "?")
+  const [showReglagesExpl, setShowReglagesExpl] = useState(false); // popup d'explications des réglages
   const [selectedFormulas,setSelectedFormulas] = useState(() => {
     const s = loadSettings();
     return s.selectedFormulas ? new Set(s.selectedFormulas) : DEFAULT_SELECTED;
@@ -1613,40 +1623,69 @@ export default function RythmApp() {
     </div>
   );
 
-  // ── Aide (modal + bulles) — partagée accueil ET en-jeu ───────────────────────
-  const helpTourSteps = currentPage === "home"
-    ? [
-        { tourId:'activite-grid',       title:'Activités',  desc:'4 exercices : frapper le rythme, compléter, identifier ou composer. Choisis selon ton niveau.' },
-        { tourId:'btn-reglages-rythme', title:'Réglages',   desc:'Configure le tempo, le mode de saisie (TAP ou micro) et les niveaux de formules.' },
-        { tourId:'btn-commencer',       title:'Commencer',  desc:'Lance l\'exercice avec les réglages en cours. Possible de jouer en série de 10 pour un score global.' },
-      ]
-    : [
-        { tourId:'jeu-zone',     title:'Zone de jeu', desc:'Le rythme s\'affiche ici. Selon l\'activité, tu le tapes, le composes ou choisis la bonne réponse.' },
-        { tourId:'jeu-reglages', title:'Réglages',    desc:'Ajuste le tempo, le mode de saisie (TAP ou micro) et les niveaux sans quitter l\'exercice.' },
-        { tourId:'jeu-retour',   title:'Activités',   desc:'Reviens à la liste des exercices à tout moment.' },
-      ];
+  // ── Aide + Consignes (revue) + Réglages (explications) — partagés accueil ET en-jeu ──
+  const closeConsigneReview = () => { setShowConsigne(false); setConsigneReviewing(false); };
 
-  const HelpOverlay = (
+  const HelpOverlay = showHelp ? (
     <>
-      {showHelp && (
-        <>
-          <div onClick={() => setShowHelp(false)} style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.6)', zIndex:200 }}/>
-          <div style={{ position:'fixed', top:'50%', left:'50%', transform:'translate(-50%,-50%)', zIndex:201, width:'min(320px, 90vw)', background:'var(--surface)', border:'1.5px solid rgba(74,108,247,0.3)', borderRadius:20, padding:'28px 24px', textAlign:'center' }}>
-            <div style={{ fontSize:18, fontWeight:900, color:'var(--text)', marginBottom:6 }}>Aide</div>
-            <div style={{ fontSize:12, color:'var(--text-muted)', marginBottom:24 }}>Comment puis-je t'aider ?</div>
-            <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
-              {currentPage === "home" && (
-                <button onClick={() => { setShowHelp(false); setShowTutorial(true); }} style={{ padding:'14px 0', borderRadius:14, border:'none', background:'linear-gradient(135deg,#3b82f6,#4A6CF7)', color:'#fff', fontSize:14, fontWeight:800, cursor:'pointer' }}>▶ Relancer le tutoriel</button>
-              )}
-              <button onClick={() => { setShowHelp(false); setShowTour(true); }} style={{ padding:'14px 0', borderRadius:14, border:'2px solid rgba(74,108,247,0.35)', background:'none', color:'#4A6CF7', fontSize:14, fontWeight:800, cursor:'pointer' }}>Bulles explicatives</button>
-            </div>
-            <button onClick={() => setShowHelp(false)} style={{ marginTop:16, background:'none', border:'none', color:'var(--text-muted)', fontSize:12, cursor:'pointer' }}>Fermer</button>
-          </div>
-        </>
-      )}
-      {showTour && <TourGuide steps={helpTourSteps} onDone={() => setShowTour(false)} />}
+      <div onClick={() => setShowHelp(false)} style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.6)', zIndex:200 }}/>
+      <div style={{ position:'fixed', top:'50%', left:'50%', transform:'translate(-50%,-50%)', zIndex:201, width:'min(320px, 90vw)', background:'var(--surface)', border:'1.5px solid rgba(74,108,247,0.3)', borderRadius:20, padding:'28px 24px', textAlign:'center' }}>
+        <div style={{ fontSize:18, fontWeight:900, color:'var(--text)', marginBottom:6 }}>Aide</div>
+        <div style={{ fontSize:12, color:'var(--text-muted)', marginBottom:24 }}>Que veux-tu consulter ?</div>
+        <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+          <button onClick={() => { setShowHelp(false); setConsigneReviewing(true); setShowConsigne(true); }}
+            style={{ padding:'14px 0', borderRadius:14, border:'none', background:'linear-gradient(135deg,#3b82f6,#4A6CF7)', color:'#fff', fontSize:14, fontWeight:800, cursor:'pointer' }}>
+            Consignes
+          </button>
+          <button onClick={() => { setShowHelp(false); setShowReglagesExpl(true); }}
+            style={{ padding:'14px 0', borderRadius:14, border:'2px solid rgba(74,108,247,0.35)', background:'none', color:'#4A6CF7', fontSize:14, fontWeight:800, cursor:'pointer' }}>
+            Réglages
+          </button>
+        </div>
+        <button onClick={() => setShowHelp(false)} style={{ marginTop:16, background:'none', border:'none', color:'var(--text-muted)', fontSize:12, cursor:'pointer' }}>Fermer</button>
+      </div>
     </>
-  );
+  ) : null;
+
+  const ConsigneModal = showConsigne ? (
+    <ConsigneOverlay
+      storageKey={`rythme-${activity}`}
+      icon={activity===1?"🥁":activity===2?"👂":activity===3?"🎵":activity===4?"🎼":"🧩"}
+      title={ACTIVITIES[activity - 1]?.label ?? "Activité"}
+      lines={CONSIGNES_RYTHME[activity] ?? []}
+      controls={[
+        ...(activity === 1 ? [CONSIGNE_CONTROLS.rhythmSound] : []),
+        ...((activity === 1 || activity === 2) ? [CONSIGNE_CONTROLS.flash] : []),
+        ...((inputMode === "tap" && (activity === 1 || activity === 2)) ? [CONSIGNE_CONTROLS.tapSound] : []),
+      ]}
+      warning={RYTHME_SOUND_WARNING}
+      startLabel={consigneReviewing ? "Fermer" : (seriesMode ? "▶ Commencer la série" : "▶ Commencer")}
+      onStart={consigneReviewing ? closeConsigneReview : startFromConsigne}
+      onClose={consigneReviewing ? closeConsigneReview : () => setShowConsigne(false)}
+    />
+  ) : null;
+
+  const ReglagesExplModal = showReglagesExpl ? (
+    <>
+      <div onClick={() => setShowReglagesExpl(false)} style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.6)', zIndex:300 }}/>
+      <div style={{ position:'fixed', top:'50%', left:'50%', transform:'translate(-50%,-50%)', zIndex:301, width:'min(360px, 92vw)', maxHeight:'88vh', overflowY:'auto', background:'var(--surface)', border:'1.5px solid rgba(74,108,247,0.3)', borderRadius:20, padding:'26px 22px 20px' }}>
+        <div style={{ fontSize:18, fontWeight:900, color:'var(--text)', marginBottom:4, textAlign:'center' }}>Réglages — Rythme</div>
+        <div style={{ fontSize:12, color:'var(--text-muted)', marginBottom:16, textAlign:'center' }}>À quoi servent les options ?</div>
+        <div style={{ display:'flex', flexDirection:'column', gap:12, marginBottom:18 }}>
+          {REGLAGES_SECTIONS.map((s, i) => (
+            <div key={i}>
+              <div style={{ fontSize:13, fontWeight:800, color:'var(--text)', marginBottom:2 }}>{s.title}</div>
+              <div style={{ fontSize:12, lineHeight:1.45, color:'var(--text-muted)' }}>{s.body}</div>
+            </div>
+          ))}
+        </div>
+        <button onClick={() => setShowReglagesExpl(false)}
+          style={{ width:'100%', padding:'13px 0', borderRadius:14, border:'none', background:'linear-gradient(135deg,#4A6CF7,#8B5CF6)', color:'#fff', fontSize:15, fontWeight:800, cursor:'pointer' }}>
+          Fermer
+        </button>
+      </div>
+    </>
+  ) : null;
 
   // ── Page accueil ───────────────────────────────────────────────────────────
   if (currentPage === "home") {
@@ -1733,23 +1772,8 @@ export default function RythmApp() {
           </div>
         </div>
 
-        {showConsigne && (
-          <ConsigneOverlay
-            storageKey={`rythme-${activity}`}
-            icon={activity===1?"🥁":activity===2?"👂":activity===3?"🎵":activity===4?"🎼":"🧩"}
-            title={ACTIVITIES[activity - 1]?.label ?? "Activité"}
-            lines={CONSIGNES_RYTHME[activity] ?? []}
-            controls={[
-              ...(activity === 1 ? [CONSIGNE_CONTROLS.rhythmSound] : []),
-              ...((activity === 1 || activity === 2) ? [CONSIGNE_CONTROLS.flash] : []),
-              ...((inputMode === "tap" && (activity === 1 || activity === 2)) ? [CONSIGNE_CONTROLS.tapSound] : []),
-            ]}
-            warning={RYTHME_SOUND_WARNING}
-            startLabel={seriesMode ? "▶ Commencer la série" : "▶ Commencer"}
-            onStart={startFromConsigne}
-            onClose={() => setShowConsigne(false)}
-          />
-        )}
+        {ConsigneModal}
+        {ReglagesExplModal}
       </>
     );
   }
@@ -1865,6 +1889,8 @@ export default function RythmApp() {
     <>
     {SettingsModal}
     {HelpOverlay}
+    {ConsigneModal}
+    {ReglagesExplModal}
     <div
       className="bg-app text-app min-h-dvh flex flex-col items-center px-3.5 py-3 pb-6 select-none"
       style={{ touchAction: (phase === 'results' || activity === 5) ? 'pan-y' : 'none' }}
@@ -1911,7 +1937,6 @@ export default function RythmApp() {
             setPattern(null);
           }}
           onPointerDown={e => e.stopPropagation()}
-          data-tour="jeu-retour"
           className="bg-surface-2 border border-app rounded-lg font-bold text-xs cursor-pointer px-2.5 py-1"
           style={{ color: '#4A6CF7' }}
         >← Activités</button>
@@ -1944,7 +1969,6 @@ export default function RythmApp() {
               setOpenAccordion("saisie");
               setSettingsModalOpen(true);
             }}
-            data-tour="jeu-reglages"
             className="bg-surface-2 border border-app rounded-xl text-app-muted text-lg cursor-pointer px-2 py-0.5 leading-none"
             title="Réglages"
           >⚙</button>
@@ -1953,7 +1977,7 @@ export default function RythmApp() {
 
 
       {/* ── ZONE PRINCIPALE ── */}
-      <div className="flex-1 w-full max-w-xl flex gap-2.5 items-stretch" data-tour="jeu-zone">
+      <div className="flex-1 w-full max-w-xl flex gap-2.5 items-stretch">
 
         {/* Contenu central */}
         <div className="flex-1 flex flex-col items-center justify-center gap-4 min-w-0">
