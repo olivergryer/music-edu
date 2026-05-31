@@ -158,14 +158,23 @@ function mergeWithDefaults(data: Record<string, unknown>): ProgressState {
   }
 }
 
+function localDateStr(d: Date = new Date()): string {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
 function todayStr() {
-  return new Date().toISOString().slice(0, 10)
+  return localDateStr()
 }
 
 function updateStreak(streak: Streak): Streak {
   const today = todayStr()
   if (streak.lastDate === today) return streak
-  const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10)
+  const y = new Date()
+  y.setDate(y.getDate() - 1)
+  const yesterday = localDateStr(y)
   const next = streak.lastDate === yesterday ? streak.current + 1 : 1
   const longest = Math.max(streak.longest, next)
   return { current: next, longest, lastDate: today }

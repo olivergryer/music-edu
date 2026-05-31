@@ -315,8 +315,10 @@ function SeriesEndScreen({ xpLog, medals, totalXp, dominantMedal, perfectSeries,
   const [result, setResult] = useState(null);
 
   useEffect(() => {
-    const r = addSession({ module: "rythme", xpEarned: totalXp, medal: dominantMedal, meta: { perfectSeries } });
-    setResult(r);
+    let cancelled = false;
+    addSession({ module: "rythme", xpEarned: totalXp, medal: dominantMedal, meta: { perfectSeries } })
+      .then(r => { if (!cancelled) setResult(r); });
+    return () => { cancelled = true };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

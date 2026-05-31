@@ -5,6 +5,7 @@ import useSwipe from './hooks/useSwipe'
 import IntervalleStaff from './IntervalleStaff.jsx'
 import TourGuide from './TourGuide'
 import ConsigneOverlay, { consigneSeen } from './ConsigneOverlay'
+import useProgressFirebase from './hooks/useProgressFirebase'
 
 const CATEGORIES = [
   { id: 'vocabulaire_musical',    label: 'Vocabulaire musical',    includes: ['vocabulaire_italien', 'vocabulaire_technique', 'notation_partition'] },
@@ -715,7 +716,7 @@ function QuizScreen({ session, mode, onAnswer, onNext }) {
 }
 
 // ── Résultats ──────────────────────────────────────────────────────────────────
-function ResultScreen({ session, mode, onReplay }) {
+function ResultScreen({ session, mode, onReplay, addSession }) {
   const { answers, pool } = session
   const totalPts = answers.reduce((s, a) => s + a.points, 0)
   const maxPts = pool.length
@@ -723,6 +724,16 @@ function ResultScreen({ session, mode, onReplay }) {
   const passed = mode === 'examen' ? totalPts >= 35 : null
   const errors = answers.filter(a => !a.correct)
   const barColor = pct >= 0.9 ? '#22C55E' : pct >= 0.7 ? '#fbbf24' : '#f87171'
+
+  useEffect(() => {
+    if (!addSession) return
+    const xpEarned = mode === 'examen'
+      ? Math.round(totalPts * 100) + (passed ? 500 : 0)
+      : Math.round(totalPts * 50)
+    const medal = pct >= 0.9 ? '🥇' : pct >= 0.7 ? '🥈' : '🥉'
+    addSession({ module: 'theorie', xpEarned, medal })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   return (
     <div>
@@ -778,6 +789,7 @@ function ResultScreen({ session, mode, onReplay }) {
 
 // ── Page principale ────────────────────────────────────────────────────────────
 export default function TheoriePage() {
+  const { addSession } = useProgressFirebase()
   const [screen, setScreen] = useState('setup')
   const [mode, setMode] = useState(null)
   const [allQuestions, setAllQuestions] = useState([])
@@ -868,7 +880,7 @@ export default function TheoriePage() {
         {showTutorial && <TheorieTutorial onDone={handleTutorialDone} />}
         {screen === 'setup' && !showTutorial && <SetupScreen questions={mergedQuestions} onStart={handleStart} onLoadCSV={setCsvQuestions} csvCount={csvQuestions.length} templateQuestions={allQuestions} />}
         {screen === 'quiz' && session && <QuizScreen key={session.currentIdx} session={session} mode={mode} onAnswer={handleAnswer} onNext={handleNext} />}
-        {screen === 'result' && session && <ResultScreen session={session} mode={mode} onReplay={() => { setSession(null); setMode(null); setScreen('setup') }} />}
+        {screen === 'result' && session && <ResultScreen session={session} mode={mode} addSession={addSession} onReplay={() => { setSession(null); setMode(null); setScreen('setup') }} />}
         {showHelp && (
           <HelpModalTheorie
             onTuto={() => { setShowHelp(false); setScreen('setup'); setMode(null); setSession(null); setShowTutorial(true) }}

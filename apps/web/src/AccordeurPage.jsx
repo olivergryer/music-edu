@@ -10,6 +10,7 @@ import SpectrePaneau from './SpectrePaneau'
 import GenerateurAccord from './GenerateurAccord'
 import JeuGamme from './JeuGamme'
 import { INSTRUMENTS, loadInstrumentSamples, isOscillatorInstrument, playPhrase, playPhraseOscillator, phraseDurationMs } from './windEngine'
+import useProgressFirebase from './hooks/useProgressFirebase'
 import {
   analyserBuffer, segmenter, calculerEcarts, courbebrute,
   scorePedagogique, scoreQualite, couleurJustesse,
@@ -466,6 +467,7 @@ function TemperamentKnob({ label, value, onChange, disabled = false }) {
 // ─── Composant principal ─────────────────────────────────────────────────────────
 export default function AccordeurPage() {
   const [searchParams] = useSearchParams()
+  const { addSession } = useProgressFirebase()
 
   const [diapason,    setDiapason]    = useState(() => { const v = parseFloat(localStorage.getItem('acc_diapason')); return isNaN(v) ? DIAPASON_DEFAULT : v })
   const [transpoKey,  setTranspoKey]  = useState(() => localStorage.getItem('acc_transpo') || 'C')
@@ -874,7 +876,14 @@ export default function AccordeurPage() {
     }
     sauvegarderSession(session)
     setSessions(lireSessions())
-  }, [notes, courbe, scoreP, scoreQ, structureId, structures, referentiel, diapason, seuil])
+
+    if (scoreP && scoreP.total > 0) {
+      const ratio = scoreP.justes / scoreP.total
+      const medal = ratio >= 0.9 ? '🥇' : ratio >= 0.7 ? '🥈' : ratio >= 0.5 ? '🥉' : '🎯'
+      const xpEarned = ratio >= 0.9 ? 500 : ratio >= 0.7 ? 300 : ratio >= 0.5 ? 150 : 50
+      addSession({ module: 'accordeur', xpEarned, medal })
+    }
+  }, [notes, courbe, scoreP, scoreQ, structureId, structures, referentiel, diapason, seuil, addSession])
 
   const ajouterStructure = useCallback(() => {
     if (!newStructNom.trim()) return
