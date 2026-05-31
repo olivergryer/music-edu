@@ -13,6 +13,7 @@ const TAP_COOLDOWN_MS = 250;    // ms entre deux frappes captées
 const AMBIENT_MS      = 1500;   // durée de mesure du bruit ambiant
 const TAP_TARGET      = 4;      // nb de frappes par stage
 const MAX_THRESHOLD   = 0.05;   // plafond (= max du slider)
+const TRANSITION_MS   = 1200;   // pause entre piano et forte (laisse retomber la résonance)
 
 export default function MicCalibration({ analyserRef, ensureMic, stopMic, inputMode, onApply, onClose }) {
   const [stage, setStage]         = useState("intro"); // intro | ambient | piano | forte | done | error
@@ -22,8 +23,9 @@ export default function MicCalibration({ analyserRef, ensureMic, stopMic, inputM
   const [level, setLevel]         = useState(0);
   const [error, setError]         = useState("");
 
-  const rafRef   = useRef(0);
-  const stageRef = useRef(stage);
+  const rafRef        = useRef(0);
+  const stageRef      = useRef(stage);
+  const transitionRef = useRef(null);
   useEffect(() => { stageRef.current = stage; }, [stage]);
 
   // Assure un micro vivant pendant la calibration (résume ctx + (re-)acquiert si mort).
@@ -39,6 +41,7 @@ export default function MicCalibration({ analyserRef, ensureMic, stopMic, inputM
     return () => {
       cancelled = true;
       cancelAnimationFrame(rafRef.current);
+      clearTimeout(transitionRef.current);
       if (inputMode !== "mic") stopMic();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -91,7 +94,11 @@ export default function MicCalibration({ analyserRef, ensureMic, stopMic, inputM
             if (st === "piano") {
               setPianoPeaks(prev => {
                 const next = [...prev, captured];
-                if (next.length >= TAP_TARGET) setStage("forte");
+                if (next.length >= TAP_TARGET) {
+                  setStage("wait");
+                  clearTimeout(transitionRef.current);
+                  transitionRef.current = setTimeout(() => setStage("forte"), TRANSITION_MS);
+                }
                 return next;
               });
             } else {
@@ -122,6 +129,7 @@ export default function MicCalibration({ analyserRef, ensureMic, stopMic, inputM
   })();
 
   const restart = () => {
+    clearTimeout(transitionRef.current);
     setPianoPeaks([]); setFortePeaks([]); setAmbientRms(0);
     setStage("ambient");
   };
@@ -191,6 +199,18 @@ export default function MicCalibration({ analyserRef, ensureMic, stopMic, inputM
               Tape 4 fois <b>doucement</b>.
             </div>
             <Counter n={pianoPeaks.length}/>
+            <LevelMeter/>
+          </>
+        )}
+
+        {stage === "wait" && (
+          <>
+            <div style={{ fontSize:13, color:'var(--text)', lineHeight:1.5, textAlign:'center', marginTop:8 }}>
+              <b>Prépare les frappes fortes…</b>
+            </div>
+            <div style={{ fontSize:11, color:'var(--text-muted)', textAlign:'center', marginTop:4 }}>
+              On laisse retomber le son.
+            </div>
             <LevelMeter/>
           </>
         )}
