@@ -5,6 +5,7 @@ import useSwipe from "./hooks/useSwipe";
 import RythmStaff from "./RythmStaff";
 import SettingsPage from "./SettingsPage";
 import ConsigneOverlay, { consigneSeen } from "./ConsigneOverlay";
+import MicCalibration from "./MicCalibration";
 import useSheetData from "./useSheetData";
 import useProgressFirebase, { TROPHIES as TROPHIES_IMPORT } from "./hooks/useProgressFirebase";
 import { generateDistractorSet, deriveNiveau } from "./rythmDistractors";
@@ -444,12 +445,72 @@ const RYTHME_SOUND_WARNING = { tone: "sound", text: "Monte le volume et désacti
 
 // Sections de la popup d'explications avancées des réglages (depuis le bouton "?").
 const REGLAGES_SECTIONS = [
-  { title: "Saisie",         body: "TAP : touche l'écran au rythme. Micro : chante, frappe ou joue à l'instrument — la détection sonore valide chaque attaque." },
-  { title: "Tempo",          body: "Fixe (BPM choisi) ou variable (BPM tiré au hasard dans une plage min–max à chaque exercice)." },
-  { title: "Niveau",         body: "Sélectionne les formules rythmiques par cycle scolaire (C1/1 → C3). Pilote la difficulté des rythmes et des distracteurs (act. 3, 4, 5)." },
-  { title: "Mode Extrême",   body: "Activité 1 : son du rythme et flash bordure désactivés → score ×2. Cumulable avec le bonus de révélation." },
-  { title: "Révélation",     body: "Activité 1 uniquement : la portée n'apparaît qu'au temps 1, 2, 3 ou 4 du rythme. Plus tardif = bonus de score (+10 %, +20 %, +50 %)." },
-  { title: "Boutons en jeu", body: "Son du rythme, Flash et Son du tap : (dés)activables en cours d'exercice — détaillés dans la consigne d'arrivée." },
+  {
+    title: "Saisie",
+    body: "TAP : touche l'écran au rythme. Micro : chante, frappe ou joue à l'instrument — la détection sonore valide chaque attaque.",
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="2.5" fill="currentColor" stroke="none"/>
+        <circle cx="12" cy="12" r="6.5"/>
+        <circle cx="12" cy="12" r="10.5" strokeOpacity="0.4"/>
+      </svg>
+    ),
+  },
+  {
+    title: "Tempo",
+    body: "Fixe (BPM choisi) ou variable (BPM tiré au hasard dans une plage min–max à chaque exercice).",
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M7 21h10l-2-17h-6z"/>
+        <line x1="12" y1="6" x2="16.5" y2="14"/>
+        <line x1="6" y1="21" x2="18" y2="21"/>
+      </svg>
+    ),
+  },
+  {
+    title: "Niveau",
+    body: "Sélectionne les formules rythmiques par cycle scolaire (C1/1 → C3). Pilote la difficulté des rythmes et des distracteurs (act. 3, 4, 5).",
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+        <rect x="3"  y="14" width="4" height="7"  rx="1"/>
+        <rect x="10" y="10" width="4" height="11" rx="1"/>
+        <rect x="17" y="5"  width="4" height="16" rx="1"/>
+      </svg>
+    ),
+  },
+  {
+    title: "Mode Extrême",
+    body: "Activité 1 : son du rythme et flash bordure désactivés → score ×2. Cumulable avec le bonus de révélation.",
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M13 2L4.5 13.5H11L10 22L19.5 10.5H13L13 2Z"/>
+      </svg>
+    ),
+  },
+  {
+    title: "Révélation",
+    body: "Activité 1 uniquement : la portée n'apparaît qu'au temps 1, 2, 3 ou 4 du rythme. Plus tardif = bonus de score (+10 %, +20 %, +50 %).",
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12z"/>
+        <circle cx="12" cy="12" r="2.8" fill="currentColor" stroke="none"/>
+      </svg>
+    ),
+  },
+  {
+    title: "Boutons en jeu",
+    body: "Son du rythme, Flash et Son du tap : (dés)activables en cours d'exercice — détaillés dans la consigne d'arrivée.",
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+        <line x1="3" y1="6"  x2="21" y2="6"/>
+        <circle cx="9"  cy="6"  r="2.5" fill="currentColor" stroke="none"/>
+        <line x1="3" y1="12" x2="21" y2="12"/>
+        <circle cx="16" cy="12" r="2.5" fill="currentColor" stroke="none"/>
+        <line x1="3" y1="18" x2="21" y2="18"/>
+        <circle cx="11" cy="18" r="2.5" fill="currentColor" stroke="none"/>
+      </svg>
+    ),
+  },
 ];
 
 // Boutons de l'exercice détaillés dans la consigne d'arrivée (icônes identiques à l'UI).
@@ -675,6 +736,7 @@ export default function RythmApp() {
   const [showConsigne,     setShowConsigne]     = useState(false); // overlay consigne d'arrivée (home + revue depuis "?")
   const [consigneReviewing,setConsigneReviewing]= useState(false); // true = consigne ouverte pour relecture (depuis "?")
   const [showReglagesExpl, setShowReglagesExpl] = useState(false); // popup d'explications des réglages
+  const [showMicCalib,     setShowMicCalib]     = useState(false); // modale calibration micro
   const [selectedFormulas,setSelectedFormulas] = useState(() => {
     const s = loadSettings();
     return s.selectedFormulas ? new Set(s.selectedFormulas) : DEFAULT_SELECTED;
@@ -971,6 +1033,14 @@ export default function RythmApp() {
   }, [rhythmBeep]);
 
   // ── Microphone ─────────────────────────────────────────────────────────────
+  // Reprend l'AudioContext suspendu (verrouillage device / passage en arrière-plan).
+  const resumeAudio = useCallback(async () => {
+    try {
+      const ac = audioCtxRef.current;
+      if (ac && ac.state === "suspended") await ac.resume();
+    } catch (_) { /* ignore */ }
+  }, []);
+
   const startMic = useCallback(async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
@@ -997,6 +1067,35 @@ export default function RythmApp() {
     setMicActive(false);
     setMicLevel(0);
   }, []);
+
+  // Garantit un micro vivant : résume l'audio context puis re-acquiert le flux si
+  // les pistes sont mortes (cas typique après verrouillage device / sortie d'appli).
+  const ensureMicAlive = useCallback(async () => {
+    await resumeAudio();
+    const tracks = micStreamRef.current?.getTracks?.() ?? [];
+    const alive  = tracks.length > 0 && tracks.every(t => t.readyState === "live");
+    if (alive) return;
+    try { micStreamRef.current?.getTracks?.().forEach(t => t.stop()); } catch (_) {}
+    micStreamRef.current   = null;
+    micAnalyserRef.current = null;
+    await startMic();
+  }, [resumeAudio, startMic]);
+
+  // Retour au premier plan (déverrouillage device / retour sur l'onglet) :
+  // ré-active l'AudioContext et ré-acquiert le micro si nécessaire.
+  useEffect(() => {
+    const onVisible = async () => {
+      if (document.visibilityState !== "visible") return;
+      await resumeAudio();
+      if (inputMode === "mic") await ensureMicAlive();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", onVisible);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("focus", onVisible);
+    };
+  }, [inputMode, resumeAudio, ensureMicAlive]);
 
   // ── Helpers ────────────────────────────────────────────────────────────────
   const clearTids = () => { tidsRef.current.forEach(clearTimeout); tidsRef.current = []; };
@@ -1522,9 +1621,17 @@ export default function RythmApp() {
                     <div style={{ background:'var(--surface-2)', borderRadius:10, padding:'10px 12px' }}>
                       <div style={{ display:'flex', justifyContent:'space-between', fontSize:10, color:'var(--text-muted)', marginBottom:4 }}>
                         <span>Seuil détection</span>
-                        <span style={{ fontWeight:700, color:'#4A6CF7' }}>{micThreshold.toFixed(3)}</span>
+                        <span style={{ fontWeight:700, color:'#4A6CF7' }}>{(micThreshold*200).toFixed(1)}</span>
                       </div>
-                      <input type="range" min={5} max={500} step={5} value={Math.round(micThreshold*1000)} onChange={e => setMicThreshold(+e.target.value/1000)} style={{ width:'100%', accentColor:'#4A6CF7' }}/>
+                      <input type="range" min={0} max={10} step={0.5} value={micThreshold*200}
+                        onChange={e => { setMicThreshold(+e.target.value/200); ensureMicAlive(); }}
+                        style={{ width:'100%', accentColor:'#4A6CF7' }}/>
+                      <button
+                        onClick={() => setShowMicCalib(true)}
+                        style={{ marginTop:8, width:'100%', padding:'8px 0', borderRadius:10, border:'1px solid rgba(74,108,247,0.35)', background:'none', color:'#4A6CF7', fontSize:11, fontWeight:700, cursor:'pointer' }}
+                      >
+                        Calibrer automatiquement
+                      </button>
                     </div>
                   )}
                   {micError && <div style={{ fontSize:10, color:'#f87171', marginTop:6 }}>{micError}</div>}
@@ -1665,6 +1772,17 @@ export default function RythmApp() {
     />
   ) : null;
 
+  const MicCalibModal = showMicCalib ? (
+    <MicCalibration
+      analyserRef={micAnalyserRef}
+      ensureMic={ensureMicAlive}
+      stopMic={stopMic}
+      inputMode={inputMode}
+      onApply={(t) => setMicThreshold(t)}
+      onClose={() => setShowMicCalib(false)}
+    />
+  ) : null;
+
   const ReglagesExplModal = showReglagesExpl ? (
     <>
       <div onClick={() => setShowReglagesExpl(false)} style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.6)', zIndex:300 }}/>
@@ -1673,9 +1791,17 @@ export default function RythmApp() {
         <div style={{ fontSize:12, color:'var(--text-muted)', marginBottom:16, textAlign:'center' }}>À quoi servent les options ?</div>
         <div style={{ display:'flex', flexDirection:'column', gap:12, marginBottom:18 }}>
           {REGLAGES_SECTIONS.map((s, i) => (
-            <div key={i}>
-              <div style={{ fontSize:13, fontWeight:800, color:'var(--text)', marginBottom:2 }}>{s.title}</div>
-              <div style={{ fontSize:12, lineHeight:1.45, color:'var(--text-muted)' }}>{s.body}</div>
+            <div key={i} style={{ display:'flex', alignItems:'flex-start', gap:10 }}>
+              <span style={{
+                flexShrink:0, width:32, height:32, borderRadius:10,
+                display:'flex', alignItems:'center', justifyContent:'center',
+                background:'var(--surface-2)', border:'1px solid var(--border-c)',
+                color:'#4A6CF7',
+              }}>{s.icon}</span>
+              <div style={{ flex:1 }}>
+                <div style={{ fontSize:13, fontWeight:800, color:'var(--text)', marginBottom:2 }}>{s.title}</div>
+                <div style={{ fontSize:12, lineHeight:1.45, color:'var(--text-muted)' }}>{s.body}</div>
+              </div>
             </div>
           ))}
         </div>
@@ -1774,6 +1900,7 @@ export default function RythmApp() {
 
         {ConsigneModal}
         {ReglagesExplModal}
+        {MicCalibModal}
       </>
     );
   }
@@ -1891,6 +2018,7 @@ export default function RythmApp() {
     {HelpOverlay}
     {ConsigneModal}
     {ReglagesExplModal}
+    {MicCalibModal}
     <div
       className="bg-app text-app min-h-dvh flex flex-col items-center px-3.5 py-3 pb-6 select-none"
       style={{ touchAction: (phase === 'results' || activity === 5) ? 'pan-y' : 'none' }}
@@ -2102,7 +2230,11 @@ export default function RythmApp() {
                   className="relative rounded-2xl overflow-hidden"
                   style={{
                     background: 'var(--surface)',
-                    border: (flashBorderOn && (activity === 1 ? metroDotFlash : beatFlash)) ? '2px solid #4A6CF7' : '2px solid var(--border-c)',
+                    border: (flashBorderOn && (
+                      phase === "results"
+                        ? beatFlash  // relecture (Réécouter / Solution) : beatFlash pilote partout
+                        : (activity === 1 ? metroDotFlash : beatFlash)
+                    )) ? '2px solid #4A6CF7' : '2px solid var(--border-c)',
                     padding: '10px 6px 6px',
                     cursor: phase === "results" ? "pointer" : "default",
                   }}
