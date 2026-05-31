@@ -332,7 +332,7 @@ function TheorieTutorial({ onDone }) {
     if (slide === 3) {
       const modes = [
         { id:'entrainement', label:'Entraînement', desc:'10 questions · catégories au choix · feedback immédiat' },
-        { id:'examen',       label:'Examen',       desc:'40 questions · toutes catégories · seuil 35/40' },
+        { id:'examen',       label:'Code de la route musicale', desc:'40 questions · toutes catégories · seuil 35/40' },
       ]
       return (
         <div style={{ display:'flex', flexDirection:'column', gap:10, width:280 }}>
@@ -362,7 +362,7 @@ function TheorieTutorial({ onDone }) {
     { title:'Bienvenue dans Théorie !', body:'Quiz de théorie musicale — intervalles, tonalités, rythme, harmonie et plus. Progresse à ton rythme, du débutant au niveau avancé.' },
     { title:'Choisis ton niveau',       body:'Sélectionne le niveau jusqu\'auquel les questions seront incluses. Tu pourras changer à tout moment.' },
     { title:'Choisis tes catégories',   body:'Concentre-toi sur les thèmes qui t\'intéressent. Laisse vide pour tout inclure.' },
-    { title:'Choisis ton mode',         body:'Entraînement pour un feedback immédiat. Examen pour simuler une vraie évaluation.' },
+    { title:'Choisis ton mode',         body:'Entraînement pour un feedback immédiat. Code de la route musicale pour simuler une vraie évaluation.' },
   ]
 
   const { title, body } = SLIDES[slide]
@@ -519,7 +519,7 @@ function SetupScreen({ questions, onStart, onLoadCSV, csvCount, templateQuestion
             )
           })}
         </div>
-        <div className="text-[11px] text-app-muted mt-2">Grisées = pas encore de questions à ce niveau. Catégories appliquées en Entraînement ; l'Examen couvre tout.</div>
+        <div className="text-[11px] text-app-muted mt-2">Grisées = pas encore de questions à ce niveau. Catégories appliquées en Entraînement ; le Code de la route musicale couvre tout.</div>
       </div>
 
       {/* Choix du mode = lancement */}
@@ -537,7 +537,7 @@ function SetupScreen({ questions, onStart, onLoadCSV, csvCount, templateQuestion
           className="rounded-2xl p-4 text-left border-2 transition-colors"
           style={{ background: '#8B5CF6', borderColor: '#8B5CF6' }}
         >
-          <div className="text-sm font-extrabold mb-1 text-white">Examen →</div>
+          <div className="text-sm font-extrabold mb-1 text-white leading-tight">Code de la route musicale →</div>
           <div className="text-[11px] leading-snug" style={{ color: 'rgba(255,255,255,0.85)' }}>40 questions · seuil 35/40</div>
         </button>
       </div>
@@ -824,7 +824,7 @@ export default function TheoriePage() {
   const THEORIE_TOUR_STEPS = [
     { tourId:'niveau-select', title:'Niveau',          desc:'Choisis le niveau maximum des questions incluses, du débutant (C1/1) au niveau avancé (C3).' },
     { tourId:'cats-select',   title:'Catégories',      desc:'Concentre-toi sur un thème précis ou laisse vide pour inclure toutes les catégories.' },
-    { tourId:'mode-cards',    title:'Lancer',          desc:'Entraînement pour un feedback immédiat après chaque réponse. Examen pour simuler une vraie évaluation avec seuil 35/40.' },
+    { tourId:'mode-cards',    title:'Lancer',          desc:'Entraînement pour un feedback immédiat après chaque réponse. Code de la route musicale pour simuler une vraie évaluation avec seuil 35/40.' },
     { tourId:'quiz-question', title:'Question',        desc:'20 secondes par question. Répondre dans les temps donne 1 pt, hors délai 0,5 pt.' },
   ]
 
@@ -881,7 +881,7 @@ export default function TheoriePage() {
           <ConsigneOverlay
             storageKey="theorie"
             icon="🎯"
-            title={mode === 'examen' ? "Mode Examen" : "Mode Entraînement"}
+            title={mode === 'examen' ? "Code de la route musicale" : "Mode Entraînement"}
             lines={[
               "Réponds aux questions de théorie musicale.",
               mode === 'examen'
