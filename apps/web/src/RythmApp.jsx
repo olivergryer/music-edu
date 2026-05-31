@@ -201,11 +201,11 @@ const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 // Boost de volume appliqué UNIQUEMENT aux notes qui tombent SUR un temps (pas aux
 // subdivisions internes). Reflète la hiérarchie métrique : temps fort > 3e temps >
 // temps faibles.
-// Coefficients ×2 par rapport à la base (1.30 / 1.05 / 1.20 / 1.05).
+// Coefficients ×1.6 par rapport à la base (1.30 / 1.05 / 1.20 / 1.05).
 const BEAT_WEIGHTS = {
-  4: [2.60, 2.10, 2.40, 2.10], // 4/4, 12/8 (4 temps musicaux)
-  3: [2.60, 2.10, 2.10],       // 3/4, 9/8
-  2: [2.60, 2.10],             // 2/4, 6/8
+  4: [2.08, 1.68, 1.92, 1.68], // 4/4, 12/8 (4 temps musicaux)
+  3: [2.08, 1.68, 1.68],       // 3/4, 9/8
+  2: [2.08, 1.68],             // 2/4, 6/8
 };
 function beatsPerMeasure(timeSig) {
   if (timeSig === "3/4" || timeSig === "9/8") return 3;
