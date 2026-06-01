@@ -1473,11 +1473,13 @@ export default function RythmApp() {
     });
     setScores(s);
 
-    // Score global : total ∈ [0,1] → mappé sur 100, multiplié par les bonus existants.
+    // Score global : total ∈ [0,1] mappé sur le max théorique (playableCount × 100),
+    // puis multiplié par les bonus (révélation, mode extrême) pour rester aligné avec
+    // maxPts = playableCount × 100 × bonusMult × extremeMult (cf. ligne ~1820).
     const bonus  = REVEAL_BONUS[revealBeat] / 100;
     const extremeMult = extremeMode ? 2 : 1;
     setScoreWasExtreme(extremeMode);
-    const earnedFinal = Math.round(result.total * 100 * (1 + bonus) * extremeMult);
+    const earnedFinal = Math.round(result.total * 100 * playable.length * (1 + bonus) * extremeMult);
     setEarnedPts(earnedFinal);
     setTotalPts(prev => prev + earnedFinal);
 

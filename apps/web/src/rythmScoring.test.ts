@@ -161,8 +161,9 @@ test("scoreRhythm : motif court (3 notes) → wTempo neutralisé, pas de pénali
   assert.ok(r.total > 0.7, `... mais total préservé (${r.total})`);
 });
 
-test("scoreRhythm : motif limite (4 notes) → flag LOW_CONFIDENCE_REGULARITY", () => {
-  const target = [0, 1, 2, 3];
+test("scoreRhythm : motif limite (minNotesForTempo notes) → flag LOW_CONFIDENCE_REGULARITY", () => {
+  const N = DEFAULT_PARAMS.minNotesForTempo;
+  const target = Array.from({ length: N }, (_, i) => i);
   const user = target.map(t => t * 500);
   const r = scoreRhythm({ targetOnsets: target, userOnsets: user, targetTempoMsPerUnit: 500, activity: 1 }, DEFAULT_PARAMS);
   assert.ok(r.diagnosis.flags.includes("LOW_CONFIDENCE_REGULARITY"), `flags = ${r.diagnosis.flags.join(",")}`);
@@ -201,8 +202,8 @@ test("diagnose : activité 2 (tempo libre) → AUCUN flag tempo même si très d
 });
 
 test("diagnose : IRREGULAR quand dispersion > 0.6 × regMaxMs", () => {
-  // ±60 ms alternés → bien au-dessus du plancher de bruit (15 ms), MAD ≈ 60 → regularity ≈ 89
-  const user = T.map((t, i) => t * MS_PER_UNIT + (i % 2 === 0 ? 60 : -60));
+  // Résidus alternés bien au-delà du plancher (25 ms) pour atteindre le seuil IRREGULAR (0.6 × regMaxMs)
+  const user = T.map((t, i) => t * MS_PER_UNIT + (i % 2 === 0 ? 120 : -120));
   const r = scoreRhythm(mkAttempt({ user }), DEFAULT_PARAMS);
   assert.ok(r.diagnosis.flags.includes("IRREGULAR"), `regularityMs=${r.diagnosis.regularityMs}, flags=${r.diagnosis.flags.join(",")}`);
 });

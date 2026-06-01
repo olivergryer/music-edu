@@ -8,10 +8,10 @@ export const DEFAULT_PARAMS: ScoringParams = {
   // Alignement
   gapFactor: 0.5,
   maxIter: 3,
-  // Bruit & dead-zone (TODO calibration : viser ~15 ms tactile, peut bouger 10-25 ms)
-  inputNoiseFloorMs: 15,
+  // Bruit & dead-zone (TODO calibration ; 25 ms = jitter tactile usuel tablette/portable)
+  inputNoiseFloorMs: 25,
   // Régularité
-  regMaxMs: 80,
+  regMaxMs: 150,   // MAD à laquelle régularité → 0 (assoupli : un enfant jouant avec 50 ms MAD garde une bonne note)
   regExp: 0.8,
   // Décalage
   offsetMaxMs: 200,
@@ -25,5 +25,5 @@ export const DEFAULT_PARAMS: ScoringParams = {
   wOffset: { 1: 0.5, 2: 0.5 },
   wTempo:  { 1: 0.7, 2: 0.0 }, // act. 2 : tempo libre → non pénalisé
   // Motifs courts
-  minNotesForTempo: 4,
+  minNotesForTempo: 5,
 };
