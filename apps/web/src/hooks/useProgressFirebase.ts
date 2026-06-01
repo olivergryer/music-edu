@@ -11,22 +11,28 @@ interface Streak {
   lastDate: string | null
 }
 
+interface DailyCounter {
+  date: string | null
+  count: number
+}
+
 interface ProgressState {
   xp: number
   streak: Streak
   trophies: string[]
   modules: {
-    rythme:    { seriesPlayed: number; xpTotal: number }
+    rythme:    { seriesPlayed: number; exercisesPlayed: number; xpTotal: number }
     theorie:   { sessionsPlayed: number; xpTotal: number }
     accordeur: { sessionsPlayed: number; xpTotal: number }
   }
+  dailyRythmeIndiv: DailyCounter
 }
 
 interface AddSessionParams {
   module: 'rythme' | 'theorie' | 'accordeur'
   xpEarned: number
   medal: string
-  meta?: { perfectSeries?: boolean }
+  meta?: { perfectSeries?: boolean; individual?: boolean }
 }
 
 interface AddSessionResult {
@@ -60,8 +66,12 @@ export const TROPHIES = [
   {
     id: 'first_note',
     icon: '♩', label: 'Première note',
-    hint: 'Jouer ta première série de rythme ou session de théorie',
-    check: (s: ProgressState) => s.modules.rythme.seriesPlayed >= 1 || s.modules.theorie.sessionsPlayed >= 1,
+    hint: 'Jouer ton premier exercice ou ta première session',
+    check: (s: ProgressState) =>
+      s.modules.rythme.seriesPlayed >= 1 ||
+      s.modules.rythme.exercisesPlayed >= 1 ||
+      s.modules.theorie.sessionsPlayed >= 1 ||
+      s.modules.accordeur.sessionsPlayed >= 1,
   },
   {
     id: 'first_series',
@@ -138,10 +148,11 @@ const DEFAULT_STATE: ProgressState = {
   streak: { current: 0, longest: 0, lastDate: null },
   trophies: [],
   modules: {
-    rythme:    { seriesPlayed: 0, xpTotal: 0 },
+    rythme:    { seriesPlayed: 0, exercisesPlayed: 0, xpTotal: 0 },
     theorie:   { sessionsPlayed: 0, xpTotal: 0 },
     accordeur: { sessionsPlayed: 0, xpTotal: 0 },
   },
+  dailyRythmeIndiv: { date: null, count: 0 },
 }
 
 function mergeWithDefaults(data: Record<string, unknown>): ProgressState {
@@ -150,6 +161,7 @@ function mergeWithDefaults(data: Record<string, unknown>): ProgressState {
     ...DEFAULT_STATE,
     ...d,
     streak: { ...DEFAULT_STATE.streak, ...(d.streak ?? {}) },
+    dailyRythmeIndiv: { ...DEFAULT_STATE.dailyRythmeIndiv, ...(d.dailyRythmeIndiv ?? {}) },
     modules: {
       rythme:    { ...DEFAULT_STATE.modules.rythme,    ...(d.modules?.['rythme']    ?? {}) },
       theorie:   { ...DEFAULT_STATE.modules.theorie,   ...(d.modules?.['theorie']   ?? {}) },
@@ -213,15 +225,34 @@ export default function useProgressFirebase() {
 
     const prev = dataRef.current
     const rankBefore = getRank(prev.xp).id
-    const newStreak   = updateStreak(prev.streak)
     const newXp       = prev.xp + xpEarned
     const rankAfter  = getRank(newXp).id
+
+    const isRythmeIndiv = module === 'rythme' && meta.individual === true
+    const today = todayStr()
+
+    // Compteur quotidien d'exos indiv rythme : ne déclenche le streak qu'au 10ᵉ du jour.
+    let newDailyRythmeIndiv = prev.dailyRythmeIndiv
+    let countsForStreak = !isRythmeIndiv
+    if (isRythmeIndiv) {
+      const sameDay = prev.dailyRythmeIndiv.date === today
+      const count = sameDay ? prev.dailyRythmeIndiv.count + 1 : 1
+      newDailyRythmeIndiv = { date: today, count }
+      // Première fois que le seuil 10 est atteint aujourd'hui → on compte pour le streak.
+      countsForStreak = sameDay && prev.dailyRythmeIndiv.count < 10 && count >= 10
+    }
+
+    const newStreak = countsForStreak ? updateStreak(prev.streak) : prev.streak
 
     let moduleUpdate: ProgressState['modules']
     if (module === 'rythme') {
       moduleUpdate = {
         ...prev.modules,
-        rythme: { seriesPlayed: prev.modules.rythme.seriesPlayed + 1, xpTotal: prev.modules.rythme.xpTotal + xpEarned },
+        rythme: {
+          seriesPlayed:    prev.modules.rythme.seriesPlayed    + (isRythmeIndiv ? 0 : 1),
+          exercisesPlayed: prev.modules.rythme.exercisesPlayed + (isRythmeIndiv ? 1 : 0),
+          xpTotal:         prev.modules.rythme.xpTotal         + xpEarned,
+        },
       }
     } else if (module === 'theorie') {
       moduleUpdate = {
@@ -240,6 +271,7 @@ export default function useProgressFirebase() {
       xp: newXp,
       streak: newStreak,
       modules: moduleUpdate,
+      dailyRythmeIndiv: newDailyRythmeIndiv,
     }
 
     const newTrophyIds = checkNewTrophies(updated, meta, prev.trophies)

@@ -1478,13 +1478,16 @@ export default function RythmApp() {
     });
     setScores(s);
 
-    // Score global : total ∈ [0,1] mappé sur le max théorique (playableCount × 100),
-    // puis multiplié par les bonus (révélation, mode extrême) pour rester aligné avec
-    // maxPts = playableCount × 100 × bonusMult × extremeMult (cf. ligne ~1820).
+    // Score global : combine le `total` structurel du moteur (composantes robustes au MAD)
+    // avec la moyenne des points par note (sensibilité par-tap : un « Bien » isolé n'est
+    // pas absorbé par la médiane). Un seul « Bien » sur 8 → perNoteAvg = 96,25 % → 96 %.
+    const totalNotePts = s.reduce((acc, x) => acc + x.pts, 0);
+    const perNoteAvg   = playable.length > 0 ? totalNotePts / (playable.length * 100) : 0;
+    const combinedTotal = result.total * perNoteAvg;
     const bonus  = REVEAL_BONUS[revealBeat] / 100;
     const extremeMult = extremeMode ? 2 : 1;
     setScoreWasExtreme(extremeMode);
-    const earnedFinal = Math.round(result.total * 100 * playable.length * (1 + bonus) * extremeMult);
+    const earnedFinal = Math.round(combinedTotal * 100 * playable.length * (1 + bonus) * extremeMult);
     setEarnedPts(earnedFinal);
     setTotalPts(prev => prev + earnedFinal);
 
@@ -1550,6 +1553,22 @@ export default function RythmApp() {
       startSession();
     }
   });
+
+  // Enregistre l'XP d'un exercice individuel (hors série) une seule fois par pattern.
+  const recordedPatternRef = useRef(null);
+  useEffect(() => {
+    if (phase !== "results" || seriesMode || !pattern) return;
+    if (recordedPatternRef.current === pattern) return;
+    // Act 1/2 : earnedPts est posé après le calcul de scores (1 tick plus tard) — on attend.
+    if ((activity === 1 || activity === 2) && scores.length === 0) return;
+    recordedPatternRef.current = pattern;
+    const playableCount = pattern.figs.filter(f => !f.rest).length || 1;
+    const bonusMult     = 1 + REVEAL_BONUS[revealBeat] / 100;
+    const maxPtsLocal   = activity === 5 ? 100 : Math.round(playableCount * 100 * bonusMult * (scoreWasExtreme ? 2 : 1));
+    const pctLocal      = maxPtsLocal ? Math.round((earnedPts / maxPtsLocal) * 100) : 0;
+    const medalLocal    = pctLocal >= 90 ? "🥇" : pctLocal >= 70 ? "🥈" : pctLocal >= 50 ? "🥉" : "🎯";
+    addSession({ module: "rythme", xpEarned: earnedPts, medal: medalLocal, meta: { individual: true } });
+  }, [phase, seriesMode, pattern, earnedPts, scores, activity, revealBeat, scoreWasExtreme, addSession]);
 
 
   // ── Page réglages ──────────────────────────────────────────────────────────

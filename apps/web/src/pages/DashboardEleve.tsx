@@ -156,7 +156,7 @@ export default function DashboardEleve() {
           <span className={labelCls}>Activité</span>
           <div className="flex gap-2.5">
             {([
-              { key: 'rythme',    label: 'Rythme',    stat: `${modules.rythme.seriesPlayed} séries`,      xpTotal: modules.rythme.xpTotal },
+              { key: 'rythme',    label: 'Rythme',    stat: `${modules.rythme.seriesPlayed} séries · ${modules.rythme.exercisesPlayed ?? 0} exos`, xpTotal: modules.rythme.xpTotal },
               { key: 'theorie',   label: 'Théorie',   stat: `${modules.theorie.sessionsPlayed} sessions`,  xpTotal: modules.theorie.xpTotal },
               { key: 'accordeur', label: 'Accordeur', stat: `${modules.accordeur.sessionsPlayed} sessions`, xpTotal: modules.accordeur.xpTotal },
             ] as const).map(m => (

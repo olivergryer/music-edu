@@ -2,8 +2,11 @@
 
 ## Stack & déploiement
 Turborepo monorepo · React 19 + Vite · TypeScript (nouveaux fichiers `.ts`/`.tsx`, existants `.jsx`) · React Router v6 · App principale : `apps/web/`
-Déploiement : Vercel via GitHub push (depuis racine `/music-edu/`).
-Firebase Spark : Firestore + Authentication (email/password).
+Déploiement Vercel via GitHub push (depuis racine `/music-edu/`) :
+- `main` → **production** (URL principale)
+- `dev` → **preview** (URL `tessitura-git-dev-*.vercel.app`)
+
+Firebase Spark : Firestore + Authentication (email/password). **DB partagée dev/prod** (assumé, comptes test gérés par le user).
 
 ## Routes
 | URL | Fichier principal | Auth |
@@ -65,7 +68,6 @@ teacherCodes/{code}
 - `ThemeContext.tsx` — `useTheme()` + `ThemeToggleInline` (inline dans headers modules) + `ThemeProvider`
 - `TourGuide.jsx` — overlay tour guidé : tap ou swipe gauche = étape suivante, overlay bloquant + scrollIntoView
 - `useSheetData.js` — chargement CSV Google Sheets (rythme)
-- `useProgress.js` — **MORT**, non utilisé, ne pas importer
 
 ## Design system
 - Fond `#030712` · Surface `#0a0f1a` · Accent `#c084fc` / `#7c3aed`
@@ -97,8 +99,8 @@ teacherCodes/{code}
 - **Plan avant code** — `/plan` avant toute feature non triviale, attendre validation
 - **Spec d'abord** — ne pas anticiper des détails non spécifiés
 - **Une session par module** — ne pas mélanger les modules
-- **Toujours travailler sur `main`** — ne PAS créer de branche de feature
-- **Ne pas committer ni pusher** — l'utilisateur gère `git commit` + `git push` lui-même (déploiement Vercel). Laisser les modifications dans le working tree.
+- **Toujours travailler sur `dev`** — `main` = prod Vercel, ne jamais commit dessus directement. Pas de branche de feature.
+- **Ne pas committer ni pusher** — l'utilisateur gère `git commit` + `git push` lui-même (sur `dev` → preview, puis merge `dev` → `main` quand stable). Laisser les modifications dans le working tree.
 
 ## Commandes
 ```bash
@@ -106,8 +108,12 @@ teacherCodes/{code}
 npm run dev
 npm run build
 
-# Depuis music-edu/ (racine)
+# Depuis music-edu/ (racine) — travail courant sur dev
 git add . && git commit -m "..." && git push
+
+# Promouvoir dev → prod quand stable (depuis main)
+git checkout main && git merge dev --ff-only && git push && git checkout dev
+
 firebase deploy --only firestore:rules
 ```
 
