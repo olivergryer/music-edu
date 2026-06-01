@@ -8,8 +8,23 @@ try {
   buildDate = execSync('git log -1 --format=%cI').toString().trim()
 } catch {}
 
+// Seule la branche `dev` (Vercel) reçoit le manifest + icône DEV.
+const isDevBuild = process.env.VERCEL_GIT_COMMIT_REF === 'dev'
+
+const pwaEnvPlugin = {
+  name: 'pwa-env-swap',
+  transformIndexHtml(html) {
+    if (!isDevBuild) return html
+    return html
+      .replace('href="/manifest.json"', 'href="/manifest.dev.json"')
+      .replace('href="/icon-192x192.png"', 'href="/icon-dev.svg"')
+      .replace('<title>Tessitura</title>', '<title>Tessitura DEV</title>')
+      .replace(/content="Tessitura"/g, 'content="Tessitura DEV"')
+  },
+}
+
 export default defineConfig({
-  plugins: [tailwindcss(), react()],
+  plugins: [tailwindcss(), react(), pwaEnvPlugin],
   define: {
     __BUILD_DATE__: JSON.stringify(buildDate),
   },

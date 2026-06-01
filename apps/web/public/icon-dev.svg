@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <image href="/icon-512x512.png" width="512" height="512"/>
+  <g transform="translate(512 0) rotate(45)">
+    <rect x="-110" y="0" width="220" height="56" fill="#fbbf24" stroke="#1a0a00" stroke-width="3"/>
+    <text x="0" y="40" text-anchor="middle" font-family="Arial Black, Arial, sans-serif" font-weight="900" font-size="36" fill="#1a0a00" letter-spacing="2">DEV</text>
+  </g>
+</svg>
