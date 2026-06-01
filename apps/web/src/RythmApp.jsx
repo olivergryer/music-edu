@@ -6,6 +6,8 @@ import RythmStaff from "./RythmStaff";
 import SettingsPage from "./SettingsPage";
 import ConsigneOverlay, { consigneSeen } from "./ConsigneOverlay";
 import MicCalibration from "./MicCalibration";
+import { scoreRhythm } from "./rythmScoringScore.ts";
+import { DEFAULT_PARAMS as RYTHM_SCORING_PARAMS } from "./rythmScoringParams.ts";
 import useSheetData from "./useSheetData";
 import useProgressFirebase, { TROPHIES as TROPHIES_IMPORT } from "./hooks/useProgressFirebase";
 import { generateDistractorSet, deriveNiveau } from "./rythmDistractors";
@@ -173,30 +175,6 @@ function scoreTap(actual, expected, beatMs) {
 }
 const GRADE_COLOR = { perfect:"#a78bfa", good:"#34d399", ok:"#fbbf24", miss:"#f87171" };
 
-// ─── Analyse tempo (régression affine tap ≈ a·attendu + b) ──────────────────────
-// Constantes tunables — ajuster pour calibrer l'indulgence tempo du scoring.
-const MIN_TAPS_FOR_TEMPO = 4;     // sous ce nb de frappes appariées : pas d'analyse tempo
-const TEMPO_COMP_LIMIT   = 0.10;  // tempo compensé jusqu'à ±10% (au-delà, l'excès est pénalisé)
-const TEMPO_MALUS_COEFF  = 1.0;   // malus global = |erreur tempo| × ce coeff (proportionnel)
-const TEMPO_MALUS_MAX    = 0.5;   // plafond du malus (50% du score)
-
-// Régression des moindres carrés sur les paires (attendu ts, frappe tap).
-// Retourne pente a (>1 = ralentit, <1 = presse) et ordonnée b (offset au départ).
-function fitAffine(pairs) {
-  const n = pairs.length;
-  const meanTs  = pairs.reduce((s, p) => s + p.ts,  0) / n;
-  const meanTap = pairs.reduce((s, p) => s + p.tap, 0) / n;
-  let num = 0, den = 0;
-  for (const { ts, tap } of pairs) {
-    num += (ts - meanTs) * (tap - meanTap);
-    den += (ts - meanTs) ** 2;
-  }
-  const a = den > 0 ? num / den : 1;
-  const b = meanTap - a * meanTs;
-  return { a, b };
-}
-const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
-
 // ─── Accentuation des temps d'une mesure classique ────────────────────────────
 // Boost de volume appliqué UNIQUEMENT aux notes qui tombent SUR un temps (pas aux
 // subdivisions internes). Reflète la hiérarchie métrique : temps fort > 3e temps >
@@ -242,31 +220,56 @@ function DiagRow({ label, value, color }) {
 
 function TapDiagnostics({ beatMs, analysis }) {
   const a = analysis ?? {};
-  const tempoColor = !a.hasTempo ? 'var(--text-muted)'
-    : Math.abs(a.tempoErr) < 0.02 ? '#34d399'
-    : Math.abs(a.tempoErr) < TEMPO_COMP_LIMIT ? '#fbbf24' : '#f87171';
-  const tempoPct = a.hasTempo ? Math.round(Math.abs(a.tempoErr) * 100) : 0;
-  const tempoText = !a.hasTempo ? '—'
-    : Math.abs(a.tempoErr) < 0.02 ? 'Tempo juste'
-    : (a.tempoErr > 0 ? `Tu presses (~${tempoPct}% trop vite)` : `Tu ralentis (~${tempoPct}% trop lent)`)
-      + (a.malusPts > 0 ? ` (−${a.malusPts} pts)` : '');
+  const flags = a.flags ?? [];
+  const has = (f) => flags.includes(f);
 
+  // Tempo : piloté par flags TEMPO_FAST / TEMPO_SLOW (engine = enveloppe tolérance/max)
+  const tempoPct = a.hasTempo ? Math.round(Math.abs(a.tempoErr ?? 0) * 100) : 0;
+  let tempoText, tempoColor;
+  if (!a.hasTempo) {
+    tempoText = '—'; tempoColor = 'var(--text-muted)';
+  } else if (has('TEMPO_FAST')) {
+    tempoText = `Tu joues plus vite que le modèle (~${tempoPct}%)`;
+    tempoColor = Math.abs(a.tempoErr ?? 0) < 0.05 ? '#fbbf24' : '#f87171';
+  } else if (has('TEMPO_SLOW')) {
+    tempoText = `Tu ralentis (~${tempoPct}% trop lent)`;
+    tempoColor = Math.abs(a.tempoErr ?? 0) < 0.05 ? '#fbbf24' : '#f87171';
+  } else {
+    tempoText = 'Tempo juste'; tempoColor = '#34d399';
+  }
+
+  // Décalage : piloté par flags OFFSET_LATE / OFFSET_EARLY
   const off = a.offsetMs ?? 0;
-  const offColor = Math.abs(off) <= 100 ? '#34d399' : '#fbbf24';
-  const offText = Math.abs(off) <= 100 ? 'Bien calé'
-    : off < 0 ? `~${Math.abs(off)} ms en avance` : `~${off} ms en retard`;
+  let offText, offColor;
+  if (has('OFFSET_LATE'))       { offText = `Tu démarres en retard (~${Math.round(off)} ms)`;       offColor = '#fbbf24'; }
+  else if (has('OFFSET_EARLY')) { offText = `Tu démarres en avance (~${Math.abs(Math.round(off))} ms)`; offColor = '#fbbf24'; }
+  else                          { offText = 'Bien calé';                                            offColor = '#34d399'; }
 
+  // Régularité : ratio regularityStd / beatMs
   const r = a.regularityStd != null && beatMs ? a.regularityStd / beatMs : null;
-  const regColor = r == null ? 'var(--text-muted)'
-    : r < 0.05 ? '#34d399' : r < 0.12 ? '#34d399' : r < 0.20 ? '#fbbf24' : '#f87171';
-  const regText = r == null ? '—'
-    : r < 0.05 ? 'Très régulier' : r < 0.12 ? 'Régulier' : r < 0.20 ? 'Assez régulier' : 'Irrégulier';
+  let regText, regColor;
+  if (r == null)         { regText = '—';                regColor = 'var(--text-muted)'; }
+  else if (has('IRREGULAR')) { regText = 'Ton tempo est en dents de scie'; regColor = '#f87171'; }
+  else if (r < 0.05)     { regText = 'Très régulier';    regColor = '#34d399'; }
+  else if (r < 0.12)     { regText = 'Régulier';         regColor = '#34d399'; }
+  else                   { regText = 'Assez régulier';   regColor = '#fbbf24'; }
+
+  // Dérive (nouveau) : DRIFT_ACCEL / DRIFT_DECEL
+  let driftText = null, driftColor = '#fbbf24';
+  if (has('DRIFT_ACCEL')) driftText = 'Tu accélères vers la fin';
+  if (has('DRIFT_DECEL')) driftText = 'Tu ralentis vers la fin';
+
+  const extras  = a.extras  ?? [];
+  const missing = a.missing ?? [];
 
   return (
     <div style={{ marginTop:12, textAlign:'left', borderTop:'1px solid var(--border-c)', paddingTop:10 }}>
       <DiagRow label="Tempo"      value={tempoText} color={tempoColor} />
       <DiagRow label="Décalage"   value={offText}   color={offColor} />
       <DiagRow label="Régularité" value={regText}   color={regColor} />
+      {driftText && <DiagRow label="Dérive" value={driftText} color={driftColor} />}
+      {extras.length  > 0 && <DiagRow label="Frappes en trop" value={`${extras.length}`}  color="#f87171" />}
+      {missing.length > 0 && <DiagRow label="Frappes manquées" value={`${missing.length}`} color="#f87171" />}
     </div>
   );
 }
@@ -1437,60 +1440,67 @@ export default function RythmApp() {
   // ── Calcul des résultats ───────────────────────────────────────────────────
   useEffect(() => {
     if (phase !== "results" || !pattern) return;
-    if (activity !== 1 && activity !== 2) return; // scoring tap : act 1 & 2 seulement (pas act 3/4/5)
+    if (activity !== 1 && activity !== 2) return; // scoring tap : act 1 & 2 seulement
     const beatMs = 60000 / sessionBpm;
     const { timestamps } = toTimestamps(pattern.figs, sessionBpm, pattern.timeSig);
     const playable = pattern.figs
-      .map((fig, i) => ({ fig, ts: timestamps[i] }))
+      .map((fig, i) => ({ fig, tsBeats: timestamps[i] / beatMs }))
       .filter(({ fig }) => !fig.rest);
 
-    // Régression affine tap ≈ a·attendu + b : a = tempo (pente), b = offset constant.
-    const paired = playable
-      .map(({ ts }, i) => ({ ts, tap: tapTimesRef.current[i] }))
-      .filter(({ tap }) => tap !== undefined);
-    const meanTs  = paired.length ? paired.reduce((s, p) => s + p.ts,  0) / paired.length : 0;
-    const meanErr = paired.length ? paired.reduce((s, p) => s + (p.tap - p.ts), 0) / paired.length : 0;
-    const tsSpread = paired.length ? Math.max(...paired.map(p => p.ts)) - Math.min(...paired.map(p => p.ts)) : 0;
-    const hasTempo = paired.length >= MIN_TAPS_FOR_TEMPO && tsSpread >= beatMs;
+    // Construction de l'attempt : targetOnsets en pulsations (sans bias d'unités),
+    // tempo cible en ms/pulsation. userOnsets = brut, l'alignement DP gère les extras/missing.
+    const attempt = {
+      targetOnsets: playable.map(p => p.tsBeats),
+      userOnsets:   [...tapTimesRef.current],
+      targetTempoMsPerUnit: beatMs,
+      activity,
+    };
+    const result = scoreRhythm(attempt, RYTHM_SCORING_PARAMS);
 
-    const fit   = hasTempo ? fitAffine(paired) : { a: 1, b: meanErr };
-    const slope = fit.a;
-    // Compensation : pente bornée à ±TEMPO_COMP_LIMIT (au-delà, l'excès n'est pas compensé)
-    const aComp = clamp(slope, 1 / (1 + TEMPO_COMP_LIMIT), 1 / (1 - TEMPO_COMP_LIMIT));
-    // Intercept recentré sur le barycentre (meanTs, meanErr+meanTs) après bornage de la pente
-    const bComp = clamp((meanErr + meanTs) - aComp * meanTs, -200, 200);
-    const tempoErr = hasTempo ? (1 / slope - 1) : 0; // >0 = presse, <0 = ralentit
-
-    const s = playable.map(({ ts }, i) => {
-      const tap = tapTimesRef.current[i];
-      if (tap === undefined) return { label:"Manqué ✕", pts:0, grade:"miss", dev:null };
-      return scoreTap(tap, aComp * ts + bComp, beatMs);
+    // Reconstitue scores[] indexé par note jouable. Pour chaque cible : appariée → dev
+    // (résidu en ms) + grade dérivé des seuils scoreTap ; manquée → grade "miss", dev null.
+    const pairByTargetIdx = new Map();
+    result.alignment.pairs.forEach((p, idx) => {
+      pairByTargetIdx.set(p.targetIdx, result.fit.residuals[idx]);
+    });
+    const s = playable.map((_, i) => {
+      if (!pairByTargetIdx.has(i)) {
+        return { label: "Manqué ✕", pts: 0, grade: "miss", dev: null };
+      }
+      const dev = pairByTargetIdx.get(i);
+      // dev est déjà le résidu en ms ; scoreTap réutilise les seuils % de beatMs.
+      return scoreTap(dev, 0, beatMs);
     });
     setScores(s);
 
-    // Régularité = écart-type des résidus de score (notes jouées)
-    const devs = s.filter(x => x.dev != null).map(x => x.dev);
-    const devMean = devs.length ? devs.reduce((a, b) => a + b, 0) / devs.length : 0;
-    const regularityStd = devs.length
-      ? Math.sqrt(devs.reduce((a, d) => a + (d - devMean) ** 2, 0) / devs.length)
-      : 0;
-
-    const raw    = s.reduce((sum, x) => sum + x.pts, 0);
+    // Score global : total ∈ [0,1] → mappé sur 100, multiplié par les bonus existants.
     const bonus  = REVEAL_BONUS[revealBeat] / 100;
-    const extremeMult = extremeMode ? 2 : 1;   // Mode Extrême : score x2 (cumul avec bonus révélation)
+    const extremeMult = extremeMode ? 2 : 1;
     setScoreWasExtreme(extremeMode);
-    const earned = Math.round(raw * (1 + bonus) * extremeMult);
-    // Malus de tempo proportionnel (s'applique toujours quand le tempo est analysé)
-    const malusFrac = hasTempo ? Math.min(TEMPO_MALUS_MAX, Math.abs(tempoErr) * TEMPO_MALUS_COEFF) : 0;
-    const earnedFinal = Math.round(earned * (1 - malusFrac));
+    const earnedFinal = Math.round(result.total * 100 * (1 + bonus) * extremeMult);
     setEarnedPts(earnedFinal);
     setTotalPts(prev => prev + earnedFinal);
+
+    // Champs hérités (rétrocompatibilité tapAnalysis) + nouveaux (flags, drift, extras…)
+    const N = attempt.targetOnsets.length;
+    const hasTempo = N >= RYTHM_SCORING_PARAMS.minNotesForTempo;
+    // tempoErr orienté comme avant : >0 = presse (élève plus rapide), <0 = ralentit.
+    // result.diagnosis.tempoRatio = aFit/aCible. Élève plus rapide ⇒ aFit < aCible ⇒ ratio < 1 ⇒ presse.
+    const tempoErr = hasTempo ? (1 / result.diagnosis.tempoRatio - 1) : 0;
     setTapAnalysis({
+      // Anciens champs (UI existante)
       hasTempo,
       tempoErr,
-      offsetMs: Math.round(fit.b),
-      regularityStd: Math.round(regularityStd),
-      malusPts: earned - earnedFinal,
+      offsetMs: Math.round(result.diagnosis.offsetMs),
+      regularityStd: Math.round(result.diagnosis.regularityMs),
+      malusPts: 0, // malus tempo absorbé dans result.total désormais
+      // Nouveaux champs
+      flags:       result.diagnosis.flags,
+      drift:       result.diagnosis.drift,
+      extras:      result.alignment.extraUserIdx,
+      missing:     result.alignment.missingTargetIdx,
+      components:  result.components,
+      total:       result.total,
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, activity]);
