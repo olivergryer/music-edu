@@ -8,6 +8,7 @@ import ConsigneOverlay, { consigneSeen } from "./ConsigneOverlay";
 import MicCalibration from "./MicCalibration";
 import { scoreRhythm } from "./rythmScoringScore.ts";
 import { DEFAULT_PARAMS as RYTHM_SCORING_PARAMS } from "./rythmScoringParams.ts";
+import { deadzone as scoringDeadzone } from "./rythmScoringAnalyze.ts";
 import useSheetData from "./useSheetData";
 import useProgressFirebase, { TROPHIES as TROPHIES_IMPORT } from "./hooks/useProgressFirebase";
 import { generateDistractorSet, deriveNiveau } from "./rythmDistractors";
@@ -1468,8 +1469,12 @@ export default function RythmApp() {
         return { label: "Manqué ✕", pts: 0, grade: "miss", dev: null };
       }
       const dev = pairByTargetIdx.get(i);
-      // dev est déjà le résidu en ms ; scoreTap réutilise les seuils % de beatMs.
-      return scoreTap(dev, 0, beatMs);
+      // Le grade utilise le résidu DEAD-ZONÉ (cohérent avec la régularité globale :
+      // un résidu sous le plancher de bruit compte comme parfait). Le `dev` retourné
+      // reste brut pour l'affichage (badge dépliable + point sur portée).
+      const devGraded = scoringDeadzone(dev, RYTHM_SCORING_PARAMS.inputNoiseFloorMs);
+      const graded = scoreTap(devGraded, 0, beatMs);
+      return { ...graded, dev };
     });
     setScores(s);
 
