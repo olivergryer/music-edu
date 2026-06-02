@@ -171,13 +171,13 @@ test("scoreRhythm : motif limite (minNotesForTempo notes) → flag LOW_CONFIDENC
 
 // ─── diagnose — un cas par flag (critère §4) ──────────────────────────────────
 test("diagnose : OFFSET_LATE quand b > offsetMaxMs/2", () => {
-  const user = perfectUser.map(u => u + 130); // +130 ms > 200/2
+  const user = perfectUser.map(u => u + 250); // > offsetMaxMs/2 (400/2 = 200)
   const r = scoreRhythm(mkAttempt({ user }), DEFAULT_PARAMS);
   assert.ok(r.diagnosis.flags.includes("OFFSET_LATE"));
 });
 
 test("diagnose : OFFSET_EARLY quand b < -offsetMaxMs/2", () => {
-  const user = perfectUser.map(u => u - 130);
+  const user = perfectUser.map(u => u - 250);
   const r = scoreRhythm(mkAttempt({ user }), DEFAULT_PARAMS);
   assert.ok(r.diagnosis.flags.includes("OFFSET_EARLY"));
 });

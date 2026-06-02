@@ -10,19 +10,19 @@ export const DEFAULT_PARAMS: ScoringParams = {
   maxIter: 3,
   // Bruit & dead-zone (TODO calibration ; 25 ms = jitter tactile usuel tablette/portable)
   inputNoiseFloorMs: 25,
-  // Régularité
-  regMaxMs: 150,   // MAD à laquelle régularité → 0 (assoupli : un enfant jouant avec 50 ms MAD garde une bonne note)
+  // Régularité (incl. drift via résidus — bornée haut pour ne pas écraser un enfant qui dérive)
+  regMaxMs: 200,
   regExp: 0.8,
-  // Décalage
-  offsetMaxMs: 200,
+  // Décalage (assoupli : flag à 200 ms, zéro seulement au-delà de 400 ms)
+  offsetMaxMs: 400,
   // Tempo (zone de tolérance ±5%, saturation à 0 seulement au-delà de ±30%)
   tempoTolRel: 0.05,
   tempoMaxRel: 0.25,
-  // Dérive
-  driftThresholdRel: 0.08,
-  // Pondérations
+  // Dérive (flag uniquement, pas de composante dédiée — seuil relâché)
+  driftThresholdRel: 0.18,
+  // Pondérations (offset abaissé : décalage systématique = défaut mineur, facile à corriger)
   wRegularity: 1.0,
-  wOffset: { 1: 0.5, 2: 0.5 },
+  wOffset: { 1: 0.3, 2: 0.3 },
   wTempo:  { 1: 0.7, 2: 0.0 }, // act. 2 : tempo libre → non pénalisé
   // Motifs courts
   minNotesForTempo: 5,
