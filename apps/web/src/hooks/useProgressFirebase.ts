@@ -4,6 +4,7 @@ import { db } from '../lib/firebase'
 import { useAuth } from '../auth/AuthProvider'
 import {
   applySession,
+  applyDecayOnly,
   DEFAULT_STATE,
   mergeWithDefaults,
   getRank,
@@ -22,20 +23,21 @@ interface AddSessionResult {
 
 export default function useProgressFirebase() {
   const { user } = useAuth()
-  const [data, setData] = useState<ProgressState>(DEFAULT_STATE)
+  // rawData = état persisté tel quel (non-décayé). Source de vérité pour applySession.
+  const [rawData, setRawData] = useState<ProgressState>(DEFAULT_STATE)
   const [loaded, setLoaded] = useState(false)
-  const dataRef = useRef(data)
+  const rawDataRef = useRef(rawData)
 
-  useEffect(() => { dataRef.current = data }, [data])
+  useEffect(() => { rawDataRef.current = rawData }, [rawData])
 
   useEffect(() => {
     if (!user) {
-      setData(DEFAULT_STATE)
+      setRawData(DEFAULT_STATE)
       setLoaded(false)
       return
     }
     getDoc(doc(db, 'users', user.uid, 'progress', 'data')).then(snap => {
-      setData(snap.exists() ? mergeWithDefaults(snap.data()) : DEFAULT_STATE)
+      setRawData(snap.exists() ? mergeWithDefaults(snap.data()) : DEFAULT_STATE)
       setLoaded(true)
     })
   }, [user])
@@ -43,8 +45,9 @@ export default function useProgressFirebase() {
   const addSession = useCallback(async (params: AddSessionParams): Promise<AddSessionResult> => {
     if (!user || !loaded) return { newTrophies: [], rankedUp: false }
 
-    const result = applySession(dataRef.current, params, todayStr())
-    setData(result.newState)
+    // applySession calcule lui-même le decay depuis lastDate persisté.
+    const result = applySession(rawDataRef.current, params, todayStr())
+    setRawData(result.newState)
 
     await setDoc(doc(db, 'users', user.uid, 'progress', 'data'), result.newState)
     await addDoc(collection(db, 'users', user.uid, 'history'), {
@@ -55,13 +58,16 @@ export default function useProgressFirebase() {
     return { newTrophies: result.newTrophies, rankedUp: result.rankedUp }
   }, [user, loaded])
 
+  // Vue décayée pour l'affichage (non persistée — recalculée à chaque render).
+  const displayData = applyDecayOnly(rawData, todayStr())
+
   return {
-    xp: data.xp,
-    rank: getRank(data.xp),
-    nextRank: getNextRank(data.xp),
-    streak: data.streak,
-    trophies: data.trophies,
-    modules: data.modules,
+    xp: displayData.xp,
+    rank: getRank(displayData.xp),
+    nextRank: getNextRank(displayData.xp),
+    streak: displayData.streak,
+    trophies: displayData.trophies,
+    modules: displayData.modules,
     loaded,
     addSession,
   }

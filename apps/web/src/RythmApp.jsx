@@ -1428,7 +1428,8 @@ export default function RythmApp() {
   // ── Tap ────────────────────────────────────────────────────────────────────
   const handleTap = useCallback((e) => {
     e.preventDefault();
-    if (phase !== "playing" && (phase !== "countdown" || activity !== 1)) return;
+    // Accepte playing + pre-tap pendant le décompte pour act 1 ET act 2.
+    if (phase !== "playing" && !(phase === "countdown" && (activity === 1 || activity === 2))) return;
     const t = performance.now() - playStartRef.current;
     // Pendant le décompte : n'accepter que dans la fenêtre d'anticipation
     if (t < -TOL.ok) return;
@@ -2346,15 +2347,19 @@ export default function RythmApp() {
                     sessionBpm={sessionBpm}
                   />
                   {phase==="results" && scores.length > 0 && (
-                    <div style={{ display:'flex', justifyContent:'center', marginTop:2 }}>
-                      {/* Mini-réplique d'un marqueur : explique le dessin sous chaque note */}
-                      <svg width="170" height="30" style={{ display:'block' }}>
-                        <line x1="24" y1="9" x2="146" y2="9" stroke="#9ca3af" strokeOpacity="0.35" />
-                        <line x1="85" y1="4" x2="85" y2="14" stroke="#9ca3af" strokeOpacity="0.6" />
-                        <circle cx="105" cy="9" r="3.2" fill="#34d399" />
-                        <text x="24"  y="27" fontSize="8" textAnchor="start"  style={{ fill:'var(--text-muted)' }}>en avance</text>
-                        <text x="85"  y="27" fontSize="8" textAnchor="middle" style={{ fill:'var(--text-muted)' }}>pile</text>
-                        <text x="146" y="27" fontSize="8" textAnchor="end"    style={{ fill:'var(--text-muted)' }}>en retard</text>
+                    <div style={{
+                      position:'absolute', bottom:6, left:6,
+                      display:'flex', flexDirection:'column', alignItems:'center', gap:1,
+                      pointerEvents:'none',
+                    }}>
+                      {/* Mini-réplique du marqueur (note + guide + axe + pile), pas de point */}
+                      <svg width="50" height="44" style={{ display:'block' }}>
+                        <ellipse cx="25" cy="6" rx="5" ry="3.5" fill="#4b5563" />
+                        <line x1="25" y1="10" x2="25" y2="26" stroke="#9ca3af" strokeOpacity="0.45" />
+                        <line x1="8"  y1="32" x2="42" y2="32" stroke="#9ca3af" strokeOpacity="0.55" />
+                        <line x1="25" y1="28" x2="25" y2="36" stroke="#9ca3af" strokeOpacity="0.8" />
+                        <text x="8"  y="43" fontSize="7" textAnchor="start" style={{ fill:'var(--text-muted)' }}>avance</text>
+                        <text x="42" y="43" fontSize="7" textAnchor="end"   style={{ fill:'var(--text-muted)' }}>retard</text>
                       </svg>
                     </div>
                   )}

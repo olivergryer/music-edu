@@ -233,9 +233,9 @@ export default function RythmStaff({
             };
 
             scored.forEach(({ x, dev, grade }) => {
-              addLine(x, bottomY + 3, x, stripY - 5, "#9ca3af", 0.22);   // guide note → marqueur
-              addLine(x - w, stripY, x + w, stripY, "#9ca3af", 0.30);    // axe tôt/tard
-              addLine(x, stripY - 3, x, stripY + 3, "#9ca3af", 0.55);    // repère « pile »
+              addLine(x, bottomY + 3, x, stripY - 5, "#9ca3af", 0.40);   // guide note → marqueur
+              addLine(x - w, stripY, x + w, stripY, "#9ca3af", 0.50);    // axe tôt/tard
+              addLine(x, stripY - 3, x, stripY + 3, "#9ca3af", 0.80);    // repère « pile »
               if (dev != null) {
                 const cx  = x + Math.max(-1, Math.min(1, (dev / halfMs) * 2)) * w;
                 const dot = document.createElementNS(NS, "circle");
@@ -243,7 +243,7 @@ export default function RythmStaff({
                 dot.setAttribute("cy", stripY);
                 dot.setAttribute("r", "3.6");
                 dot.style.fill = DOT_FILL[grade] ?? "#9ca3af";
-                dot.style.opacity = "0.88";
+                dot.style.opacity = "1";
                 dot.style.filter = `drop-shadow(0 0 3px ${DOT_GLOW[grade] ?? "rgba(156,163,175,0.5)"})`;
                 svg.appendChild(dot);
               }

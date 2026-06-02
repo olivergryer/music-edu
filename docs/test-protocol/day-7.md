@@ -21,6 +21,7 @@
 | accordeur.xpTotal | `0` | `0` | ✅ |
 | dailyRythmeIndiv.date | `null` | `null` | ✅ |
 | dailyRythmeIndiv.count | `0` | `0` | ✅ |
+| highestRankIdx | `0` | `0` | ✅ |
 | trophies | `["first_note","first_series","portee"]` | `["first_note","first_series","portee"]` | ✅ |
 
 ## ✅ Profil 2 — Marathon indiv (≥10/jour)
@@ -42,6 +43,7 @@
 | accordeur.xpTotal | `0` | `0` | ✅ |
 | dailyRythmeIndiv.date | `"2026-06-07"` | `"2026-06-07"` | ✅ |
 | dailyRythmeIndiv.count | `12` | `12` | ✅ |
+| highestRankIdx | `0` | `0` | ✅ |
 | trophies | `["first_note","portee"]` | `["first_note","portee"]` | ✅ |
 
 ## ✅ Profil 3 — Tortue indiv (<10/jour)
@@ -63,6 +65,7 @@
 | accordeur.xpTotal | `0` | `0` | ✅ |
 | dailyRythmeIndiv.date | `"2026-06-07"` | `"2026-06-07"` | ✅ |
 | dailyRythmeIndiv.count | `5` | `5` | ✅ |
+| highestRankIdx | `0` | `0` | ✅ |
 | trophies | `["first_note"]` | `["first_note"]` | ✅ |
 
 ## ✅ Profil 4 — Skipper (saute J4)
@@ -71,7 +74,7 @@
 
 | Champ | Prédit | Réel | Statut |
 |-------|--------|------|--------|
-| xp | `300` | `300` | ✅ |
+| xp | `297` | `297` | ✅ |
 | streak.current | `3` | `3` | ✅ |
 | streak.longest | `3` | `3` | ✅ |
 | streak.lastDate | `"2026-06-07"` | `"2026-06-07"` | ✅ |
@@ -84,6 +87,7 @@
 | accordeur.xpTotal | `0` | `0` | ✅ |
 | dailyRythmeIndiv.date | `null` | `null` | ✅ |
 | dailyRythmeIndiv.count | `0` | `0` | ✅ |
+| highestRankIdx | `0` | `0` | ✅ |
 | trophies | `["first_note","first_series"]` | `["first_note","first_series"]` | ✅ |
 
 ## ✅ Profil 5 — Multi-modules
@@ -105,6 +109,7 @@
 | accordeur.xpTotal | `1000` | `1000` | ✅ |
 | dailyRythmeIndiv.date | `null` | `null` | ✅ |
 | dailyRythmeIndiv.count | `0` | `0` | ✅ |
+| highestRankIdx | `0` | `0` | ✅ |
 | trophies | `["duo","first_note","first_series","portee"]` | `["duo","first_note","first_series","portee"]` | ✅ |
 
 ## ✅ Profil 6 — XP marathonien
@@ -126,6 +131,7 @@
 | accordeur.xpTotal | `0` | `0` | ✅ |
 | dailyRythmeIndiv.date | `null` | `null` | ✅ |
 | dailyRythmeIndiv.count | `0` | `0` | ✅ |
+| highestRankIdx | `3` | `3` | ✅ |
 | trophies | `["do_majeur","duo","first_note","first_series","perfect_series","portee"]` | `["do_majeur","duo","first_note","first_series","perfect_series","portee"]` | ✅ |
 
 ## ✅ Profil 7 — Examiné stressé
@@ -147,6 +153,7 @@
 | accordeur.xpTotal | `0` | `0` | ✅ |
 | dailyRythmeIndiv.date | `null` | `null` | ✅ |
 | dailyRythmeIndiv.count | `0` | `0` | ✅ |
+| highestRankIdx | `3` | `3` | ✅ |
 | trophies | `["do_majeur","first_note","portee"]` | `["do_majeur","first_note","portee"]` | ✅ |
 
 ## ✅ Profil 8 — Accordeur pro
@@ -168,6 +175,7 @@
 | accordeur.xpTotal | `1950` | `1950` | ✅ |
 | dailyRythmeIndiv.date | `null` | `null` | ✅ |
 | dailyRythmeIndiv.count | `0` | `0` | ✅ |
+| highestRankIdx | `0` | `0` | ✅ |
 | trophies | `["first_note","portee"]` | `["first_note","portee"]` | ✅ |
 
 ## ✅ Profil 9 — Couvre-feu indiv
@@ -189,6 +197,7 @@
 | accordeur.xpTotal | `0` | `0` | ✅ |
 | dailyRythmeIndiv.date | `"2026-06-07"` | `"2026-06-07"` | ✅ |
 | dailyRythmeIndiv.count | `10` | `10` | ✅ |
+| highestRankIdx | `0` | `0` | ✅ |
 | trophies | `["first_note"]` | `["first_note"]` | ✅ |
 
 ## ✅ Profil 10 — Perfectionniste
@@ -210,4 +219,5 @@
 | accordeur.xpTotal | `0` | `0` | ✅ |
 | dailyRythmeIndiv.date | `null` | `null` | ✅ |
 | dailyRythmeIndiv.count | `0` | `0` | ✅ |
+| highestRankIdx | `0` | `0` | ✅ |
 | trophies | `["first_note","first_series","perfect_series","portee"]` | `["first_note","first_series","perfect_series","portee"]` | ✅ |

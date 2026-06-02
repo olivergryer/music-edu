@@ -24,6 +24,7 @@ export interface ProgressState {
     accordeur: { sessionsPlayed: number; xpTotal: number }
   }
   dailyRythmeIndiv: DailyCounter
+  highestRankIdx: number  // plus haut rang jamais atteint (index dans RANKS)
 }
 
 export interface AddSessionParams {
@@ -65,6 +66,13 @@ export function getRank(xp: number) {
 
 export function getNextRank(xp: number) {
   return RANKS.find(l => l.xp > xp) ?? null
+}
+
+export function getRankIdx(xp: number): number {
+  for (let i = RANKS.length - 1; i >= 0; i--) {
+    if (xp >= RANKS[i].xp) return i
+  }
+  return 0
 }
 
 // ─── Trophées ─────────────────────────────────────────────────────────────────
@@ -160,6 +168,7 @@ export const DEFAULT_STATE: ProgressState = {
     accordeur: { sessionsPlayed: 0, xpTotal: 0 },
   },
   dailyRythmeIndiv: { date: null, count: 0 },
+  highestRankIdx: 0,
 }
 
 export function mergeWithDefaults(data: Record<string, unknown>): ProgressState {
@@ -169,6 +178,7 @@ export function mergeWithDefaults(data: Record<string, unknown>): ProgressState 
     ...d,
     streak: { ...DEFAULT_STATE.streak, ...(d.streak ?? {}) },
     dailyRythmeIndiv: { ...DEFAULT_STATE.dailyRythmeIndiv, ...(d.dailyRythmeIndiv ?? {}) },
+    highestRankIdx: d.highestRankIdx ?? DEFAULT_STATE.highestRankIdx,
     modules: {
       rythme:    { ...DEFAULT_STATE.modules.rythme,    ...(d.modules?.['rythme']    ?? {}) },
       theorie:   { ...DEFAULT_STATE.modules.theorie,   ...(d.modules?.['theorie']   ?? {}) },
@@ -205,6 +215,74 @@ export function updateStreak(streak: Streak, today: string): Streak {
   return { current: next, longest, lastDate: today }
 }
 
+function dateDiff(d1: string, d2: string): number {
+  const [y1, m1, dd1] = d1.split('-').map(Number)
+  const [y2, m2, dd2] = d2.split('-').map(Number)
+  const t1 = new Date(y1, m1 - 1, dd1).getTime()
+  const t2 = new Date(y2, m2 - 1, dd2).getTime()
+  return Math.round((t2 - t1) / 86_400_000)
+}
+
+// Nombre de jours d'inactivité réelle : 0 si lastDate=null, ou si lastDate=today/yesterday.
+export function computeDaysIdle(lastDate: string | null, today: string): number {
+  if (!lastDate) return 0
+  const gap = dateDiff(lastDate, today)
+  return Math.max(0, gap - 1)
+}
+
+// ─── Décroissance XP ──────────────────────────────────────────────────────────
+//
+// Règle :
+//   - Jours 1-7 d'inactivité    : -2%/jour (composé)
+//   - Jours 8-14                : -5%/jour (composé)
+//   - Jour 15 et plus           : -10%/jour (composé)
+//   - Au 7ᵉ jour d'inactivité, si le rang n'a pas baissé naturellement → chute forcée d'1 rang
+//     (XP ramené à RANKS[initialRankIdx].xp - 1, juste sous le seuil du rang initial).
+
+export function applyDecay(xp: number, daysIdle: number): number {
+  if (daysIdle <= 0) return xp
+  const initialRankIdx = getRankIdx(xp)
+
+  let factor = 1
+  if (daysIdle >= 1)  factor *= Math.pow(0.98, Math.min(daysIdle, 7))
+  if (daysIdle >= 8)  factor *= Math.pow(0.95, Math.min(daysIdle - 7, 7))
+  if (daysIdle >= 15) factor *= Math.pow(0.9,  daysIdle - 14)
+
+  let decayedXp = Math.round(xp * factor)
+
+  // Plancher rang : au-delà de 7 jours d'inactivité, force la chute d'1 rang si pas déjà tombé.
+  if (daysIdle >= 7 && initialRankIdx > 0) {
+    const newRankIdx = getRankIdx(decayedXp)
+    if (newRankIdx >= initialRankIdx) {
+      decayedXp = Math.max(0, RANKS[initialRankIdx].xp - 1)
+    }
+  }
+
+  return Math.max(0, decayedXp)
+}
+
+// ─── Boost de récupération ────────────────────────────────────────────────────
+//
+// Tant que le XP courant est sous le seuil du rang (peak - 1), chaque XP gagné compte double.
+// Sans effet si peak ≤ 1 (Apprenti ou Musicien) car le rang n-1 cible est Apprenti (seuil 0).
+
+export function xpMultiplier(state: ProgressState): number {
+  const peakIdx = state.highestRankIdx
+  if (peakIdx <= 1) return 1
+  const targetThreshold = RANKS[peakIdx - 1].xp
+  return state.xp < targetThreshold ? 2 : 1
+}
+
+// ─── Decay-only (pour affichage dashboard, sans persister) ────────────────────
+
+export function applyDecayOnly(prev: ProgressState, today: string): ProgressState {
+  const daysIdle = computeDaysIdle(prev.streak.lastDate, today)
+  if (daysIdle <= 0) return prev
+  const decayedXp = applyDecay(prev.xp, daysIdle)
+  if (decayedXp === prev.xp) return prev
+  return { ...prev, xp: decayedXp }
+}
+
 // ─── Trophées débloqués pour cette session ────────────────────────────────────
 
 export function checkNewTrophies(state: ProgressState, meta: AddSessionParams['meta'], alreadyUnlocked: string[]): string[] {
@@ -221,8 +299,18 @@ export function applySession(
   today: string,
 ): ApplySessionResult {
   const { module, xpEarned, medal, meta = {} } = params
-  const rankBefore = getRank(prev.xp).id
-  const newXp = prev.xp + xpEarned
+
+  // 1. Decay sur l'XP existant (en fonction de l'inactivité depuis lastDate).
+  const daysIdle = computeDaysIdle(prev.streak.lastDate, today)
+  const decayedXp = applyDecay(prev.xp, daysIdle)
+  const stateAfterDecay: ProgressState = { ...prev, xp: decayedXp }
+
+  // 2. Multiplicateur de récupération (2× si en-dessous de peak-1).
+  const multiplier = xpMultiplier(stateAfterDecay)
+  const xpGained = xpEarned * multiplier
+
+  const rankBefore = getRank(decayedXp).id
+  const newXp = decayedXp + xpGained
   const rankAfter = getRank(newXp).id
 
   const isRythmeIndiv = module === 'rythme' && meta.individual === true
@@ -238,6 +326,7 @@ export function applySession(
 
   const newStreak = countsForStreak ? updateStreak(prev.streak, today) : prev.streak
 
+  // Les compteurs xpTotal par module reflètent l'XP réellement créditée (boost inclus).
   let moduleUpdate: ProgressState['modules']
   if (module === 'rythme') {
     moduleUpdate = {
@@ -245,20 +334,24 @@ export function applySession(
       rythme: {
         seriesPlayed:    prev.modules.rythme.seriesPlayed    + (isRythmeIndiv ? 0 : 1),
         exercisesPlayed: prev.modules.rythme.exercisesPlayed + (isRythmeIndiv ? 1 : 0),
-        xpTotal:         prev.modules.rythme.xpTotal         + xpEarned,
+        xpTotal:         prev.modules.rythme.xpTotal         + xpGained,
       },
     }
   } else if (module === 'theorie') {
     moduleUpdate = {
       ...prev.modules,
-      theorie: { sessionsPlayed: prev.modules.theorie.sessionsPlayed + 1, xpTotal: prev.modules.theorie.xpTotal + xpEarned },
+      theorie: { sessionsPlayed: prev.modules.theorie.sessionsPlayed + 1, xpTotal: prev.modules.theorie.xpTotal + xpGained },
     }
   } else {
     moduleUpdate = {
       ...prev.modules,
-      accordeur: { sessionsPlayed: prev.modules.accordeur.sessionsPlayed + 1, xpTotal: prev.modules.accordeur.xpTotal + xpEarned },
+      accordeur: { sessionsPlayed: prev.modules.accordeur.sessionsPlayed + 1, xpTotal: prev.modules.accordeur.xpTotal + xpGained },
     }
   }
+
+  // highestRankIdx : on garde le max entre l'ancien et le rang atteint après cette session.
+  const newRankIdx = getRankIdx(newXp)
+  const newHighestRankIdx = Math.max(prev.highestRankIdx, newRankIdx)
 
   const newStateBeforeTrophies: ProgressState = {
     ...prev,
@@ -266,6 +359,7 @@ export function applySession(
     streak: newStreak,
     modules: moduleUpdate,
     dailyRythmeIndiv: newDailyRythmeIndiv,
+    highestRankIdx: newHighestRankIdx,
   }
 
   const newTrophyIds = checkNewTrophies(newStateBeforeTrophies, meta, prev.trophies)
@@ -277,7 +371,7 @@ export function applySession(
   const historyEntry: HistoryEntry = {
     date: today,
     module,
-    xp: xpEarned,
+    xp: xpGained,
     medal,
   }
 

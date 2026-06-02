@@ -15,9 +15,9 @@ export const DEFAULT_PARAMS: ScoringParams = {
   regExp: 0.8,
   // Décalage
   offsetMaxMs: 200,
-  // Tempo
-  tempoTolRel: 0.02,
-  tempoMaxRel: 0.05,
+  // Tempo (zone de tolérance ±5%, saturation à 0 seulement au-delà de ±30%)
+  tempoTolRel: 0.05,
+  tempoMaxRel: 0.25,
   // Dérive
   driftThresholdRel: 0.08,
   // Pondérations

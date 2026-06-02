@@ -93,6 +93,7 @@ export function compareState(predicted: ProfileDay['predicted'], actual: Progres
     { field: 'accordeur.xpTotal',           predicted: j(predicted.modules.accordeur.xpTotal),        actual: j(actual.modules.accordeur.xpTotal),        pass: predicted.modules.accordeur.xpTotal === actual.modules.accordeur.xpTotal },
     { field: 'dailyRythmeIndiv.date',       predicted: j(predicted.dailyRythmeIndiv.date),            actual: j(actual.dailyRythmeIndiv.date),            pass: predicted.dailyRythmeIndiv.date === actual.dailyRythmeIndiv.date },
     { field: 'dailyRythmeIndiv.count',      predicted: j(predicted.dailyRythmeIndiv.count),           actual: j(actual.dailyRythmeIndiv.count),           pass: predicted.dailyRythmeIndiv.count === actual.dailyRythmeIndiv.count },
+    { field: 'highestRankIdx',              predicted: j(predicted.highestRankIdx),                   actual: j(actual.highestRankIdx),                   pass: predicted.highestRankIdx === actual.highestRankIdx },
     { field: 'trophies',                    predicted: j(sortedTrophies(predicted.trophies)),         actual: j(sortedTrophies(actual.trophies)),         pass: j(sortedTrophies(predicted.trophies)) === j(sortedTrophies(actual.trophies)) },
   ]
 }

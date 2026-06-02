@@ -138,12 +138,18 @@ export default function AccordeurStaff({ notes, transpoKey = 'C', tonicName = 'D
     return next
   })
 
+  // Mobile (notePx ≤ 30) : spacing ~1/3 desktop, marge clef réduite
+  const isMobile      = notePx <= 30
+  const beatPx        = isMobile ? 19 : PX_PER_BEAT
+  const noteFloorPx   = isMobile ? 10 : PX_PER_NOTE
+  const staveMarginPx = isMobile ? 80 : STAVE_MARGIN
+
   const displayedNotes = notes?.slice(0, MAX_NOTES_DISPLAY) ?? []
   // Largeur proportionnelle à la durée totale (compact), plancher par note
   const totalBeats = displayedNotes.reduce(
     (a, n) => a + durationToVex(Math.max(200, n.finMs - n.debutMs)).beats, 0)
-  const contentW   = Math.max(totalBeats * PX_PER_BEAT, displayedNotes.length * PX_PER_NOTE)
-  const staveWidth  = STAVE_MARGIN + contentW
+  const contentW   = Math.max(totalBeats * beatPx, displayedNotes.length * noteFloorPx)
+  const staveWidth  = staveMarginPx + contentW
 
   useEffect(() => {
     if (!ref.current || !displayedNotes.length) return
@@ -315,7 +321,7 @@ export default function AccordeurStaff({ notes, transpoKey = 'C', tonicName = 'D
           const pts  = downsample(note.centsSeries, 20)
           if (pts.length < 2) return
           const cx = centersX[i]
-          let w = PX_PER_NOTE
+          let w = noteFloorPx
           if (i > 0)                    w = Math.min(w, Math.abs(cx - centersX[i - 1]) * 0.9)
           if (i < centersX.length - 1)  w = Math.min(w, Math.abs(centersX[i + 1] - cx) * 0.9)
           const x0 = cx - w / 2

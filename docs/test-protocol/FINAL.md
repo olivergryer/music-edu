@@ -1,21 +1,25 @@
 # Rapport final — Protocole de test
 
-**Vérifications totales** : 980/980
+**Vérifications totales** : 1170/1170
 **Profil×jour FAIL** : 0
 
 ## Matrice 10 profils × 7 jours
 
-| Profil | J1 | J2 | J3 | J4 | J5 | J6 | J7 |
-|--------|----|----|----|----|----|----|----|
-| Apprenti régulier | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Marathon indiv (≥10/jour) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Tortue indiv (<10/jour) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Skipper (saute J4) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Multi-modules | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| XP marathonien | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Examiné stressé | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Accordeur pro | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Couvre-feu indiv | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Perfectionniste | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Profil | J1 | J2 | J3 | J4 | J5 | J6 | J7 | J8 | J9 | J10 | J11 | J12 | J13 | J14 | J15 | J16 | J17 | J18 | J19 | J20 | J21 | J22 |
+|--------|----|----|----|----|----|----|----|----|----|----|----|----|----|----|----|----|----|----|----|----|----|----|
+| Apprenti régulier | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
+| Marathon indiv (≥10/jour) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
+| Tortue indiv (<10/jour) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
+| Skipper (saute J4) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
+| Multi-modules | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
+| XP marathonien | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
+| Examiné stressé | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
+| Accordeur pro | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
+| Couvre-feu indiv | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
+| Perfectionniste | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
+| Décroissance phase 1 | ✅ | — | — | — | — | — | — | ✅ | — | — | — | — | — | — | — | — | — | — | — | — | — | — |
+| Décroissance phase 2 + chute forcée | ✅ | — | — | — | — | — | — | — | — | — | — | — | — | — | ✅ | — | — | — | — | — | — | — |
+| Décroissance phase 3 | ✅ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | ✅ |
+| Boost récupération | ✅ | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | — | ✅ |
 
 🎉 **Tous les profils × jours sont conformes aux prédictions.**

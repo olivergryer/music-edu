@@ -1,8 +1,8 @@
 # PLAN — Protocole de test des comptes utilisateurs
 
-Période simulée : **2026-06-01 → 2026-06-07** (7 jours)
+Période simulée : **2026-06-01 → 2026-06-22** (7 jours)
 
-Profils testés : **10**
+Profils testés : **14**
 
 ## Aperçu
 
@@ -11,13 +11,17 @@ Profils testés : **10**
 | 1 | Apprenti régulier | 1 série rythme/jour pendant 7 jours. Teste streak max + trophée portee. |
 | 2 | Marathon indiv (≥10/jour) | 12 exos indiv rythme par jour. Teste seuil streak 10 exos. |
 | 3 | Tortue indiv (<10/jour) | 5 exos indiv rythme/jour : reste sous le seuil 10, streak reste à 0. |
-| 4 | Skipper (saute J4) | Joue J1-J3 puis skip J4 puis reprend J5-J7. Streak reset à 1 le J5. |
+| 4 | Skipper (saute J4) | Joue J1-J3 puis skip J4 puis reprend J5-J7. Décroissance -2% pendant J4. |
 | 5 | Multi-modules | Alterne rythme/théorie/accordeur. Teste streak cross-module + trophée duo. |
 | 6 | XP marathonien | 1 série parfaite + 1 examen théorie reçu par jour. Teste rangs Musicien→Soliste + trophée do_majeur. |
 | 7 | Examiné stressé | Que des examens théorie reçus (40/40). Teste bonus +500 XP examen. |
 | 8 | Accordeur pro | Ratios variés (100/80/60/40/100/80/60). Teste barème XP accordeur. |
 | 9 | Couvre-feu indiv | J1 = 9 exos (streak NON), J2-J7 = 10 exos (streak compte). Teste seuil exact. |
 | 10 | Perfectionniste | 1 série parfaite/jour (perfectSeries=true). Teste trophée perfect_series. |
+| 11 | Décroissance phase 1 | D1 +10 000 XP, D2-D7 idle, D8 reprise. Teste -2%/j × 6 jours. |
+| 12 | Décroissance phase 2 + chute forcée | D1 +10 000 XP, D2-D14 idle, D15 reprise. Teste -2%×7 puis -5%×6 + chute de rang forcée. |
+| 13 | Décroissance phase 3 | D1 +10 000 XP, D2-D21 idle, D22 reprise. Teste -2%×7, -5%×7, -10%×6. |
+| 14 | Boost récupération | D1 atteint Soliste (12500 XP), D2-D21 idle, D22 reprise. Teste boost 2× jusqu'à Instrumentiste. |
 
 ## Planning détaillé par profil
 
@@ -65,7 +69,7 @@ Profils testés : **10**
 
 ### Profil 4 — Skipper (saute J4)
 
-*Joue J1-J3 puis skip J4 puis reprend J5-J7. Streak reset à 1 le J5.*
+*Joue J1-J3 puis skip J4 puis reprend J5-J7. Décroissance -2% pendant J4.*
 
 | Jour | Date | Actions | XP prévu | Streak prévu | Trophées prévus |
 |------|------|---------|----------|--------------|-----------------|
@@ -73,9 +77,9 @@ Profils testés : **10**
 | 2 | 2026-06-02 | 1× rythme | 100 | 2 | first_note, first_series |
 | 3 | 2026-06-03 | 1× rythme | 150 | 3 | first_note, first_series |
 | 4 | 2026-06-04 | _(aucune)_ | 150 | 3 | first_note, first_series |
-| 5 | 2026-06-05 | 1× rythme | 200 | 1 | first_note, first_series |
-| 6 | 2026-06-06 | 1× rythme | 250 | 2 | first_note, first_series |
-| 7 | 2026-06-07 | 1× rythme | 300 | 3 | first_note, first_series |
+| 5 | 2026-06-05 | 1× rythme | 197 | 1 | first_note, first_series |
+| 6 | 2026-06-06 | 1× rythme | 247 | 2 | first_note, first_series |
+| 7 | 2026-06-07 | 1× rythme | 297 | 3 | first_note, first_series |
 
 ### Profil 5 — Multi-modules
 
@@ -160,3 +164,39 @@ Profils testés : **10**
 | 5 | 2026-06-05 | 1× rythme parfaite | 1000 | 5 | first_note, first_series, perfect_series |
 | 6 | 2026-06-06 | 1× rythme parfaite | 1200 | 6 | first_note, first_series, perfect_series |
 | 7 | 2026-06-07 | 1× rythme parfaite | 1400 | 7 | first_note, first_series, perfect_series, portee |
+
+### Profil 11 — Décroissance phase 1
+
+*D1 +10 000 XP, D2-D7 idle, D8 reprise. Teste -2%/j × 6 jours.*
+
+| Jour | Date | Actions | XP prévu | Streak prévu | Trophées prévus |
+|------|------|---------|----------|--------------|-----------------|
+| 1 | 2026-06-01 | 1× theorie | 10000 | 1 | first_note |
+| 8 | 2026-06-08 | 1× theorie | 8958 | 1 | first_note |
+
+### Profil 12 — Décroissance phase 2 + chute forcée
+
+*D1 +10 000 XP, D2-D14 idle, D15 reprise. Teste -2%×7 puis -5%×6 + chute de rang forcée.*
+
+| Jour | Date | Actions | XP prévu | Streak prévu | Trophées prévus |
+|------|------|---------|----------|--------------|-----------------|
+| 1 | 2026-06-01 | 1× theorie | 10000 | 1 | first_note |
+| 15 | 2026-06-15 | 1× theorie | 6099 | 1 | first_note |
+
+### Profil 13 — Décroissance phase 3
+
+*D1 +10 000 XP, D2-D21 idle, D22 reprise. Teste -2%×7, -5%×7, -10%×6.*
+
+| Jour | Date | Actions | XP prévu | Streak prévu | Trophées prévus |
+|------|------|---------|----------|--------------|-----------------|
+| 1 | 2026-06-01 | 1× theorie | 10000 | 1 | first_note |
+| 22 | 2026-06-22 | 1× theorie | 3322 | 1 | first_note |
+
+### Profil 14 — Boost récupération
+
+*D1 atteint Soliste (12500 XP), D2-D21 idle, D22 reprise. Teste boost 2× jusqu'à Instrumentiste.*
+
+| Jour | Date | Actions | XP prévu | Streak prévu | Trophées prévus |
+|------|------|---------|----------|--------------|-----------------|
+| 1 | 2026-06-01 | 1× theorie | 12500 | 1 | do_majeur, first_note |
+| 22 | 2026-06-22 | 1× theorie | 6027 | 1 | do_majeur, first_note |
