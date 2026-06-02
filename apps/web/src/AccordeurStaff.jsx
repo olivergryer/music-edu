@@ -138,11 +138,11 @@ export default function AccordeurStaff({ notes, transpoKey = 'C', tonicName = 'D
     return next
   })
 
-  // Mobile (notePx ≤ 30) : spacing ~1/3 desktop, marge clef réduite
+  // Mobile (notePx ≤ 30) : spacing ~½ desktop, marge clef réduite
   const isMobile      = notePx <= 30
-  const beatPx        = isMobile ? 19 : PX_PER_BEAT
-  const noteFloorPx   = isMobile ? 10 : PX_PER_NOTE
-  const staveMarginPx = isMobile ? 80 : STAVE_MARGIN
+  const beatPx        = isMobile ? 28 : PX_PER_BEAT
+  const noteFloorPx   = isMobile ? 16 : PX_PER_NOTE
+  const staveMarginPx = isMobile ? 100 : STAVE_MARGIN
 
   const displayedNotes = notes?.slice(0, MAX_NOTES_DISPLAY) ?? []
   // Largeur proportionnelle à la durée totale (compact), plancher par note
