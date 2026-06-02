@@ -30,6 +30,30 @@ const DIAPASON_DEFAULT        = 442
 const SEUIL_DEFAULT           = 10
 const SILENCE_MS_DEFAULT      = 40
 const NOTE_JUMP_CENTS_DEFAULT = 30
+const MIN_NOTE_MS_DEFAULT     = 100
+
+// Profils de réglages segmentation
+const ACC_PROFILES = {
+  legato:  { label: 'Phrasé legato',    clarityThreshold: 0.75, gateLevel: 0.015, silenceDurationMs: 80, noteJumpCents: 50, minNoteDurationMs: 120 },
+  detache: { label: 'Détaché',          clarityThreshold: 0.82, gateLevel: 0.02,  silenceDurationMs: 50, noteJumpCents: 30, minNoteDurationMs: 80  },
+  rapide:  { label: 'Articulé rapide',  clarityThreshold: 0.85, gateLevel: 0.025, silenceDurationMs: 30, noteJumpCents: 25, minNoteDurationMs: 50  },
+}
+const ACC_PROFILE_KEYS = ['legato', 'detache', 'rapide', 'custom']
+
+// Détection : si l'utilisateur a déjà des réglages personnalisés en localStorage
+// sans clé acc_profile, on passe en 'custom' pour ne pas écraser ses valeurs.
+function _readInitialProfile() {
+  const p = localStorage.getItem('acc_profile')
+  if (ACC_PROFILE_KEYS.includes(p)) return p
+  const hasLegacy = ['acc_clarity', 'acc_gate', 'acc_silence', 'acc_noteJump'].some(k => localStorage.getItem(k) !== null)
+  return hasLegacy ? 'custom' : 'detache'
+}
+
+function _initParam(profile, paramName, lsKey, fallback, parser) {
+  if (profile !== 'custom' && ACC_PROFILES[profile]) return ACC_PROFILES[profile][paramName]
+  const v = parser(localStorage.getItem(lsKey))
+  return isNaN(v) ? fallback : v
+}
 const REFERENTIELS            = ['tempere', '5-limite', 'utilisateur']
 const INTERVAL_NAMES          = [
   'Seconde mineure','Seconde majeure','Tierce mineure','Tierce majeure',
@@ -464,6 +488,37 @@ function TemperamentKnob({ label, value, onChange, disabled = false }) {
   )
 }
 
+// ─── Sélecteur de profil de détection ────────────────────────────────────────────
+function ProfileSelector({ profile, onChange, compact = false }) {
+  const options = [
+    ['legato',  'Phrasé legato'],
+    ['detache', 'Détaché'],
+    ['rapide',  'Articulé rapide'],
+    ['custom',  'Personnalisé'],
+  ]
+  return (
+    <div className={`grid grid-cols-2 gap-1.5 ${compact ? '' : ''}`}>
+      {options.map(([k, label]) => {
+        const active = profile === k
+        return (
+          <button
+            key={k}
+            onClick={() => onChange(k)}
+            className="rounded-md border font-bold cursor-pointer transition-colors"
+            style={{
+              padding: compact ? '5px 6px' : '7px 8px',
+              fontSize: compact ? 11 : 12,
+              borderColor: active ? '#FF8B3D' : 'var(--border-c)',
+              background:  active ? 'rgba(255,139,61,0.12)' : 'var(--surface-2)',
+              color:       active ? '#FF8B3D' : 'var(--text-muted)',
+            }}
+          >{label}</button>
+        )
+      })}
+    </div>
+  )
+}
+
 // ─── Composant principal ─────────────────────────────────────────────────────────
 export default function AccordeurPage() {
   const [searchParams] = useSearchParams()
@@ -475,11 +530,13 @@ export default function AccordeurPage() {
   const [seuil,       setSeuil]       = useState(() => { const v = parseInt(localStorage.getItem('acc_seuil')); return isNaN(v) ? SEUIL_DEFAULT : v })
   const [structureId, setStructureId] = useState(null)
 
-  const [silenceDurationMs, setSilenceDurationMs] = useState(() => { const v = parseInt(localStorage.getItem('acc_silence')); return isNaN(v) ? SILENCE_MS_DEFAULT : v })
-  const [noteJumpCents,     setNoteJumpCents]     = useState(() => { const v = parseInt(localStorage.getItem('acc_noteJump')); return isNaN(v) ? NOTE_JUMP_CENTS_DEFAULT : v })
-  const [clarityThreshold,  setClarityThreshold]  = useState(() => { const v = parseFloat(localStorage.getItem('acc_clarity')); return isNaN(v) ? 0.82 : v })
-  const [gateLevel,         setGateLevel]         = useState(() => { const v = parseFloat(localStorage.getItem('acc_gate')); return isNaN(v) ? 0.02 : v })
-  const gateLevelRef = useRef(0.02)
+  const [profile,           setProfile]           = useState(_readInitialProfile)
+  const [silenceDurationMs, setSilenceDurationMs] = useState(() => _initParam(_readInitialProfile(), 'silenceDurationMs', 'acc_silence',     SILENCE_MS_DEFAULT,      parseInt))
+  const [noteJumpCents,     setNoteJumpCents]     = useState(() => _initParam(_readInitialProfile(), 'noteJumpCents',     'acc_noteJump',    NOTE_JUMP_CENTS_DEFAULT, parseInt))
+  const [clarityThreshold,  setClarityThreshold]  = useState(() => _initParam(_readInitialProfile(), 'clarityThreshold',  'acc_clarity',     0.82,                    parseFloat))
+  const [gateLevel,         setGateLevel]         = useState(() => _initParam(_readInitialProfile(), 'gateLevel',         'acc_gate',        0.02,                    parseFloat))
+  const [minNoteDurationMs, setMinNoteDurationMs] = useState(() => _initParam(_readInitialProfile(), 'minNoteDurationMs', 'acc_minDuration', MIN_NOTE_MS_DEFAULT,     parseInt))
+  const gateLevelRef = useRef(gateLevel)
 
   const [modeLive,    setModeLive]   = useState(true)
   const [liveNote,    setLiveNote]   = useState(null)
@@ -585,7 +642,7 @@ export default function AccordeurPage() {
     serieRef.current = s
     const struct    = [...DEFAULT_STRUCTURES, ...structures].find(x => x.id === structureId)
     const tonikMidi = struct ? (noteNameToPC(struct.toniques[0]?.tonique ?? 'Do') + 60) : 60
-    const segs      = segmenter(s, diapason, { silenceDurationMs, noteJumpCents })
+    const segs      = segmenter(s, diapason, { silenceDurationMs, noteJumpCents, minNoteDurationMs })
     const notesCalc = calculerEcarts(segs, referentiel, tonikMidi, diapason, userTemperament)
     const courbeB   = courbebrute(s, referentiel, tonikMidi, diapason, userTemperament)
     setNotes(notesCalc)
@@ -593,12 +650,12 @@ export default function AccordeurPage() {
     setScoreP(scorePedagogique(notesCalc, seuil))
     setScoreQ(scoreQualite(notesCalc))
     setDirty(false)
-  }, [clarityThreshold, gateLevel, referentiel, seuil, silenceDurationMs, noteJumpCents, diapason, structureId, structures, userTemperament])
+  }, [clarityThreshold, gateLevel, referentiel, seuil, silenceDurationMs, noteJumpCents, minNoteDurationMs, diapason, structureId, structures, userTemperament])
 
   useEffect(() => {
     if (!audioBufferRef.current) return
     setDirty(true)
-  }, [clarityThreshold, gateLevel, referentiel, seuil, silenceDurationMs, noteJumpCents, diapason, structureId, structures, userTemperament])
+  }, [clarityThreshold, gateLevel, referentiel, seuil, silenceDurationMs, noteJumpCents, minNoteDurationMs, diapason, structureId, structures, userTemperament])
 
   useEffect(() => {
     const struct = [...DEFAULT_STRUCTURES, ...structures].find(x => x.id === structureId)
@@ -641,10 +698,34 @@ export default function AccordeurPage() {
   useEffect(() => { localStorage.setItem(USER_TEMP_KEY,    JSON.stringify(userTemperament)) }, [userTemperament])
   useEffect(() => { localStorage.setItem(USER_PRESETS_KEY, JSON.stringify(userPresets)) }, [userPresets])
   useEffect(() => { localStorage.setItem('acc_seuil',    seuil) }, [seuil])
-  useEffect(() => { localStorage.setItem('acc_silence',  silenceDurationMs) }, [silenceDurationMs])
-  useEffect(() => { localStorage.setItem('acc_noteJump', noteJumpCents) }, [noteJumpCents])
-  useEffect(() => { localStorage.setItem('acc_clarity',  clarityThreshold) }, [clarityThreshold])
-  useEffect(() => { localStorage.setItem('acc_gate',     gateLevel) }, [gateLevel])
+  useEffect(() => { localStorage.setItem('acc_silence',     silenceDurationMs) }, [silenceDurationMs])
+  useEffect(() => { localStorage.setItem('acc_noteJump',    noteJumpCents) },     [noteJumpCents])
+  useEffect(() => { localStorage.setItem('acc_clarity',     clarityThreshold) },  [clarityThreshold])
+  useEffect(() => { localStorage.setItem('acc_gate',        gateLevel) },         [gateLevel])
+  useEffect(() => { localStorage.setItem('acc_minDuration', minNoteDurationMs) }, [minNoteDurationMs])
+  useEffect(() => { localStorage.setItem('acc_profile',     profile) },           [profile])
+
+  // Application d'un profil prédéfini : applique les 5 valeurs et bascule le mode.
+  // 'custom' : conserve les valeurs courantes, réactive les sliders.
+  const applyProfile = useCallback((name) => {
+    if (name === 'custom') { setProfile('custom'); return }
+    const p = ACC_PROFILES[name]
+    if (!p) return
+    setProfile(name)
+    setClarityThreshold(p.clarityThreshold)
+    setGateLevel(p.gateLevel)
+    gateLevelRef.current = p.gateLevel
+    setSilenceDurationMs(p.silenceDurationMs)
+    setNoteJumpCents(p.noteJumpCents)
+    setMinNoteDurationMs(p.minNoteDurationMs)
+  }, [])
+
+  // Setters utilisateur (sliders) : modifier manuellement bascule le profil sur 'custom'.
+  const setSilenceManual    = useCallback((v) => { setSilenceDurationMs(v); setProfile('custom') }, [])
+  const setNoteJumpManual   = useCallback((v) => { setNoteJumpCents(v);     setProfile('custom') }, [])
+  const setClarityManual    = useCallback((v) => { setClarityThreshold(v);  setProfile('custom') }, [])
+  const setGateManual       = useCallback((v) => { setGateLevel(v); gateLevelRef.current = v; setProfile('custom') }, [])
+  const setMinDurationManual = useCallback((v) => { setMinNoteDurationMs(v); setProfile('custom') }, [])
 
   useEffect(() => {
     demarrerLive()
@@ -737,7 +818,7 @@ export default function AccordeurPage() {
     const serieCalc = analyserBuffer(audioBuffer, { clarityThreshold, rmsGate: gateLevel })
     const struct    = [...DEFAULT_STRUCTURES, ...structures].find(s => s.id === structureId)
     const tonikMidi = struct ? (noteNameToPC(struct.toniques[0]?.tonique ?? 'Do') + 60) : 60
-    const segments  = segmenter(serieCalc, diapason, { silenceDurationMs, noteJumpCents })
+    const segments  = segmenter(serieCalc, diapason, { silenceDurationMs, noteJumpCents, minNoteDurationMs })
     const notesAv   = calculerEcarts(segments, referentiel, tonikMidi, diapason, userTemperament)
     const courbeB   = courbebrute(serieCalc, referentiel, tonikMidi, diapason, userTemperament)
 
@@ -750,7 +831,7 @@ export default function AccordeurPage() {
     setScoreQ(scoreQualite(notesAv))
     setDirty(false)
     setPhase('resultats')
-  }, [structures, structureId, referentiel, diapason, seuil, silenceDurationMs, noteJumpCents, clarityThreshold, gateLevel])
+  }, [structures, structureId, referentiel, diapason, seuil, silenceDurationMs, noteJumpCents, minNoteDurationMs, clarityThreshold, gateLevel])
 
   const demarrerLive = useCallback(async () => {
     setErreur(null)
@@ -843,7 +924,7 @@ export default function AccordeurPage() {
       const struct    = [...DEFAULT_STRUCTURES, ...structures].find(s => s.id === structureId)
       const tonikMidi = struct ? (noteNameToPC(struct.toniques[0]?.tonique ?? 'Do') + 60) : 60
       const serieCalc = analyserBuffer(audioBuffer, { clarityThreshold, rmsGate: gateLevel })
-      const segments  = segmenter(serieCalc, diapason, { silenceDurationMs, noteJumpCents })
+      const segments  = segmenter(serieCalc, diapason, { silenceDurationMs, noteJumpCents, minNoteDurationMs })
       const notesAv   = calculerEcarts(segments, referentiel, tonikMidi, diapason, userTemperament)
       const courbeB   = courbebrute(serieCalc, referentiel, tonikMidi, diapason, userTemperament)
 
@@ -859,7 +940,7 @@ export default function AccordeurPage() {
       setErreur('Erreur lecture fichier : ' + e.message)
       setPhase('pret')
     }
-  }, [structures, structureId, referentiel, diapason, seuil, silenceDurationMs, noteJumpCents, clarityThreshold, gateLevel])
+  }, [structures, structureId, referentiel, diapason, seuil, silenceDurationMs, noteJumpCents, minNoteDurationMs, clarityThreshold, gateLevel])
 
   const sauvegarderResultats = useCallback(() => {
     const struct = structures.find(s => s.id === structureId)
@@ -1105,33 +1186,58 @@ export default function AccordeurPage() {
               <details className="mb-4">
                 <summary className="cursor-pointer text-xs font-semibold text-app-muted list-none mb-2">Réglages segmentation</summary>
                 <div className="mt-2">
-                  <div className="flex gap-2.5 items-end mb-3">
-                    {[
-                      { label: 'Silence', val: silenceDurationMs, set: setSilenceDurationMs, min: 20, max: 300, step: 5, unit: 'ms', type: 'int' },
-                      { label: 'Saut note', val: noteJumpCents, set: setNoteJumpCents, min: 20, max: 200, step: 5, unit: '¢', type: 'int' },
-                      { label: 'Gate RMS', val: gateLevel, set: (v) => { setGateLevel(v); gateLevelRef.current = v }, min: 0, max: 0.15, step: 0.005, unit: '', type: 'float' },
-                    ].map(({ label, val, set, min, max, step, unit, type }) => (
-                      <label key={label} className="text-xs text-app-muted flex-1">
-                        {label}
-                        <div className="flex items-center gap-1 mt-1">
-                          <input type="number" min={min} max={max} step={step} value={val}
-                            onChange={e => { const v = type === 'int' ? parseInt(e.target.value) : parseFloat(e.target.value); if (!isNaN(v)) set(v) }}
-                            className="w-full bg-app text-app border border-app rounded-md px-2 py-1.5 text-sm font-bold" />
-                          {unit && <span className="text-app-muted text-xs whitespace-nowrap">{unit}</span>}
-                        </div>
-                      </label>
-                    ))}
+                  {/* Sélecteur de profil */}
+                  <div className="mb-3">
+                    <div className="text-xs text-app-muted mb-1.5 font-semibold">Profil de détection</div>
+                    <ProfileSelector profile={profile} onChange={applyProfile} />
                   </div>
-                  <label className="text-xs text-app-muted">
-                    Seuil clarté
-                    <div className="flex items-center gap-2 mt-1">
-                      <input type="range" min="0.5" max="1.0" step="0.01" value={clarityThreshold}
-                        onChange={e => setClarityThreshold(Number(e.target.value))}
-                        className="flex-1" style={{ accentColor: '#FF8B3D' }} />
-                      <span className="text-app font-bold min-w-9">{clarityThreshold.toFixed(2)}</span>
-                    </div>
-                    <div className="text-app-muted text-[10px] mt-0.5">Haut = moins de faux positifs</div>
-                  </label>
+
+                  {(() => {
+                    const locked = profile !== 'custom'
+                    const lockedStyle = locked ? { opacity: 0.5, cursor: 'not-allowed' } : {}
+                    return (
+                      <>
+                        <div className="flex gap-2.5 items-end mb-3">
+                          {[
+                            { label: 'Silence',   val: silenceDurationMs, set: setSilenceManual,     min: 20, max: 300,  step: 5,     unit: 'ms', type: 'int'   },
+                            { label: 'Saut note', val: noteJumpCents,     set: setNoteJumpManual,    min: 20, max: 200,  step: 5,     unit: '¢',  type: 'int'   },
+                            { label: 'Gate RMS',  val: gateLevel,         set: setGateManual,        min: 0,  max: 0.15, step: 0.005, unit: '',   type: 'float' },
+                          ].map(({ label, val, set, min, max, step, unit, type }) => (
+                            <label key={label} className="text-xs text-app-muted flex-1" style={lockedStyle}>
+                              {label}
+                              <div className="flex items-center gap-1 mt-1">
+                                <input type="number" min={min} max={max} step={step} value={val} disabled={locked}
+                                  onChange={e => { const v = type === 'int' ? parseInt(e.target.value) : parseFloat(e.target.value); if (!isNaN(v)) set(v) }}
+                                  className="w-full bg-app text-app border border-app rounded-md px-2 py-1.5 text-sm font-bold" />
+                                {unit && <span className="text-app-muted text-xs whitespace-nowrap">{unit}</span>}
+                              </div>
+                            </label>
+                          ))}
+                        </div>
+                        <label className="text-xs text-app-muted block mb-3" style={lockedStyle}>
+                          Seuil clarté
+                          <div className="flex items-center gap-2 mt-1">
+                            <input type="range" min="0.5" max="1.0" step="0.01" value={clarityThreshold} disabled={locked}
+                              onChange={e => setClarityManual(Number(e.target.value))}
+                              className="flex-1" style={{ accentColor: '#FF8B3D' }} />
+                            <span className="text-app font-bold min-w-9">{clarityThreshold.toFixed(2)}</span>
+                          </div>
+                          <div className="text-app-muted text-[10px] mt-0.5">Haut = moins de faux positifs</div>
+                        </label>
+                        <label className="text-xs text-app-muted block" style={lockedStyle}>
+                          Durée min
+                          <div className="flex items-center gap-2 mt-1">
+                            <input type="range" min="30" max="300" step="5" value={minNoteDurationMs} disabled={locked}
+                              onChange={e => setMinDurationManual(parseInt(e.target.value))}
+                              className="flex-1" style={{ accentColor: '#FF8B3D' }} />
+                            <span className="text-app font-bold min-w-12 text-right">{minNoteDurationMs} ms</span>
+                          </div>
+                          <div className="text-app-muted text-[10px] mt-0.5">Notes plus courtes ignorées</div>
+                        </label>
+                      </>
+                    )
+                  })()}
+
                   {phase === 'resultats' && (
                     <InfoTip text="Modification active le bouton ↻ Recalculer sur la portée." />
                   )}
@@ -1496,6 +1602,12 @@ export default function AccordeurPage() {
                 μ <strong className="text-app">{muMoyen}¢</strong>
                 &nbsp;&nbsp;σ <strong className="text-app">{sigmaMoyen}¢</strong>
               </span>
+            </div>
+
+            {/* Sélecteur de profil — ajuste la détection à la volée, recalculer pour appliquer */}
+            <div className="mb-3">
+              <div className="text-[10px] text-app-muted mb-1 font-semibold uppercase tracking-wider">Profil de détection</div>
+              <ProfileSelector profile={profile} onChange={applyProfile} compact />
             </div>
 
             <div className="flex gap-1.5 mb-3">

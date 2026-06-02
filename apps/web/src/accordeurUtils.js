@@ -277,12 +277,13 @@ export function analyserBuffer(audioBuffer, opts = {}) {
 /**
  * Segmente la série temporelle en notes.
  * @param {number} diapason
- * @param {object} opts  { silenceDurationMs, noteJumpCents }
+ * @param {object} opts  { silenceDurationMs, noteJumpCents, minNoteDurationMs }
  * @returns {Array<{nom, octave, debutMs, finMs, frames: [{tMs, hz}]}>}
  */
 export function segmenter(serie, diapason = 442, opts = {}) {
-  const silenceDurationMs = opts.silenceDurationMs ?? SILENCE_DURATION_MS
-  const noteJumpCents     = opts.noteJumpCents     ?? NOTE_JUMP_CENTS
+  const silenceDurationMs  = opts.silenceDurationMs  ?? SILENCE_DURATION_MS
+  const noteJumpCents      = opts.noteJumpCents      ?? NOTE_JUMP_CENTS
+  const minNoteDurationMs  = opts.minNoteDurationMs  ?? 100
 
   const segments = []
   let courant    = null
@@ -337,7 +338,7 @@ export function segmenter(serie, diapason = 442, opts = {}) {
     segments.push(_finaliserSegment(courant, diapason))
   }
 
-  return segments.filter(s => s.frames.length >= 3 && (s.finMs - s.debutMs) >= 100)
+  return segments.filter(s => s.frames.length >= 3 && (s.finMs - s.debutMs) >= minNoteDurationMs)
 }
 
 function _finaliserSegment(seg, diapason) {
