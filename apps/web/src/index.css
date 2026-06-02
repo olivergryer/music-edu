@@ -84,6 +84,18 @@ button:focus-visible, a:focus-visible {
   50%       { opacity: 1; }
 }
 
+/* Scrollbar horizontale toujours visible (utilisée pour la portée accordeur) */
+.scroll-x-hint {
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: #FF8B3D var(--surface-2);
+}
+.scroll-x-hint::-webkit-scrollbar          { height: 8px; -webkit-appearance: none; }
+.scroll-x-hint::-webkit-scrollbar-track    { background: var(--surface-2); border-radius: 4px; }
+.scroll-x-hint::-webkit-scrollbar-thumb    { background: #FF8B3D; border-radius: 4px; }
+.scroll-x-hint::-webkit-scrollbar-thumb:hover { background: #ff7a1f; }
+
 /* Mode Extrême — zoom in + fade */
 @keyframes extreme-pop {
   0%   { opacity: 0; transform: scale(0.3); }

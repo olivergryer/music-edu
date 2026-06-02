@@ -122,8 +122,23 @@ function svgEl(tag, attrs) {
 
 export default function AccordeurStaff({ notes, transpoKey = 'C', tonicName = 'Do', containerWidth = 500, height = 300, notePx = 52 }) {
   const ref = useRef(null)
+  const scrollRef = useRef(null)
+  const [measuredW, setMeasuredW] = useState(containerWidth)
   const { dark } = useTheme()
   const C = themePalette(dark)
+
+  // Largeur réelle disponible (mobile parent < containerWidth prop)
+  useEffect(() => {
+    if (!scrollRef.current) return
+    const update = () => {
+      const w = scrollRef.current?.clientWidth ?? 0
+      if (w > 0) setMeasuredW(w)
+    }
+    update()
+    const ro = new ResizeObserver(update)
+    ro.observe(scrollRef.current)
+    return () => ro.disconnect()
+  }, [])
 
   const [tog, setTog] = useState(() => {
     try {
@@ -145,11 +160,15 @@ export default function AccordeurStaff({ notes, transpoKey = 'C', tonicName = 'D
   const staveMarginPx = isMobile ? 100 : STAVE_MARGIN
 
   const displayedNotes = notes?.slice(0, MAX_NOTES_DISPLAY) ?? []
-  // Largeur proportionnelle à la durée totale (compact), plancher par note
   const totalBeats = displayedNotes.reduce(
     (a, n) => a + durationToVex(Math.max(200, n.finMs - n.debutMs)).beats, 0)
-  const contentW   = Math.max(totalBeats * beatPx, displayedNotes.length * noteFloorPx)
+  // Largeur naturelle (espacement compact) vs largeur dispo dans la card
+  const naturalContent = Math.max(totalBeats * beatPx, displayedNotes.length * noteFloorPx)
+  const availableContent = Math.max(0, measuredW - staveMarginPx)
+  // Si naturel ≤ dispo → étirer pour remplir. Sinon garder naturel (scroll).
+  const contentW    = Math.max(naturalContent, availableContent)
   const staveWidth  = staveMarginPx + contentW
+  const overflows   = naturalContent > availableContent && availableContent > 0
 
   useEffect(() => {
     if (!ref.current || !displayedNotes.length) return
@@ -381,7 +400,7 @@ export default function AccordeurStaff({ notes, transpoKey = 'C', tonicName = 'D
           </button>
         ))}
       </div>
-      <div className="w-full overflow-x-auto overflow-y-hidden">
+      <div ref={scrollRef} className={overflows ? 'w-full scroll-x-hint' : 'w-full overflow-hidden'}>
         <div ref={ref} style={{ width: staveWidth, minWidth: staveWidth }} />
       </div>
     </div>
