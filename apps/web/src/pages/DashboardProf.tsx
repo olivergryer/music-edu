@@ -122,7 +122,8 @@ export default function DashboardProf() {
           const prog = e.progress ?? DEFAULT_PROGRESS
           const rank = getRank(prog.xp)
           return (
-            <div key={e.uid} className="bg-surface border border-app rounded-2xl px-5 py-4 mb-3">
+            <Link key={e.uid} to={`/dashboard/prof/eleve/${e.uid}`}
+              className="block bg-surface border border-app rounded-2xl px-5 py-4 mb-3 no-underline text-app hover:bg-surface-2 transition-colors cursor-pointer">
               <div className="flex justify-between items-center mb-3">
                 <div className="text-base font-bold text-app">{e.displayName}</div>
                 <div className="flex gap-2.5 items-center">
@@ -158,7 +159,7 @@ export default function DashboardProf() {
               ) : (
                 <div className="text-xs text-app-muted italic">Aucune session enregistrée.</div>
               )}
-            </div>
+            </Link>
           )
         })}
 
