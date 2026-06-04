@@ -5,6 +5,9 @@ import { signOut } from 'firebase/auth'
 import { db, auth } from '../lib/firebase'
 import { useAuth } from '../auth/AuthProvider'
 import useProgressFirebase, { TROPHIES, getNextRank } from '../hooks/useProgressFirebase'
+import { usePwaInstall } from '../hooks/usePwaInstall'
+import PwaInstallTutorial from '../components/PwaInstallTutorial'
+import PwaInAppBrowserOverlay from '../components/PwaInAppBrowserOverlay'
 
 interface HistoryEntry {
   date: string
@@ -36,6 +39,17 @@ export default function DashboardEleve() {
   const [teacherInput, setTeacherInput] = useState('')
   const [teacherMsg, setTeacherMsg] = useState('')
   const [teacherLoading, setTeacherLoading] = useState(false)
+  const pwa = usePwaInstall()
+  const [showPwaTuto, setShowPwaTuto] = useState(false)
+  const [showInApp, setShowInApp] = useState(false)
+
+  useEffect(() => {
+    if (pwa.shouldShowInAppWarning()) setShowInApp(true)
+    else if (pwa.shouldShowDashboard()) {
+      pwa.markDashboardShown()
+      setShowPwaTuto(true)
+    }
+  }, [pwa])
 
   const nextLv = getNextRank(xp)
   const xpInRank = xp - rank.xp
@@ -92,6 +106,8 @@ export default function DashboardEleve() {
 
   return (
     <div className="bg-app min-h-dvh flex flex-col items-center px-4 py-3 pb-10">
+      {showInApp && <PwaInAppBrowserOverlay pwa={pwa} onClose={() => setShowInApp(false)} />}
+      {showPwaTuto && !showInApp && <PwaInstallTutorial pwa={pwa} context="dashboard" onClose={() => setShowPwaTuto(false)} />}
       <div className="w-full max-w-xl">
 
         {/* Header */}

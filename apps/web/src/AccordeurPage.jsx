@@ -5,6 +5,7 @@ import { ThemeToggleInline } from './ThemeContext'
 import TourGuide from './TourGuide'
 import { PitchDetector } from 'pitchy'
 import AccordeurStaff from './AccordeurStaff'
+import TestPhaseWatermark from './TestPhaseWatermark'
 import ConsigneOverlay, { consigneSeen } from './ConsigneOverlay'
 import SpectrePaneau from './SpectrePaneau'
 import GenerateurAccord from './GenerateurAccord'
@@ -1030,6 +1031,7 @@ export default function AccordeurPage() {
 
   return (
     <div className="bg-app min-h-dvh flex flex-col items-center px-4 py-5">
+      <TestPhaseWatermark />
       <div className="w-full max-w-xl">
 
         {/* ── Header ── */}

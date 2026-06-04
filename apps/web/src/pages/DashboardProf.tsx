@@ -5,6 +5,9 @@ import { signOut } from 'firebase/auth'
 import { db, auth } from '../lib/firebase'
 import { useAuth } from '../auth/AuthProvider'
 import { getRank } from '../hooks/useProgressFirebase'
+import { usePwaInstall } from '../hooks/usePwaInstall'
+import PwaInstallTutorial from '../components/PwaInstallTutorial'
+import PwaInAppBrowserOverlay from '../components/PwaInAppBrowserOverlay'
 
 interface EleveProgress {
   xp: number
@@ -47,6 +50,17 @@ export default function DashboardProf() {
   const { user, profile } = useAuth()
   const [eleves, setEleves] = useState<EleveData[]>([])
   const [loading, setLoading] = useState(true)
+  const pwa = usePwaInstall()
+  const [showPwaTuto, setShowPwaTuto] = useState(false)
+  const [showInApp, setShowInApp] = useState(false)
+
+  useEffect(() => {
+    if (pwa.shouldShowInAppWarning()) setShowInApp(true)
+    else if (pwa.shouldShowDashboard()) {
+      pwa.markDashboardShown()
+      setShowPwaTuto(true)
+    }
+  }, [pwa])
 
   useEffect(() => {
     if (!user) return
@@ -73,6 +87,8 @@ export default function DashboardProf() {
 
   return (
     <div className="bg-app min-h-dvh flex flex-col items-center px-4 py-3 pb-10">
+      {showInApp && <PwaInAppBrowserOverlay pwa={pwa} onClose={() => setShowInApp(false)} />}
+      {showPwaTuto && !showInApp && <PwaInstallTutorial pwa={pwa} context="dashboard" onClose={() => setShowPwaTuto(false)} />}
       <div className="w-full max-w-2xl">
 
         {/* Header */}

@@ -1,9 +1,14 @@
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import useProgressFirebase from './hooks/useProgressFirebase'
+import { usePwaInstall } from './hooks/usePwaInstall'
 import { useAuth } from './auth/AuthProvider'
 import { useTheme } from './ThemeContext'
+import PwaInstallTutorial from './components/PwaInstallTutorial'
+import PwaInAppBrowserOverlay from './components/PwaInAppBrowserOverlay'
 import banniereDark from './assets/banniere_dark.svg'
 import banniereLight from './assets/banniere_light.svg'
+import { SHOW_TEST_BADGE } from './featureFlags'
 
 const MODULES = [
   { id: 'rythme',    label: 'Rythme',    desc: 'Lecture et reproduction rythmique', to: '/rythme',    active: true, color: '#4A6CF7' },
@@ -38,9 +43,20 @@ export default function HubPage() {
   const { xp, rank, streak, trophies } = useProgressFirebase()
   const { user, profile } = useAuth()
   const { dark } = useTheme()
+  const pwa = usePwaInstall()
+  const [showPwaTuto, setShowPwaTuto] = useState(false)
+  const [showInApp, setShowInApp] = useState(false)
+
+  useEffect(() => {
+    if (pwa.shouldShowInAppWarning()) setShowInApp(true)
+    else if (pwa.shouldShowHub()) setShowPwaTuto(true)
+  }, [pwa])
 
   return (
     <div className="bg-app min-h-dvh flex flex-col items-center px-5 py-12">
+
+      {showInApp && <PwaInAppBrowserOverlay pwa={pwa} onClose={() => setShowInApp(false)} />}
+      {showPwaTuto && !showInApp && <PwaInstallTutorial pwa={pwa} context="hub" onClose={() => setShowPwaTuto(false)} />}
 
       <div className="w-full max-w-2xl">
         <div className="mb-12">
@@ -50,6 +66,25 @@ export default function HubPage() {
             style={{ width: '100%', height: 'auto' }}
           />
         </div>
+
+        {SHOW_TEST_BADGE && (
+          <div
+            className="mb-5 rounded-xl px-4 py-3 flex items-center gap-3"
+            style={{
+              background: 'rgba(255,139,61,0.10)',
+              border: '1px solid rgba(255,139,61,0.35)',
+            }}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FF8B3D" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+              <path d="M12 9v4M12 17h.01" />
+              <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+            </svg>
+            <div style={{ lineHeight: 1.35 }}>
+              <div className="text-sm font-bold" style={{ color: '#FF8B3D' }}>Accordeur en phase de test</div>
+              <div className="text-xs text-app-muted">Module en cours de validation, retours bienvenus via la page Retours.</div>
+            </div>
+          </div>
+        )}
 
         <div className="grid gap-4 items-stretch" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))' }}>
           {MODULES.map(m => m.active

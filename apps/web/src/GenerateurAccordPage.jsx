@@ -8,6 +8,7 @@ import {
   centsTempere, hzToMidi, frameRMS, preEmphasis, HZ_MIN, HZ_MAX,
 } from './accordeurUtils'
 import { INSTRUMENTS, isOscillatorInstrument, loadInstrumentSamples, playChord, playChordOscillator } from './windEngine'
+import TestPhaseWatermark from './TestPhaseWatermark'
 
 function computeUserOffsets(chordMidis, rootName, userTemperament) {
   const rootPC = noteNameToPC(rootName)
@@ -393,6 +394,7 @@ export default function GenerateurAccordPage() {
 
   return (
     <div className="bg-app min-h-dvh flex flex-col items-center px-4 py-5">
+      <TestPhaseWatermark />
       <div className="w-full max-w-xl">
 
         {/* Header */}
