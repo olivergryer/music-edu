@@ -1488,7 +1488,9 @@ export default function RythmApp() {
     const bonus  = REVEAL_BONUS[revealBeat] / 100;
     const extremeMult = extremeMode ? 2 : 1;
     setScoreWasExtreme(extremeMode);
-    const earnedFinal = Math.round(combinedTotal * 100 * playable.length * (1 + bonus) * extremeMult);
+    // Plafond 100 pts par exercice (× bonus révélation × mode extrême), pour rester aligné
+    // avec act 3/4/5 et avec les autres modules. Avant : ×playableCount (4-8× trop élevé).
+    const earnedFinal = Math.round(combinedTotal * 100 * (1 + bonus) * extremeMult);
     setEarnedPts(earnedFinal);
     setTotalPts(prev => prev + earnedFinal);
 
@@ -1563,9 +1565,8 @@ export default function RythmApp() {
     // Act 1/2 : earnedPts est posé après le calcul de scores (1 tick plus tard) — on attend.
     if ((activity === 1 || activity === 2) && scores.length === 0) return;
     recordedPatternRef.current = pattern;
-    const playableCount = pattern.figs.filter(f => !f.rest).length || 1;
     const bonusMult     = 1 + REVEAL_BONUS[revealBeat] / 100;
-    const maxPtsLocal   = activity === 5 ? 100 : Math.round(playableCount * 100 * bonusMult * (scoreWasExtreme ? 2 : 1));
+    const maxPtsLocal   = activity === 5 ? 100 : Math.round(100 * bonusMult * (scoreWasExtreme ? 2 : 1));
     const pctLocal      = maxPtsLocal ? Math.round((earnedPts / maxPtsLocal) * 100) : 0;
     const medalLocal    = pctLocal >= 90 ? "🥇" : pctLocal >= 70 ? "🥈" : pctLocal >= 50 ? "🥉" : "🎯";
     addSession({ module: "rythme", xpEarned: earnedPts, medal: medalLocal, meta: { individual: true } });
@@ -2036,10 +2037,10 @@ export default function RythmApp() {
 
   // ── Calculs affichage ──────────────────────────────────────────────────────
   const playableCount = pattern?.figs.filter(f => !f.rest).length ?? 1;
-  const rawMax        = playableCount * 100;
   const bonusMult     = 1 + REVEAL_BONUS[revealBeat] / 100;
-  // Act 5 : earnedPts EST déjà un pourcentage (scoring partiel) → maxPts = 100.
-  const maxPts        = activity === 5 ? 100 : Math.round(rawMax * bonusMult * (scoreWasExtreme ? 2 : 1));
+  // Toutes activités : max théorique = 100 pts × bonus révélation × mode extrême.
+  // (Avant : act 1/2 × playableCount → 4-8× plus que les autres.)
+  const maxPts        = activity === 5 ? 100 : Math.round(100 * bonusMult * (scoreWasExtreme ? 2 : 1));
   const pct           = maxPts ? Math.round((earnedPts / maxPts) * 100) : 0;
   const medal         = pct >= 90 ? "🥇" : pct >= 70 ? "🥈" : pct >= 50 ? "🥉" : "🎯";
 
