@@ -87,26 +87,55 @@ export default function PwaInstallTutorial({ pwa, context, onClose }) {
   )
 }
 
+function InstallButton({ onClick }) {
+  return (
+    <button onClick={onClick}
+      style={{
+        width: '100%', padding: '13px 0', borderRadius: 14, border: 'none',
+        background: 'linear-gradient(135deg,#4A6CF7,#8B5CF6)', color: '#fff',
+        fontSize: 15, fontWeight: 800, cursor: 'pointer',
+      }}>
+      📥 Installer maintenant
+    </button>
+  )
+}
+
 function InstallInstructions({ pwa }) {
-  if (pwa.platform === 'android' && pwa.canTriggerInstall) {
+  const { platform, browser, canTriggerInstall, triggerInstall } = pwa
+
+  // ─── Bouton natif quand dispo (Chrome/Edge/Brave avec beforeinstallprompt) ──
+  if (canTriggerInstall) {
     return (
       <div style={{ marginBottom: 4 }}>
-        <button onClick={() => pwa.triggerInstall()}
-          style={{
-            width: '100%', padding: '13px 0', borderRadius: 14, border: 'none',
-            background: 'linear-gradient(135deg,#4A6CF7,#8B5CF6)', color: '#fff',
-            fontSize: 15, fontWeight: 800, cursor: 'pointer',
-          }}>
-          📥 Installer maintenant
-        </button>
+        <InstallButton onClick={() => triggerInstall()} />
         <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 8, lineHeight: 1.4 }}>
-          Tu peux aussi passer par Menu ⋮ → "Installer l'application".
+          Tu peux aussi passer par le menu de ton navigateur (⋮ ou ⋯) → « Installer l'application ».
         </p>
       </div>
     )
   }
 
-  if (pwa.platform === 'ios') {
+  // ─── iOS : pas de prompt natif, jamais. Instructions par navigateur ─────────
+  if (platform === 'ios') {
+    if (browser === 'chrome') {
+      return (
+        <div style={{ textAlign: 'left', display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 4 }}>
+          <Step n={1} text="Appuie sur l'icône Partager (en haut à droite de Chrome)." icon={<ShareIcon />} />
+          <Step n={2} text="Fais défiler et choisis « Sur l'écran d'accueil »." icon="🏠" />
+          <Step n={3} text="Confirme avec « Ajouter »." icon="✓" />
+        </div>
+      )
+    }
+    if (browser === 'firefox') {
+      return (
+        <div style={{ textAlign: 'left', display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 4 }}>
+          <Step n={1} text="Appuie sur le menu ⋮ en bas à droite." icon="⋮" />
+          <Step n={2} text="Choisis « Partager » puis « Sur l'écran d'accueil »." icon="🏠" />
+          <Step n={3} text="Confirme avec « Ajouter »." icon="✓" />
+        </div>
+      )
+    }
+    // Safari par défaut (et autres iOS)
     return (
       <div style={{ textAlign: 'left', display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 4 }}>
         <Step n={1} text="Appuie sur l'icône Partager en bas de Safari." icon={<ShareIcon />} />
@@ -116,22 +145,63 @@ function InstallInstructions({ pwa }) {
     )
   }
 
-  if (pwa.platform === 'desktop' && pwa.canTriggerInstall) {
+  // ─── Android sans prompt natif ─────────────────────────────────────────────
+  if (platform === 'android') {
+    if (browser === 'chrome' || browser === 'edge' || browser === 'brave' || browser === 'opera') {
+      return (
+        <div style={{ textAlign: 'left', display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 4 }}>
+          <Step n={1} text="Appuie sur le menu ⋮ en haut à droite." icon="⋮" />
+          <Step n={2} text="Choisis « Installer l'application » ou « Ajouter à l'écran d'accueil »." icon="📥" />
+          <Step n={3} text="Confirme avec « Installer »." icon="✓" />
+        </div>
+      )
+    }
+    if (browser === 'samsung') {
+      return (
+        <div style={{ textAlign: 'left', display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 4 }}>
+          <Step n={1} text="Appuie sur le menu ☰ en bas." icon="☰" />
+          <Step n={2} text="Choisis « Ajouter la page à »." icon="➕" />
+          <Step n={3} text="Sélectionne « Écran d'accueil »." icon="🏠" />
+        </div>
+      )
+    }
+    // Firefox Android / autres
     return (
-      <div style={{ marginBottom: 4 }}>
-        <button onClick={() => pwa.triggerInstall()}
-          style={{
-            width: '100%', padding: '13px 0', borderRadius: 14, border: 'none',
-            background: 'linear-gradient(135deg,#4A6CF7,#8B5CF6)', color: '#fff',
-            fontSize: 15, fontWeight: 800, cursor: 'pointer',
-          }}>
-          📥 Installer maintenant
-        </button>
+      <div style={{ textAlign: 'left', display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 4 }}>
+        <Step n={1} text="Appuie sur le menu ⋮." icon="⋮" />
+        <Step n={2} text="Choisis « Installer » ou « Ajouter à l'écran d'accueil »." icon="📥" />
       </div>
     )
   }
 
-  // Fallback (Android sans prompt, Desktop sans prompt, autre)
+  // ─── Desktop sans prompt natif ─────────────────────────────────────────────
+  if (platform === 'desktop') {
+    if (browser === 'chrome' || browser === 'edge' || browser === 'brave') {
+      return (
+        <div style={{ fontSize: 13, color: 'var(--text)', lineHeight: 1.5, textAlign: 'left' }}>
+          Clique sur l'icône <b>Installer</b> dans la barre d'adresse (à droite de l'URL),
+          ou ouvre le menu <b>⋮</b> → <b>« Installer Tessitura »</b>.
+        </div>
+      )
+    }
+    if (browser === 'safari') {
+      return (
+        <div style={{ fontSize: 13, color: 'var(--text)', lineHeight: 1.5, textAlign: 'left' }}>
+          Dans le menu <b>Fichier</b> → <b>« Ajouter au Dock »</b> (macOS Sonoma ou plus récent).
+        </div>
+      )
+    }
+    if (browser === 'firefox') {
+      return (
+        <div style={{ fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.5, textAlign: 'left' }}>
+          Firefox ne supporte pas l'installation PWA directe.
+          Ouvre Tessitura dans <b>Chrome</b>, <b>Edge</b> ou <b>Safari</b> pour pouvoir l'installer.
+        </div>
+      )
+    }
+  }
+
+  // Fallback générique (autres / unknown)
   return (
     <div style={{ fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.5, textAlign: 'left' }}>
       Ouvre le menu de ton navigateur (⋮ ou ⋯) puis cherche{' '}

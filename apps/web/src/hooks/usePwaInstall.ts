@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { localDateStr } from './progressLogic'
 
 export type Platform = 'ios' | 'android' | 'desktop' | 'unknown'
+export type Browser = 'chrome' | 'safari' | 'firefox' | 'edge' | 'samsung' | 'opera' | 'brave' | 'other'
 export type InAppBrowser = 'instagram' | 'facebook' | 'tiktok' | null
 
 interface BeforeInstallPromptEvent extends Event {
@@ -20,6 +21,20 @@ function detectPlatform(): Platform {
   if (/iPad|iPhone|iPod/.test(ua) && !(window as unknown as { MSStream?: unknown }).MSStream) return 'ios'
   if (/Android/.test(ua)) return 'android'
   return 'desktop'
+}
+
+function detectBrowser(): Browser {
+  if (typeof navigator === 'undefined') return 'other'
+  const ua = navigator.userAgent
+  // Ordre important : Edge/Opera/Brave/Samsung contiennent souvent "Chrome" dans leur UA.
+  if (/Edg\//i.test(ua)) return 'edge'
+  if (/OPR\/|Opera/i.test(ua)) return 'opera'
+  if (/SamsungBrowser/i.test(ua)) return 'samsung'
+  if (/Brave/i.test(ua) || (navigator as unknown as { brave?: unknown }).brave) return 'brave'
+  if (/CriOS|Chrome/i.test(ua)) return 'chrome'  // CriOS = Chrome iOS
+  if (/FxiOS|Firefox/i.test(ua)) return 'firefox'
+  if (/Safari/i.test(ua)) return 'safari'
+  return 'other'
 }
 
 function detectInAppBrowser(): InAppBrowser {
@@ -46,6 +61,7 @@ function writeFlag(key: string, value: string) {
 
 export function usePwaInstall() {
   const [platform] = useState<Platform>(() => detectPlatform())
+  const [browser] = useState<Browser>(() => detectBrowser())
   const [inAppBrowser] = useState<InAppBrowser>(() => detectInAppBrowser())
   const [isStandalone] = useState<boolean>(() => detectStandalone())
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null)
@@ -95,6 +111,7 @@ export function usePwaInstall() {
 
   return {
     platform,
+    browser,
     inAppBrowser,
     isStandalone,
     canTriggerInstall: installPrompt !== null,
