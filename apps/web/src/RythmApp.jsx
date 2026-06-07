@@ -186,8 +186,8 @@ const BEAT_WEIGHTS = {
   3: [2.5, 1.6, 1.6],      // 3/4, 9/8
   2: [2.5, 1.6],           // 2/4, 6/8
 };
-// Activité 5 : accentuation plus douce (rythme tenu, écoute longue).
-const BEAT_WEIGHTS_ACT5 = {
+// Activités 3, 4, 5 : accentuation plus douce (rythme tenu / écoute longue / choix).
+const BEAT_WEIGHTS_SOFT = {
   4: [2.0, 1.4, 1.8, 1.4],
   3: [2.0, 1.4, 1.4],
   2: [2.0, 1.4],
@@ -199,9 +199,9 @@ function beatsPerMeasure(timeSig) {
 }
 // Renvoie le multiplicateur de volume pour une note d'onset `ts` (ms) avec un
 // `beatMs` (durée d'un temps musical). Off-beat → 1.0.
-function beatVolMult(timeSig, ts, beatMs, isAct5 = false) {
+function beatVolMult(timeSig, ts, beatMs, softBeats = false) {
   const bpm = beatsPerMeasure(timeSig);
-  const table = isAct5 ? BEAT_WEIGHTS_ACT5 : BEAT_WEIGHTS;
+  const table = softBeats ? BEAT_WEIGHTS_SOFT : BEAT_WEIGHTS;
   const weights = table[bpm] ?? [1, 1, 1, 1];
   const pos = ts / beatMs;
   const idx = Math.round(pos);
@@ -474,10 +474,10 @@ const ACT_SHORT = {
 
 // Consignes synthétiques affichées à l'arrivée sur chaque activité (overlay).
 const CONSIGNES_RYTHME = {
-  1: ["Un rythme s'affiche sur la portée.", "Reproduis-le en tapant (ou au micro) au bon moment, en suivant le tempo."],
+  1: ["Un rythme s'affiche sur la portée.", "Reproduis-le en tapant (ou au micro) en suivant le tempo. Commence après le décompte de 4 temps."],
   2: ["Écoute le rythme : la portée reste cachée.", "Reproduis-le ensuite en tapant au bon moment."],
-  3: ["Écoute le rythme joué.", "Choisis, parmi les 4 portées, celle qui correspond."],
-  4: ["Observe la portée affichée.", "Écoute les 4 lectures A/B/C/D et choisis celle qui correspond."],
+  3: ["Écoute le rythme joué (après un décompte de 2 temps).", "Choisis, parmi les 4 portées, celle qui correspond."],
+  4: ["Observe la portée affichée.", "Écoute les 4 lectures A/B/C/D (clic = lecture avec décompte visuel et flash) et choisis celle qui correspond."],
   5: ["Écoute le rythme, puis reconstitue-le en posant les cellules sur la portée.", "Valide pour voir ton score."],
 };
 const RYTHME_SOUND_WARNING = { tone: "sound", text: "Monte le volume et désactive le mode silencieux de ton appareil — le son est nécessaire." };
@@ -567,7 +567,7 @@ const CONSIGNE_CONTROLS = {
   tapSound: { icon: "🥁", name: "Son du tap", desc: "Active ou coupe le son joué à chacune de tes frappes." },
 };
 
-const TUTO_TOTAL = 4;
+const TUTO_TOTAL = 3;
 
 function TutorialOverlay({ onDone, niveauOrder, activity: initActivity, inputMode: initInputMode }) {
   const [slide, setSlide] = useState(0);
@@ -585,11 +585,7 @@ function TutorialOverlay({ onDone, niveauOrder, activity: initActivity, inputMod
   const SLIDES = [
     {
       title: "Bienvenue dans Rythme !",
-      body: "Entraîne-toi à reproduire et reconnaître des rythmes musicaux, du débutant au virtuose.",
-    },
-    {
-      title: "Quel exercice ?",
-      body: "Clique sur l'activité que tu veux pratiquer.",
+      body: "Entraîne-toi à reproduire et reconnaître des rythmes musicaux, du débutant au virtuose. Choisis ton activité ci-dessous.",
     },
     {
       title: "Tap ou Micro ?",
@@ -606,19 +602,6 @@ function TutorialOverlay({ onDone, niveauOrder, activity: initActivity, inputMod
   /* ── Visuals inline ────────────────────────── */
   function renderVisual() {
     if (slide === 0) {
-      return (
-        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, width:280 }}>
-          {[1,2,3,4,5].map(id => (
-            <div key={id} style={{ background:'rgba(74,108,247,0.1)', border:'2px solid rgba(74,108,247,0.4)', borderRadius:14, padding:'16px 8px 12px', display:'flex', flexDirection:'column', alignItems:'center', color:'#c084fc' }}>
-              {ACT_ICONS[id]}
-              <div style={{ fontSize:10, color:'#a5b4fc', marginTop:8, lineHeight:1.3, textAlign:'center' }}>{ACTIVITIES[id-1].label}</div>
-            </div>
-          ))}
-        </div>
-      );
-    }
-
-    if (slide === 1) {
       return (
         <div style={{ display:'flex', flexDirection:'column', gap:8, width:280 }}>
           {[1,2,3,4,5].map(i => {
@@ -645,7 +628,7 @@ function TutorialOverlay({ onDone, niveauOrder, activity: initActivity, inputMod
       );
     }
 
-    if (slide === 2) {
+    if (slide === 1) {
       const micColor = dark ? '#9ca3af' : '#6b7280';
       const tapSel = tutoInputMode === "tap";
       const micSel = tutoInputMode === "mic";
@@ -677,7 +660,7 @@ function TutorialOverlay({ onDone, niveauOrder, activity: initActivity, inputMod
       );
     }
 
-    if (slide === 3) {
+    if (slide === 2) {
       return (
         <div style={{ display:'flex', flexWrap:'wrap', gap:8, justifyContent:'center', width:280 }}>
           {niveaux.map(lv => {
@@ -784,9 +767,9 @@ export default function RythmApp() {
 
   // Tempo
   const [tempoMode,    setTempoMode]    = useState(() => loadSettings().tempoMode    ?? "fixed");
-  const [bpmFixed,     setBpmFixed]     = useState(() => loadSettings().bpmFixed     ?? 80);
-  const [bpmMin,       setBpmMin]       = useState(() => loadSettings().bpmMin       ?? 60);
-  const [bpmMax,       setBpmMax]       = useState(() => loadSettings().bpmMax       ?? 100);
+  const [bpmFixed,     setBpmFixed]     = useState(() => loadSettings().bpmFixed     ?? 66);
+  const [bpmMin,       setBpmMin]       = useState(() => loadSettings().bpmMin       ?? 50);
+  const [bpmMax,       setBpmMax]       = useState(() => loadSettings().bpmMax       ?? 90);
   const [sessionBpm,   setSessionBpm]   = useState(80);
 
   // Bonus révélation
@@ -808,14 +791,16 @@ export default function RythmApp() {
   const [flashBorderOn, setFlashBorderOn] = useState(true);
   const [beatStrong,   setBeatStrong]   = useState(false);
   const [metroDotFlash,setMetroDotFlash]= useState(false);
-  const [flashOffsetMs,   setFlashOffsetMs]   = useState(-50);
+  const [flashOffsetMs,   setFlashOffsetMs]   = useState(() => loadSettings().flashOffsetMs ?? -20);
   const [tapAnalysis,     setTapAnalysis]     = useState(null);
   const [rhythmSoundOn, setRhythmSoundOn] = useState(true);
   const [tapSoundOn,    setTapSoundOn]    = useState(true);
   const rhythmSoundRef = useRef(true);
   const tapSoundRef    = useRef(true);
+  const flashBorderRef = useRef(true);
   rhythmSoundRef.current = rhythmSoundOn;
   tapSoundRef.current    = tapSoundOn;
+  flashBorderRef.current = flashBorderOn;
 
   // Mode Extrême act 1 : rythme + flash off → score x2
   const [extremeAnimOn, setExtremeAnimOn] = useState(false);
@@ -924,10 +909,10 @@ export default function RythmApp() {
       localStorage.setItem(SETTINGS_KEY, JSON.stringify({
         selectedFormulas: [...selectedFormulas],
         tempoMode, bpmFixed, bpmMin, bpmMax,
-        revealBeat, inputMode,
+        revealBeat, inputMode, flashOffsetMs,
       }));
     } catch {}
-  }, [selectedFormulas, tempoMode, bpmFixed, bpmMin, bpmMax, revealBeat, inputMode]);
+  }, [selectedFormulas, tempoMode, bpmFixed, bpmMin, bpmMax, revealBeat, inputMode, flashOffsetMs]);
 
   // ── Gestion formules / niveaux ─────────────────────────────────────────────
   const toggleFormula = useCallback(id => {
@@ -1008,10 +993,13 @@ export default function RythmApp() {
       const t   = ac.currentTime;
       const dur = Math.max(0.1, durMs / 1000);
       const peak = 0.3 * volMult;
+      // Release exp 80 ms (clamp à dur/2 pour notes très courtes) intégré dans la durée
+      // nominale : préserve le gap inter-notes (différencie noire+silence d'une blanche).
+      const release = Math.min(0.08, dur * 0.5);
       g.gain.setValueAtTime(0.0001, t);
-      g.gain.exponentialRampToValueAtTime(peak, t + 0.01);     // attaque brève
-      g.gain.setValueAtTime(peak, Math.max(t + 0.02, t + dur - 0.06));
-      g.gain.exponentialRampToValueAtTime(0.001, t + dur);    // release court
+      g.gain.exponentialRampToValueAtTime(peak, t + 0.01);
+      g.gain.setValueAtTime(peak, t + Math.max(0.02, dur - release));
+      g.gain.exponentialRampToValueAtTime(0.001, t + dur);
       o.start(t); o.stop(t + dur + 0.02);
     } catch(_) {}
   }, [getCtx]);
@@ -1037,8 +1025,16 @@ export default function RythmApp() {
   const replayTaps = useCallback(() => {
     audioTidsRef.current.forEach(clearTimeout);
     audioTidsRef.current = [];
-    const minT = Math.min(0, ...tapTimes);
-    tapTimes.forEach(t => {
+    // Correction tempo/décalage : si fit dispo, remappe chaque tap u_i → (u_i - b)·beatMs/a
+    // pour rejouer la version débarrassée du décalage et du biais de tempo.
+    let corrected = tapTimes;
+    const fit = tapAnalysis?.fit;
+    const tgt = tapAnalysis?.targetBeatMs;
+    if (fit && tgt && fit.a > 0) {
+      corrected = tapTimes.map(t => (t - fit.b) * (tgt / fit.a));
+    }
+    const minT = Math.min(0, ...corrected);
+    corrected.forEach(t => {
       const delay = Math.max(0, t - minT);
       const id = setTimeout(() => tapBeep(true), delay);
       audioTidsRef.current.push(id);
@@ -1056,10 +1052,12 @@ export default function RythmApp() {
         audioTidsRef.current.push(id);
       }
     }
-  }, [tapTimes, tapBeep, pattern, sessionBpm]);
+  }, [tapTimes, tapBeep, pattern, sessionBpm, tapAnalysis]);
 
+  // Métro count-in : son couplé au toggle "Flash" (les deux portent le repère tempo).
+  // Désactiver Flash → métro silencieux + bordure non clignotante (cohérence audio/visuel).
   const pulse = useCallback((strong = false) => {
-    beep(strong);
+    if (flashBorderRef.current) beep(strong);
     setBeatStrong(strong);
     setBeatFlash(true);
     setTimeout(() => setBeatFlash(false), strong ? 160 : 110);
@@ -1141,8 +1139,21 @@ export default function RythmApp() {
   const clearTids = () => { tidsRef.current.forEach(clearTimeout); tidsRef.current = []; };
   const tid       = (fn, ms) => { const id = setTimeout(fn, ms); tidsRef.current.push(id); return id; };
 
+  // Décompte décomposé : sur chaque beat de count-in, joue 2 (binaire) ou 3 (ternaire)
+  // subdivisions — 1ère = son fort + flash (pulse), suivantes = beep faible (son seul).
+  // Le flash reste sur le 1er pour éviter le clignotement subdivisionnel.
+  const pulseCountdown = (strong, timeSig, beatMs) => {
+    pulse(strong);
+    const isTernary = ["12/8", "6/8", "9/8"].includes(timeSig);
+    const subs = isTernary ? 3 : 2;
+    const subMs = beatMs / subs;
+    for (let k = 1; k < subs; k++) {
+      tid(() => { if (flashBorderRef.current) beep(false); }, k * subMs);
+    }
+  };
+
   // sustain=true : lecture tenue (chaque note résonne ~sa durée) — act 3/4.
-  const playPatternAudio = useCallback((pat, bpmVal, delayMs = 0, forced = false, sustain = false, isAct5 = false) => {
+  const playPatternAudio = useCallback((pat, bpmVal, delayMs = 0, forced = false, sustain = false, softBeats = false) => {
     audioTidsRef.current.forEach(clearTimeout);
     audioTidsRef.current = [];
     const { timestamps, totalMs } = toTimestamps(pat.figs, bpmVal, pat.timeSig);
@@ -1151,7 +1162,7 @@ export default function RythmApp() {
     const beatMs = 60000 / bpmVal;
     pat.figs.forEach((fig, i) => {
       if (!fig.rest) {
-        const vol = beatVolMult(pat.timeSig, timestamps[i], beatMs, isAct5);
+        const vol = beatVolMult(pat.timeSig, timestamps[i], beatMs, softBeats);
         const id = sustain
           ? setTimeout(() => rhythmSustain(figDur(fig) * quarterMs * 0.9, forced, vol), delayMs + timestamps[i])
           : setTimeout(() => rhythmBeep(false, forced, vol), delayMs + timestamps[i]);
@@ -1213,8 +1224,8 @@ export default function RythmApp() {
       setSelectedIdx(null); setRevealed(false);
       setPhase("building");
       // Décompte beats 3 & 4 (flash bordure) puis lecture tenue (flash sur chaque temps)
-      setAct5CountN(3); pulse(false);
-      tid(() => { setAct5CountN(4); pulse(false); }, beatMs);
+      setAct5CountN(3); pulseCountdown(false, pat.timeSig, beatMs);
+      tid(() => { setAct5CountN(4); pulseCountdown(false, pat.timeSig, beatMs); }, beatMs);
       tid(() => { setAct5CountN(null); playPatternAudio(pat, bpm, 0, false, true, true); }, 2 * beatMs);
       return;
     }
@@ -1240,16 +1251,17 @@ export default function RythmApp() {
       if (activity === 3) {
         // Décompte 3,4 puis lecture audio (tenue)
         setPhase("countdown"); setCountdownN(3);
-        pulse(false);
-        tid(() => { setCountdownN(4); pulse(false); }, beatMs);
+        pulseCountdown(false, pat.timeSig, beatMs);
+        tid(() => { setCountdownN(4); pulseCountdown(false, pat.timeSig, beatMs); }, beatMs);
         tid(() => {
           setPhase("playing");
-          playPatternAudio(pat, bpm, 0, false, true);
-          // Flash bordures des 4 réponses sur chaque beat
+          playPatternAudio(pat, bpm, 0, false, true, true);
+          // Flash bordures + tick métro sur chaque beat (coordonnés via flashBorderRef)
           for (let k = 0; k < 4; k++) {
             tid(() => {
               setBeatFlash(true);
               setTimeout(() => setBeatFlash(false), 110);
+              if (flashBorderRef.current) beep(false);
             }, k * beatMs);
           }
         }, 2 * beatMs);
@@ -1268,10 +1280,10 @@ export default function RythmApp() {
       setRevealed(false);
       // Décompte réduit : beats 3 et 4 uniquement
       setPhase("countdown"); setCountdownN(3);
-      pulse(false);
+      pulseCountdown(false, pat.timeSig, beatMs);
       playStartRef.current = performance.now() + 2 * beatMs + totalMs + 3 * beatMs;
 
-      tid(() => { setCountdownN(4); pulse(false); }, beatMs);
+      tid(() => { setCountdownN(4); pulseCountdown(false, pat.timeSig, beatMs); }, beatMs);
 
       // Modèle — flash visuel seulement, notes en rhythmBeep
       tid(() => {
@@ -1293,8 +1305,8 @@ export default function RythmApp() {
 
       // Après modèle : 1 beat muet, puis 3 & 4 sonores
       tid(() => { setPhase("countdown"); setCountdownN(null); setBeatFlash(false); }, 2 * beatMs + totalMs);
-      tid(() => { setCountdownN(3); pulse(false); }, 2 * beatMs + totalMs + beatMs);
-      tid(() => { setCountdownN(4); pulse(false); }, 2 * beatMs + totalMs + 2 * beatMs);
+      tid(() => { setCountdownN(3); pulseCountdown(false, pat.timeSig, beatMs); }, 2 * beatMs + totalMs + beatMs);
+      tid(() => { setCountdownN(4); pulseCountdown(false, pat.timeSig, beatMs); }, 2 * beatMs + totalMs + 2 * beatMs);
 
       // Reproduction
       tid(() => {
@@ -1329,7 +1341,7 @@ export default function RythmApp() {
     setScores([]); setActiveIdx(-1); setProgress(0);
     setRevealed(revealBeat === 1);
     setPhase("countdown"); setCountdownN(1);
-    pulse(true);
+    pulseCountdown(true, pat.timeSig, beatMs);
 
     playStartRef.current = performance.now() + 4 * beatMs;
 
@@ -1348,7 +1360,7 @@ export default function RythmApp() {
     [1,2,3,4].forEach((n, i) => {
       tid(() => {
         setCountdownN(n);
-        if (i > 0) pulse(false);
+        if (i > 0) pulseCountdown(false, pat.timeSig, beatMs);
         if (n >= revealBeat) setRevealed(true);
       }, i * beatMs);
     });
@@ -1449,6 +1461,28 @@ export default function RythmApp() {
       .map((fig, i) => ({ fig, tsBeats: timestamps[i] / beatMs }))
       .filter(({ fig }) => !fig.rest);
 
+    // ── Sous-seuil : motifs ≤3 notes → scoreRhythm désactivé (statistiques non robustes).
+    // Grade par note uniquement à partir du dev brut, total = moyenne. Pas de diagnostics.
+    if (playable.length <= 3) {
+      const userTaps = [...tapTimesRef.current];
+      const s = playable.map((p, i) => {
+        const expected = p.tsBeats * beatMs;
+        if (i >= userTaps.length) return { label: "Manqué ✕", pts: 0, grade: "miss", dev: null };
+        return scoreTap(userTaps[i], expected, beatMs);
+      });
+      setScores(s);
+      const totalNotePts = s.reduce((acc, x) => acc + x.pts, 0);
+      const perNoteAvg   = totalNotePts / (playable.length * 100);
+      const bonus  = REVEAL_BONUS[revealBeat] / 100;
+      const extremeMult = extremeMode ? 2 : 1;
+      setScoreWasExtreme(extremeMode);
+      const earnedFinal = Math.round(perNoteAvg * 100 * (1 + bonus) * extremeMult);
+      setEarnedPts(earnedFinal);
+      setTotalPts(prev => prev + earnedFinal);
+      setTapAnalysis(null); // pas de diagnostics sous le seuil
+      return;
+    }
+
     // Construction de l'attempt : targetOnsets en pulsations (sans bias d'unités),
     // tempo cible en ms/pulsation. userOnsets = brut, l'alignement DP gère les extras/missing.
     const attempt = {
@@ -1514,6 +1548,9 @@ export default function RythmApp() {
       missing:     result.alignment.missingTargetIdx,
       components:  result.components,
       total:       result.total,
+      // Réécoute corrigée : fit (a, b) en ms/pulsation et ms — appliqué aux user taps
+      fit:           { a: result.fit.a, b: result.fit.b },
+      targetBeatMs:  beatMs,
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, activity]);
@@ -1548,12 +1585,12 @@ export default function RythmApp() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => () => { clearTids(); cancelAnimationFrame(rafRef.current); stopMic(); audioTidsRef.current.forEach(clearTimeout); }, []);
 
-  // Lance le jeu après tutorial interactif (attend que les closures de startGame soient fraîches)
-  // Doit rester AVANT tout early return (Rules of Hooks)
+  // Après tutorial interactif : ouvre la consigne d'arrivée (force l'affichage même si déjà vue),
+  // puis le clic "Commencer" lance la session. Closures fraîches après le render.
   useEffect(() => {
     if (pendingTutoStartRef.current) {
       pendingTutoStartRef.current = false;
-      startSession();
+      setShowConsigne(true);
     }
   });
 
@@ -2354,13 +2391,13 @@ export default function RythmApp() {
                       pointerEvents:'none',
                     }}>
                       {/* Mini-réplique du marqueur (note + guide + axe + pile), pas de point */}
-                      <svg width="50" height="44" style={{ display:'block' }}>
-                        <ellipse cx="25" cy="6" rx="5" ry="3.5" fill="#4b5563" />
-                        <line x1="25" y1="10" x2="25" y2="26" stroke="#9ca3af" strokeOpacity="0.45" />
-                        <line x1="8"  y1="32" x2="42" y2="32" stroke="#9ca3af" strokeOpacity="0.55" />
-                        <line x1="25" y1="28" x2="25" y2="36" stroke="#9ca3af" strokeOpacity="0.8" />
-                        <text x="8"  y="43" fontSize="7" textAnchor="start" style={{ fill:'var(--text-muted)' }}>avance</text>
-                        <text x="42" y="43" fontSize="7" textAnchor="end"   style={{ fill:'var(--text-muted)' }}>retard</text>
+                      <svg width="88" height="52" style={{ display:'block' }}>
+                        <ellipse cx="44" cy="6" rx="5" ry="3.5" fill="#4b5563" />
+                        <line x1="44" y1="10" x2="44" y2="26" stroke="#9ca3af" strokeOpacity="0.45" />
+                        <line x1="6"  y1="32" x2="82" y2="32" stroke="#9ca3af" strokeOpacity="0.55" />
+                        <line x1="44" y1="28" x2="44" y2="36" stroke="#9ca3af" strokeOpacity="0.8" />
+                        <text x="2"  y="46" fontSize="9" textAnchor="start" style={{ fill:'var(--text-muted)' }}>avance</text>
+                        <text x="86" y="46" fontSize="9" textAnchor="end"   style={{ fill:'var(--text-muted)' }}>retard</text>
                       </svg>
                     </div>
                   )}
@@ -2423,20 +2460,34 @@ export default function RythmApp() {
               </div>
               <TapDiagnostics beatMs={60000 / sessionBpm} analysis={tapAnalysis} />
               {tapTimes.length > 0 && (
-                <div className="flex gap-2 justify-center mt-3">
-                  <button
-                    onPointerDown={e => e.stopPropagation()}
-                    onClick={replayTaps}
-                    className="rounded-xl border-none px-3 py-1.5 text-[11px] font-bold cursor-pointer"
-                    style={{ background: 'rgba(74,108,247,0.12)', color: '#4A6CF7' }}
-                  >▶ Réécouter</button>
-                  <button
-                    onPointerDown={e => e.stopPropagation()}
-                    onClick={() => playPatternAudio(pattern, sessionBpm, 0, true)}
-                    className="rounded-xl border-none px-3 py-1.5 text-[11px] font-bold cursor-pointer"
-                    style={{ background: 'rgba(52,211,153,0.12)', color: '#34d399' }}
-                  >▶ Solution</button>
-                </div>
+                <>
+                  <div className="flex gap-2 justify-center mt-3">
+                    <button
+                      onPointerDown={e => e.stopPropagation()}
+                      onClick={replayTaps}
+                      className="rounded-xl border-none px-3 py-1.5 text-[11px] font-bold cursor-pointer"
+                      style={{ background: 'rgba(74,108,247,0.12)', color: '#4A6CF7' }}
+                    >▶ Réécouter corrigé</button>
+                    <button
+                      onPointerDown={e => e.stopPropagation()}
+                      onClick={() => playPatternAudio(pattern, sessionBpm, 0, true)}
+                      className="rounded-xl border-none px-3 py-1.5 text-[11px] font-bold cursor-pointer"
+                      style={{ background: 'rgba(52,211,153,0.12)', color: '#34d399' }}
+                    >▶ Solution</button>
+                  </div>
+                  {tapAnalysis?.fit && tapAnalysis?.targetBeatMs && (
+                    <div className="text-[10px] text-app-muted mt-1.5">
+                      {(() => {
+                        const tempoPct = Math.round((tapAnalysis.targetBeatMs / tapAnalysis.fit.a - 1) * 100);
+                        const offMs    = Math.round(tapAnalysis.fit.b);
+                        const parts = [];
+                        if (tempoPct !== 0) parts.push(`Tempo ${tempoPct > 0 ? '+' : ''}${tempoPct}%`);
+                        if (offMs !== 0)    parts.push(`Décalage ${offMs > 0 ? '+' : ''}${offMs} ms`);
+                        return parts.length > 0 ? `${parts.join(' · ')} compensés` : 'Aucune correction nécessaire';
+                      })()}
+                    </div>
+                  )}
+                </>
               )}
             </div>
           )}
@@ -2457,7 +2508,7 @@ export default function RythmApp() {
                   <>
                     <span>{phase==="playing" ? "Quelle portée ?" : "Résultat"} · {sessionBpm} BPM</span>
                     <button
-                      onClick={() => playPatternAudio(choices[correctIdx], sessionBpm, 0, false, true)}
+                      onClick={() => playPatternAudio(choices[correctIdx], sessionBpm, 0, false, true, true)}
                       className="rounded border-none px-2.5 py-0.5 text-white text-[10px] font-bold cursor-pointer"
                       style={{ background: '#4A6CF7' }}
                     >▶ Rejouer</button>
@@ -2509,10 +2560,19 @@ export default function RythmApp() {
                 })}
               </div>
               {phase === "results" && (
-                <div className="mt-3 text-center text-sm font-bold"
-                  style={{ color: selectedIdx === correctIdx ? '#22C55E' : '#f87171' }}>
-                  {selectedIdx === correctIdx ? "✓ Bonne réponse ! +100 pts" : "✕ Mauvaise réponse."}
-                </div>
+                <>
+                  <div className="mt-3 text-center text-sm font-bold"
+                    style={{ color: selectedIdx === correctIdx ? '#22C55E' : '#f87171' }}>
+                    {selectedIdx === correctIdx ? "✓ Bonne réponse ! +100 pts" : "✕ Mauvaise réponse."}
+                  </div>
+                  <div className="flex justify-center mt-2">
+                    <button
+                      onClick={() => playPatternAudio(choices[correctIdx], sessionBpm, 0, false, true, true)}
+                      className="rounded-xl border-none px-3 py-1.5 text-[11px] font-bold cursor-pointer"
+                      style={{ background: 'rgba(74,108,247,0.12)', color: '#4A6CF7' }}
+                    >▶ Réécouter le rythme</button>
+                  </div>
+                </>
               )}
             </div>
           )}
@@ -2549,13 +2609,18 @@ export default function RythmApp() {
                       onPointerDown={e => e.stopPropagation()}
                       onClick={() => {
                         if (phase !== "playing") return;
-                        playPatternAudio(c, sessionBpm, 0, false, true);
+                        playPatternAudio(c, sessionBpm, 0, false, true, true);
                         setPendingIdx(i);
-                        // Comptage des temps synchronisé avec l'audio
+                        // Comptage des temps + flash bordure + tick métro synchronisés
                         setAct4CountN(1);
                         const bMs = 60000 / sessionBpm;
                         [1,2,3,4].forEach(n => {
-                          const id = setTimeout(() => setAct4CountN(n), (n-1) * bMs);
+                          const id = setTimeout(() => {
+                            setAct4CountN(n);
+                            setBeatFlash(true);
+                            setTimeout(() => setBeatFlash(false), 110);
+                            if (flashBorderRef.current) beep(false);
+                          }, (n-1) * bMs);
                           audioTidsRef.current.push(id);
                         });
                         const endId = setTimeout(() => setAct4CountN(null), 4 * bMs + 200);
@@ -2584,13 +2649,37 @@ export default function RythmApp() {
                 </button>
               )}
               {phase === "results" && (
-                <div className="text-center text-sm font-bold"
-                  style={{ color: selectedIdx === correctIdx ? '#22C55E' : '#f87171' }}>
-                  {selectedIdx === correctIdx
-                    ? "✓ Bonne réponse ! +100 pts"
-                    : `✕ Mauvaise réponse. La bonne réponse était ${String.fromCharCode(65+correctIdx)}.`}
-                </div>
-              )}
+                <>
+                  <div className="text-center text-sm font-bold"
+                    style={{ color: selectedIdx === correctIdx ? '#22C55E' : '#f87171' }}>
+                    {selectedIdx === correctIdx
+                      ? "✓ Bonne réponse ! +100 pts"
+                      : `✕ Mauvaise réponse. La bonne réponse était ${String.fromCharCode(65+correctIdx)}.`}
+                  </div>
+                  {selectedIdx !== null && choices[selectedIdx] && (
+                    <div className="mt-3">
+                      <div className="text-[10px] text-app-muted text-center mb-1">Ta réponse — {String.fromCharCode(65+selectedIdx)}</div>
+                      <div className="rounded-xl overflow-hidden"
+                        style={{ background:'var(--surface-2)', padding:'8px 6px 4px', border:'1px solid var(--border-c)' }}>
+                        <RythmStaff figures={choices[selectedIdx].figs} timeSig={choices[selectedIdx].timeSig} activeIdx={-1} height={110}/>
+                      </div>
+                      <div className="flex justify-center mt-2 gap-2">
+                        <button
+                          onClick={() => playPatternAudio(choices[selectedIdx], sessionBpm, 0, false, true, true)}
+                          className="rounded-xl border-none px-3 py-1.5 text-[11px] font-bold cursor-pointer"
+                          style={{ background: 'rgba(74,108,247,0.12)', color: '#4A6CF7' }}
+                        >▶ Réécouter ta réponse</button>
+                        {selectedIdx !== correctIdx && (
+                          <button
+                            onClick={() => playPatternAudio(choices[correctIdx], sessionBpm, 0, false, true, true)}
+                            className="rounded-xl border-none px-3 py-1.5 text-[11px] font-bold cursor-pointer"
+                            style={{ background: 'rgba(52,211,153,0.12)', color: '#34d399' }}
+                          >▶ Solution</button>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </>)}
             </div>
           )}
 
@@ -2692,16 +2781,57 @@ export default function RythmApp() {
                       <div className="text-3xl font-black" style={{ color: '#4A6CF7' }}>{medal} +{earnedPts} pts</div>
                     </div>
                   )}
-                  <div className="text-[11px] text-app-muted mb-1">Ta réponse</div>
-                  <div className="rounded-2xl overflow-hidden mb-2" style={{ background: 'var(--surface)', padding: '10px 6px 6px', border: `2px solid ${act5Invalid ? '#f87171' : 'var(--border-c)'}` }}>
-                    {act5Placed.length > 0
-                      ? <RythmStaff figures={act5Figs} timeSig={pattern.timeSig} activeIdx={-1} showClef={false} compact={true} strikeMeter={act5Invalid} />
-                      : <div className="text-center text-[12px] text-app-muted py-8">(aucune cellule posée)</div>}
-                  </div>
-                  <div className="text-[11px] text-app-muted mb-1">Solution</div>
-                  <div className="rounded-2xl overflow-hidden" style={{ background: 'var(--surface)', padding: '10px 6px 6px', border: '2px solid #22C55E' }}>
-                    <RythmStaff figures={pattern.figs} timeSig={pattern.timeSig} activeIdx={-1} showClef={false} />
-                  </div>
+                  {(() => {
+                    // Bordure réponse user : vert=100, orange ]50,100[, rouge [0,50] ou invalide.
+                    let userBorder = 'var(--border-c)';
+                    if (act5Invalid)        userBorder = '#f87171';
+                    else if (earnedPts >= 100) userBorder = '#22C55E';
+                    else if (earnedPts > 50)   userBorder = '#fbbf24';
+                    else                       userBorder = '#f87171';
+                    const SpeakerIcon = (
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.85 }}>
+                        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" fill="currentColor"/>
+                        <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/>
+                      </svg>
+                    );
+                    const playUser = () => {
+                      if (act5Placed.length === 0) return;
+                      playPatternAudio({ figs: act5Figs, timeSig: pattern.timeSig }, sessionBpm, 0, true, true, true);
+                    };
+                    const playSolution = () => playPatternAudio(pattern, sessionBpm, 0, true, true, true);
+                    return (
+                      <>
+                        <div className="text-[11px] text-app-muted mb-1">Ta réponse</div>
+                        <div
+                          role="button"
+                          onClick={playUser}
+                          className="rounded-2xl overflow-hidden mb-2 relative cursor-pointer"
+                          style={{ background: 'var(--surface)', padding: '10px 6px 30px', border: `2px solid ${userBorder}` }}
+                        >
+                          {act5Placed.length > 0
+                            ? <RythmStaff figures={act5Figs} timeSig={pattern.timeSig} activeIdx={-1} showClef={false} compact={true} strikeMeter={act5Invalid} />
+                            : <div className="text-center text-[12px] text-app-muted py-8">(aucune cellule posée)</div>}
+                          {act5Placed.length > 0 && (
+                            <div style={{ position:'absolute', bottom:6, left:0, right:0, display:'flex', justifyContent:'center', color: userBorder, pointerEvents:'none' }}>
+                              {SpeakerIcon}
+                            </div>
+                          )}
+                        </div>
+                        <div className="text-[11px] text-app-muted mb-1">Solution</div>
+                        <div
+                          role="button"
+                          onClick={playSolution}
+                          className="rounded-2xl overflow-hidden relative cursor-pointer"
+                          style={{ background: 'var(--surface)', padding: '10px 6px 30px', border: '2px solid #22C55E' }}
+                        >
+                          <RythmStaff figures={pattern.figs} timeSig={pattern.timeSig} activeIdx={-1} showClef={false} />
+                          <div style={{ position:'absolute', bottom:6, left:0, right:0, display:'flex', justifyContent:'center', color:'#22C55E', pointerEvents:'none' }}>
+                            {SpeakerIcon}
+                          </div>
+                        </div>
+                      </>
+                    );
+                  })()}
                 </>
               )}
             </div>

@@ -405,11 +405,21 @@ export function scorePedagogique(notes, seuilCents) {
 
 export function scoreQualite(notes) {
   if (!notes.length) return 0
+  // Trois paliers par axe (linéaire entre les points) :
+  //   μ : 1¢ → 1.0, 5¢ → ~0.949, 50¢ → 0
+  //   σ : 2¢ → 1.0, 8¢ → ~0.949, 40¢ → 0
+  // Combiné (μ=5, σ=8) ≈ 0.90 ; (μ<1, σ<2) = 1.0 ; au-delà μ=50 ou σ=40 → 0.
+  const MID = 0.9486833   // √0.9 — produit μ×σ = 0.9 à la limite excellent
+  const axe = (v, tol, mid, max) => {
+    if (v <= tol) return 1
+    if (v >= max) return 0
+    if (v <= mid) return 1 - (1 - MID) * (v - tol) / (mid - tol)
+    return MID * (1 - (v - mid) / (max - mid))
+  }
   const scores = notes.map(n => {
-    const mu    = Math.abs(n.muCents)
-    const sigma = n.sigmaCents
-    if (mu > 30 || sigma > 20) return 0
-    return Math.pow(1 - mu / 30, 1.5) * Math.pow(1 - sigma / 20, 0.8)
+    const muFactor    = axe(Math.abs(n.muCents), 1, 5, 50)
+    const sigmaFactor = axe(n.sigmaCents,        2, 8, 40)
+    return muFactor * sigmaFactor
   })
   const moyenne = scores.reduce((a, b) => a + b, 0) / scores.length
   return Math.round(moyenne * 100)
@@ -590,11 +600,11 @@ export const CHORD_TYPES = {
   'maj':   { label: 'Majeur',            intervals: [0, 4, 7] },
   'min':   { label: 'Mineur',            intervals: [0, 3, 7] },
   'dim':   { label: 'Diminué',           intervals: [0, 3, 6] },
-  'dom7':  { label: '7e de dominante',   intervals: [0, 4, 7, 10] },
-  'maj7':  { label: 'Majeur 7',          intervals: [0, 4, 7, 11] },
-  'min7':  { label: 'Mineur 7',          intervals: [0, 3, 7, 10] },
-  'hdim7': { label: 'Demi-diminuée',     intervals: [0, 3, 6, 10] },
-  'dim7':  { label: 'Diminuée',          intervals: [0, 3, 6, 9] },
+  'dom7':  { label: 'Septième de dominante', intervals: [0, 4, 7, 10] },
+  'maj7':  { label: 'Septième majeure',      intervals: [0, 4, 7, 11] },
+  'min7':  { label: 'Septième mineure',      intervals: [0, 3, 7, 10] },
+  'hdim7': { label: 'Septième demi-diminuée', intervals: [0, 3, 6, 10] },
+  'dim7':  { label: 'Septième diminuée',     intervals: [0, 3, 6, 9] },
 }
 
 // Ascending close-position chord. inversion = index of bass note in original interval list.

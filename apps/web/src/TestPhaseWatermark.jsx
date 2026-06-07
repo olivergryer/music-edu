@@ -21,17 +21,20 @@ export default function TestPhaseWatermark() {
           top: '50%',
           left: '50%',
           transform: 'translate(-50%, -50%) rotate(-28deg)',
-          fontSize: 'clamp(36px, 9vw, 80px)',
+          fontSize: 'clamp(28px, 7vw, 68px)',
+          lineHeight: 1.05,
           fontWeight: 900,
-          letterSpacing: 4,
+          letterSpacing: 3,
           color: '#FF8B3D',
           opacity: 0.10,
-          whiteSpace: 'nowrap',
+          textAlign: 'center',
           textTransform: 'uppercase',
           fontFamily: "'Righteous','Inter',sans-serif",
+          maxWidth: '92vw',
+          wordSpacing: '0.2em',
         }}
       >
-        Module en phase de test
+        Module<br />en phase<br />de test
       </div>
     </div>
   )

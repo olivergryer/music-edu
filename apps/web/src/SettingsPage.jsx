@@ -265,7 +265,7 @@ export default function SettingsPage({
           <span className={labelCls}>Synchronisation bordure</span>
           <div className="flex items-center gap-2.5">
             <div className="flex-1">
-              <input type="range" min={-200} max={200} step={5} value={flashOffsetMs}
+              <input type="range" min={-100} max={100} step={10} value={flashOffsetMs}
                 onChange={e => onFlashOffsetChange(+e.target.value)}
                 className="w-full block" style={{ accentColor: "#4A6CF7" }}
               />

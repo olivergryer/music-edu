@@ -49,16 +49,18 @@ function levelToInt(str) {
   return parseInt(m[1]) * 10 + parseInt(m[2] ?? '0')
 }
 
-function catHasQuestions(questions, level, cat) {
-  return questions.some(q => levelToInt(q.niveau) <= levelToInt(level) && cat.includes.includes(q.categorie))
+function catHasQuestions(questions, mode, level, cat, onlyCurrent) {
+  const allowed = new Set(allowedLevelsFor(mode, level, onlyCurrent))
+  return questions.some(q => allowed.has(q.niveau) && cat.includes.includes(q.categorie))
 }
 
-function buildPool(questions, mode, level, selectedCatIds) {
+function buildPool(questions, mode, level, selectedCatIds, onlyCurrent) {
+  const allowed = new Set(allowedLevelsFor(mode, level, onlyCurrent))
   const activeFineCategories = selectedCatIds.length === 0
     ? null
     : CATEGORIES.filter(c => selectedCatIds.includes(c.id)).flatMap(c => c.includes)
   let pool = questions.filter(q => {
-    const levelOk = levelToInt(q.niveau) <= levelToInt(level)
+    const levelOk = allowed.has(q.niveau)
     const catOk = mode === 'examen' || activeFineCategories === null || activeFineCategories.includes(q.categorie)
     return levelOk && catOk
   })
@@ -251,9 +253,20 @@ function TexteQuestion({ value, onChange, onSubmit, revealed, correct }) {
 // ── Tutorial ───────────────────────────────────────────────────────────────────
 const THEORIE_TUTO_KEY = 'theorie_tuto_v1'
 const THEORIE_LEVEL_KEY = 'theorie_level_v1'
+const THEORIE_ONLY_CURRENT_KEY = 'theorie_only_current_v1'
 
 function loadStoredLevel() {
   try { const v = localStorage.getItem(THEORIE_LEVEL_KEY); return LEVELS.includes(v) ? v : 'C1/2' } catch { return 'C1/2' }
+}
+function loadStoredOnlyCurrent() {
+  try { return localStorage.getItem(THEORIE_ONLY_CURRENT_KEY) === '1' } catch { return false }
+}
+
+function allowedLevelsFor(mode, level, onlyCurrent) {
+  const idx = LEVELS.indexOf(level)
+  if (idx < 0) return [level]
+  if (mode !== 'examen' && onlyCurrent) return [level]
+  return LEVELS.slice(Math.max(0, idx - 2), idx + 1)
 }
 const TUTO_TOTAL = 4
 const T_ACC = '#8B5CF6'
@@ -449,12 +462,14 @@ function HelpModalTheorie({ onTuto, onTour, onClose }) {
 // ── Page de préparation (page unique) ───────────────────────────────────────────
 function SetupScreen({ questions, onStart, onLoadCSV, csvCount, templateQuestions }) {
   const [level, setLevel] = useState(loadStoredLevel)
+  const [onlyCurrent, setOnlyCurrent] = useState(loadStoredOnlyCurrent)
   const [cats, setCats] = useState([])
   useEffect(() => { try { localStorage.setItem(THEORIE_LEVEL_KEY, level) } catch {} }, [level])
+  useEffect(() => { try { localStorage.setItem(THEORIE_ONLY_CURRENT_KEY, onlyCurrent ? '1' : '0') } catch {} }, [onlyCurrent])
   const fileRef = useRef()
   const availableCats = useMemo(
-    () => new Set(CATEGORIES.filter(cat => catHasQuestions(questions, level, cat)).map(c => c.id)),
-    [questions, level]
+    () => new Set(CATEGORIES.filter(cat => catHasQuestions(questions, 'entrainement', level, cat, onlyCurrent)).map(c => c.id)),
+    [questions, level, onlyCurrent]
   )
   useEffect(() => { setCats(prev => prev.filter(id => availableCats.has(id))) }, [availableCats])
   function toggleCat(id) {
@@ -492,7 +507,21 @@ function SetupScreen({ questions, onStart, onLoadCSV, csvCount, templateQuestion
             >{l}</button>
           ))}
         </div>
-        <div className="text-[11px] text-app-muted mt-2">Inclut toutes les questions jusqu'au niveau sélectionné.</div>
+        <div className="text-[11px] text-app-muted mt-2">
+          {onlyCurrent
+            ? 'Niveau sélectionné seulement (Entraînement). En Code de la route musicale : 3 niveaux inclus (sélectionné + 2 en dessous).'
+            : 'Inclut 3 niveaux : sélectionné + 2 en dessous.'}
+        </div>
+        <label className="flex items-center gap-2 mt-3 cursor-pointer text-[11px] font-bold text-app-muted">
+          <input
+            type="checkbox"
+            checked={onlyCurrent}
+            onChange={e => setOnlyCurrent(e.target.checked)}
+            className="cursor-pointer"
+            style={{ accentColor: '#8B5CF6' }}
+          />
+          Niveau actuel seulement <span className="font-normal">(Entraînement uniquement)</span>
+        </label>
       </div>
 
       {/* Catégories */}
@@ -526,7 +555,7 @@ function SetupScreen({ questions, onStart, onLoadCSV, csvCount, templateQuestion
       {/* Choix du mode = lancement */}
       <div className="grid grid-cols-2 gap-3" data-tour="mode-cards">
         <button
-          onClick={() => onStart('entrainement', level, cats)}
+          onClick={() => onStart('entrainement', level, cats, onlyCurrent)}
           className="rounded-2xl p-4 text-left border-2 transition-colors"
           style={{ background: 'var(--surface)', borderColor: '#8B5CF6' }}
         >
@@ -534,7 +563,7 @@ function SetupScreen({ questions, onStart, onLoadCSV, csvCount, templateQuestion
           <div className="text-[11px] text-app-muted leading-snug">10 questions · feedback immédiat</div>
         </button>
         <button
-          onClick={() => onStart('examen', level, cats)}
+          onClick={() => onStart('examen', level, cats, onlyCurrent)}
           className="rounded-2xl p-4 text-left border-2 transition-colors"
           style={{ background: '#8B5CF6', borderColor: '#8B5CF6' }}
         >
@@ -811,8 +840,8 @@ export default function TheoriePage() {
     return [...allQuestions.filter(q => !csvIds.has(q.id)), ...csvQuestions]
   }, [allQuestions, csvQuestions])
 
-  function handleStart(m, level, categories) {
-    const pool = buildPool(mergedQuestions, m, level, categories)
+  function handleStart(m, level, categories, onlyCurrent) {
+    const pool = buildPool(mergedQuestions, m, level, categories, onlyCurrent)
     if (pool.length === 0) { alert('Aucune question ne correspond à cette sélection. Élargis le niveau ou les catégories.'); return }
     setMode(m)
     setSession({ pool, currentIdx: 0, answers: [] })
@@ -826,7 +855,7 @@ export default function TheoriePage() {
     setShowTutorial(false)
     if (!selections) return
     const { level, cats, mode: m } = selections
-    const pool = buildPool(mergedQuestions, m, level, cats)
+    const pool = buildPool(mergedQuestions, m, level, cats, loadStoredOnlyCurrent())
     if (pool.length === 0) { setMode(m); setScreen('setup'); return }
     setMode(m)
     setSession({ pool, currentIdx: 0, answers: [] })

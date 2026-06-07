@@ -1,9 +1,19 @@
 # Module Rythme — référence technique
 
 ## Fichiers
-- `RythmApp.jsx` — composant principal ~2100 lignes, **sensible**
-- `RythmStaff.jsx` — rendu VexFlow SVG, ResizeObserver mobile
+- `RythmApp.jsx` — composant principal ~2700 lignes, **sensible**
+- `RythmStaff.jsx` — rendu VexFlow SVG, ResizeObserver mobile, strip décalage par note
 - `SettingsPage.jsx` — réglages avancés : catalogue formules + Google Sheets + offset flash calibration
+- `MicCalibration.jsx` — modale guidée 3 étapes (ambient → piano → forte) + détection onset/offset hystérésis adaptative au bruit ambiant
+- **Moteur scoring act 1/2** (module TS pur, framework-agnostic) :
+  - `rythmScoringTypes.ts` — types (`RhythmAttempt`, `Alignment`, `FitResult`, `RhythmScore`, `RhythmDiagnosis`, `ScoringParams`)
+  - `rythmScoringParams.ts` — `DEFAULT_PARAMS` (toutes constantes tunables)
+  - `rythmScoringAlign.ts` — Needleman-Wunsch DP monotone + backtrack ⇒ pairs / missing / extras
+  - `rythmScoringFit.ts` — Theil-Sen robuste + boucle EM (align ⇄ fit, ≤3 tours)
+  - `rythmScoringAnalyze.ts` — MAD (1.4826 × MAD) + drift (pente Theil-Sen de `localTempo_k`) + dead-zone
+  - `rythmScoringDiagnose.ts` — taxonomie flags (clés i18n)
+  - `rythmScoringScore.ts` — façade `scoreRhythm(attempt, params)` (orchestre tout)
+  - `rythmScoring.test.ts` — 27 tests + non-régression `EXTRA_TAP`/`MISSED_NOTE` ≈ `PERFECT` (preuve alignement protège fit)
 
 ## 5 activités
 1. **Reproduire vu** — portée visible, l'élève tape/chante
@@ -21,26 +31,95 @@
 
 ## Audio
 - `beep(strong)` : métronome (sine 1000/700 Hz, 80 ms)
-- `rhythmBeep(strong, forced)` : son rythme (triangle 330 Hz, 150 ms fixe) — `forced=true` bypass toggle
-- `rhythmSustain(durMs, forced)` : note **tenue** (triangle 330 Hz, enveloppe ≈ durée note) — distingue tenue vs attaque+silence
+- `rhythmBeep(strong, forced, volMult=1)` : son rythme (triangle 330 Hz, 150 ms fixe) — `forced=true` bypass toggle, `volMult` scale le gain
+- `rhythmSustain(durMs, forced, volMult=1)` : note **tenue** (triangle 330 Hz, enveloppe ≈ durée note) — distingue tenue vs attaque+silence
 - `tapBeep(forced)` : bruit blanc 40 ms — `forced=true` bypass toggle
-- `rhythmPulse()` : rhythmBeep + flash visuel
-- `playPatternAudio(pat, bpm, delayMs, forced, sustain)` : joue pattern · `sustain=true` → `rhythmSustain` par note (durée ≈ `figDur × quarterMs × 0.9`). **Act 3/4 uniquement** (lecture + Rejouer + boutons A/B/C/D) ; act 1/2 gardent le bip percussif.
+- `rhythmPulse(strong, volMult=1)` : rhythmBeep + flash visuel
+- `playPatternAudio(pat, bpm, delayMs, forced, sustain, isAct5)` : joue pattern · `sustain=true` → `rhythmSustain` par note (durée ≈ `figDur × quarterMs × 0.9`) · `isAct5=true` → palette d'accentuation plus douce. **Act 3/4 uniquement** (lecture + Rejouer + boutons A/B/C/D) ; act 1/2 gardent le bip percussif.
 - Toggles son via refs (`rhythmSoundRef`, `tapSoundRef`) — assignés dans render body, pas useEffect
 - Act 2/3/4 : `rhythmSoundOn` forcé à `true` via `useEffect([activity])` — son toujours actif
 - Beat 1 : vérifier `!pat.figs[0]?.rest` avant jouer le son
 - `tidsRef` = timers jeu · `audioTidsRef` = timers audio (clearés séparément)
+- **Reprise après verrouillage / passage arrière-plan** : `resumeAudio()` + `ensureMicAlive()` sur `visibilitychange`/`focus`. `ensureMicAlive` re-acquière le flux si les pistes sont `ended` (cas typique iOS lock).
 
-## Scoring act 1 & 2
-- `scoreTap(actual, expected, beatMs)` → `{ label, pts, grade, dev }`
-- Tolérances : perfect 10%, good 18%, ok 30% du beat
-- `dev` signé : + = tard, − = tôt, null si raté
-- Offset optimal calculé en results : `optOffset = clamp(-mean(tap−expected), −200, 200)`
-- `scoreDevs` prop RythmStaff : figIdx → dev signé ms · `sessionBpm` requis
-- `compact` prop RythmStaff : limite formatWidth (usage dans SettingsPage catalogue)
+### Accentuation des temps (boost de volume on-beat)
+Multiplicateur de gain appliqué **uniquement aux notes qui tombent sur un temps musical** (tolérance 5 ms, pas aux subdivisions internes).
+- `BEAT_WEIGHTS` act 1-4 (contraste marqué) : 4 temps → `[2.5, 1.6, 2.1, 1.6]`, 3 temps → `[2.5, 1.6, 1.6]`, 2 temps → `[2.5, 1.6]`.
+- `BEAT_WEIGHTS_ACT5` (plus doux, écoute tenue) : `[2.0, 1.4, 1.8, 1.4]` etc.
+- `beatVolMult(timeSig, ts, beatMs, isAct5)` : retourne 1.0 hors temps. Appliqué dans `playPatternAudio`, lecture modèle act 2, jeu act 1 (note 1 + rhythmPulse suivantes).
+- `beatsPerMeasure(timeSig)` : 4 (4/4, 12/8) · 3 (3/4, 9/8) · 2 (2/4, 6/8).
+
+## Scoring act 1 & 2 — moteur `scoreRhythm` (module pur)
+
+### Pipeline
+`useEffect` résultats construit un `RhythmAttempt` :
+- `targetOnsets` en pulsations (`timestamps[i] / beatMs` pour notes non-rest)
+- `userOnsets` = `tapTimesRef.current` (ms relatifs à `playStartRef`)
+- `targetTempoMsPerUnit = 60000 / sessionBpm`
+- `activity` (1 ou 2)
+
+Appel `scoreRhythm(attempt, DEFAULT_PARAMS)` orchestre :
+1. **`fitWithAlignment`** : init pente (`targetTempoMsPerUnit` ou rapport des empans), boucle EM align ⇄ Theil-Sen (≤3 tours, sort si paires stables).
+2. **`alignOnsets`** : DP Needleman-Wunsch sur `pred = a·target + b` vs `user`, `gap = gapFactor × medianTargetIOIms`. Backtrack → `pairs`, `missingTargetIdx`, `extraUserIdx`.
+3. **`theilSenFit`** : pente = médiane des `(u_j-u_i)/(t_j-t_i)`, intercept = médiane des `u_i - a·t_i`. Robuste à 1 outlier énorme.
+4. **`analyzeResiduals`** : `regularityMs = 1.4826 × MAD` sur résidus dead-zonés ; drift = pente robuste de `localTempo_k = (u_{k+1}-u_k)/(t_{k+1}-t_k)` vs `k`, déclenché si `|totalChange / medTempo| > driftThresholdRel`.
+5. **`scoreRhythm`** : composantes ∈ [0,1] :
+   - `completeness = pairs / (pairs + 0.5·(missing+extra))`
+   - `regularity = clamp(1 - regularityMs/regMaxMs, 0, 1)^regExp`
+   - `offset = clamp(1 - |deadzone(b)|/offsetMaxMs, 0, 1)`
+   - `tempo = clamp(1 - max(0, |a/target-1| - tempoTolRel)/tempoMaxRel, 0, 1)`
+   - **Agrégation produit pondéré** : `total = completeness · regularity^wReg · offset^wOff[act] · tempo^wTempo[act]`.
+   - **Motifs courts** : si `targetOnsets.length < minNotesForTempo` ⇒ `wTempo` forcé à 0 (override prioritaire). Si `=== minNotesForTempo` ⇒ flag `LOW_CONFIDENCE_REGULARITY`.
+6. **`diagnose`** : flags (clés i18n) `OFFSET_LATE/EARLY`, `TEMPO_FAST/SLOW`, `DRIFT_ACCEL/DECEL`, `IRREGULAR`, `EXTRA_ONSETS`, `MISSING_ONSETS`, `LOW_CONFIDENCE_REGULARITY`.
+
+### Mapping adaptateur → UI existante
+- **`scores[]` par cible** : appariée ⇒ `dev = résidu`, grade dérivé via `scoreTap(deadzone(dev), 0, beatMs)` (cohérent avec régularité — un résidu sous le plancher de bruit = `Parfait`). `dev` retourné = brut (pour badge dépliable + point sur portée). Manquée ⇒ `{ label:"Manqué ✕", pts:0, grade:"miss", dev:null }`.
+- **Score combiné** : `combinedTotal = result.total × perNoteAvg` où `perNoteAvg = Σpts / (playableCount×100)`. Réintroduit la sensibilité par-tap qu'absorbe le MAD (un « Bien » isolé baisse le total, n'est plus noyé dans la robustesse).
+- **`earnedFinal = round(combinedTotal × 100 × (1+bonus) × extremeMult)`** — **plafonné à 100 pts/exercice** (× révélation × extrême), aligné avec act 3/4/5 et autres modules. Pas de `×playableCount`.
+- `maxPts = 100 × bonusMult × extremeMult` (act 5 : 100 brut).
+- **`tapAnalysis`** : champs hérités (`hasTempo`, `tempoErr`, `offsetMs`, `regularityStd`, `malusPts`) + nouveaux (`flags`, `drift`, `extras`, `missing`, `components`, `total`).
+
+### `DEFAULT_PARAMS` tunables (`rythmScoringParams.ts`)
+| param | défaut | rôle |
+|---|---|---|
+| `gapFactor` | 0.5 | GAP DP = `gapFactor × medianTargetIOIms` |
+| `maxIter` | 3 | boucle EM |
+| `inputNoiseFloorMs` | 25 | dead-zone (jitter tactile) — TODO calibration device |
+| `regMaxMs` | 200 | dispersion à laquelle régularité → 0 |
+| `regExp` | 0.8 | exposant régularité |
+| `offsetMaxMs` | 400 | borne enveloppe offset (zéro à 400 ms) |
+| `tempoTolRel` | 0.05 | tolérance avant pénalité (±5 %) |
+| `tempoMaxRel` | 0.25 | borne tempo (zéro à ±30 % au-delà de tolerance) |
+| `driftThresholdRel` | 0.18 | seuil flag DRIFT_* |
+| `wRegularity` | 1.0 | poids régularité |
+| `wOffset` | `{1:0.3, 2:0.3}` | poids offset (assoupli — défaut mineur, facile à corriger) |
+| `wTempo` | `{1:0.7, 2:0}` | act 2 : tempo libre → non pénalisé |
+| `minNotesForTempo` | 5 | sous ce nb de notes cibles, `wTempo` forcé à 0 |
+
+### TapDiagnostics (composant inline RythmApp.jsx)
+Libellés FR pilotés par les flags. Lignes :
+- **Tempo** : `TEMPO_FAST`/`SLOW` → message+%, sinon « Tempo juste » (vert) ou « — ».
+- **Décalage** : `OFFSET_LATE`/`EARLY` → message+ms, sinon « Bien calé ».
+- **Régularité** : `IRREGULAR` → « Ton tempo est en dents de scie » (rouge), sinon ratio `regularityStd/beatMs` → « Très régulier » … « Assez régulier ».
+- **Dérive** (conditionnelle) : `DRIFT_ACCEL` → « Tu accélères vers la fin », `DRIFT_DECEL` → « Tu ralentis ».
+- **Frappes en trop / manquées** (conditionnelles) : nombre.
+
+### RythmStaff — strip décalage par note
+- `scoreGrades`/`scoreDevs` prop : figIdx → grade/dev signé ms (rempli en phase results par l'adaptateur).
+- **Marker par note (DANS la portée, sous la note)** : guide vertical (note → strip), axe horizontal court tôt/tard, repère « pile » central, dot coloré par grade (palettes désaturées `DOT_FILL` + glow `DOT_GLOW`). Amplitude horizontale ×2 (`(dev/halfMs)*2`), centré sur le milieu de la tête de note (`getNoteHeadBeginX/EndX`).
+- `w` (largeur ½ axe) borné `clamp(0.42 × minGap, 6, 16)` → comparable entre notes, jamais de chevauchement.
+- Légende mini-réplique du marker (note + guide + axe + pile, **sans dot**), positionnée **absolute bottom-left** de la card portée (forme verticale, taller-than-wide).
+- Notes : couleur classique (`#4b5563`), pas de recoloration par grade (info portée par les dots).
+
+### Pré-tap
+- Act 1 ET act 2 : `handleTap` accepte le pre-tap pendant `countdown` dans la fenêtre `t >= -TOL.ok` (TOL.ok = 280 ms).
+- `playStartRef` = origine, taps en `performance.now() - playStartRef`.
+
+### Compact / rendu staff (inchangé)
+- `compact` prop RythmStaff : limite formatWidth (usage SettingsPage catalogue)
 - RythmStaff rend à taille **native** : SVG `renderWidth × height` px (`renderWidth = min(conteneur, width)` via ResizeObserver). `width` prop = cap max (div `maxWidth`, `overflow:hidden`).
-- **Réduction adaptative downscale-only** : après dessin, `getBBox()` ; si `contentW > renderWidth` (mesure dense + écran étroit) → viewBox + `meet` réduit juste ce qu'il faut. Sinon AUCUN scaling → taille native (jamais artificiellement petit). Adaptatif sur tout device.
-- Résultats : boutons **▶ Mes taps** + **▶ Solution** — appellent forced=true (indépendants des toggles son)
+- **Réduction adaptative downscale-only** : après dessin, `getBBox()` ; si `contentW > renderWidth` → viewBox + `meet` réduit. Sinon AUCUN scaling. Adaptatif sur tout device.
+- Résultats : boutons **▶ Réécouter** + **▶ Solution** (`forced=true`, indépendants des toggles son), bordure flash pilotée par `beatFlash` en phase `results` (act 1 ET 2 ; en phase de jeu act 1 utilise `metroDotFlash` calibré).
 
 ## Scoring act 3 & 4 (QCM)
 - 100 pts si correct, 0 si faux · essai unique (scoring non modifié par le moteur distracteurs)
@@ -69,7 +148,7 @@ Moteur de mutations typées piloté par une **table de difficulté par niveau** 
 
 ## Mode Extrême (act 1)
 - `extremeMode = activity===1 && !rhythmSoundOn && !flashBorderOn` — son rythme ET flash off
-- Score ×2, cumul multiplicatif avec REVEAL_BONUS : `earned = round(raw * (1+bonus) * 2)`
+- Score ×2, cumul multiplicatif avec `REVEAL_BONUS` : `earnedFinal = round(combinedTotal × 100 × (1+bonus) × 2)`
 - `scoreWasExtreme` fige l'état au calcul du score (`maxPts` ×2 aussi → `pct` ≤ 100%)
 - Animation overlay `extreme-pop` (keyframe `index.css`) + badge "⚡ ×2 Extrême" dans results
 
@@ -123,6 +202,9 @@ Groupes : `binary` (4/4) ou `ternary` (12/8) · `totalMs = 4 * beatMs` pour les 
 - RythmStaff div : `height: height` (prop) en style explicite — empêche le flex-stretch dans les cartes
 - Chunk size warning build = normal (VexFlow volumineux)
 - `attackFingerprint(figs)` : onsets non-silences × 1000 → string (évite flottants)
-- Dots timing (RythmStaff) : gauche = tôt, droite = tard · miss = pas de dot
+- Strip décalage RythmStaff : marker par note SOUS la portée (pas au-dessus, ≠ ancien comportement). gauche = tôt, droite = tard, pile = centre. Tap manqué = pile + guide sans dot.
 - Act 2 : bouton son rythme masqué (son toujours actif, essentiel à l'écoute)
 - Act 3 : `opacity: 1` constant sur la grille portées (pas de fade pendant countdown)
+- **Plafond pts par exercice = 100** (× révélation × extrême) — aligné act 3/4/5 et autres modules. Pas `× playableCount`.
+- **`scoreTap` conservé** uniquement pour dériver le grade par note dans l'adaptateur (à partir du résidu dead-zoné). Tolérances grade : `pf = beatMs×0.02` (Parfait), `gd = ×0.18` (Bien), `ok = ×0.30` (Moyen), au-delà = Raté.
+- Anciens helpers supprimés : `fitAffine`, `MIN_TAPS_FOR_TEMPO`, `TEMPO_COMP_LIMIT`, `TEMPO_MALUS_COEFF`, `TEMPO_MALUS_MAX`, `clamp` local. Remplacés par moteur TS pur.

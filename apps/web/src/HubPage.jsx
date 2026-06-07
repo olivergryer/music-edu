@@ -16,12 +16,32 @@ const MODULES = [
   { id: 'accordeur', label: 'Accordeur', desc: 'Accordeur par phrase et générateur d\'accords', to: '/accordeur', active: true, color: '#FF8B3D' },
 ]
 
-function ModuleCard({ label, desc, active, color }) {
+function ModuleCard({ label, desc, active, color, testPhase }) {
   return (
     <div
-      className="bg-surface rounded-2xl p-6 border border-app transition-all duration-200 hover:shadow-lg group h-full"
+      className="bg-surface rounded-2xl p-6 border border-app transition-all duration-200 hover:shadow-lg group h-full relative"
       style={{ opacity: active ? 1 : 0.4, cursor: active ? 'pointer' : 'default' }}
     >
+      {testPhase && (
+        <div
+          style={{
+            position: 'absolute',
+            top: 10,
+            right: 10,
+            background: 'rgba(255,139,61,0.14)',
+            color: '#FF8B3D',
+            border: '1px solid rgba(255,139,61,0.45)',
+            borderRadius: 999,
+            padding: '2px 8px',
+            fontSize: 10,
+            fontWeight: 700,
+            letterSpacing: 0.3,
+            textTransform: 'uppercase',
+          }}
+        >
+          En test
+        </div>
+      )}
       <div
         className="w-10 h-10 rounded-xl mb-4 flex items-center justify-center"
         style={{ background: color + '20' }}
@@ -67,33 +87,25 @@ export default function HubPage() {
           />
         </div>
 
+        <div className="grid gap-4 items-stretch" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))' }}>
+          {MODULES.map(m => {
+            const testPhase = SHOW_TEST_BADGE && m.id === 'accordeur'
+            return m.active
+              ? <Link key={m.id} to={m.to} className="no-underline">
+                  <ModuleCard {...m} testPhase={testPhase} />
+                </Link>
+              : <ModuleCard key={m.id} {...m} testPhase={testPhase} />
+          })}
+        </div>
+
         {SHOW_TEST_BADGE && (
           <div
-            className="mb-5 rounded-xl px-4 py-3 flex items-center gap-3"
-            style={{
-              background: 'rgba(255,139,61,0.10)',
-              border: '1px solid rgba(255,139,61,0.35)',
-            }}
+            className="mt-4 text-xs text-app-muted text-center"
+            style={{ opacity: 0.75 }}
           >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FF8B3D" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
-              <path d="M12 9v4M12 17h.01" />
-              <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
-            </svg>
-            <div style={{ lineHeight: 1.35 }}>
-              <div className="text-sm font-bold" style={{ color: '#FF8B3D' }}>Accordeur en phase de test</div>
-              <div className="text-xs text-app-muted">Module en cours de validation, retours bienvenus via la page Retours.</div>
-            </div>
+            Module Accordeur en phase de test — retours bienvenus via la page Retours.
           </div>
         )}
-
-        <div className="grid gap-4 items-stretch" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))' }}>
-          {MODULES.map(m => m.active
-            ? <Link key={m.id} to={m.to} className="no-underline">
-                <ModuleCard {...m} />
-              </Link>
-            : <ModuleCard key={m.id} {...m} />
-          )}
-        </div>
 
         {/* Barre progression utilisateur */}
         <div className="mt-8 flex gap-3 items-center justify-center flex-wrap text-sm text-app-muted">

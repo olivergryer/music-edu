@@ -1,6 +1,33 @@
 import * as Tone from 'tone'
 import { midiToHz, JUST_RATIOS_CENTS } from './accordeurUtils'
 
+// ─── Sortie audible (bypass mode silencieux iOS) ─────────────────────────────
+// Web Audio AudioContext.destination est coupé par le switch silence iOS.
+// Routage via MediaStreamDestination → HTMLAudioElement = catégorie "playback"
+// → audible en silencieux, comme une <audio> classique (≃ Réécouter du Blob).
+const _sinks = new WeakMap()
+function audibleSink(rawCtx) {
+  let s = _sinks.get(rawCtx)
+  if (s) return s
+  try {
+    const dest  = rawCtx.createMediaStreamDestination()
+    const audio = new Audio()
+    audio.srcObject = dest.stream
+    audio.playsInline = true
+    audio.muted = false
+    audio.play().catch(() => {})
+    s = { node: dest, audio }
+    _sinks.set(rawCtx, s)
+    return s
+  } catch {
+    return null
+  }
+}
+function audibleOutput(ctx) {
+  const sink = audibleSink(ctx)
+  return sink?.node ?? ctx.destination
+}
+
 // ─── Instruments ─────────────────────────────────────────────────────────────
 export const INSTRUMENTS = {
   oscillator: { label: 'Sinusoïde',      loMidi: 0,  hiMidi: 127, isOsc: true },
@@ -120,7 +147,8 @@ function _playToneNote(toneData, midi, centsOffset) {
     loopEnd,
     fadeIn:    0.02,
     fadeOut:   0.15,
-  }).toDestination()
+  })
+  player.connect(audibleOutput(toneCtx.rawContext))
 
   player.playbackRate = initialRate
   player.start()
@@ -163,7 +191,7 @@ export function playChordOscillator(ctx, midis, offsets, diapason = 442) {
     const gain = ctx.createGain()
     gain.gain.setValueAtTime(0, t)
     gain.gain.setTargetAtTime(0.25, t, 0.02)
-    gain.connect(ctx.destination)
+    gain.connect(audibleOutput(ctx))
     const osc = ctx.createOscillator()
     osc.type  = 'sine'
     osc.frequency.value = hz
@@ -215,7 +243,8 @@ export function playPhrase(ctx, notes, sampleMap, referentiel, tonikMidi, diapas
         loop:    false,
         fadeIn:  0.02,
         fadeOut: 0.08,
-      }).toDestination()
+      })
+      player.connect(audibleOutput(toneCtx.rawContext))
 
       player.playbackRate = semitonesRate * Math.pow(2, (diapasonCents + corrCents) / 1200)
       player.start(time)
@@ -250,7 +279,7 @@ export function playPhraseOscillator(ctx, notes, referentiel, tonikMidi, diapaso
     gain.gain.setValueAtTime(0, time)
     gain.gain.setTargetAtTime(0.3, time, 0.02)
     gain.gain.setTargetAtTime(0, Math.max(time, time + durSec - 0.06), 0.03)
-    gain.connect(ctx.destination)
+    gain.connect(audibleOutput(ctx))
     const osc = ctx.createOscillator()
     osc.type = 'sine'
     osc.frequency.value = hz

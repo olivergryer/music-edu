@@ -214,7 +214,7 @@
     "niveau": "C2/1",
     "categorie": "vocabulaire_technique",
     "type": "vrai_faux",
-    "question": "« Subito piano » (sp) signifie devenir doux soudainement.",
+    "question": "« Subito piano » (abrégé « p sub. » sur la partition) signifie devenir doux soudainement.",
     "reponse_correcte": "Vrai",
     "explication": "Subito (soudain) + piano (doux) = baisser brusquement le volume sans transition."
   },
@@ -717,15 +717,6 @@
     "explication": "En 6/8 : 6 croches par mesure, regroupées en 2 × 3 (deux temps ternaires)."
   },
   {
-    "id": "RM007",
-    "niveau": "C1/3",
-    "categorie": "rythme_mesure",
-    "type": "vrai_faux",
-    "question": "La mesure 3/4 est une mesure ternaire à trois temps.",
-    "reponse_correcte": "Vrai",
-    "explication": "La mesure 3/4 a 3 temps à la noire. C'est la mesure de la valse."
-  },
-  {
     "id": "RM008",
     "niveau": "C2/1",
     "categorie": "rythme_mesure",
@@ -988,7 +979,7 @@
     "question": "Qu'est-ce que le menuet ?",
     "reponse_correcte": "Une danse à 3 temps originaire de France",
     "reponse_fausse_1": "Une danse à 4 temps d'origine allemande",
-    "reponse_fausse_2": "Une forme en 2 parties",
+    "reponse_fausse_2": "Une danse populaire d'origine espagnole",
     "reponse_fausse_3": "Un tempo très rapide",
     "explication": "Le menuet est une danse de cour française en 3/4, souvent utilisé comme 3e mouvement de sonate."
   },
@@ -1046,7 +1037,7 @@
     "categorie": "formes_musicales",
     "type": "qcm",
     "question": "Qu'est-ce qu'une suite ?",
-    "reponse_correcte": "Une série de pièces de danse enchaînées dans la même tonalité",
+    "reponse_correcte": "Une série de pièces de danse enchaînées, généralement dans la même tonalité",
     "reponse_fausse_1": "Un opéra en plusieurs actes",
     "reponse_fausse_2": "Une forme d'improvisation",
     "reponse_fausse_3": "Une symphonie en 4 mouvements",
