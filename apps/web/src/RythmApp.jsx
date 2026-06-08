@@ -209,6 +209,23 @@ function beatVolMult(timeSig, ts, beatMs, softBeats = false) {
   return weights[idx % bpm] ?? 1.0;
 }
 
+// ─── Icône HP scintillante (coin haut-gauche d'une carte) ─────────────────────
+// Invite à réécouter la mesure : clic n'importe où sur la carte parente déclenche
+// la lecture (la carte porte le onClick ; cette icône est purement visuelle).
+function SpeakerHint({ color = "#4A6CF7" }) {
+  return (
+    <div style={{
+      position:'absolute', top:6, left:6, zIndex:5, color,
+      pointerEvents:'none', animation:'speaker-blink 1.4s ease-in-out infinite',
+    }}>
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" fill="currentColor"/>
+        <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/>
+      </svg>
+    </div>
+  );
+}
+
 // ─── Bilan visuel act 1 & 2 : dispersion des frappes + diagnostics ──────────────
 function DiagRow({ label, value, color }) {
   return (
@@ -1006,13 +1023,13 @@ export default function RythmApp() {
       const t   = ac.currentTime;
       const dur = Math.max(0.1, durMs / 1000);
       const peak = 0.3 * volMult;
-      // Release exp 80 ms (clamp à dur/2 pour notes très courtes) intégré dans la durée
-      // nominale : préserve le gap inter-notes (différencie noire+silence d'une blanche).
-      const release = Math.min(0.08, dur * 0.5);
+      // Decay exp piano-like : attaque brève puis décroissance continue sur TOUTE la durée.
+      // Une note longue (blanche) résonne et s'éteint progressivement ; une note courte
+      // (noire) s'éteint vite → différence tenue/court clairement audible.
       g.gain.setValueAtTime(0.0001, t);
-      g.gain.exponentialRampToValueAtTime(peak, t + 0.01);
-      g.gain.setValueAtTime(peak, t + Math.max(0.02, dur - release));
-      g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+      g.gain.exponentialRampToValueAtTime(peak, t + 0.008);            // attaque
+      g.gain.exponentialRampToValueAtTime(peak * 0.28, t + dur * 0.6); // décroissance
+      g.gain.exponentialRampToValueAtTime(0.0008, t + dur);           // extinction
       o.start(t); o.stop(t + dur + 0.02);
     } catch(_) {}
   }, [getCtx]);
@@ -1326,13 +1343,15 @@ export default function RythmApp() {
 
       // Reproduction
       tid(() => {
-        pulse(true);
+        pulse(true); // 1er temps : flash + métro (gated flashBorderRef)
         setPhase("playing");
         startRef.current = performance.now();
         [1,2,3].forEach(k => {
           tid(() => {
             setBeatStrong(false); setBeatFlash(true);
             setTimeout(() => setBeatFlash(false), 110);
+            // Métronome cumulé au flash sur chaque temps de la reproduction
+            if (flashBorderRef.current) beep(false);
           }, k * beatMs);
         });
         const tick = () => {
@@ -1366,9 +1385,13 @@ export default function RythmApp() {
     for (let k = 0; k < totalTicks; k++) {
       const delay = k * beatMs + flashOffsetMs;
       if (delay >= 0) {
+        const isExerciseBeat = k >= 4;   // beats du rythme (après le count-in de 4)
+        const isDownbeat     = k === 4;  // 1er temps de l'exercice = temps fort
         tid(() => {
           setMetroDotFlash(true);
           setTimeout(() => setMetroDotFlash(false), 120);
+          // Métronome cumulé au flash : son du temps quand l'option Flash est active.
+          if (isExerciseBeat && flashBorderRef.current) beep(isDownbeat);
         }, delay);
       }
     }
@@ -1408,7 +1431,7 @@ export default function RythmApp() {
         setPhase("results");
       }, totalMs + beatMs * 0.6);
     }, 4 * beatMs);
-  }, [randomPattern, actualBpm, pulse, rhythmBeep, rhythmPulse, revealBeat, activity, flashOffsetMs, formulaCatalog, selectedFormulas, playPatternAudio, niveauOrder, niveauFormulaIds]);
+  }, [randomPattern, actualBpm, pulse, beep, rhythmBeep, rhythmPulse, revealBeat, activity, flashOffsetMs, formulaCatalog, selectedFormulas, playPatternAudio, niveauOrder, niveauFormulaIds]);
 
   // ── Choix act 3 & 4 ───────────────────────────────────────────────────────
   const handleChoice = useCallback((idx) => {
@@ -2402,31 +2425,43 @@ export default function RythmApp() {
                   />
                   {phase==="results" && scores.length > 0 && (
                     <div style={{
-                      position:'absolute', bottom:6, left:6,
-                      display:'flex', flexDirection:'column', alignItems:'center', gap:1,
+                      position:'absolute', top:6, left:'50%', transform:'translateX(-50%)',
                       pointerEvents:'none',
                     }}>
-                      {/* Mini-réplique du marqueur (note + guide + axe + pile), pas de point */}
-                      <svg width="88" height="52" style={{ display:'block' }}>
-                        <ellipse cx="44" cy="6" rx="5" ry="3.5" fill="#4b5563" />
-                        <line x1="44" y1="10" x2="44" y2="26" stroke="#9ca3af" strokeOpacity="0.45" />
-                        <line x1="6"  y1="32" x2="82" y2="32" stroke="#9ca3af" strokeOpacity="0.55" />
-                        <line x1="44" y1="28" x2="44" y2="36" stroke="#9ca3af" strokeOpacity="0.8" />
-                        <text x="2"  y="46" fontSize="9" textAnchor="start" style={{ fill:'var(--text-muted)' }}>avance</text>
-                        <text x="86" y="46" fontSize="9" textAnchor="end"   style={{ fill:'var(--text-muted)' }}>retard</text>
+                      {/* Légende de l'axe de décalage (sans tête de note ni trait vertical) */}
+                      <svg width="92" height="24" style={{ display:'block' }}>
+                        <line x1="8"  y1="9" x2="84" y2="9" stroke="#9ca3af" strokeOpacity="0.55" />
+                        <line x1="46" y1="5" x2="46" y2="13" stroke="#9ca3af" strokeOpacity="0.8" />
+                        <text x="2"  y="22" fontSize="9" textAnchor="start" style={{ fill:'var(--text-muted)' }}>avance</text>
+                        <text x="90" y="22" fontSize="9" textAnchor="end"   style={{ fill:'var(--text-muted)' }}>retard</text>
                       </svg>
                     </div>
                   )}
                 </div>
               ) : (
                 <div
-                  className="rounded-2xl p-5 text-center text-3xl tracking-[8px] transition-colors duration-75"
+                  className="relative rounded-2xl p-5 text-center text-3xl tracking-[8px] transition-colors duration-75"
                   style={{
                     background: 'var(--surface)',
                     border: (flashBorderOn && activity === 2 && beatFlash) ? '2px solid #4A6CF7' : '1px dashed var(--border-c)',
                     color: 'var(--border-c)',
                   }}
                 >
+                  {/* Toggle flash bordure — visible dès le count-in / exemple (act 2) */}
+                  {activity === 2 && (
+                    <button
+                      onPointerDown={e => e.stopPropagation()}
+                      onClick={e => { e.stopPropagation(); setFlashBorderOn(v => !v); }}
+                      className="absolute top-1.5 right-1.5 z-10 rounded-full border-0 cursor-pointer h-7 w-7 flex items-center justify-center"
+                      style={{ background: flashBorderOn ? 'rgba(74,108,247,0.18)' : 'rgba(0,0,0,0.25)' }}
+                      title={flashBorderOn ? "Désactiver flash bordure" : "Activer flash bordure"}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                        <path d="M13 2L4.5 13.5H11L10 22L19.5 10.5H13L13 2Z" fill={flashBorderOn ? "#4A6CF7" : "#6b7280"} />
+                        {!flashBorderOn && <line x1="3" y1="3" x2="21" y2="21" stroke="#f87171" strokeWidth="2.5" strokeLinecap="round"/>}
+                      </svg>
+                    </button>
+                  )}
                   ? ? ? ?
                 </div>
               )}
@@ -2521,14 +2556,9 @@ export default function RythmApp() {
                 {phase==="countdown" ? (
                   <span className="text-[40px] font-black leading-none" style={{ color: '#4A6CF7' }}>{countdownN}</span>
                 ) : (
-                  <>
-                    <span>{phase==="playing" ? "Quelle portée ?" : "Résultat"} · {sessionBpm} BPM</span>
-                    <button
-                      onClick={() => playPatternAudio(choices[correctIdx], sessionBpm, 0, false, true, true)}
-                      className="rounded border-none px-2.5 py-0.5 text-white text-[10px] font-bold cursor-pointer"
-                      style={{ background: '#4A6CF7' }}
-                    >▶ Rejouer</button>
-                  </>
+                  <span>
+                    {phase==="playing" ? "Quelle portée ?" : "Résultat — touche une mesure pour la réécouter"} · {sessionBpm} BPM
+                  </span>
                 )}
               </div>
               <div
@@ -2545,15 +2575,21 @@ export default function RythmApp() {
                     if (i === correctIdx) borderColor = '#22C55E';
                     else if (i === selectedIdx) borderColor = '#f87171';
                   }
+                  const hintColor = phase === "results"
+                    ? (i === correctIdx ? '#22C55E' : i === selectedIdx ? '#f87171' : '#9ca3af')
+                    : '#4A6CF7';
                   return (
                     <div
                       key={i}
                       role="button"
                       onPointerDown={e => e.stopPropagation()}
-                      onClick={() => { if (phase === "playing") handleChoice(i); }}
-                      className="rounded-xl bg-surface"
+                      onClick={() => {
+                        if (phase === "playing") handleChoice(i);
+                        else if (phase === "results") playPatternAudio(c, sessionBpm, 0, false, true, true);
+                      }}
+                      className="relative rounded-xl bg-surface"
                       style={{
-                        cursor: phase === "playing" ? "pointer" : "default",
+                        cursor: "pointer",
                         border: `2px solid ${borderColor}`,
                         padding: '6px',
                         display: 'flex',
@@ -2562,6 +2598,7 @@ export default function RythmApp() {
                         boxShadow: phase === "playing" && beatFlash ? '0 0 8px rgba(74,108,247,0.4)' : 'none',
                       }}
                     >
+                      {phase === "results" && <SpeakerHint color={hintColor} />}
                       <RythmStaff
                         figures={c.figs}
                         timeSig={c.timeSig}
@@ -2581,14 +2618,6 @@ export default function RythmApp() {
                     style={{ color: selectedIdx === correctIdx ? '#22C55E' : '#f87171' }}>
                     {selectedIdx === correctIdx ? "✓ Bonne réponse ! +100 pts" : "✕ Mauvaise réponse."}
                   </div>
-                  <div className="flex justify-center mt-2">
-                    <button
-                      onPointerDown={e => e.stopPropagation()}
-                      onClick={() => playPatternAudio(choices[correctIdx], sessionBpm, 0, false, true, true)}
-                      className="rounded-xl border-none px-3 py-1.5 text-[11px] font-bold cursor-pointer"
-                      style={{ background: 'rgba(74,108,247,0.12)', color: '#4A6CF7' }}
-                    >▶ Réécouter le rythme</button>
-                  </div>
                 </>
               )}
             </div>
@@ -2604,13 +2633,18 @@ export default function RythmApp() {
                 )}
               </div>
               <div
-                className="rounded-2xl overflow-hidden mb-3 transition-colors duration-200"
+                role={phase==="results" ? "button" : undefined}
+                onPointerDown={phase==="results" ? (e => e.stopPropagation()) : undefined}
+                onClick={phase==="results" ? (() => playPatternAudio(choices[correctIdx], sessionBpm, 0, false, true, true)) : undefined}
+                className="relative rounded-2xl overflow-hidden mb-3 transition-colors duration-200"
                 style={{
                   background: 'var(--surface)',
                   padding: '10px 6px 6px',
+                  cursor: phase==="results" ? 'pointer' : 'default',
                   border: `2px solid ${phase==="results" ? (selectedIdx===correctIdx ? '#22C55E' : '#f87171') : 'var(--border-c)'}`,
                 }}
               >
+                {phase==="results" && <SpeakerHint color={selectedIdx===correctIdx ? '#22C55E' : '#f87171'} />}
                 <RythmStaff figures={pattern.figs} timeSig={pattern.timeSig} activeIdx={-1} />
               </div>
               <div className="grid grid-cols-2 gap-2 mb-2.5">
@@ -2673,28 +2707,17 @@ export default function RythmApp() {
                       ? "✓ Bonne réponse ! +100 pts"
                       : `✕ Mauvaise réponse. La bonne réponse était ${String.fromCharCode(65+correctIdx)}.`}
                   </div>
-                  {selectedIdx !== null && choices[selectedIdx] && (
+                  {selectedIdx !== null && choices[selectedIdx] && selectedIdx !== correctIdx && (
                     <div className="mt-3">
-                      <div className="text-[10px] text-app-muted text-center mb-1">Ta réponse — {String.fromCharCode(65+selectedIdx)}</div>
-                      <div className="rounded-xl overflow-hidden"
-                        style={{ background:'var(--surface-2)', padding:'8px 6px 4px', border:'1px solid var(--border-c)' }}>
+                      <div className="text-[10px] text-app-muted text-center mb-1">Ta réponse — {String.fromCharCode(65+selectedIdx)} (touche pour réécouter)</div>
+                      <div
+                        role="button"
+                        onPointerDown={e => e.stopPropagation()}
+                        onClick={() => playPatternAudio(choices[selectedIdx], sessionBpm, 0, false, true, true)}
+                        className="relative rounded-xl overflow-hidden cursor-pointer"
+                        style={{ background:'var(--surface-2)', padding:'8px 6px 4px', border:'2px solid #f87171' }}>
+                        <SpeakerHint color="#f87171" />
                         <RythmStaff figures={choices[selectedIdx].figs} timeSig={choices[selectedIdx].timeSig} activeIdx={-1} height={110}/>
-                      </div>
-                      <div className="flex justify-center mt-2 gap-2">
-                        <button
-                          onPointerDown={e => e.stopPropagation()}
-                          onClick={() => playPatternAudio(choices[selectedIdx], sessionBpm, 0, false, true, true)}
-                          className="rounded-xl border-none px-3 py-1.5 text-[11px] font-bold cursor-pointer"
-                          style={{ background: 'rgba(74,108,247,0.12)', color: '#4A6CF7' }}
-                        >▶ Réécouter ta réponse</button>
-                        {selectedIdx !== correctIdx && (
-                          <button
-                            onPointerDown={e => e.stopPropagation()}
-                            onClick={() => playPatternAudio(choices[correctIdx], sessionBpm, 0, false, true, true)}
-                            className="rounded-xl border-none px-3 py-1.5 text-[11px] font-bold cursor-pointer"
-                            style={{ background: 'rgba(52,211,153,0.12)', color: '#34d399' }}
-                          >▶ Solution</button>
-                        )}
                       </div>
                     </div>
                   )}
@@ -2807,12 +2830,6 @@ export default function RythmApp() {
                     else if (earnedPts >= 100) userBorder = '#22C55E';
                     else if (earnedPts > 50)   userBorder = '#fbbf24';
                     else                       userBorder = '#f87171';
-                    const SpeakerIcon = (
-                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.85 }}>
-                        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" fill="currentColor"/>
-                        <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/>
-                      </svg>
-                    );
                     const playUser = () => {
                       if (act5Placed.length === 0) return;
                       playPatternAudio({ figs: act5Figs, timeSig: pattern.timeSig }, sessionBpm, 0, true, true, true);
@@ -2820,22 +2837,18 @@ export default function RythmApp() {
                     const playSolution = () => playPatternAudio(pattern, sessionBpm, 0, true, true, true);
                     return (
                       <>
-                        <div className="text-[11px] text-app-muted mb-1">Ta réponse</div>
+                        <div className="text-[11px] text-app-muted mb-1">Ta réponse — touche pour réécouter</div>
                         <div
                           role="button"
                           onPointerDown={e => e.stopPropagation()}
                           onClick={playUser}
                           className="rounded-2xl overflow-hidden mb-2 relative cursor-pointer"
-                          style={{ background: 'var(--surface)', padding: '10px 6px 30px', border: `2px solid ${userBorder}` }}
+                          style={{ background: 'var(--surface)', padding: '10px 6px 6px', border: `2px solid ${userBorder}` }}
                         >
+                          {act5Placed.length > 0 && <SpeakerHint color={userBorder} />}
                           {act5Placed.length > 0
                             ? <RythmStaff figures={act5Figs} timeSig={pattern.timeSig} activeIdx={-1} showClef={false} compact={true} strikeMeter={act5Invalid} />
                             : <div className="text-center text-[12px] text-app-muted py-8">(aucune cellule posée)</div>}
-                          {act5Placed.length > 0 && (
-                            <div style={{ position:'absolute', bottom:6, left:0, right:0, display:'flex', justifyContent:'center', color: userBorder, pointerEvents:'none' }}>
-                              {SpeakerIcon}
-                            </div>
-                          )}
                         </div>
                         <div className="text-[11px] text-app-muted mb-1">Solution</div>
                         <div
@@ -2843,12 +2856,10 @@ export default function RythmApp() {
                           onPointerDown={e => e.stopPropagation()}
                           onClick={playSolution}
                           className="rounded-2xl overflow-hidden relative cursor-pointer"
-                          style={{ background: 'var(--surface)', padding: '10px 6px 30px', border: '2px solid #22C55E' }}
+                          style={{ background: 'var(--surface)', padding: '10px 6px 6px', border: '2px solid #22C55E' }}
                         >
+                          <SpeakerHint color="#22C55E" />
                           <RythmStaff figures={pattern.figs} timeSig={pattern.timeSig} activeIdx={-1} showClef={false} />
-                          <div style={{ position:'absolute', bottom:6, left:0, right:0, display:'flex', justifyContent:'center', color:'#22C55E', pointerEvents:'none' }}>
-                            {SpeakerIcon}
-                          </div>
                         </div>
                       </>
                     );

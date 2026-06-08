@@ -84,6 +84,12 @@ button:focus-visible, a:focus-visible {
   50%       { opacity: 1; }
 }
 
+/* Icône HP de réécoute — scintillement marqué (apparaît / disparaît presque) */
+@keyframes speaker-blink {
+  0%, 100% { opacity: 0.12; }
+  50%       { opacity: 1; }
+}
+
 /* Scrollbar horizontale toujours visible (utilisée pour la portée accordeur) */
 .scroll-x-hint {
   overflow-x: auto;
