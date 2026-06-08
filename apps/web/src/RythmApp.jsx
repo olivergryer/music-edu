@@ -965,6 +965,19 @@ export default function RythmApp() {
     } catch(_) {}
   }, [getCtx]);
 
+  // Son du décompte décomposé : on-beat = grave + fort, subdivision off-beat = aigu + plus faible.
+  const countBeep = useCallback((onBeat) => {
+    try {
+      const ac = getCtx();
+      const o  = ac.createOscillator(), g = ac.createGain();
+      o.connect(g); g.connect(ac.destination);
+      o.frequency.value = onBeat ? 600 : 950;          // grave (on) / aigu (off)
+      g.gain.setValueAtTime(onBeat ? 0.28 : 0.16, ac.currentTime); // fort (on) / faible (off)
+      g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.06);
+      o.start(ac.currentTime); o.stop(ac.currentTime + 0.07);
+    } catch(_) {}
+  }, [getCtx]);
+
   // Note du rythme — triangle chaud, plus long
   const rhythmBeep = useCallback((strong = false, forced = false, volMult = 1) => {
     if (!forced && !rhythmSoundRef.current) return;
@@ -1140,15 +1153,18 @@ export default function RythmApp() {
   const tid       = (fn, ms) => { const id = setTimeout(fn, ms); tidsRef.current.push(id); return id; };
 
   // Décompte décomposé : sur chaque beat de count-in, joue 2 (binaire) ou 3 (ternaire)
-  // subdivisions — 1ère = son fort + flash (pulse), suivantes = beep faible (son seul).
-  // Le flash reste sur le 1er pour éviter le clignotement subdivisionnel.
+  // subdivisions. On-beat = son grave fort + flash, off-beats = son aigu plus faible (son seul).
+  // Le flash reste sur l'on-beat pour éviter le clignotement subdivisionnel.
   const pulseCountdown = (strong, timeSig, beatMs) => {
-    pulse(strong);
+    if (flashBorderRef.current) countBeep(true);
+    setBeatStrong(strong);
+    setBeatFlash(true);
+    setTimeout(() => setBeatFlash(false), strong ? 160 : 110);
     const isTernary = ["12/8", "6/8", "9/8"].includes(timeSig);
     const subs = isTernary ? 3 : 2;
     const subMs = beatMs / subs;
     for (let k = 1; k < subs; k++) {
-      tid(() => { if (flashBorderRef.current) beep(false); }, k * subMs);
+      tid(() => { if (flashBorderRef.current) countBeep(false); }, k * subMs);
     }
   };
 
@@ -2567,6 +2583,7 @@ export default function RythmApp() {
                   </div>
                   <div className="flex justify-center mt-2">
                     <button
+                      onPointerDown={e => e.stopPropagation()}
                       onClick={() => playPatternAudio(choices[correctIdx], sessionBpm, 0, false, true, true)}
                       className="rounded-xl border-none px-3 py-1.5 text-[11px] font-bold cursor-pointer"
                       style={{ background: 'rgba(74,108,247,0.12)', color: '#4A6CF7' }}
@@ -2665,12 +2682,14 @@ export default function RythmApp() {
                       </div>
                       <div className="flex justify-center mt-2 gap-2">
                         <button
+                          onPointerDown={e => e.stopPropagation()}
                           onClick={() => playPatternAudio(choices[selectedIdx], sessionBpm, 0, false, true, true)}
                           className="rounded-xl border-none px-3 py-1.5 text-[11px] font-bold cursor-pointer"
                           style={{ background: 'rgba(74,108,247,0.12)', color: '#4A6CF7' }}
                         >▶ Réécouter ta réponse</button>
                         {selectedIdx !== correctIdx && (
                           <button
+                            onPointerDown={e => e.stopPropagation()}
                             onClick={() => playPatternAudio(choices[correctIdx], sessionBpm, 0, false, true, true)}
                             className="rounded-xl border-none px-3 py-1.5 text-[11px] font-bold cursor-pointer"
                             style={{ background: 'rgba(52,211,153,0.12)', color: '#34d399' }}
@@ -2804,6 +2823,7 @@ export default function RythmApp() {
                         <div className="text-[11px] text-app-muted mb-1">Ta réponse</div>
                         <div
                           role="button"
+                          onPointerDown={e => e.stopPropagation()}
                           onClick={playUser}
                           className="rounded-2xl overflow-hidden mb-2 relative cursor-pointer"
                           style={{ background: 'var(--surface)', padding: '10px 6px 30px', border: `2px solid ${userBorder}` }}
@@ -2820,6 +2840,7 @@ export default function RythmApp() {
                         <div className="text-[11px] text-app-muted mb-1">Solution</div>
                         <div
                           role="button"
+                          onPointerDown={e => e.stopPropagation()}
                           onClick={playSolution}
                           className="rounded-2xl overflow-hidden relative cursor-pointer"
                           style={{ background: 'var(--surface)', padding: '10px 6px 30px', border: '2px solid #22C55E' }}

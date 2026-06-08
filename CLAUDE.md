@@ -84,6 +84,7 @@ teacherCodes/{code}
 - **Pas de lib externe** sans demande explicite
 - **Interface 100% français** — labels, feedback, erreurs
 - **Mobile-first** — maxWidth 540px, touch-friendly, min 44px zones cliquables
+- **Handlers de tap globaux + boutons enfants** — quand un conteneur capte les taps (`onPointerDown`/`onPointerUp` au niveau racine : tap-to-advance, tap-to-place, zone de frappe…), TOUT bouton/carte interactif imbriqué DOIT `e.stopPropagation()` sur `onPointerDown` (pas seulement `onClick`). Sinon le handler racine se déclenche en premier (pointer events avant click) et avale l'action — bouton « non cliquable » qui déclenche le skip/advance. Ex. RythmApp results : Réécouter/Solution/cartes act 5.
 - `vercel.json` — ne jamais supprimer `"rewrites": [{"source":"/(.*)", "destination":"/index.html"}]`
 - `RythmApp.jsx` — fichier sensible (~2100 lignes), ne modifier que sur demande explicite
 - CSV `/public/formules-rythme-template.csv` — source de vérité formules rythme, ajouter dans le CSV pas dans le code
