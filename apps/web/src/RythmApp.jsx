@@ -1023,13 +1023,16 @@ export default function RythmApp() {
       const t   = ac.currentTime;
       const dur = Math.max(0.1, durMs / 1000);
       const peak = 0.3 * volMult;
-      // Decay exp piano-like : attaque brève puis décroissance continue sur TOUTE la durée.
-      // Une note longue (blanche) résonne et s'éteint progressivement ; une note courte
-      // (noire) s'éteint vite → différence tenue/court clairement audible.
+      // Decay DOUX sur toute la note : le son reste présent (~65% de la crête) jusqu'à la
+      // fin → la LONGUEUR est perceptible (distingue blanche de noire). Puis extinction
+      // rapide sur les 70 derniers ms → silence net pendant un éventuel soupir suivant
+      // (distingue noire+demi-soupir de noire pointée). Le gap est porté par le *0.85
+      // appliqué à la durée dans playPatternAudio.
+      const rel = Math.min(0.07, dur * 0.35);
       g.gain.setValueAtTime(0.0001, t);
-      g.gain.exponentialRampToValueAtTime(peak, t + 0.008);            // attaque
-      g.gain.exponentialRampToValueAtTime(peak * 0.28, t + dur * 0.6); // décroissance
-      g.gain.exponentialRampToValueAtTime(0.0008, t + dur);           // extinction
+      g.gain.exponentialRampToValueAtTime(peak, t + 0.008);              // attaque
+      g.gain.exponentialRampToValueAtTime(peak * 0.65, t + dur - rel);   // decay doux
+      g.gain.exponentialRampToValueAtTime(0.0008, t + dur);             // extinction rapide
       o.start(t); o.stop(t + dur + 0.02);
     } catch(_) {}
   }, [getCtx]);
@@ -1169,14 +1172,15 @@ export default function RythmApp() {
   const clearTids = () => { tidsRef.current.forEach(clearTimeout); tidsRef.current = []; };
   const tid       = (fn, ms) => { const id = setTimeout(fn, ms); tidsRef.current.push(id); return id; };
 
-  // Décompte décomposé : sur chaque beat de count-in, joue 2 (binaire) ou 3 (ternaire)
-  // subdivisions. On-beat = son grave fort + flash, off-beats = son aigu plus faible (son seul).
-  // Le flash reste sur l'on-beat pour éviter le clignotement subdivisionnel.
-  const pulseCountdown = (strong, timeSig, beatMs) => {
+  // Décompte : temps 1 & 2 DÉCOMPOSÉS (2 subdivisions binaire / 3 ternaire — on-beat grave
+  // fort + flash, off-beats aigu plus faible), temps 3 & 4 SEULS (on-beat uniquement).
+  // `beatNum` = numéro du temps annoncé (1..4) → pilote la décomposition.
+  const pulseCountdown = (strong, timeSig, beatMs, beatNum = 1) => {
     if (flashBorderRef.current) countBeep(true);
     setBeatStrong(strong);
     setBeatFlash(true);
     setTimeout(() => setBeatFlash(false), strong ? 160 : 110);
+    if (beatNum > 2) return; // temps 3 & 4 : on-beat seul, pas de subdivisions
     const isTernary = ["12/8", "6/8", "9/8"].includes(timeSig);
     const subs = isTernary ? 3 : 2;
     const subMs = beatMs / subs;
@@ -1197,7 +1201,7 @@ export default function RythmApp() {
       if (!fig.rest) {
         const vol = beatVolMult(pat.timeSig, timestamps[i], beatMs, softBeats);
         const id = sustain
-          ? setTimeout(() => rhythmSustain(figDur(fig) * quarterMs * 0.9, forced, vol), delayMs + timestamps[i])
+          ? setTimeout(() => rhythmSustain(figDur(fig) * quarterMs * 0.85, forced, vol), delayMs + timestamps[i])
           : setTimeout(() => rhythmBeep(false, forced, vol), delayMs + timestamps[i]);
         audioTidsRef.current.push(id);
       }
@@ -1257,8 +1261,8 @@ export default function RythmApp() {
       setSelectedIdx(null); setRevealed(false);
       setPhase("building");
       // Décompte beats 3 & 4 (flash bordure) puis lecture tenue (flash sur chaque temps)
-      setAct5CountN(3); pulseCountdown(false, pat.timeSig, beatMs);
-      tid(() => { setAct5CountN(4); pulseCountdown(false, pat.timeSig, beatMs); }, beatMs);
+      setAct5CountN(3); pulseCountdown(false, pat.timeSig, beatMs, 3);
+      tid(() => { setAct5CountN(4); pulseCountdown(false, pat.timeSig, beatMs, 4); }, beatMs);
       tid(() => { setAct5CountN(null); playPatternAudio(pat, bpm, 0, false, true, true); }, 2 * beatMs);
       return;
     }
@@ -1284,8 +1288,8 @@ export default function RythmApp() {
       if (activity === 3) {
         // Décompte 3,4 puis lecture audio (tenue)
         setPhase("countdown"); setCountdownN(3);
-        pulseCountdown(false, pat.timeSig, beatMs);
-        tid(() => { setCountdownN(4); pulseCountdown(false, pat.timeSig, beatMs); }, beatMs);
+        pulseCountdown(false, pat.timeSig, beatMs, 3);
+        tid(() => { setCountdownN(4); pulseCountdown(false, pat.timeSig, beatMs, 4); }, beatMs);
         tid(() => {
           setPhase("playing");
           playPatternAudio(pat, bpm, 0, false, true, true);
@@ -1313,10 +1317,10 @@ export default function RythmApp() {
       setRevealed(false);
       // Décompte réduit : beats 3 et 4 uniquement
       setPhase("countdown"); setCountdownN(3);
-      pulseCountdown(false, pat.timeSig, beatMs);
+      pulseCountdown(false, pat.timeSig, beatMs, 3);
       playStartRef.current = performance.now() + 2 * beatMs + totalMs + 3 * beatMs;
 
-      tid(() => { setCountdownN(4); pulseCountdown(false, pat.timeSig, beatMs); }, beatMs);
+      tid(() => { setCountdownN(4); pulseCountdown(false, pat.timeSig, beatMs, 4); }, beatMs);
 
       // Modèle — flash visuel seulement, notes en rhythmBeep
       tid(() => {
@@ -1338,8 +1342,8 @@ export default function RythmApp() {
 
       // Après modèle : 1 beat muet, puis 3 & 4 sonores
       tid(() => { setPhase("countdown"); setCountdownN(null); setBeatFlash(false); }, 2 * beatMs + totalMs);
-      tid(() => { setCountdownN(3); pulseCountdown(false, pat.timeSig, beatMs); }, 2 * beatMs + totalMs + beatMs);
-      tid(() => { setCountdownN(4); pulseCountdown(false, pat.timeSig, beatMs); }, 2 * beatMs + totalMs + 2 * beatMs);
+      tid(() => { setCountdownN(3); pulseCountdown(false, pat.timeSig, beatMs, 3); }, 2 * beatMs + totalMs + beatMs);
+      tid(() => { setCountdownN(4); pulseCountdown(false, pat.timeSig, beatMs, 4); }, 2 * beatMs + totalMs + 2 * beatMs);
 
       // Reproduction
       tid(() => {
@@ -1376,12 +1380,15 @@ export default function RythmApp() {
     setScores([]); setActiveIdx(-1); setProgress(0);
     setRevealed(revealBeat === 1);
     setPhase("countdown"); setCountdownN(1);
-    pulseCountdown(true, pat.timeSig, beatMs);
+    pulseCountdown(true, pat.timeSig, beatMs, 1);
 
     playStartRef.current = performance.now() + 4 * beatMs;
 
     setMetroDotFlash(false);
-    const totalTicks = 4 + Math.ceil((totalMs + beatMs * 0.6) / beatMs) + 1;
+    // nBeats = nombre de temps réels de la mesure. Le métro/flash s'arrête au DERNIER temps
+    // (k = 4+nBeats-1), jamais au temps suivant (sinon 5ème temps fantôme en fin de réponse).
+    const nBeatsEx   = Math.round(totalMs / beatMs);
+    const totalTicks = 4 + nBeatsEx;
     for (let k = 0; k < totalTicks; k++) {
       const delay = k * beatMs + flashOffsetMs;
       if (delay >= 0) {
@@ -1399,7 +1406,7 @@ export default function RythmApp() {
     [1,2,3,4].forEach((n, i) => {
       tid(() => {
         setCountdownN(n);
-        if (i > 0) pulseCountdown(false, pat.timeSig, beatMs);
+        if (i > 0) pulseCountdown(false, pat.timeSig, beatMs, n);
         if (n >= revealBeat) setRevealed(true);
       }, i * beatMs);
     });

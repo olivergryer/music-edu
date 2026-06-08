@@ -13,6 +13,8 @@ import DashboardEleve from './pages/DashboardEleve'
 import DashboardProf from './pages/DashboardProf'
 import DashboardProfEleve from './pages/DashboardProfEleve'
 import FeedbackPage from './pages/FeedbackPage'
+import QuestionsAdminPage from './QuestionsAdminPage'
+import { IS_DEV } from './isDev'
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth()
@@ -54,6 +56,7 @@ function AppRoutes() {
       <Route path="/" element={<HubPage />} />
       <Route path="/rythme" element={<RythmApp />} />
       <Route path="/theorie" element={<TheoriePage />} />
+      {IS_DEV && <Route path="/theorie/questions" element={<QuestionsAdminPage />} />}
       <Route path="/accordeur" element={<AccordeurPage />} />
       <Route path="/accordeur/generateur" element={<GenerateurAccordPage />} />
       <Route path="/profil" element={<ProtectedRoute><ProfilPage /></ProtectedRoute>} />

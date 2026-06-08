@@ -6,6 +6,7 @@ import IntervalleStaff from './IntervalleStaff.jsx'
 import TourGuide from './TourGuide'
 import ConsigneOverlay, { consigneSeen } from './ConsigneOverlay'
 import useProgressFirebase from './hooks/useProgressFirebase'
+import { IS_DEV } from './isDev'
 
 const CATEGORIES = [
   { id: 'vocabulaire_musical',    label: 'Vocabulaire musical',    includes: ['vocabulaire_italien', 'vocabulaire_technique', 'notation_partition'] },
@@ -885,6 +886,14 @@ export default function TheoriePage() {
           </Link>
           <div style={{ display:'flex', gap:6, alignItems:'center' }}>
             <ThemeToggleInline />
+            {IS_DEV && (
+              <Link
+                to="/theorie/questions"
+                title="Admin questions (DEV)"
+                className="bg-surface border border-app rounded-lg cursor-pointer flex items-center justify-center no-underline"
+                style={{ height:32, padding:'0 8px', fontWeight:700, fontSize:10, letterSpacing:1, color:'#8B5CF6' }}
+              >DEV</Link>
+            )}
             <button
               onClick={() => setShowHelp(true)}
               title="Aide"
