@@ -1187,6 +1187,25 @@ export default function RythmApp() {
   const clearTids = () => { tidsRef.current.forEach(clearTimeout); tidsRef.current = []; };
   const tid       = (fn, ms) => { const id = setTimeout(fn, ms); tidsRef.current.push(id); return id; };
 
+
+  // Décompte : temps 1 & 2 DÉCOMPOSÉS (2 subdivisions binaire / 3 ternaire — on-beat grave
+  // fort + flash, off-beats aigu plus faible), temps 3 & 4 SEULS (on-beat uniquement).
+  // `beatNum` = numéro du temps annoncé (1..4) → pilote la décomposition.
+  // `forced` = ignore metroSoundRef (pour count-in en mode extrême).
+  const pulseCountdown = (strong, timeSig, beatMs, beatNum = 1, forced = false) => {
+    if (metroSoundRef.current || forced) countBeep(true, forced);
+    setBeatStrong(strong);
+    setBeatFlash(true);
+    setTimeout(() => setBeatFlash(false), strong ? 160 : 110);
+    if (beatNum > 2) return; // temps 3 & 4 : on-beat seul, pas de subdivisions
+    const isTernary = ["12/8", "6/8", "9/8"].includes(timeSig);
+    const subs = isTernary ? 3 : 2;
+    const subMs = beatMs / subs;
+    for (let k = 1; k < subs; k++) {
+      tid(() => { if (metroSoundRef.current || forced) countBeep(false, forced); }, k * subMs);
+    }
+  };
+
   // Rejeu même formule (sans gain XP) — réutilise pattern courant sans regeneration
   const retryExercise = useCallback(() => {
     if (!pattern) return;
@@ -1226,25 +1245,7 @@ export default function RythmApp() {
       tid(() => { setCountdownN(4); pulseCountdown(false, pattern.timeSig, beatMs, 4, extremeMode); }, beatMs);
       tid(() => { setPhase("playing"); setCountdownN(null); }, 2 * beatMs);
     }
-  }, [pattern, sessionBpm, bpmFixed, activity, revealBeat, extremeMode, pulseCountdown, beep]);
-
-  // Décompte : temps 1 & 2 DÉCOMPOSÉS (2 subdivisions binaire / 3 ternaire — on-beat grave
-  // fort + flash, off-beats aigu plus faible), temps 3 & 4 SEULS (on-beat uniquement).
-  // `beatNum` = numéro du temps annoncé (1..4) → pilote la décomposition.
-  // `forced` = ignore metroSoundRef (pour count-in en mode extrême).
-  const pulseCountdown = (strong, timeSig, beatMs, beatNum = 1, forced = false) => {
-    if (metroSoundRef.current || forced) countBeep(true, forced);
-    setBeatStrong(strong);
-    setBeatFlash(true);
-    setTimeout(() => setBeatFlash(false), strong ? 160 : 110);
-    if (beatNum > 2) return; // temps 3 & 4 : on-beat seul, pas de subdivisions
-    const isTernary = ["12/8", "6/8", "9/8"].includes(timeSig);
-    const subs = isTernary ? 3 : 2;
-    const subMs = beatMs / subs;
-    for (let k = 1; k < subs; k++) {
-      tid(() => { if (metroSoundRef.current || forced) countBeep(false, forced); }, k * subMs);
-    }
-  };
+  }, [pattern, sessionBpm, bpmFixed, activity, revealBeat, extremeMode]);
 
   // sustain=true : lecture tenue (chaque note résonne ~sa durée) — act 3/4.
   const playPatternAudio = useCallback((pat, bpmVal, delayMs = 0, forced = false, sustain = false, softBeats = false) => {
