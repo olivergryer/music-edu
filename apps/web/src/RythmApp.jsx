@@ -860,6 +860,7 @@ export default function RythmApp() {
   const [selectedIdx, setSelectedIdx] = useState(null);
   const [pendingIdx,  setPendingIdx]  = useState(null);
   const [act4CountN,  setAct4CountN]  = useState(null);
+  const [replayIdx,   setReplayIdx]   = useState(-1); // act 3/4 results : portée en cours de réécoute (flash localisé)
   const [act34Error,  setAct34Error]  = useState(null); // act 3/4 : génération distracteurs impossible
   const [act5Palette, setAct5Palette] = useState([]);   // act 5 : cellules (formules) proposées
   const [act5Placed,  setAct5Placed]  = useState([]);   // act 5 : cellules posées par l'élève (séquence)
@@ -1242,19 +1243,6 @@ export default function RythmApp() {
     }
   };
 
-  // Rejeu même formule (sans gain XP) — réutilise pattern courant sans regeneration
-  // Rejeu même formule (sans gain XP) — déclenche startGame avec retryMode=true
-  const retryExercise = useCallback(() => {
-    if (!pattern) return;
-    setRetryMode(true);
-    retryModeRef.current = true;
-    recordedPatternRef.current = null;
-    setTapTimes([]); tapTimesRef.current = [];
-    setScores([]); setActiveIdx(-1); setProgress(0);
-    setEarnedPts(0);
-    setPhase("idle"); // Déclenche startGame qui verra retryMode=true
-  }, [pattern]);
-
   // sustain=true : lecture tenue (chaque note résonne ~sa durée) — act 3/4.
   const playPatternAudio = useCallback((pat, bpmVal, delayMs = 0, forced = false, sustain = false, softBeats = false) => {
     audioTidsRef.current.forEach(clearTimeout);
@@ -1509,6 +1497,19 @@ export default function RythmApp() {
       }, totalMs + beatMs * 0.6);
     }, 4 * beatMs);
   }, [randomPattern, actualBpm, pulse, beep, rhythmBeep, rhythmPulse, revealBeat, activity, flashOffsetMs, formulaCatalog, selectedFormulas, playPatternAudio, niveauOrder, niveauFormulaIds]);
+
+  // Rejeu même formule (sans gain XP) — relance startGame directement avec retryModeRef=true.
+  // startGame lit retryModeRef de façon synchrone et réutilise le pattern courant.
+  const retryExercise = useCallback(() => {
+    if (!pattern) return;
+    retryModeRef.current = true;
+    setRetryMode(true);
+    recordedPatternRef.current = null;
+    setTapTimes([]); tapTimesRef.current = [];
+    setScores([]); setActiveIdx(-1); setProgress(0);
+    setEarnedPts(0);
+    startGame();
+  }, [pattern, startGame]);
 
   // ── Choix act 3 & 4 ───────────────────────────────────────────────────────
   const handleChoice = useCallback((idx) => {
@@ -2227,7 +2228,9 @@ export default function RythmApp() {
   const handleNext = () => {
     if (!canStart) return;
     setExpandedBadge(null);
-    setRetryMode(false); retryModeRef.current = false; // Exercice suivant = nouvelle génération aléatoire
+    // Reset retryMode UNIQUEMENT pour un vrai "Suivant" (depuis results), pas pour le
+    // démarrage qui suit un Rejouer (phase idle, retryModeRef encore true à préserver).
+    if (phase === "results") { setRetryMode(false); retryModeRef.current = false; }
     if (seriesMode && phase === "results") {
       const nextIdx = seriesIdx + 1;
       const updatedXpLog  = [...seriesXpLog, earnedPts];
@@ -2741,8 +2744,20 @@ export default function RythmApp() {
                       role="button"
                       onPointerDown={e => e.stopPropagation()}
                       onClick={() => {
-                        if (phase === "playing") handleChoice(i);
-                        else if (phase === "results") playPatternAudio(c, sessionBpm, 0, false, true, true);
+                        if (phase === "playing") { handleChoice(i); return; }
+                        if (phase !== "results") return;
+                        // Réécoute corrigée + tempo (flash localisé sur cette portée / son selon toggle)
+                        audioTidsRef.current.forEach(clearTimeout); audioTidsRef.current = [];
+                        const bMs = 60000 / sessionBpm;
+                        setReplayIdx(i);
+                        playPatternAudio(c, sessionBpm, 0, false, true, true);
+                        for (let k = 0; k < 4; k++) {
+                          tid(() => {
+                            if (flashBorderOn) { setBeatFlash(true); setTimeout(() => setBeatFlash(false), 110); }
+                            if (metroSoundOn) beep(false);
+                          }, k * bMs);
+                        }
+                        tid(() => setReplayIdx(-1), 4 * bMs + 150);
                       }}
                       className="relative rounded-xl bg-surface"
                       style={{
@@ -2752,7 +2767,7 @@ export default function RythmApp() {
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        boxShadow: phase === "playing" && beatFlash ? '0 0 8px rgba(74,108,247,0.4)' : 'none',
+                        boxShadow: ((phase === "playing" || (phase === "results" && replayIdx === i)) && beatFlash) ? '0 0 8px rgba(74,108,247,0.4)' : 'none',
                       }}
                     >
                       {phase === "results" && <SpeakerHint color={hintColor} />}
@@ -2796,46 +2811,6 @@ export default function RythmApp() {
           {/* act 4 — portée cible + 4 boutons audio */}
           {activity === 4 && phase !== "idle" && pattern && (
             <div className="w-full relative">
-              {/* Toggle Flash+Métro — top-right act 4 */}
-              <button
-                onPointerDown={e => e.stopPropagation()}
-                onClick={e => { e.stopPropagation(); setFlashMetroState(s => (s + 1) % 4); }}
-                className="absolute top-0 right-0 z-10 rounded-full border-0 cursor-pointer h-7 w-7 flex items-center justify-center"
-                style={{
-                  background: flashMetroState > 0 ? 'rgba(74,108,247,0.18)' : 'rgba(0,0,0,0.25)',
-                }}
-                title={
-                  flashMetroState === 0 ? "Flash + Métro OFF" :
-                  flashMetroState === 1 ? "Flash seulement" :
-                  flashMetroState === 2 ? "Métro seulement" :
-                  "Flash + Métro ON"
-                }
-              >
-                {flashMetroState === 0 && (
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2">
-                    <circle cx="12" cy="12" r="10"/>
-                    <line x1="4" y1="4" x2="20" y2="20"/>
-                  </svg>
-                )}
-                {flashMetroState === 1 && (
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="#4A6CF7">
-                    <path d="M13 2L4.5 13.5H11L10 22L19.5 10.5H13L13 2Z"/>
-                  </svg>
-                )}
-                {flashMetroState === 2 && (
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4A6CF7" strokeWidth="1.5" strokeLinecap="round">
-                    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" fill="#4A6CF7"/>
-                    <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/>
-                  </svg>
-                )}
-                {flashMetroState === 3 && (
-                  <svg width="14" height="14" viewBox="0 0 28 24" fill="none">
-                    <path d="M6 2L-1 11H4L3 20L10 10H6L6 2Z" fill="#4A6CF7" transform="translate(2)"/>
-                    <path d="M16 6c2 0 3-1 3-3s-1-3-3-3-3 1-3 3 1 3 3 3zm0 2c-3 0-5 2-5 5v2h10v-2c0-3-2-5-5-5z" fill="#4A6CF7" transform="translate(5,3)" opacity="0.8"/>
-                  </svg>
-                )}
-              </button>
-
               <div className="text-center text-[11px] text-app-muted mb-1.5 flex items-center justify-center gap-2.5">
                 <span>{phase==="playing" ? "Quelle lecture ?" : "Résultat"} · {sessionBpm} BPM</span>
                 {act4CountN !== null && (
@@ -2854,6 +2829,45 @@ export default function RythmApp() {
                   border: `2px solid ${phase==="results" ? (selectedIdx===correctIdx ? '#22C55E' : '#f87171') : 'var(--border-c)'}`,
                 }}
               >
+                {/* Toggle Flash+Métro — top-right sur la portée cible (visible, comme act 1/2/3) */}
+                <button
+                  onPointerDown={e => e.stopPropagation()}
+                  onClick={e => { e.stopPropagation(); setFlashMetroState(s => (s + 1) % 4); }}
+                  className="absolute top-1.5 right-1.5 z-10 rounded-full border-0 cursor-pointer h-7 w-7 flex items-center justify-center"
+                  style={{
+                    background: flashMetroState > 0 ? 'rgba(74,108,247,0.18)' : 'rgba(0,0,0,0.25)',
+                  }}
+                  title={
+                    flashMetroState === 0 ? "Flash + Métro OFF" :
+                    flashMetroState === 1 ? "Flash seulement" :
+                    flashMetroState === 2 ? "Métro seulement" :
+                    "Flash + Métro ON"
+                  }
+                >
+                  {flashMetroState === 0 && (
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2">
+                      <circle cx="12" cy="12" r="10"/>
+                      <line x1="4" y1="4" x2="20" y2="20"/>
+                    </svg>
+                  )}
+                  {flashMetroState === 1 && (
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="#4A6CF7">
+                      <path d="M13 2L4.5 13.5H11L10 22L19.5 10.5H13L13 2Z"/>
+                    </svg>
+                  )}
+                  {flashMetroState === 2 && (
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4A6CF7" strokeWidth="1.5" strokeLinecap="round">
+                      <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" fill="#4A6CF7"/>
+                      <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/>
+                    </svg>
+                  )}
+                  {flashMetroState === 3 && (
+                    <svg width="14" height="14" viewBox="0 0 28 24" fill="none">
+                      <path d="M6 2L-1 11H4L3 20L10 10H6L6 2Z" fill="#4A6CF7" transform="translate(2)"/>
+                      <path d="M16 6c2 0 3-1 3-3s-1-3-3-3-3 1-3 3 1 3 3 3zm0 2c-3 0-5 2-5 5v2h10v-2c0-3-2-5-5-5z" fill="#4A6CF7" transform="translate(5,3)" opacity="0.8"/>
+                    </svg>
+                  )}
+                </button>
                 {phase==="results" && <SpeakerHint color={selectedIdx===correctIdx ? '#22C55E' : '#f87171'} />}
                 <RythmStaff figures={pattern.figs} timeSig={pattern.timeSig} activeIdx={-1} />
               </div>
