@@ -1368,21 +1368,9 @@ export default function RythmApp() {
           }
         }, 2 * beatMs);
       } else {
-        // Act 4 : décompte 3,4 puis playing (comme act 3)
-        setPhase("countdown"); setAct4CountN(3);
-        pulseCountdown(false, pat.timeSig, beatMs, 3);
-        tid(() => { setAct4CountN(4); pulseCountdown(false, pat.timeSig, beatMs, 4); }, beatMs);
-        tid(() => {
-          setPhase("playing");
-          // Flash bordures des 4 réponses sur chaque beat
-          for (let k = 0; k < 4; k++) {
-            tid(() => {
-              setBeatFlash(true);
-              setTimeout(() => setBeatFlash(false), 110);
-              if (metroSoundRef.current) beep(false);
-            }, k * beatMs);
-          }
-        }, 2 * beatMs);
+        // Act 4 : affichage statique sans count-in ni métronome au démarrage
+        // Le count-in + métronome viendront au clic sur une portée
+        setPhase("playing");
       }
       return;
     }
@@ -2725,16 +2713,6 @@ export default function RythmApp() {
                   </span>
                 )}
               </div>
-              {phase === "playing" && pattern && (
-                <div className="text-center mb-2">
-                  <button
-                    onPointerDown={e => e.stopPropagation()}
-                    onClick={() => playPatternAudio(pattern, sessionBpm, 0, false, true, true)}
-                    className="rounded-lg border-none px-3 py-1.5 text-[11px] font-bold cursor-pointer"
-                    style={{ background: 'rgba(74,108,247,0.12)', color: '#4A6CF7' }}
-                  >▶ Réécouter la mesure</button>
-                </div>
-              )}
               <div
                 className="grid gap-2 transition-opacity duration-300"
                 style={{
@@ -2786,6 +2764,19 @@ export default function RythmApp() {
                   );
                 })}
               </div>
+
+              {/* Bouton réécouter en bas — act 3 */}
+              {phase === "playing" && pattern && (
+                <div className="text-center mt-2.5">
+                  <button
+                    onPointerDown={e => e.stopPropagation()}
+                    onClick={() => playPatternAudio(pattern, sessionBpm, 0, false, true, true)}
+                    className="rounded-lg border-none px-3 py-1.5 text-[11px] font-bold cursor-pointer"
+                    style={{ background: 'rgba(74,108,247,0.12)', color: '#4A6CF7' }}
+                  >▶ Réécouter la mesure</button>
+                </div>
+              )}
+
               {phase === "results" && (
                 <>
                   <div className="mt-3 text-center text-sm font-bold"
