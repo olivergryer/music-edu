@@ -2836,7 +2836,7 @@ export default function RythmApp() {
                   }
                   tid(() => setReplayIdx(-1), 4 * bMs + 150);
                 }) : undefined}
-                className="relative rounded-2xl overflow-hidden mb-3 transition-colors duration-200"
+                className="relative rounded-2xl overflow-hidden mb-3"
                 style={{
                   background: 'var(--surface)',
                   padding: '10px 6px 6px',
