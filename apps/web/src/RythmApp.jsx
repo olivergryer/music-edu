@@ -2902,6 +2902,21 @@ export default function RythmApp() {
                     <button key={i}
                       onPointerDown={e => e.stopPropagation()}
                       onClick={() => {
+                        // En results : réécoute de cette proposition + flash sur la portée principale (replayIdx=-2)
+                        if (phase === "results") {
+                          audioTidsRef.current.forEach(clearTimeout); audioTidsRef.current = [];
+                          const bMs2 = 60000 / sessionBpm;
+                          setReplayIdx(-2);
+                          playPatternAudio(c, sessionBpm, 0, false, true, true);
+                          for (let k = 0; k < 4; k++) {
+                            tid(() => {
+                              if (flashBorderOn) { setBeatFlash(true); setTimeout(() => setBeatFlash(false), 110); }
+                              if (metroSoundOn) beep(false);
+                            }, k * bMs2);
+                          }
+                          tid(() => setReplayIdx(-1), 4 * bMs2 + 150);
+                          return;
+                        }
                         if (phase !== "playing") return;
                         audioTidsRef.current.forEach(clearTimeout); audioTidsRef.current = [];
                         setPendingIdx(i);
@@ -2937,7 +2952,7 @@ export default function RythmApp() {
                         }, 2 * bMs);
                       }}
                       className="border-none rounded-xl py-2.5 text-sm font-bold"
-                      style={{ background: bg, color: col, cursor: phase==="playing" ? "pointer" : "default", transition: "all 0.15s" }}
+                      style={{ background: bg, color: col, cursor: (phase==="playing" || phase==="results") ? "pointer" : "default", transition: "all 0.15s" }}
                     >▶ {String.fromCharCode(65+i)}</button>
                   );
                 })}
