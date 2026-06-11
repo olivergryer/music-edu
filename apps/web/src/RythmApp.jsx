@@ -1292,14 +1292,13 @@ export default function RythmApp() {
   }, [tempoMode, bpmFixed, bpmMin, bpmMax]);
 
   // ── Démarrage ─────────────────────────────────────────────────────────────
-  const startGame = useCallback(() => {
+  // reusePattern : pattern explicite à rejouer (Rejouer) — évite tout stale de closure.
+  const startGame = useCallback((reusePattern = null) => {
     clearTids();
     audioTidsRef.current.forEach(clearTimeout); audioTidsRef.current = [];
     cancelAnimationFrame(rafRef.current);
-    // Retry mode : réutiliser pattern existant, sinon générer nouveau
-    // Lecture via ref pour éviter closure stale (handleNext set false juste avant l'appel)
-    const isRetry = retryModeRef.current;
-    const pat  = isRetry && pattern ? pattern : randomPattern();
+    // Rejouer : réutilise le pattern fourni en argument ; sinon génère un nouveau.
+    const pat  = reusePattern ?? randomPattern();
     // En mode série : BPM de base + ramp +5 tous les 3 exercices
     const bpm  = seriesBaseBpmRef.current !== null
       ? seriesBaseBpmRef.current + Math.floor(seriesIdxRef.current / 3) * 5
@@ -1508,7 +1507,7 @@ export default function RythmApp() {
     setTapTimes([]); tapTimesRef.current = [];
     setScores([]); setActiveIdx(-1); setProgress(0);
     setEarnedPts(0);
-    startGame();
+    startGame(pattern); // pattern courant passé explicitement → rejoue la même formule
   }, [pattern, startGame]);
 
   // ── Choix act 3 & 4 ───────────────────────────────────────────────────────
