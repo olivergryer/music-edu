@@ -3,7 +3,7 @@ import { localDateStr } from './progressLogic'
 
 export type Platform = 'ios' | 'android' | 'desktop' | 'unknown'
 export type Browser = 'chrome' | 'safari' | 'firefox' | 'edge' | 'samsung' | 'opera' | 'brave' | 'other'
-export type InAppBrowser = 'instagram' | 'facebook' | 'tiktok' | null
+export type InAppBrowser = 'instagram' | 'messenger' | 'facebook' | 'tiktok' | null
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>
@@ -41,6 +41,8 @@ function detectInAppBrowser(): InAppBrowser {
   if (typeof navigator === 'undefined') return null
   const ua = navigator.userAgent
   if (/Instagram/i.test(ua)) return 'instagram'
+  // Messenger AVANT facebook : son UA contient aussi FBAN/FB_IAB.
+  if (/Messenger|MessengerForiOS|Orca-/i.test(ua)) return 'messenger'
   if (/FBAN|FBAV|FB_IAB/i.test(ua)) return 'facebook'
   if (/musical_ly|TikTok|BytedanceWebview/i.test(ua)) return 'tiktok'
   return null

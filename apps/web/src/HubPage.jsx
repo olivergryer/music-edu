@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import useProgressFirebase from './hooks/useProgressFirebase'
+import useProgressFirebase, { rankLabel, displayStreak, todayStr } from './hooks/useProgressFirebase'
 import { usePwaInstall } from './hooks/usePwaInstall'
 import { useAuth } from './auth/AuthProvider'
 import { useTheme } from './ThemeContext'
@@ -63,6 +63,8 @@ export default function HubPage() {
   const { xp, rank, streak, trophies } = useProgressFirebase()
   const { user, profile } = useAuth()
   const { dark } = useTheme()
+  const liveStreak = displayStreak(streak, todayStr())
+  const dashHref = profile?.role === 'prof' ? '/dashboard/prof' : '/dashboard/eleve'
   const pwa = usePwaInstall()
   const [showPwaTuto, setShowPwaTuto] = useState(false)
   const [showInApp, setShowInApp] = useState(false)
@@ -111,23 +113,27 @@ export default function HubPage() {
         <div className="mt-8 flex gap-3 items-center justify-center flex-wrap text-sm text-app-muted">
           {user ? (
             <>
-              {streak.current > 0 && (
+              {liveStreak > 0 && (
                 <span className="flex items-center gap-1">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="#FF8B3D"><path d="M12 2C8 8 4 11 4 15a8 8 0 0016 0c0-4-4-7-8-13z"/></svg>
-                  {streak.current} jour{streak.current > 1 ? 's' : ''}
+                  {liveStreak} jour{liveStreak > 1 ? 's' : ''}
                 </span>
               )}
               {xp > 0 && <span className="font-semibold text-app">{xp} XP</span>}
               {xp > 0 && (
-                <span className="font-bold text-sm px-2 py-0.5 rounded-full" style={{ background: '#8B5CF620', color: '#8B5CF6' }}>
-                  {rank.id}
-                </span>
+                <Link
+                  to={dashHref}
+                  className="font-bold no-underline text-sm px-2 py-0.5 rounded-full transition-opacity hover:opacity-80"
+                  style={{ background: '#8B5CF620', color: '#8B5CF6' }}
+                >
+                  {rankLabel(rank)}
+                </Link>
               )}
               {trophies.length > 0 && <span className="text-app-muted">{trophies.length} trophées</span>}
               <Link
-                to={profile?.role === 'prof' ? '/dashboard/prof' : '/dashboard/eleve'}
-                className="font-bold no-underline text-sm px-3 py-1 rounded-full border border-app transition-colors hover:bg-surface"
-                style={{ color: '#4A6CF7' }}
+                to={dashHref}
+                className="font-extrabold no-underline text-sm px-3.5 py-1.5 rounded-full border-2 transition-colors"
+                style={{ color: '#fff', background: '#4A6CF7', borderColor: '#4A6CF7' }}
               >
                 {profile?.displayName ?? 'Mon compte'} →
               </Link>

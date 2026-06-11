@@ -984,7 +984,8 @@ export default function RythmApp() {
 
   // Métronome — clic sec, sine. Presets : 0=standard (1000/700), 1=doux (800/500), 2=grave (600/400).
   const beep = useCallback((strong = false, forced = false) => {
-    if (!forced && !rhythmSoundRef.current) return;
+    // Métronome : indépendant du son de l'exemple (rhythmSoundRef) — gate sur le toggle métronome.
+    if (!forced && !metroSoundRef.current) return;
     try {
       const ac = getCtx();
       const [freqStrong, freqWeak] = [
@@ -2888,6 +2889,7 @@ export default function RythmApp() {
                 <div
                   className="absolute inset-0 rounded-2xl pointer-events-none"
                   style={{
+                    zIndex: 20,
                     border: '3px solid #4A6CF7',
                     boxShadow: 'inset 0 0 14px rgba(74,108,247,0.55)',
                     opacity: targetFlash ? 1 : 0,
@@ -2925,17 +2927,17 @@ export default function RythmApp() {
                         setPendingIdx(i);
                         const bMs = 60000 / sessionBpm;
 
-                        // Count-in "3, 4" toujours audible + visible
+                        // Count-in "3, 4" toujours audible + visible (flash overlay sur portée principale)
                         setAct4CountN(3);
                         countBeep(false, true); // Force son count-in
-                        setBeatFlash(true);
-                        setTimeout(() => setBeatFlash(false), 110);
+                        setTargetFlash(true);
+                        setTimeout(() => setTargetFlash(false), 110);
 
                         tid(() => {
                           setAct4CountN(4);
                           countBeep(false, true); // Force son count-in
-                          setBeatFlash(true);
-                          setTimeout(() => setBeatFlash(false), 110);
+                          setTargetFlash(true);
+                          setTimeout(() => setTargetFlash(false), 110);
                         }, bMs);
 
                         // Après count-in : lecture formule avec son/flash selon toggle
@@ -2946,8 +2948,8 @@ export default function RythmApp() {
                           for (let k = 0; k < 4; k++) {
                             tid(() => {
                               if (flashBorderOn) {
-                                setBeatFlash(true);
-                                setTimeout(() => setBeatFlash(false), 110);
+                                setTargetFlash(true);
+                                setTimeout(() => setTargetFlash(false), 110);
                               }
                               if (metroSoundOn) beep(false);
                             }, k * bMs);

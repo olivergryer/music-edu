@@ -4,7 +4,7 @@ import { collection, query, where, getDocs, orderBy, limit } from 'firebase/fire
 import { signOut } from 'firebase/auth'
 import { db, auth } from '../lib/firebase'
 import { useAuth } from '../auth/AuthProvider'
-import { getRank } from '../hooks/useProgressFirebase'
+import { getRank, rankLabel, displayStreak, todayStr } from '../hooks/useProgressFirebase'
 import { usePwaInstall } from '../hooks/usePwaInstall'
 import PwaInstallTutorial from '../components/PwaInstallTutorial'
 import PwaInAppBrowserOverlay from '../components/PwaInAppBrowserOverlay'
@@ -143,11 +143,13 @@ export default function DashboardProf() {
               <div className="flex justify-between items-center mb-3">
                 <div className="text-base font-bold text-app">{e.displayName}</div>
                 <div className="flex gap-2.5 items-center">
-                  <span className="text-xs font-bold" style={{ color: '#8B5CF6' }}>{rank.id}</span>
+                  <span className="text-xs font-bold" style={{ color: '#8B5CF6' }}>{rankLabel(rank)}</span>
                   <span className="text-xs text-app-muted">{prog.xp} XP</span>
-                  <span className="text-xs" style={{ color: prog.streak.current > 0 ? '#FF8B3D' : 'var(--text-muted)' }}>
-                    {prog.streak.current}j
-                  </span>
+                  {(() => { const s = displayStreak(prog.streak, todayStr()); return (
+                    <span className="text-xs" style={{ color: s > 0 ? '#FF8B3D' : 'var(--text-muted)' }}>
+                      {s}j
+                    </span>
+                  )})()}
                 </div>
               </div>
 

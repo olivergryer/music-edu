@@ -14,7 +14,7 @@ import {
   type ProgressState,
 } from './progressLogic'
 
-export { RANKS, TROPHIES, getRank, getNextRank } from './progressLogic'
+export { RANKS, TROPHIES, getRank, getNextRank, rankLabel, displayStreak, todayStr } from './progressLogic'
 
 interface AddSessionResult {
   newTrophies: string[]

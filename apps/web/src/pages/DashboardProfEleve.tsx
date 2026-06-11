@@ -9,7 +9,7 @@ import {
   localDateStr,
   mergeWithDefaults,
   DEFAULT_STATE,
-  getRank, getNextRank, todayStr,
+  getRank, getNextRank, todayStr, rankLabel, displayStreak,
   TROPHIES,
   type ProgressState,
 } from '../hooks/progressLogic'
@@ -98,6 +98,7 @@ export default function DashboardProfEleve() {
   const xpInRank = progress.xp - rank.xp
   const xpNeeded = nextLv ? nextLv.xp - rank.xp : 1
   const pct = Math.min(100, Math.round((xpInRank / xpNeeded) * 100))
+  const liveStreak = displayStreak(progress.streak, todayStr())
 
   return (
     <div className="bg-app min-h-dvh flex flex-col items-center px-4 py-3 pb-10">
@@ -143,7 +144,7 @@ export default function DashboardProfEleve() {
               <div className="flex justify-between items-center mb-3">
                 <div>
                   <div className={labelCls}>Rang</div>
-                  <div className="text-3xl font-black" style={{ color: '#8B5CF6' }}>{rank.id}</div>
+                  <div className="text-3xl font-black" style={{ color: '#8B5CF6' }}>{rankLabel(rank)}</div>
                 </div>
                 <div className="text-right">
                   <div className={labelCls}>XP total</div>
@@ -155,15 +156,15 @@ export default function DashboardProfEleve() {
               </div>
               <div className="flex justify-between text-xs text-app-muted">
                 <span>{xpInRank} / {xpNeeded} XP</span>
-                <span>{nextLv ? `Prochain : ${nextLv.id}` : 'Rang maximum'}</span>
+                <span>{nextLv ? `Prochain : ${rankLabel(nextLv)}` : 'Rang maximum'}</span>
               </div>
             </div>
 
             {/* Streak */}
             <div className={cardCls + ' flex gap-4'}>
               <div className="flex-1 text-center">
-                <div className="text-3xl font-black mb-1" style={{ color: progress.streak.current > 0 ? '#FF8B3D' : 'var(--text-muted)' }}>
-                  {progress.streak.current}
+                <div className="text-3xl font-black mb-1" style={{ color: liveStreak > 0 ? '#FF8B3D' : 'var(--text-muted)' }}>
+                  {liveStreak}
                 </div>
                 <div className="text-xs text-app-muted">jours consécutifs</div>
               </div>

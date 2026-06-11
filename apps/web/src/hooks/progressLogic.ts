@@ -50,15 +50,22 @@ export interface ApplySessionResult {
 
 // ─── Rangs XP (cross-module) ──────────────────────────────────────────────────
 
+// `id` = clé technique STABLE (trophées, highestRankIdx stocké) — ne jamais renommer.
+// `label` = affichage (écriture inclusive sur les rangs genrés uniquement).
 export const RANKS = [
-  { id: 'Apprenti',      xp: 0 },
-  { id: 'Musicien',      xp: 2500 },
-  { id: 'Instrumentiste',xp: 6000 },
-  { id: 'Soliste',       xp: 12500 },
-  { id: 'Concertiste',   xp: 45000 },
-  { id: 'Virtuose',      xp: 80000 },
-  { id: 'Maestro',       xp: 140000 },
+  { id: 'Apprenti',       xp: 0,      label: 'Apprenti.e' },
+  { id: 'Instrumentiste', xp: 2500 },
+  { id: 'Musicien',       xp: 6000,   label: 'Musicien.ne' },
+  { id: 'Soliste',        xp: 12500 },
+  { id: 'Concertiste',    xp: 45000 },
+  { id: 'Virtuose',       xp: 80000 },
+  { id: 'Maestro',        xp: 140000, label: 'Maestro.a' },
 ]
+
+// Libellé d'affichage d'un rang (inclusif si défini, sinon épicène = id).
+export function rankLabel(rank: { id: string; label?: string }): string {
+  return rank.label ?? rank.id
+}
 
 export function getRank(xp: number) {
   return [...RANKS].reverse().find(l => xp >= l.xp) ?? RANKS[0]
@@ -215,6 +222,16 @@ export function updateStreak(streak: Streak, today: string): Streak {
   return { current: next, longest, lastDate: today }
 }
 
+// Série « vivante » pour l'affichage : `current` n'est remis à 1 qu'au PROCHAIN jeu.
+// Tant que l'utilisateur n'a pas rejoué, `current` reste périmé. Cette fonction
+// renvoie 0 dès qu'un jour a été sauté (lastDate ni aujourd'hui ni hier).
+export function displayStreak(streak: Streak, today: string): number {
+  if (!streak.lastDate) return 0
+  if (streak.lastDate === today) return streak.current
+  if (streak.lastDate === previousDayStr(today)) return streak.current
+  return 0
+}
+
 function dateDiff(d1: string, d2: string): number {
   const [y1, m1, dd1] = d1.split('-').map(Number)
   const [y2, m2, dd2] = d2.split('-').map(Number)
@@ -264,7 +281,7 @@ export function applyDecay(xp: number, daysIdle: number): number {
 // ─── Boost de récupération ────────────────────────────────────────────────────
 //
 // Tant que le XP courant est sous le seuil du rang (peak - 1), chaque XP gagné compte double.
-// Sans effet si peak ≤ 1 (Apprenti ou Musicien) car le rang n-1 cible est Apprenti (seuil 0).
+// Sans effet si peak ≤ 1 (Apprenti ou Instrumentiste) car le rang n-1 cible est Apprenti (seuil 0).
 
 export function xpMultiplier(state: ProgressState): number {
   const peakIdx = state.highestRankIdx

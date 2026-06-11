@@ -5,6 +5,7 @@ import { useState } from 'react'
 
 const APP_LABELS = {
   instagram: 'Instagram',
+  messenger: 'Messenger',
   facebook: 'Facebook',
   tiktok: 'TikTok',
 }
@@ -29,7 +30,14 @@ export default function PwaInAppBrowserOverlay({ pwa, onClose }) {
   }
 
   const appLabel = APP_LABELS[pwa.inAppBrowser] ?? 'l\'application'
-  const instructions = pwa.platform === 'ios'
+  const isMessenger = pwa.inAppBrowser === 'messenger'
+  const instructions = isMessenger
+    ? (pwa.platform === 'ios'
+        ? 'Appuie sur ⋯ puis "Ouvrir dans le navigateur". Sinon, copie le lien ci-dessous et colle-le dans Safari.'
+        : pwa.platform === 'android'
+        ? 'Appuie sur ⋮ (en haut à droite) puis "Ouvrir dans le navigateur". Sinon, copie le lien ci-dessous et colle-le dans Chrome.'
+        : 'Copie le lien ci-dessous et colle-le dans Safari ou Chrome.')
+    : pwa.platform === 'ios'
     ? 'Appuie sur ⋯ (en haut à droite) puis "Ouvrir dans Safari".'
     : pwa.platform === 'android'
     ? 'Appuie sur ⋮ (en haut à droite) puis "Ouvrir dans le navigateur" (Chrome).'
