@@ -2733,6 +2733,8 @@ export default function RythmApp() {
                   if (phase === "results") {
                     if (i === correctIdx) borderColor = '#22C55E';
                     else if (i === selectedIdx) borderColor = '#f87171';
+                    // Réécoute : flash bordure bleu vif sur la portée en cours (visible, non masqué)
+                    if (replayIdx === i && flashBorderOn && beatFlash) borderColor = '#4A6CF7';
                   }
                   const hintColor = phase === "results"
                     ? (i === correctIdx ? '#22C55E' : i === selectedIdx ? '#f87171' : '#9ca3af')
@@ -2766,7 +2768,9 @@ export default function RythmApp() {
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        boxShadow: ((phase === "playing" || (phase === "results" && replayIdx === i)) && beatFlash) ? '0 0 8px rgba(74,108,247,0.4)' : 'none',
+                        boxShadow: (phase === "results" && replayIdx === i && beatFlash)
+                          ? 'inset 0 0 0 3px #4A6CF7, 0 0 12px rgba(74,108,247,0.6)'
+                          : (phase === "playing" && beatFlash) ? '0 0 8px rgba(74,108,247,0.4)' : 'none',
                       }}
                     >
                       {phase === "results" && <SpeakerHint color={hintColor} />}
@@ -2819,13 +2823,26 @@ export default function RythmApp() {
               <div
                 role={phase==="results" ? "button" : undefined}
                 onPointerDown={phase==="results" ? (e => e.stopPropagation()) : undefined}
-                onClick={phase==="results" ? (() => playPatternAudio(choices[correctIdx], sessionBpm, 0, false, true, true)) : undefined}
+                onClick={phase==="results" ? (() => {
+                  audioTidsRef.current.forEach(clearTimeout); audioTidsRef.current = [];
+                  const bMs = 60000 / sessionBpm;
+                  setReplayIdx(-2);
+                  playPatternAudio(choices[correctIdx], sessionBpm, 0, false, true, true);
+                  for (let k = 0; k < 4; k++) {
+                    tid(() => {
+                      if (flashBorderOn) { setBeatFlash(true); setTimeout(() => setBeatFlash(false), 110); }
+                      if (metroSoundOn) beep(false);
+                    }, k * bMs);
+                  }
+                  tid(() => setReplayIdx(-1), 4 * bMs + 150);
+                }) : undefined}
                 className="relative rounded-2xl overflow-hidden mb-3 transition-colors duration-200"
                 style={{
                   background: 'var(--surface)',
                   padding: '10px 6px 6px',
                   cursor: phase==="results" ? 'pointer' : 'default',
                   border: `2px solid ${phase==="results" ? (selectedIdx===correctIdx ? '#22C55E' : '#f87171') : 'var(--border-c)'}`,
+                  boxShadow: (replayIdx === -2 && beatFlash) ? 'inset 0 0 0 3px #4A6CF7, 0 0 12px rgba(74,108,247,0.6)' : 'none',
                 }}
               >
                 {/* Toggle Flash+Métro — top-right sur la portée cible (visible, comme act 1/2/3) */}
