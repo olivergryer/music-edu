@@ -10,7 +10,10 @@
     "preview": "vite preview",
     "test": "node --test \"src/**/*.test.ts\"",
     "test:protocol": "node test-protocol/run.ts",
-    "generate:questions": "node scripts/generate-questions.js"
+    "generate:questions": "node scripts/generate-questions.js",
+    "release": "node scripts/bump-version.mjs",
+    "release:minor": "node scripts/bump-version.mjs minor",
+    "release:major": "node scripts/bump-version.mjs major"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.2.4",

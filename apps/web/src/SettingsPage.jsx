@@ -117,6 +117,9 @@ export default function SettingsPage({
   revealBeat, onRevealBeatChange,
   activity, tempoMode, onTempoModeChange,
   bpmFixed, onBpmFixedChange, bpmMin, onBpmMinChange, bpmMax, onBpmMaxChange,
+  metroSoundPreset, onMetroSoundPresetChange,
+  subdivisionSoundPreset, onSubdivisionSoundPresetChange,
+  tapSoundPreset, onTapSoundPresetChange,
 }) {
   const binaryFormulas  = formulaCatalog.filter(f => f.group === "binary");
   const ternaryFormulas = formulaCatalog.filter(f => f.group === "ternary");
@@ -273,6 +276,52 @@ export default function SettingsPage({
             <div className="text-xs font-bold flex-shrink-0 min-w-14 text-right" style={{ color: '#4A6CF7' }}>{flashOffsetMs} ms</div>
           </div>
           <div className="text-[9px] text-app-muted mt-1.5 leading-relaxed">Ajuste l'avance du flash de bordure par rapport aux beats. Négatif = plus tôt.</div>
+        </div>
+      )}
+
+      {/* Réglages avancés : presets sons */}
+      {onMetroSoundPresetChange && (
+        <div className={sectionCls}>
+          <span className={labelCls}>Réglages des sons</span>
+
+          {/* Métronome */}
+          <div className="mb-3.5">
+            <label className="text-[10px] font-semibold text-app block mb-1.5">Métronome</label>
+            <select value={metroSoundPreset} onChange={e => onMetroSoundPresetChange(+e.target.value)}
+              className="w-full bg-app-muted/20 border border-app rounded-lg px-2.5 py-1.5 text-app text-[10px] outline-none"
+              style={{ accentColor: "#4A6CF7" }}
+            >
+              <option value={0}>Standard (1000/700 Hz)</option>
+              <option value={1}>Doux (800/500 Hz)</option>
+              <option value={2}>Grave (600/400 Hz)</option>
+            </select>
+          </div>
+
+          {/* Subdivisions */}
+          <div className="mb-3.5">
+            <label className="text-[10px] font-semibold text-app block mb-1.5">Décompositions (1 et 2)</label>
+            <select value={subdivisionSoundPreset} onChange={e => onSubdivisionSoundPresetChange(+e.target.value)}
+              className="w-full bg-app-muted/20 border border-app rounded-lg px-2.5 py-1.5 text-app text-[10px] outline-none"
+              style={{ accentColor: "#4A6CF7" }}
+            >
+              <option value={0}>Standard (grave/aigu)</option>
+              <option value={1}>Doux (moins de contraste)</option>
+              <option value={2}>Aigu (plus de contraste)</option>
+            </select>
+          </div>
+
+          {/* TAP */}
+          <div>
+            <label className="text-[10px] font-semibold text-app block mb-1.5">Son du tap</label>
+            <select value={tapSoundPreset} onChange={e => onTapSoundPresetChange(+e.target.value)}
+              className="w-full bg-app-muted/20 border border-app rounded-lg px-2.5 py-1.5 text-app text-[10px] outline-none"
+              style={{ accentColor: "#4A6CF7" }}
+            >
+              <option value={0}>Standard (criard)</option>
+              <option value={1}>Doux (900 Hz grave)</option>
+              <option value={2}>Très grave (600 Hz profond)</option>
+            </select>
+          </div>
         </div>
       )}
 

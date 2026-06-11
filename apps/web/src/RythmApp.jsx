@@ -816,6 +816,10 @@ export default function RythmApp() {
   const [tapAnalysis,     setTapAnalysis]     = useState(null);
   const [rhythmSoundOn, setRhythmSoundOn] = useState(true);
   const [tapSoundOn,    setTapSoundOn]    = useState(true);
+  // Presets sons : 0=standard, 1=doux, 2=grave/aigu selon type
+  const [metroSoundPreset, setMetroSoundPreset] = useState(0);
+  const [subdivisionSoundPreset, setSubdivisionSoundPreset] = useState(0);
+  const [tapSoundPreset, setTapSoundPreset] = useState(0);
   const rhythmSoundRef = useRef(true);
   const tapSoundRef    = useRef(true);
   const flashBorderRef = useRef(true);
@@ -975,34 +979,44 @@ export default function RythmApp() {
     return audioCtxRef.current;
   }, []);
 
-  // Métronome — clic sec, sine aigu. Paramètre forced = ignore rhythmSoundRef (pour count-in en mode extrême).
+  // Métronome — clic sec, sine. Presets : 0=standard (1000/700), 1=doux (800/500), 2=grave (600/400).
   const beep = useCallback((strong = false, forced = false) => {
     if (!forced && !rhythmSoundRef.current) return;
     try {
       const ac = getCtx();
+      const [freqStrong, freqWeak] = [
+        [1000, 700],   // standard
+        [800, 500],    // doux
+        [600, 400],    // grave
+      ][metroSoundPreset];
       const o  = ac.createOscillator(), g = ac.createGain();
       o.connect(g); g.connect(ac.destination);
-      o.frequency.value = strong ? 1000 : 700;
+      o.frequency.value = strong ? freqStrong : freqWeak;
       g.gain.setValueAtTime(0.25, ac.currentTime);
       g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.07);
       o.start(ac.currentTime); o.stop(ac.currentTime + 0.08);
     } catch(_) {}
-  }, [getCtx]);
+  }, [getCtx, metroSoundPreset]);
 
-  // Son du décompte décomposé : on-beat = grave + fort, subdivision off-beat = aigu + plus faible.
+  // Son du décompte décomposé. Presets : 0=standard (600/950), 1=doux (700/800), 2=aigu (800/1100).
   // Paramètre forced = ignore rhythmSoundRef (pour count-in en mode extrême).
   const countBeep = useCallback((onBeat, forced = false) => {
     if (!forced && !rhythmSoundRef.current) return;
     try {
       const ac = getCtx();
+      const [freqOn, freqOff] = [
+        [600, 950],    // standard : grave/aigu
+        [700, 800],    // doux : moins de contraste
+        [800, 1100],   // aigu : plus de contraste
+      ][subdivisionSoundPreset];
       const o  = ac.createOscillator(), g = ac.createGain();
       o.connect(g); g.connect(ac.destination);
-      o.frequency.value = onBeat ? 600 : 950;          // grave (on) / aigu (off)
-      g.gain.setValueAtTime(onBeat ? 0.28 : 0.16, ac.currentTime); // fort (on) / faible (off)
+      o.frequency.value = onBeat ? freqOn : freqOff;
+      g.gain.setValueAtTime(onBeat ? 0.28 : 0.16, ac.currentTime);
       g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.06);
       o.start(ac.currentTime); o.stop(ac.currentTime + 0.07);
     } catch(_) {}
-  }, [getCtx]);
+  }, [getCtx, subdivisionSoundPreset]);
 
   // Note du rythme — triangle chaud, plus long
   const rhythmBeep = useCallback((strong = false, forced = false, volMult = 1) => {
@@ -1046,23 +1060,43 @@ export default function RythmApp() {
     } catch(_) {}
   }, [getCtx]);
 
-  // Confirmation tap — bruit court et sec
+  // Confirmation tap — bruit court et sec. Presets : 0=standard (criard), 1=doux (grave), 2=très grave.
   const tapBeep = useCallback((forced = false) => {
     if (!forced && !tapSoundRef.current) return;
     try {
       const ac = getCtx();
-      const frames = Math.floor(ac.sampleRate * 0.04);
-      const buf = ac.createBuffer(1, frames, ac.sampleRate);
-      const d = buf.getChannelData(0);
-      for (let i = 0; i < frames; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / frames, 2);
-      const src = ac.createBufferSource();
-      src.buffer = buf;
-      const g = ac.createGain();
-      g.gain.setValueAtTime(0.3, ac.currentTime);
-      src.connect(g); g.connect(ac.destination);
-      src.start(ac.currentTime);
+      const preset = tapSoundPreset;
+      const [durMs, freq, gain] = [
+        [40, 1200, 0.3],   // standard — criard, 40ms
+        [60, 900, 0.25],   // doux — 900Hz + decay lent (60ms)
+        [50, 600, 0.28],   // grave — 600Hz profond
+      ][preset];
+
+      if (preset === 0) {
+        // Standard : bruit blanc criard
+        const frames = Math.floor(ac.sampleRate * durMs / 1000);
+        const buf = ac.createBuffer(1, frames, ac.sampleRate);
+        const d = buf.getChannelData(0);
+        for (let i = 0; i < frames; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / frames, 2);
+        const src = ac.createBufferSource();
+        src.buffer = buf;
+        const g = ac.createGain();
+        g.gain.setValueAtTime(gain, ac.currentTime);
+        src.connect(g); g.connect(ac.destination);
+        src.start(ac.currentTime);
+      } else {
+        // Presets 1 & 2 : sinusoïde avec decay
+        const o = ac.createOscillator(), g = ac.createGain();
+        o.type = 'sine';
+        o.connect(g); g.connect(ac.destination);
+        o.frequency.value = freq;
+        g.gain.setValueAtTime(gain, ac.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + durMs / 1000);
+        o.start(ac.currentTime);
+        o.stop(ac.currentTime + durMs / 1000);
+      }
     } catch(_) {}
-  }, [getCtx]);
+  }, [getCtx, tapSoundPreset]);
 
   const replayTaps = useCallback(() => {
     audioTidsRef.current.forEach(clearTimeout);
@@ -1756,6 +1790,12 @@ export default function RythmApp() {
         onBpmMinChange={setBpmMin}
         bpmMax={bpmMax}
         onBpmMaxChange={setBpmMax}
+        metroSoundPreset={metroSoundPreset}
+        onMetroSoundPresetChange={setMetroSoundPreset}
+        subdivisionSoundPreset={subdivisionSoundPreset}
+        onSubdivisionSoundPresetChange={setSubdivisionSoundPreset}
+        tapSoundPreset={tapSoundPreset}
+        onTapSoundPresetChange={setTapSoundPreset}
       />
     );
   }

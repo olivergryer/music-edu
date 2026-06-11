@@ -146,13 +146,19 @@ export default function HubPage() {
         </div>
       </div>
 
-      <footer className="mt-auto pt-12 text-xs text-app-muted opacity-40">
-        Tessitura
-        {__BUILD_DATE__ && (
-          <span style={{ marginLeft: 8 }}>
-            · {new Date(__BUILD_DATE__).toLocaleString('fr-FR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' })}
-          </span>
-        )}
+      <footer className="mt-auto pt-12 text-xs text-app-muted opacity-40 text-center">
+        <div>
+          Tessitura
+          {__APP_VERSION__ && <span style={{ marginLeft: 8 }}>v{__APP_VERSION__}</span>}
+          {__BUILD_DATE__ && (
+            <span style={{ marginLeft: 8 }}>
+              · {new Date(__BUILD_DATE__).toLocaleString('fr-FR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' })}
+            </span>
+          )}
+        </div>
+        <div style={{ marginTop: 4 }}>
+          Conçue et développée par Matthieu GAILLARD © {__BUILD_DATE__ ? new Date(__BUILD_DATE__).getFullYear() : new Date().getFullYear()}
+        </div>
       </footer>
     </div>
   )

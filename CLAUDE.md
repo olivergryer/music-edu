@@ -112,8 +112,12 @@ npm run build
 # Depuis music-edu/ (racine) — travail courant sur dev
 git add . && git commit -m "..." && git push
 
-# Promouvoir dev → prod quand stable (depuis main)
+# Promouvoir dev → prod quand stable
 git checkout main && git merge dev --ff-only && git push && git checkout dev
+
+# Puis ouvrir le cycle suivant : bump version (reste dans le working tree,
+# part avec le 1er commit dev de la session — pas de commit dédié)
+cd apps/web && npm run release && cd ../..   # release:minor / release:major sinon
 
 firebase deploy --only firestore:rules
 ```
