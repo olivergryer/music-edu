@@ -1226,7 +1226,7 @@ export default function RythmApp() {
       tid(() => { setCountdownN(4); pulseCountdown(false, pattern.timeSig, beatMs, 4, extremeMode); }, beatMs);
       tid(() => { setPhase("playing"); setCountdownN(null); }, 2 * beatMs);
     }
-  }, [pattern, sessionBpm, bpmFixed, activity, revealBeat, extremeMode, toTimestamps, pulseCountdown, beep, tid]);
+  }, [pattern, sessionBpm, bpmFixed, activity, revealBeat, extremeMode, pulseCountdown, beep]);
 
   // Décompte : temps 1 & 2 DÉCOMPOSÉS (2 subdivisions binaire / 3 ternaire — on-beat grave
   // fort + flash, off-beats aigu plus faible), temps 3 & 4 SEULS (on-beat uniquement).
