@@ -1226,60 +1226,32 @@ export default function RythmApp() {
   // fort + flash, off-beats aigu plus faible), temps 3 & 4 SEULS (on-beat uniquement).
   // `beatNum` = numéro du temps annoncé (1..4) → pilote la décomposition.
   // `forced` = ignore metroSoundRef (pour count-in en mode extrême).
+  // Count-in TOUJOURS flash + son, indépendant du toggle global.
   const pulseCountdown = (strong, timeSig, beatMs, beatNum = 1, forced = false) => {
-    if (metroSoundRef.current || forced) countBeep(true, forced);
+    countBeep(true, true); // Forcer son=true (count-in toujours)
     setBeatStrong(strong);
-    setBeatFlash(true);
+    setBeatFlash(true); // Forcer flash=true (count-in toujours)
     setTimeout(() => setBeatFlash(false), strong ? 160 : 110);
     if (beatNum > 2) return; // temps 3 & 4 : on-beat seul, pas de subdivisions
     const isTernary = ["12/8", "6/8", "9/8"].includes(timeSig);
     const subs = isTernary ? 3 : 2;
     const subMs = beatMs / subs;
     for (let k = 1; k < subs; k++) {
-      tid(() => { if (metroSoundRef.current || forced) countBeep(false, forced); }, k * subMs);
+      tid(() => { countBeep(false, true); }, k * subMs); // Forcer son=true (count-in)
     }
   };
 
   // Rejeu même formule (sans gain XP) — réutilise pattern courant sans regeneration
+  // Rejeu même formule (sans gain XP) — déclenche startGame avec retryMode=true
   const retryExercise = useCallback(() => {
     if (!pattern) return;
     setRetryMode(true);
     recordedPatternRef.current = null;
-    clearTids();
-    audioTidsRef.current.forEach(clearTimeout); audioTidsRef.current = [];
-    cancelAnimationFrame(rafRef.current);
-
-    const bpm = sessionBpm ?? bpmFixed;
-    const beatMs = 60000 / bpm;
-    const { timestamps, totalMs } = toTimestamps(pattern.figs, bpm, pattern.timeSig);
-
-    if (activity === 1) {
-      setTapTimes([]); tapTimesRef.current = [];
-      setScores([]); setActiveIdx(-1); setProgress(0);
-      setRevealed(revealBeat === 1);
-      setEarnedPts(0);
-      setPhase("countdown"); setCountdownN(1);
-      pulseCountdown(true, pattern.timeSig, beatMs, 1, extremeMode);
-      playStartRef.current = performance.now() + 4 * beatMs;
-      setMetroDotFlash(false);
-      const nBeatsEx = Math.round(totalMs / beatMs);
-      const totalTicks = 4 + nBeatsEx;
-      for (let k = 0; k < totalTicks; k++) {
-        tid(() => { setBeatFlash(true); setTimeout(() => setBeatFlash(false), 110); if (metroSoundRef.current) beep(false); }, k * beatMs);
-      }
-      tid(() => { setPhase("playing"); setMetroDotFlash(true); }, 4 * beatMs);
-    } else if (activity === 2) {
-      setTapTimes([]); tapTimesRef.current = [];
-      setScores([]); setActiveIdx(-1); setProgress(0);
-      setRevealed(revealBeat === 2);
-      setEarnedPts(0);
-      setPhase("countdown"); setCountdownN(3);
-      pulseCountdown(false, pattern.timeSig, beatMs, 3, extremeMode);
-      playStartRef.current = performance.now() + 3 * beatMs;
-      tid(() => { setCountdownN(4); pulseCountdown(false, pattern.timeSig, beatMs, 4, extremeMode); }, beatMs);
-      tid(() => { setPhase("playing"); setCountdownN(null); }, 2 * beatMs);
-    }
-  }, [pattern, sessionBpm, bpmFixed, activity, revealBeat, extremeMode]);
+    setTapTimes([]); tapTimesRef.current = [];
+    setScores([]); setActiveIdx(-1); setProgress(0);
+    setEarnedPts(0);
+    setPhase("idle"); // Déclenche startGame qui verra retryMode=true
+  }, [pattern]);
 
   // sustain=true : lecture tenue (chaque note résonne ~sa durée) — act 3/4.
   const playPatternAudio = useCallback((pat, bpmVal, delayMs = 0, forced = false, sustain = false, softBeats = false) => {
@@ -1334,7 +1306,8 @@ export default function RythmApp() {
     clearTids();
     audioTidsRef.current.forEach(clearTimeout); audioTidsRef.current = [];
     cancelAnimationFrame(rafRef.current);
-    const pat  = randomPattern();
+    // Retry mode : réutiliser pattern existant, sinon générer nouveau
+    const pat  = retryMode && pattern ? pattern : randomPattern();
     // En mode série : BPM de base + ramp +5 tous les 3 exercices
     const bpm  = seriesBaseBpmRef.current !== null
       ? seriesBaseBpmRef.current + Math.floor(seriesIdxRef.current / 3) * 5
@@ -1543,11 +1516,11 @@ export default function RythmApp() {
         setPhase("results");
       }, totalMs + beatMs * 0.6);
     }, 4 * beatMs);
-  }, [randomPattern, actualBpm, pulse, beep, rhythmBeep, rhythmPulse, revealBeat, activity, flashOffsetMs, formulaCatalog, selectedFormulas, playPatternAudio, niveauOrder, niveauFormulaIds]);
+  }, [randomPattern, actualBpm, pulse, beep, rhythmBeep, rhythmPulse, revealBeat, activity, flashOffsetMs, formulaCatalog, selectedFormulas, playPatternAudio, niveauOrder, niveauFormulaIds, retryMode, pattern]);
 
   // ── Choix act 3 & 4 ───────────────────────────────────────────────────────
   const handleChoice = useCallback((idx) => {
-    if (phase !== "playing") return;
+    if (phase !== "playing" || idx === null) return;
     audioTidsRef.current.forEach(clearTimeout); audioTidsRef.current = [];
     const correct = idx === correctIdx;
     setSelectedIdx(idx);
@@ -1758,6 +1731,7 @@ export default function RythmApp() {
     const pctLocal      = maxPtsLocal ? Math.round((earnedPts / maxPtsLocal) * 100) : 0;
     const medalLocal    = pctLocal >= 90 ? "🥇" : pctLocal >= 70 ? "🥈" : pctLocal >= 50 ? "🥉" : "🎯";
     addSession({ module: "rythme", xpEarned: earnedPts, medal: medalLocal, meta: { individual: true } });
+    setRetryMode(false); // Reset retry mode après enregistrement
   }, [phase, seriesMode, pattern, earnedPts, scores, activity, revealBeat, scoreWasExtreme, addSession, retryMode]);
 
 
@@ -2293,7 +2267,7 @@ export default function RythmApp() {
     {MicCalibModal}
     <div
       className="bg-app text-app min-h-dvh flex flex-col items-center px-3.5 py-3 pb-6 select-none"
-      style={{ touchAction: (phase === 'results' || activity === 5) ? 'pan-y' : 'none' }}
+      style={{ touchAction: (phase === 'results' || activity === 5 || activity === 3 || activity === 4) ? 'pan-y' : 'none' }}
       onPointerDown={(e) => {
         const isTapPhase =
           (phase === 'playing' ||
@@ -2696,12 +2670,52 @@ export default function RythmApp() {
           {/* GRILLE act 3 — 4 portées */}
           {activity === 3 && phase !== "idle" && choices.length > 0 && (
             <div
-              className="w-full"
+              className="w-full relative"
               style={choiceCols === 2
                 /* paysage : déborde le cap max-w-xl (576) pour des cellules larges ; le parent flex items-center recentre */
                 ? { width: 'min(94vw, 960px)', maxWidth: 'none' }
                 : undefined}
             >
+              {/* Toggle Flash+Métro — top-right */}
+              <button
+                onPointerDown={e => e.stopPropagation()}
+                onClick={e => { e.stopPropagation(); setFlashMetroState(s => (s + 1) % 4); }}
+                className="absolute top-0 right-0 z-10 rounded-full border-0 cursor-pointer h-7 w-7 flex items-center justify-center"
+                style={{
+                  background: flashMetroState > 0 ? 'rgba(74,108,247,0.18)' : 'rgba(0,0,0,0.25)',
+                }}
+                title={
+                  flashMetroState === 0 ? "Flash + Métro OFF" :
+                  flashMetroState === 1 ? "Flash seulement" :
+                  flashMetroState === 2 ? "Métro seulement" :
+                  "Flash + Métro ON"
+                }
+              >
+                {flashMetroState === 0 && (
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2">
+                    <circle cx="12" cy="12" r="10"/>
+                    <line x1="4" y1="4" x2="20" y2="20"/>
+                  </svg>
+                )}
+                {flashMetroState === 1 && (
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="#4A6CF7">
+                    <path d="M13 2L4.5 13.5H11L10 22L19.5 10.5H13L13 2Z"/>
+                  </svg>
+                )}
+                {flashMetroState === 2 && (
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4A6CF7" strokeWidth="1.5" strokeLinecap="round">
+                    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" fill="#4A6CF7"/>
+                    <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/>
+                  </svg>
+                )}
+                {flashMetroState === 3 && (
+                  <svg width="14" height="14" viewBox="0 0 28 24" fill="none">
+                    <path d="M6 2L-1 11H4L3 20L10 10H6L6 2Z" fill="#4A6CF7" transform="translate(2)"/>
+                    <path d="M16 6c2 0 3-1 3-3s-1-3-3-3-3 1-3 3 1 3 3 3zm0 2c-3 0-5 2-5 5v2h10v-2c0-3-2-5-5-5z" fill="#4A6CF7" transform="translate(5,3)" opacity="0.8"/>
+                  </svg>
+                )}
+              </button>
+
               <div className="text-center text-[11px] text-app-muted mb-2.5 flex items-center justify-center gap-2">
                 {phase==="countdown" ? (
                   <span className="text-[40px] font-black leading-none" style={{ color: '#4A6CF7' }}>{countdownN}</span>
@@ -2711,6 +2725,16 @@ export default function RythmApp() {
                   </span>
                 )}
               </div>
+              {phase === "playing" && pattern && (
+                <div className="text-center mb-2">
+                  <button
+                    onPointerDown={e => e.stopPropagation()}
+                    onClick={() => playPatternAudio(pattern, sessionBpm, 0, false, true, true)}
+                    className="rounded-lg border-none px-3 py-1.5 text-[11px] font-bold cursor-pointer"
+                    style={{ background: 'rgba(74,108,247,0.12)', color: '#4A6CF7' }}
+                  >▶ Réécouter la mesure</button>
+                </div>
+              )}
               <div
                 className="grid gap-2 transition-opacity duration-300"
                 style={{
@@ -2810,22 +2834,36 @@ export default function RythmApp() {
                       onPointerDown={e => e.stopPropagation()}
                       onClick={() => {
                         if (phase !== "playing") return;
-                        playPatternAudio(c, sessionBpm, 0, false, true, true);
+                        audioTidsRef.current.forEach(clearTimeout); audioTidsRef.current = [];
                         setPendingIdx(i);
-                        // Comptage des temps + flash bordure + tick métro synchronisés
-                        setAct4CountN(1);
                         const bMs = 60000 / sessionBpm;
-                        [1,2,3,4].forEach(n => {
-                          const id = setTimeout(() => {
-                            setAct4CountN(n);
-                            setBeatFlash(true);
-                            setTimeout(() => setBeatFlash(false), 110);
-                            if (metroSoundRef.current) beep(false);
-                          }, (n-1) * bMs);
-                          audioTidsRef.current.push(id);
-                        });
-                        const endId = setTimeout(() => setAct4CountN(null), 4 * bMs + 200);
-                        audioTidsRef.current.push(endId);
+
+                        // Count-in "3, 4" toujours audible + visible
+                        setAct4CountN(3);
+                        countBeep(false, true); // Force son count-in
+                        setBeatFlash(true);
+                        setTimeout(() => setBeatFlash(false), 110);
+
+                        tid(() => {
+                          setAct4CountN(4);
+                          countBeep(false, true); // Force son count-in
+                          setBeatFlash(true);
+                          setTimeout(() => setBeatFlash(false), 110);
+                        }, bMs);
+
+                        // Après count-in : lecture formule avec son/flash selon toggle
+                        tid(() => {
+                          setAct4CountN(null);
+                          playPatternAudio(c, sessionBpm, 0, false, true, true);
+                          // Métronome + flash pendant les 4 beats de lecture
+                          for (let k = 0; k < 4; k++) {
+                            tid(() => {
+                              setBeatFlash(true);
+                              setTimeout(() => setBeatFlash(false), 110);
+                              if (metroSoundRef.current) beep(false);
+                            }, k * bMs);
+                          }
+                        }, 2 * bMs);
                       }}
                       className="border-none rounded-xl py-2.5 text-sm font-bold"
                       style={{ background: bg, color: col, cursor: phase==="playing" ? "pointer" : "default", transition: "all 0.15s" }}
