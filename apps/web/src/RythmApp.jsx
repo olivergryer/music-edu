@@ -861,6 +861,7 @@ export default function RythmApp() {
   const [pendingIdx,  setPendingIdx]  = useState(null);
   const [act4CountN,  setAct4CountN]  = useState(null);
   const [replayIdx,   setReplayIdx]   = useState(-1); // act 3/4 results : portée en cours de réécoute (flash localisé)
+  const [targetFlash, setTargetFlash] = useState(false); // act 4 : flash overlay sur la portée principale (déterministe)
   const [act34Error,  setAct34Error]  = useState(null); // act 3/4 : génération distracteurs impossible
   const [act5Palette, setAct5Palette] = useState([]);   // act 5 : cellules (formules) proposées
   const [act5Placed,  setAct5Placed]  = useState([]);   // act 5 : cellules posées par l'élève (séquence)
@@ -2826,26 +2827,20 @@ export default function RythmApp() {
                 onClick={phase==="results" ? (() => {
                   audioTidsRef.current.forEach(clearTimeout); audioTidsRef.current = [];
                   const bMs = 60000 / sessionBpm;
-                  setReplayIdx(-2);
                   playPatternAudio(choices[correctIdx], sessionBpm, 0, false, true, true);
                   for (let k = 0; k < 4; k++) {
                     tid(() => {
-                      if (flashBorderOn) { setBeatFlash(true); setTimeout(() => setBeatFlash(false), 110); }
+                      if (flashBorderOn) { setTargetFlash(true); setTimeout(() => setTargetFlash(false), 110); }
                       if (metroSoundOn) beep(false);
                     }, k * bMs);
                   }
-                  tid(() => setReplayIdx(-1), 4 * bMs + 150);
                 }) : undefined}
                 className="relative rounded-2xl overflow-hidden mb-3"
                 style={{
                   background: 'var(--surface)',
                   padding: '10px 6px 6px',
                   cursor: phase==="results" ? 'pointer' : 'default',
-                  // Réécoute : bordure bleu vif (canal fiable, non masqué par le RythmStaff) gated par le toggle
-                  border: `2px solid ${
-                    (replayIdx === -2 && flashBorderOn && beatFlash) ? '#4A6CF7'
-                    : phase==="results" ? (selectedIdx===correctIdx ? '#22C55E' : '#f87171') : 'var(--border-c)'}`,
-                  boxShadow: (replayIdx === -2 && flashBorderOn && beatFlash) ? '0 0 12px rgba(74,108,247,0.6)' : 'none',
+                  border: `2px solid ${phase==="results" ? (selectedIdx===correctIdx ? '#22C55E' : '#f87171') : 'var(--border-c)'}`,
                 }}
               >
                 {/* Toggle Flash+Métro — top-right sur la portée cible (visible, comme act 1/2/3) */}
@@ -2889,6 +2884,16 @@ export default function RythmApp() {
                 </button>
                 {phase==="results" && <SpeakerHint color={selectedIdx===correctIdx ? '#22C55E' : '#f87171'} />}
                 <RythmStaff figures={pattern.figs} timeSig={pattern.timeSig} activeIdx={-1} />
+                {/* Overlay flash tempo — par-dessus le RythmStaff (toujours visible), piloté par targetFlash */}
+                <div
+                  className="absolute inset-0 rounded-2xl pointer-events-none"
+                  style={{
+                    border: '3px solid #4A6CF7',
+                    boxShadow: 'inset 0 0 14px rgba(74,108,247,0.55)',
+                    opacity: targetFlash ? 1 : 0,
+                    transition: 'opacity 60ms linear',
+                  }}
+                />
               </div>
               <div className="grid grid-cols-2 gap-2 mb-2.5">
                 {choices.map((c, i) => {
@@ -2906,15 +2911,13 @@ export default function RythmApp() {
                         if (phase === "results") {
                           audioTidsRef.current.forEach(clearTimeout); audioTidsRef.current = [];
                           const bMs2 = 60000 / sessionBpm;
-                          setReplayIdx(-2);
                           playPatternAudio(c, sessionBpm, 0, false, true, true);
                           for (let k = 0; k < 4; k++) {
                             tid(() => {
-                              if (flashBorderOn) { setBeatFlash(true); setTimeout(() => setBeatFlash(false), 110); }
+                              if (flashBorderOn) { setTargetFlash(true); setTimeout(() => setTargetFlash(false), 110); }
                               if (metroSoundOn) beep(false);
                             }, k * bMs2);
                           }
-                          tid(() => setReplayIdx(-1), 4 * bMs2 + 150);
                           return;
                         }
                         if (phase !== "playing") return;
