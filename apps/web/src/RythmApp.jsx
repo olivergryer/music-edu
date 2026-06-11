@@ -2768,9 +2768,9 @@ export default function RythmApp() {
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        boxShadow: (phase === "results" && replayIdx === i && beatFlash)
+                        boxShadow: (phase === "results" && replayIdx === i && flashBorderOn && beatFlash)
                           ? 'inset 0 0 0 3px #4A6CF7, 0 0 12px rgba(74,108,247,0.6)'
-                          : (phase === "playing" && beatFlash) ? '0 0 8px rgba(74,108,247,0.4)' : 'none',
+                          : (phase === "playing" && flashBorderOn && beatFlash) ? '0 0 8px rgba(74,108,247,0.4)' : 'none',
                       }}
                     >
                       {phase === "results" && <SpeakerHint color={hintColor} />}
@@ -2841,8 +2841,11 @@ export default function RythmApp() {
                   background: 'var(--surface)',
                   padding: '10px 6px 6px',
                   cursor: phase==="results" ? 'pointer' : 'default',
-                  border: `2px solid ${phase==="results" ? (selectedIdx===correctIdx ? '#22C55E' : '#f87171') : 'var(--border-c)'}`,
-                  boxShadow: (replayIdx === -2 && beatFlash) ? 'inset 0 0 0 3px #4A6CF7, 0 0 12px rgba(74,108,247,0.6)' : 'none',
+                  // Réécoute : bordure bleu vif (canal fiable, non masqué par le RythmStaff) gated par le toggle
+                  border: `2px solid ${
+                    (replayIdx === -2 && flashBorderOn && beatFlash) ? '#4A6CF7'
+                    : phase==="results" ? (selectedIdx===correctIdx ? '#22C55E' : '#f87171') : 'var(--border-c)'}`,
+                  boxShadow: (replayIdx === -2 && flashBorderOn && beatFlash) ? '0 0 12px rgba(74,108,247,0.6)' : 'none',
                 }}
               >
                 {/* Toggle Flash+Métro — top-right sur la portée cible (visible, comme act 1/2/3) */}
