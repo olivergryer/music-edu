@@ -1,5 +1,5 @@
-const CACHE_NAME = 'tessitura-v1';
-const ASSET_CACHE = 'tessitura-assets-v1';
+const CACHE_NAME = 'tessitura-v2';
+const ASSET_CACHE = 'tessitura-assets-v2';
 const SAMPLES_CACHE = 'audio-samples-v2';
 
 const PRECACHE_ASSETS = [

@@ -494,7 +494,7 @@ const CONSIGNES_RYTHME = {
   1: ["Un rythme s'affiche sur la portée.", "Reproduis-le en tapant (ou au micro) en suivant le tempo. Commence après le décompte de 4 temps."],
   2: ["Écoute le rythme : la portée reste cachée.", "Reproduis-le ensuite en tapant au bon moment."],
   3: ["Écoute le rythme joué (après un décompte de 2 temps).", "Choisis, parmi les 4 portées, celle qui correspond."],
-  4: ["Observe la portée affichée.", "Écoute les 4 lectures A/B/C/D (clic = lecture avec décompte visuel et flash) et choisis celle qui correspond."],
+  4: ["Observe la portée affichée.", "Clique sur chaque proposition A/B/C/D pour les écouter une par une et choisis celle qui correspond."],
   5: ["Écoute le rythme, puis reconstitue-le en posant les cellules sur la portée.", "Valide pour voir ton score."],
 };
 const RYTHME_SOUND_WARNING = { tone: "sound", text: "Monte le volume et désactive le mode silencieux de ton appareil — le son est nécessaire." };
@@ -805,7 +805,11 @@ export default function RythmApp() {
   const [progress,     setProgress]     = useState(0);
   const [tapFlash,     setTapFlash]     = useState(false);
   const [beatFlash,    setBeatFlash]    = useState(false);
-  const [flashBorderOn, setFlashBorderOn] = useState(true);
+  // flashMetroState : 0=OFF, 1=FLASH only, 2=SOUND only, 3=BOTH
+  const [flashMetroState, setFlashMetroState] = useState(3); // défaut : les deux
+  const flashBorderOn = flashMetroState === 1 || flashMetroState === 3;
+  const metroSoundOn  = flashMetroState === 2 || flashMetroState === 3;
+  const [retryMode, setRetryMode] = useState(false);
   const [beatStrong,   setBeatStrong]   = useState(false);
   const [metroDotFlash,setMetroDotFlash]= useState(false);
   const [flashOffsetMs,   setFlashOffsetMs]   = useState(() => loadSettings().flashOffsetMs ?? -20);
@@ -815,9 +819,11 @@ export default function RythmApp() {
   const rhythmSoundRef = useRef(true);
   const tapSoundRef    = useRef(true);
   const flashBorderRef = useRef(true);
+  const metroSoundRef  = useRef(true);
   rhythmSoundRef.current = rhythmSoundOn;
   tapSoundRef.current    = tapSoundOn;
   flashBorderRef.current = flashBorderOn;
+  metroSoundRef.current  = metroSoundOn;
 
   // Mode Extrême act 1 : rythme + flash off → score x2
   const [extremeAnimOn, setExtremeAnimOn] = useState(false);
@@ -969,8 +975,9 @@ export default function RythmApp() {
     return audioCtxRef.current;
   }, []);
 
-  // Métronome — clic sec, sine aigu
-  const beep = useCallback((strong = false) => {
+  // Métronome — clic sec, sine aigu. Paramètre forced = ignore rhythmSoundRef (pour count-in en mode extrême).
+  const beep = useCallback((strong = false, forced = false) => {
+    if (!forced && !rhythmSoundRef.current) return;
     try {
       const ac = getCtx();
       const o  = ac.createOscillator(), g = ac.createGain();
@@ -983,7 +990,9 @@ export default function RythmApp() {
   }, [getCtx]);
 
   // Son du décompte décomposé : on-beat = grave + fort, subdivision off-beat = aigu + plus faible.
-  const countBeep = useCallback((onBeat) => {
+  // Paramètre forced = ignore rhythmSoundRef (pour count-in en mode extrême).
+  const countBeep = useCallback((onBeat, forced = false) => {
+    if (!forced && !rhythmSoundRef.current) return;
     try {
       const ac = getCtx();
       const o  = ac.createOscillator(), g = ac.createGain();
@@ -1090,7 +1099,7 @@ export default function RythmApp() {
   // Métro count-in : son couplé au toggle "Flash" (les deux portent le repère tempo).
   // Désactiver Flash → métro silencieux + bordure non clignotante (cohérence audio/visuel).
   const pulse = useCallback((strong = false) => {
-    if (flashBorderRef.current) beep(strong);
+    if (metroSoundRef.current) beep(strong);
     setBeatStrong(strong);
     setBeatFlash(true);
     setTimeout(() => setBeatFlash(false), strong ? 160 : 110);
@@ -1105,10 +1114,16 @@ export default function RythmApp() {
 
   // ── Microphone ─────────────────────────────────────────────────────────────
   // Reprend l'AudioContext suspendu (verrouillage device / passage en arrière-plan).
+  // Si contexte fermé (closed), recréer — sinon resume sur suspended.
   const resumeAudio = useCallback(async () => {
     try {
       const ac = audioCtxRef.current;
-      if (ac && ac.state === "suspended") await ac.resume();
+      if (!ac) return;
+      if (ac.state === "closed") {
+        audioCtxRef.current = null; // Force recréation au prochain getCtx()
+      } else if (ac.state === "suspended") {
+        await ac.resume();
+      }
     } catch (_) { /* ignore */ }
   }, []);
 
@@ -1172,11 +1187,53 @@ export default function RythmApp() {
   const clearTids = () => { tidsRef.current.forEach(clearTimeout); tidsRef.current = []; };
   const tid       = (fn, ms) => { const id = setTimeout(fn, ms); tidsRef.current.push(id); return id; };
 
+  // Rejeu même formule (sans gain XP) — réutilise pattern courant sans regeneration
+  const retryExercise = useCallback(() => {
+    if (!pattern) return;
+    setRetryMode(true);
+    recordedPatternRef.current = null;
+    clearTids();
+    audioTidsRef.current.forEach(clearTimeout); audioTidsRef.current = [];
+    cancelAnimationFrame(rafRef.current);
+
+    const bpm = sessionBpm ?? bpmFixed;
+    const beatMs = 60000 / bpm;
+    const { timestamps, totalMs } = toTimestamps(pattern.figs, bpm, pattern.timeSig);
+
+    if (activity === 1) {
+      setTapTimes([]); tapTimesRef.current = [];
+      setScores([]); setActiveIdx(-1); setProgress(0);
+      setRevealed(revealBeat === 1);
+      setEarnedPts(0);
+      setPhase("countdown"); setCountdownN(1);
+      pulseCountdown(true, pattern.timeSig, beatMs, 1, extremeMode);
+      playStartRef.current = performance.now() + 4 * beatMs;
+      setMetroDotFlash(false);
+      const nBeatsEx = Math.round(totalMs / beatMs);
+      const totalTicks = 4 + nBeatsEx;
+      for (let k = 0; k < totalTicks; k++) {
+        tid(() => { setBeatFlash(true); setTimeout(() => setBeatFlash(false), 110); if (metroSoundRef.current) beep(false); }, k * beatMs);
+      }
+      tid(() => { setPhase("playing"); setMetroDotFlash(true); }, 4 * beatMs);
+    } else if (activity === 2) {
+      setTapTimes([]); tapTimesRef.current = [];
+      setScores([]); setActiveIdx(-1); setProgress(0);
+      setRevealed(revealBeat === 2);
+      setEarnedPts(0);
+      setPhase("countdown"); setCountdownN(3);
+      pulseCountdown(false, pattern.timeSig, beatMs, 3, extremeMode);
+      playStartRef.current = performance.now() + 3 * beatMs;
+      tid(() => { setCountdownN(4); pulseCountdown(false, pattern.timeSig, beatMs, 4, extremeMode); }, beatMs);
+      tid(() => { setPhase("playing"); setCountdownN(null); }, 2 * beatMs);
+    }
+  }, [pattern, sessionBpm, bpmFixed, activity, revealBeat, extremeMode, toTimestamps, pulseCountdown, beep, tid]);
+
   // Décompte : temps 1 & 2 DÉCOMPOSÉS (2 subdivisions binaire / 3 ternaire — on-beat grave
   // fort + flash, off-beats aigu plus faible), temps 3 & 4 SEULS (on-beat uniquement).
   // `beatNum` = numéro du temps annoncé (1..4) → pilote la décomposition.
-  const pulseCountdown = (strong, timeSig, beatMs, beatNum = 1) => {
-    if (flashBorderRef.current) countBeep(true);
+  // `forced` = ignore metroSoundRef (pour count-in en mode extrême).
+  const pulseCountdown = (strong, timeSig, beatMs, beatNum = 1, forced = false) => {
+    if (metroSoundRef.current || forced) countBeep(true, forced);
     setBeatStrong(strong);
     setBeatFlash(true);
     setTimeout(() => setBeatFlash(false), strong ? 160 : 110);
@@ -1185,7 +1242,7 @@ export default function RythmApp() {
     const subs = isTernary ? 3 : 2;
     const subMs = beatMs / subs;
     for (let k = 1; k < subs; k++) {
-      tid(() => { if (flashBorderRef.current) countBeep(false); }, k * subMs);
+      tid(() => { if (metroSoundRef.current || forced) countBeep(false, forced); }, k * subMs);
     }
   };
 
@@ -1298,13 +1355,26 @@ export default function RythmApp() {
             tid(() => {
               setBeatFlash(true);
               setTimeout(() => setBeatFlash(false), 110);
-              if (flashBorderRef.current) beep(false);
+              if (metroSoundRef.current) beep(false);
             }, k * beatMs);
           }
         }, 2 * beatMs);
       } else {
-        // Act 4 : pas de décompte, directement playing
-        setPhase("playing");
+        // Act 4 : décompte 3,4 puis playing (comme act 3)
+        setPhase("countdown"); setAct4CountN(3);
+        pulseCountdown(false, pat.timeSig, beatMs, 3);
+        tid(() => { setAct4CountN(4); pulseCountdown(false, pat.timeSig, beatMs, 4); }, beatMs);
+        tid(() => {
+          setPhase("playing");
+          // Flash bordures des 4 réponses sur chaque beat
+          for (let k = 0; k < 4; k++) {
+            tid(() => {
+              setBeatFlash(true);
+              setTimeout(() => setBeatFlash(false), 110);
+              if (metroSoundRef.current) beep(false);
+            }, k * beatMs);
+          }
+        }, 2 * beatMs);
       }
       return;
     }
@@ -1355,7 +1425,7 @@ export default function RythmApp() {
             setBeatStrong(false); setBeatFlash(true);
             setTimeout(() => setBeatFlash(false), 110);
             // Métronome cumulé au flash sur chaque temps de la reproduction
-            if (flashBorderRef.current) beep(false);
+            if (metroSoundRef.current) beep(false);
           }, k * beatMs);
         });
         const tick = () => {
@@ -1380,7 +1450,7 @@ export default function RythmApp() {
     setScores([]); setActiveIdx(-1); setProgress(0);
     setRevealed(revealBeat === 1);
     setPhase("countdown"); setCountdownN(1);
-    pulseCountdown(true, pat.timeSig, beatMs, 1);
+    pulseCountdown(true, pat.timeSig, beatMs, 1, extremeMode);
 
     playStartRef.current = performance.now() + 4 * beatMs;
 
@@ -1643,7 +1713,7 @@ export default function RythmApp() {
   // Enregistre l'XP d'un exercice individuel (hors série) une seule fois par pattern.
   const recordedPatternRef = useRef(null);
   useEffect(() => {
-    if (phase !== "results" || seriesMode || !pattern) return;
+    if (phase !== "results" || seriesMode || !pattern || retryMode) return;
     if (recordedPatternRef.current === pattern) return;
     // Act 1/2 : earnedPts est posé après le calcul de scores (1 tick plus tard) — on attend.
     if ((activity === 1 || activity === 2) && scores.length === 0) return;
@@ -1653,7 +1723,7 @@ export default function RythmApp() {
     const pctLocal      = maxPtsLocal ? Math.round((earnedPts / maxPtsLocal) * 100) : 0;
     const medalLocal    = pctLocal >= 90 ? "🥇" : pctLocal >= 70 ? "🥈" : pctLocal >= 50 ? "🥉" : "🎯";
     addSession({ module: "rythme", xpEarned: earnedPts, medal: medalLocal, meta: { individual: true } });
-  }, [phase, seriesMode, pattern, earnedPts, scores, activity, revealBeat, scoreWasExtreme, addSession]);
+  }, [phase, seriesMode, pattern, earnedPts, scores, activity, revealBeat, scoreWasExtreme, addSession, retryMode]);
 
 
   // ── Page réglages ──────────────────────────────────────────────────────────
@@ -2409,18 +2479,44 @@ export default function RythmApp() {
                       style={{ background: rhythmSoundOn ? 'rgba(74,108,247,0.18)' : 'rgba(0,0,0,0.25)', color: rhythmSoundOn ? '#4A6CF7' : 'var(--text-muted)' }}
                     >{rhythmSoundOn?"🔊":"🔇"}</button>
                   )}
-                  {/* Toggle flash bordure — top-right de la portée */}
+                  {/* Toggle Flash+Métro 4-états : OFF / FLASH / SON / BOTH — top-right */}
                   <button
                     onPointerDown={e => e.stopPropagation()}
-                    onClick={e => { e.stopPropagation(); setFlashBorderOn(v => !v); }}
+                    onClick={e => { e.stopPropagation(); setFlashMetroState(s => (s + 1) % 4); }}
                     className="absolute top-1.5 right-1.5 z-10 rounded-full border-0 cursor-pointer h-7 w-7 flex items-center justify-center"
-                    style={{ background: flashBorderOn ? 'rgba(74,108,247,0.18)' : 'rgba(0,0,0,0.25)' }}
-                    title={flashBorderOn ? "Désactiver flash bordure" : "Activer flash bordure"}
+                    style={{
+                      background: flashMetroState > 0 ? 'rgba(74,108,247,0.18)' : 'rgba(0,0,0,0.25)',
+                    }}
+                    title={
+                      flashMetroState === 0 ? "Flash + Métro OFF" :
+                      flashMetroState === 1 ? "Flash seulement" :
+                      flashMetroState === 2 ? "Métro seulement" :
+                      "Flash + Métro ON"
+                    }
                   >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                      <path d="M13 2L4.5 13.5H11L10 22L19.5 10.5H13L13 2Z" fill={flashBorderOn ? "#4A6CF7" : "#6b7280"} />
-                      {!flashBorderOn && <line x1="3" y1="3" x2="21" y2="21" stroke="#f87171" strokeWidth="2.5" strokeLinecap="round"/>}
-                    </svg>
+                    {flashMetroState === 0 && (
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2">
+                        <circle cx="12" cy="12" r="10"/>
+                        <line x1="4" y1="4" x2="20" y2="20"/>
+                      </svg>
+                    )}
+                    {flashMetroState === 1 && (
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="#4A6CF7">
+                        <path d="M13 2L4.5 13.5H11L10 22L19.5 10.5H13L13 2Z"/>
+                      </svg>
+                    )}
+                    {flashMetroState === 2 && (
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4A6CF7" strokeWidth="1.5" strokeLinecap="round">
+                        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" fill="#4A6CF7"/>
+                        <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/>
+                      </svg>
+                    )}
+                    {flashMetroState === 3 && (
+                      <svg width="14" height="14" viewBox="0 0 28 24" fill="none">
+                        <path d="M6 2L-1 11H4L3 20L10 10H6L6 2Z" fill="#4A6CF7" transform="translate(2)"/>
+                        <path d="M16 6c2 0 3-1 3-3s-1-3-3-3-3 1-3 3 1 3 3 3zm0 2c-3 0-5 2-5 5v2h10v-2c0-3-2-5-5-5z" fill="#4A6CF7" transform="translate(5,3)" opacity="0.8"/>
+                      </svg>
+                    )}
                   </button>
                   <RythmStaff
                     figures={vexFigs}
@@ -2519,7 +2615,7 @@ export default function RythmApp() {
               <TapDiagnostics beatMs={60000 / sessionBpm} analysis={tapAnalysis} />
               {tapTimes.length > 0 && (
                 <>
-                  <div className="flex gap-2 justify-center mt-3">
+                  <div className="flex gap-2 justify-center mt-3 flex-wrap">
                     <button
                       onPointerDown={e => e.stopPropagation()}
                       onClick={replayTaps}
@@ -2532,6 +2628,12 @@ export default function RythmApp() {
                       className="rounded-xl border-none px-3 py-1.5 text-[11px] font-bold cursor-pointer"
                       style={{ background: 'rgba(52,211,153,0.12)', color: '#34d399' }}
                     >▶ Solution</button>
+                    <button
+                      onPointerDown={e => e.stopPropagation()}
+                      onClick={retryExercise}
+                      className="rounded-xl border-none px-3 py-1.5 text-[11px] font-bold cursor-pointer"
+                      style={{ background: 'rgba(251,191,36,0.12)', color: '#fbbf24' }}
+                    >↻ Rejouer</button>
                   </div>
                   {tapAnalysis?.fit && tapAnalysis?.targetBeatMs && (
                     <div className="text-[10px] text-app-muted mt-1.5">
@@ -2677,7 +2779,7 @@ export default function RythmApp() {
                             setAct4CountN(n);
                             setBeatFlash(true);
                             setTimeout(() => setBeatFlash(false), 110);
-                            if (flashBorderRef.current) beep(false);
+                            if (metroSoundRef.current) beep(false);
                           }, (n-1) * bMs);
                           audioTidsRef.current.push(id);
                         });

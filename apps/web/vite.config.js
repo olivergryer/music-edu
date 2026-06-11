@@ -17,7 +17,7 @@ const pwaEnvPlugin = {
     if (!isDevBuild) return html
     return html
       .replace('href="/manifest.json"', 'href="/manifest.dev.json"')
-      .replace('href="/icon-192x192.png"', 'href="/icon-dev.svg"')
+      .replace(/href="\/apple-touch-icon[^"]*\.png"/g, 'href="/icon-dev.svg"')
       .replace('<title>Tessitura</title>', '<title>Tessitura DEV</title>')
       .replace(/content="Tessitura"/g, 'content="Tessitura DEV"')
   },
