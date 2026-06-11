@@ -810,6 +810,7 @@ export default function RythmApp() {
   const flashBorderOn = flashMetroState === 1 || flashMetroState === 3;
   const metroSoundOn  = flashMetroState === 2 || flashMetroState === 3;
   const [retryMode, setRetryMode] = useState(false);
+  const retryModeRef = useRef(false); // Lecture synchrone (évite closure stale dans startGame)
   const [beatStrong,   setBeatStrong]   = useState(false);
   const [metroDotFlash,setMetroDotFlash]= useState(false);
   const [flashOffsetMs,   setFlashOffsetMs]   = useState(() => loadSettings().flashOffsetMs ?? -20);
@@ -1246,6 +1247,7 @@ export default function RythmApp() {
   const retryExercise = useCallback(() => {
     if (!pattern) return;
     setRetryMode(true);
+    retryModeRef.current = true;
     recordedPatternRef.current = null;
     setTapTimes([]); tapTimesRef.current = [];
     setScores([]); setActiveIdx(-1); setProgress(0);
@@ -1307,7 +1309,9 @@ export default function RythmApp() {
     audioTidsRef.current.forEach(clearTimeout); audioTidsRef.current = [];
     cancelAnimationFrame(rafRef.current);
     // Retry mode : réutiliser pattern existant, sinon générer nouveau
-    const pat  = retryMode && pattern ? pattern : randomPattern();
+    // Lecture via ref pour éviter closure stale (handleNext set false juste avant l'appel)
+    const isRetry = retryModeRef.current;
+    const pat  = isRetry && pattern ? pattern : randomPattern();
     // En mode série : BPM de base + ramp +5 tous les 3 exercices
     const bpm  = seriesBaseBpmRef.current !== null
       ? seriesBaseBpmRef.current + Math.floor(seriesIdxRef.current / 3) * 5
@@ -1504,7 +1508,7 @@ export default function RythmApp() {
         setPhase("results");
       }, totalMs + beatMs * 0.6);
     }, 4 * beatMs);
-  }, [randomPattern, actualBpm, pulse, beep, rhythmBeep, rhythmPulse, revealBeat, activity, flashOffsetMs, formulaCatalog, selectedFormulas, playPatternAudio, niveauOrder, niveauFormulaIds, retryMode]);
+  }, [randomPattern, actualBpm, pulse, beep, rhythmBeep, rhythmPulse, revealBeat, activity, flashOffsetMs, formulaCatalog, selectedFormulas, playPatternAudio, niveauOrder, niveauFormulaIds]);
 
   // ── Choix act 3 & 4 ───────────────────────────────────────────────────────
   const handleChoice = useCallback((idx) => {
@@ -1719,7 +1723,7 @@ export default function RythmApp() {
     const pctLocal      = maxPtsLocal ? Math.round((earnedPts / maxPtsLocal) * 100) : 0;
     const medalLocal    = pctLocal >= 90 ? "🥇" : pctLocal >= 70 ? "🥈" : pctLocal >= 50 ? "🥉" : "🎯";
     addSession({ module: "rythme", xpEarned: earnedPts, medal: medalLocal, meta: { individual: true } });
-    setRetryMode(false); // Reset retry mode après enregistrement
+    setRetryMode(false); retryModeRef.current = false; // Reset retry mode après enregistrement
   }, [phase, seriesMode, pattern, earnedPts, scores, activity, revealBeat, scoreWasExtreme, addSession, retryMode]);
 
 
@@ -2223,6 +2227,7 @@ export default function RythmApp() {
   const handleNext = () => {
     if (!canStart) return;
     setExpandedBadge(null);
+    setRetryMode(false); retryModeRef.current = false; // Exercice suivant = nouvelle génération aléatoire
     if (seriesMode && phase === "results") {
       const nextIdx = seriesIdx + 1;
       const updatedXpLog  = [...seriesXpLog, earnedPts];
@@ -2790,7 +2795,47 @@ export default function RythmApp() {
 
           {/* act 4 — portée cible + 4 boutons audio */}
           {activity === 4 && phase !== "idle" && pattern && (
-            <div className="w-full">
+            <div className="w-full relative">
+              {/* Toggle Flash+Métro — top-right act 4 */}
+              <button
+                onPointerDown={e => e.stopPropagation()}
+                onClick={e => { e.stopPropagation(); setFlashMetroState(s => (s + 1) % 4); }}
+                className="absolute top-0 right-0 z-10 rounded-full border-0 cursor-pointer h-7 w-7 flex items-center justify-center"
+                style={{
+                  background: flashMetroState > 0 ? 'rgba(74,108,247,0.18)' : 'rgba(0,0,0,0.25)',
+                }}
+                title={
+                  flashMetroState === 0 ? "Flash + Métro OFF" :
+                  flashMetroState === 1 ? "Flash seulement" :
+                  flashMetroState === 2 ? "Métro seulement" :
+                  "Flash + Métro ON"
+                }
+              >
+                {flashMetroState === 0 && (
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2">
+                    <circle cx="12" cy="12" r="10"/>
+                    <line x1="4" y1="4" x2="20" y2="20"/>
+                  </svg>
+                )}
+                {flashMetroState === 1 && (
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="#4A6CF7">
+                    <path d="M13 2L4.5 13.5H11L10 22L19.5 10.5H13L13 2Z"/>
+                  </svg>
+                )}
+                {flashMetroState === 2 && (
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4A6CF7" strokeWidth="1.5" strokeLinecap="round">
+                    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" fill="#4A6CF7"/>
+                    <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/>
+                  </svg>
+                )}
+                {flashMetroState === 3 && (
+                  <svg width="14" height="14" viewBox="0 0 28 24" fill="none">
+                    <path d="M6 2L-1 11H4L3 20L10 10H6L6 2Z" fill="#4A6CF7" transform="translate(2)"/>
+                    <path d="M16 6c2 0 3-1 3-3s-1-3-3-3-3 1-3 3 1 3 3 3zm0 2c-3 0-5 2-5 5v2h10v-2c0-3-2-5-5-5z" fill="#4A6CF7" transform="translate(5,3)" opacity="0.8"/>
+                  </svg>
+                )}
+              </button>
+
               <div className="text-center text-[11px] text-app-muted mb-1.5 flex items-center justify-center gap-2.5">
                 <span>{phase==="playing" ? "Quelle lecture ?" : "Résultat"} · {sessionBpm} BPM</span>
                 {act4CountN !== null && (
@@ -2849,9 +2894,11 @@ export default function RythmApp() {
                           // Métronome + flash pendant les 4 beats de lecture
                           for (let k = 0; k < 4; k++) {
                             tid(() => {
-                              setBeatFlash(true);
-                              setTimeout(() => setBeatFlash(false), 110);
-                              if (metroSoundRef.current) beep(false);
+                              if (flashBorderOn) {
+                                setBeatFlash(true);
+                                setTimeout(() => setBeatFlash(false), 110);
+                              }
+                              if (metroSoundOn) beep(false);
                             }, k * bMs);
                           }
                         }, 2 * bMs);
