@@ -811,6 +811,7 @@ export default function RythmApp() {
   const metroSoundOn  = flashMetroState === 2 || flashMetroState === 3;
   const [retryMode, setRetryMode] = useState(false);
   const retryModeRef = useRef(false); // Lecture synchrone (évite closure stale dans startGame)
+  const replayPatternRef = useRef(null); // Pattern à rejouer (Rejouer) — source de vérité immunisée timing/closure
   const [beatStrong,   setBeatStrong]   = useState(false);
   const [metroDotFlash,setMetroDotFlash]= useState(false);
   const [flashOffsetMs,   setFlashOffsetMs]   = useState(() => loadSettings().flashOffsetMs ?? -20);
@@ -1299,8 +1300,11 @@ export default function RythmApp() {
     clearTids();
     audioTidsRef.current.forEach(clearTimeout); audioTidsRef.current = [];
     cancelAnimationFrame(rafRef.current);
-    // Rejouer : réutilise le pattern fourni en argument ; sinon génère un nouveau.
-    const pat  = reusePattern ?? randomPattern();
+    // Rejouer : priorité au ref (immunisé timing), puis argument, sinon nouveau pattern.
+    // Le ref est consommé une seule fois (remis à null) pour ne pas figer les exercices suivants.
+    const forced = replayPatternRef.current ?? reusePattern;
+    replayPatternRef.current = null;
+    const pat  = forced ?? randomPattern();
     // En mode série : BPM de base + ramp +5 tous les 3 exercices
     const bpm  = seriesBaseBpmRef.current !== null
       ? seriesBaseBpmRef.current + Math.floor(seriesIdxRef.current / 3) * 5
@@ -1504,12 +1508,13 @@ export default function RythmApp() {
   const retryExercise = useCallback(() => {
     if (!pattern) return;
     retryModeRef.current = true;
+    replayPatternRef.current = pattern; // source de vérité : rejoue exactement cette formule
     setRetryMode(true);
     recordedPatternRef.current = null;
     setTapTimes([]); tapTimesRef.current = [];
     setScores([]); setActiveIdx(-1); setProgress(0);
     setEarnedPts(0);
-    startGame(pattern); // pattern courant passé explicitement → rejoue la même formule
+    startGame(pattern);
   }, [pattern, startGame]);
 
   // ── Choix act 3 & 4 ───────────────────────────────────────────────────────
@@ -2231,7 +2236,7 @@ export default function RythmApp() {
     setExpandedBadge(null);
     // Reset retryMode UNIQUEMENT pour un vrai "Suivant" (depuis results), pas pour le
     // démarrage qui suit un Rejouer (phase idle, retryModeRef encore true à préserver).
-    if (phase === "results") { setRetryMode(false); retryModeRef.current = false; }
+    if (phase === "results") { setRetryMode(false); retryModeRef.current = false; replayPatternRef.current = null; }
     if (seriesMode && phase === "results") {
       const nextIdx = seriesIdx + 1;
       const updatedXpLog  = [...seriesXpLog, earnedPts];
@@ -2642,6 +2647,7 @@ export default function RythmApp() {
                     >▶ Solution</button>
                     <button
                       onPointerDown={e => e.stopPropagation()}
+                      onPointerUp={e => e.stopPropagation()}
                       onClick={retryExercise}
                       className="rounded-xl border-none px-3 py-1.5 text-[11px] font-bold cursor-pointer"
                       style={{ background: 'rgba(251,191,36,0.12)', color: '#fbbf24' }}

@@ -1,42 +1,20 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { collection, query, orderBy, limit, getDocs, doc, getDoc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore'
+import { collection, query, orderBy, getDocs, doc, getDoc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore'
 import { signOut } from 'firebase/auth'
 import { db, auth } from '../lib/firebase'
 import { useAuth } from '../auth/AuthProvider'
-import useProgressFirebase, { TROPHIES, RANKS, getNextRank, getRank, rankLabel, displayStreak, todayStr } from '../hooks/useProgressFirebase'
+import useProgressFirebase from '../hooks/useProgressFirebase'
 import { usePwaInstall } from '../hooks/usePwaInstall'
+import { todayStr } from '../hooks/progressLogic'
 import PwaInstallTutorial from '../components/PwaInstallTutorial'
 import PwaInAppBrowserOverlay from '../components/PwaInAppBrowserOverlay'
-
-interface HistoryEntry {
-  date: string
-  module: string
-  xp: number
-  medal: string
-}
-
-const MODULE_LABELS: Record<string, string> = {
-  rythme: 'Rythme',
-  theorie: 'Théorie',
-  accordeur: 'Accordeur',
-}
-
-const MODULE_COLORS: Record<string, string> = {
-  rythme: '#4A6CF7',
-  theorie: '#8B5CF6',
-  accordeur: '#FF8B3D',
-}
-
-const cardCls = "bg-surface rounded-2xl p-5 mb-3 border border-app"
-const labelCls = "text-xs font-bold text-app-muted uppercase tracking-widest mb-3 block"
+import StudentDashboardView, { type HistoryEntry } from '../components/StudentDashboardView'
 
 export default function DashboardEleve() {
   const { user, profile } = useAuth()
-  const { xp, rank, nextRank, streak, trophies, modules } = useProgressFirebase()
+  const { data, rawData } = useProgressFirebase()
   const [history, setHistory] = useState<HistoryEntry[]>([])
-  const [hoveredTrophy, setHoveredTrophy] = useState<string | null>(null)
-  const [showRankInfo, setShowRankInfo] = useState(false)
   const [teacherInput, setTeacherInput] = useState('')
   const [teacherMsg, setTeacherMsg] = useState('')
   const [teacherLoading, setTeacherLoading] = useState(false)
@@ -52,19 +30,12 @@ export default function DashboardEleve() {
     }
   }, [pwa])
 
-  const nextLv = getNextRank(xp)
-  const xpInRank = xp - rank.xp
-  const xpNeeded = nextLv ? nextLv.xp - rank.xp : 1
-  const pct = Math.min(100, Math.round((xpInRank / xpNeeded) * 100))
-  const liveStreak = displayStreak(streak, todayStr())
-  const currentRankId = getRank(xp).id
-
   const profCodes: string[] = (profile as unknown as { profCodes?: string[] })?.profCodes ?? []
   const profNames: Record<string, string> = (profile as unknown as { profNames?: Record<string, string> })?.profNames ?? {}
 
   useEffect(() => {
     if (!user) return
-    const q = query(collection(db, 'users', user.uid, 'history'), orderBy('createdAt', 'desc'), limit(20))
+    const q = query(collection(db, 'users', user.uid, 'history'), orderBy('createdAt', 'desc'))
     getDocs(q).then(snap => setHistory(snap.docs.map(d => d.data() as HistoryEntry)))
   }, [user])
 
@@ -111,49 +82,6 @@ export default function DashboardEleve() {
     <div className="bg-app min-h-dvh flex flex-col items-center px-4 py-3 pb-10">
       {showInApp && <PwaInAppBrowserOverlay pwa={pwa} onClose={() => setShowInApp(false)} />}
       {showPwaTuto && !showInApp && <PwaInstallTutorial pwa={pwa} context="dashboard" onClose={() => setShowPwaTuto(false)} />}
-      {showRankInfo && (
-        <>
-          <div onClick={() => setShowRankInfo(false)}
-            style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 310 }} />
-          <div style={{
-            position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)',
-            zIndex: 311, width: 'min(360px, 92vw)', maxHeight: '88vh', overflowY: 'auto',
-            background: 'var(--surface)', border: '1.5px solid #8B5CF6', borderRadius: 20,
-            padding: '22px 20px 18px',
-          }}>
-            <div style={{ fontSize: 17, fontWeight: 900, color: 'var(--text)', marginBottom: 4, textAlign: 'center' }}>
-              Les rangs
-            </div>
-            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 16, textAlign: 'center', lineHeight: 1.4 }}>
-              XP cumulés sur tous les modules
-            </div>
-            <div className="flex flex-col gap-1.5">
-              {RANKS.map(r => {
-                const isCurrent = r.id === currentRankId
-                const reached = xp >= r.xp
-                return (
-                  <div key={r.id} className="flex justify-between items-center rounded-xl px-3 py-2" style={{
-                    background: isCurrent ? '#8B5CF618' : 'var(--surface-2)',
-                    border: isCurrent ? '1.5px solid #8B5CF6' : '1px solid var(--border-c)',
-                    opacity: reached ? 1 : 0.5,
-                  }}>
-                    <span className="text-sm font-black" style={{ color: isCurrent ? '#8B5CF6' : 'var(--text)' }}>
-                      {rankLabel(r)}
-                      {isCurrent && <span className="text-[10px] font-bold ml-2" style={{ color: '#8B5CF6' }}>· toi</span>}
-                    </span>
-                    <span className="text-xs font-bold text-app-muted">{r.xp.toLocaleString('fr-FR')} XP</span>
-                  </div>
-                )
-              })}
-            </div>
-            <button onClick={() => setShowRankInfo(false)}
-              className="w-full mt-4 py-2.5 rounded-2xl font-bold text-sm"
-              style={{ border: '1px solid var(--border-c)', background: 'var(--surface-2)', color: 'var(--text)' }}>
-              Fermer
-            </button>
-          </div>
-        </>
-      )}
       <div className="w-full max-w-xl">
 
         {/* Header */}
@@ -174,121 +102,17 @@ export default function DashboardEleve() {
 
         <h1 className="text-xl font-black text-app mb-5">Tableau de bord</h1>
 
-        {/* Rang + XP */}
-        <button
-          type="button"
-          onClick={() => setShowRankInfo(true)}
-          className={cardCls + ' w-full text-left block cursor-pointer transition-colors hover:bg-surface-2'}
-        >
-          <div className="flex justify-between items-center mb-3">
-            <div>
-              <div className={labelCls + ' flex items-center gap-1.5'}>
-                Rang
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
-              </div>
-              <div className="text-3xl font-black" style={{ color: '#8B5CF6' }}>{rankLabel(rank)}</div>
-            </div>
-            <div className="text-right">
-              <div className={labelCls}>XP total</div>
-              <div className="text-2xl font-black text-app">{xp} XP</div>
-            </div>
-          </div>
-          <div className="h-2 bg-surface-2 rounded-full overflow-hidden mb-1.5">
-            <div
-              className="h-full rounded-full transition-all duration-300"
-              style={{ width: `${pct}%`, background: 'linear-gradient(90deg,#8B5CF6,#4A6CF7)' }}
-            />
-          </div>
-          <div className="flex justify-between text-xs text-app-muted">
-            <span>{xpInRank} / {xpNeeded} XP</span>
-            <span>{nextLv ? `Prochain : ${rankLabel(nextLv)}` : 'Rang maximum'}</span>
-          </div>
-        </button>
+        {/* Vue unifiée (identique à la fiche prof) */}
+        <StudentDashboardView
+          progress={data}
+          rawProgress={rawData}
+          history={history}
+          today={todayStr()}
+        />
 
-        {/* Streak */}
-        <div className={cardCls + ' flex gap-4'}>
-          <div className="flex-1 text-center">
-            <div className="text-3xl font-black mb-1" style={{ color: liveStreak > 0 ? '#FF8B3D' : 'var(--text-muted)' }}>
-              {liveStreak}
-            </div>
-            <div className="text-xs text-app-muted">jours consécutifs</div>
-          </div>
-          <div className="w-px bg-[var(--border-c)]" />
-          <div className="flex-1 text-center">
-            <div className="text-3xl font-black text-app-muted mb-1">{streak.longest}</div>
-            <div className="text-xs text-app-muted">record</div>
-          </div>
-        </div>
-
-        {/* Stats modules */}
-        <div className={cardCls}>
-          <span className={labelCls}>Activité</span>
-          <div className="flex gap-2.5">
-            {([
-              { key: 'rythme',    label: 'Rythme',    stat: `${modules.rythme.seriesPlayed} séries · ${modules.rythme.exercisesPlayed ?? 0} exos`, xpTotal: modules.rythme.xpTotal },
-              { key: 'theorie',   label: 'Théorie',   stat: `${modules.theorie.sessionsPlayed} sessions`,  xpTotal: modules.theorie.xpTotal },
-              { key: 'accordeur', label: 'Accordeur', stat: `${modules.accordeur.sessionsPlayed} sessions`, xpTotal: modules.accordeur.xpTotal },
-            ] as const).map(m => (
-              <div key={m.key} className="flex-1 bg-surface-2 rounded-xl p-2.5">
-                <div className="text-xs font-bold mb-1" style={{ color: MODULE_COLORS[m.key] }}>{m.label}</div>
-                <div className="text-base font-black text-app">{m.xpTotal}</div>
-                <div className="text-[10px] text-app-muted">XP · {m.stat}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Trophées */}
-        <div className={cardCls}>
-          <div className="flex justify-between items-center mb-3">
-            <span className={labelCls} style={{ margin: 0 }}>Trophées</span>
-            <span className="text-xs text-app-muted">{trophies.length} / {TROPHIES.length}</span>
-          </div>
-          <div className="grid grid-cols-4 gap-2">
-            {TROPHIES.map((t, i) => {
-              const unlocked = trophies.includes(t.id)
-              const col = i % 4
-              // Ancrage du tooltip selon la colonne : bord gauche (col 0), bord droit
-              // (col 3), centré sinon — évite le débordement hors écran.
-              const tipPos = col === 0
-                ? 'left-0'
-                : col === 3
-                ? 'right-0'
-                : 'left-1/2 -translate-x-1/2'
-              return (
-                <div
-                  key={t.id}
-                  className="relative"
-                  onMouseEnter={() => setHoveredTrophy(t.id)}
-                  onMouseLeave={() => setHoveredTrophy(null)}
-                >
-                  <div
-                    className="rounded-xl py-2.5 px-1 text-center border border-app transition-opacity"
-                    style={{
-                      background: unlocked ? '#8B5CF610' : 'var(--surface-2)',
-                      borderColor: unlocked ? '#8B5CF6' : 'var(--border-c)',
-                      opacity: unlocked ? 1 : 0.35,
-                    }}
-                  >
-                    <div className="text-xl mb-1">{t.icon}</div>
-                    <div className="text-[9px] font-bold leading-tight" style={{ color: unlocked ? '#8B5CF6' : 'var(--text-muted)' }}>
-                      {t.label}
-                    </div>
-                  </div>
-                  {hoveredTrophy === t.id && (
-                    <div className={`absolute bottom-[calc(100%+6px)] ${tipPos} w-max max-w-[150px] bg-surface border border-app rounded-lg px-2 py-1.5 text-[10px] text-app whitespace-normal z-10 pointer-events-none shadow-sm leading-snug`}>
-                      {t.hint}
-                    </div>
-                  )}
-                </div>
-              )
-            })}
-          </div>
-        </div>
-
-        {/* Professeurs liés */}
-        <div className={cardCls}>
-          <span className={labelCls}>Mon professeur</span>
+        {/* Professeurs liés (spécifique élève) */}
+        <div className="bg-surface rounded-2xl p-5 mb-3 border border-app">
+          <span className="text-xs font-bold text-app-muted uppercase tracking-widest mb-3 block">Mon professeur</span>
           {profCodes.length > 0 && (
             <div className="flex flex-col gap-2 mb-3">
               {profCodes.map(code => (
@@ -329,29 +153,6 @@ export default function DashboardEleve() {
               {teacherMsg}
             </p>
           )}
-        </div>
-
-        {/* Historique */}
-        <div className={cardCls}>
-          <span className={labelCls}>Historique des sessions</span>
-          {history.length === 0 ? (
-            <p className="text-sm text-app-muted text-center py-3">Aucune session enregistrée.</p>
-          ) : history.map((h, i) => (
-            <div
-              key={i}
-              className="flex justify-between items-center py-2"
-              style={{ borderBottom: i < history.length - 1 ? '1px solid var(--border-c)' : 'none' }}
-            >
-              <div className="flex gap-2 items-center">
-                <span className="text-base">{h.medal}</span>
-                <span className="text-xs text-app-muted">{MODULE_LABELS[h.module] ?? h.module}</span>
-              </div>
-              <div className="flex gap-2.5 items-center">
-                <span className="text-xs font-bold" style={{ color: MODULE_COLORS[h.module] ?? '#4A6CF7' }}>+{h.xp} XP</span>
-                <span className="text-[10px] text-app-muted">{h.date}</span>
-              </div>
-            </div>
-          ))}
         </div>
 
       </div>

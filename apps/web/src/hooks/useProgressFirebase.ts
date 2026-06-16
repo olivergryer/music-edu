@@ -68,6 +68,8 @@ export default function useProgressFirebase() {
     streak: displayData.streak,
     trophies: displayData.trophies,
     modules: displayData.modules,
+    data: displayData,   // état complet décayé (pour la vue dashboard unifiée)
+    rawData,             // état brut non-décayé (pour calculer le delta de decay)
     loaded,
     addSession,
   }
