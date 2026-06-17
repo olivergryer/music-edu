@@ -19,6 +19,11 @@ service cloud.firestore {
           || (request.auth != null && request.auth.uid in get(/databases/$(db)/documents/users/$(uid)).data.profIds);
         allow write: if request.auth.uid == uid;
       }
+
+      // Calibration interne (outil dev), accès strictement perso
+      match /calibrations/{session} {
+        allow read, write: if request.auth.uid == uid;
+      }
     }
 
     // Lecture publique (auth requis) pour lookup code prof

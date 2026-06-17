@@ -6,11 +6,12 @@ import TourGuide from './TourGuide'
 import { PitchDetector } from 'pitchy'
 import AccordeurStaff from './AccordeurStaff'
 import TestPhaseWatermark from './TestPhaseWatermark'
+import { IS_DEV } from './isDev'
 import ConsigneOverlay, { consigneSeen } from './ConsigneOverlay'
 import SpectrePaneau from './SpectrePaneau'
 import GenerateurAccord from './GenerateurAccord'
 import JeuGamme from './JeuGamme'
-import { INSTRUMENTS, loadInstrumentSamples, isOscillatorInstrument, playPhrase, playPhraseOscillator, phraseDurationMs } from './windEngine'
+import { INSTRUMENTS, loadInstrumentSamples, isOscillatorInstrument, playPhrase, playPhraseOscillator, phraseDurationMs, closeAudibleContext } from './windEngine'
 import useProgressFirebase from './hooks/useProgressFirebase'
 import {
   analyserBuffer, segmenter, calculerEcarts, courbebrute,
@@ -33,11 +34,27 @@ const SILENCE_MS_DEFAULT      = 40
 const NOTE_JUMP_CENTS_DEFAULT = 30
 const MIN_NOTE_MS_DEFAULT     = 100
 
-// Profils de réglages segmentation
+// Profils de réglages segmentation (défauts).
+// Override possible via localStorage 'acc_profiles_custom' (page calibration interne).
+const _ACC_PROFILES_DEFAULTS = {
+  legato:  { clarityThreshold: 0.75, gateLevel: 0.015, silenceDurationMs: 80, noteJumpCents: 50, minNoteDurationMs: 120 },
+  detache: { clarityThreshold: 0.82, gateLevel: 0.02,  silenceDurationMs: 50, noteJumpCents: 30, minNoteDurationMs: 80  },
+  rapide:  { clarityThreshold: 0.85, gateLevel: 0.025, silenceDurationMs: 30, noteJumpCents: 25, minNoteDurationMs: 50  },
+}
+function _readProfilesOverride() {
+  try {
+    const raw = localStorage.getItem('acc_profiles_custom')
+    if (!raw) return null
+    const o = JSON.parse(raw)
+    if (o?.legato && o?.detache && o?.rapide) return o
+    return null
+  } catch { return null }
+}
+const _override = _readProfilesOverride()
 const ACC_PROFILES = {
-  legato:  { label: 'Phrasé legato',    clarityThreshold: 0.75, gateLevel: 0.015, silenceDurationMs: 80, noteJumpCents: 50, minNoteDurationMs: 120 },
-  detache: { label: 'Détaché',          clarityThreshold: 0.82, gateLevel: 0.02,  silenceDurationMs: 50, noteJumpCents: 30, minNoteDurationMs: 80  },
-  rapide:  { label: 'Articulé rapide',  clarityThreshold: 0.85, gateLevel: 0.025, silenceDurationMs: 30, noteJumpCents: 25, minNoteDurationMs: 50  },
+  legato:  { label: 'Phrasé legato',   ..._ACC_PROFILES_DEFAULTS.legato,  ...(_override?.legato  || {}) },
+  detache: { label: 'Détaché',         ..._ACC_PROFILES_DEFAULTS.detache, ...(_override?.detache || {}) },
+  rapide:  { label: 'Articulé rapide', ..._ACC_PROFILES_DEFAULTS.rapide,  ...(_override?.rapide  || {}) },
 }
 const ACC_PROFILE_KEYS = ['legato', 'detache', 'rapide', 'custom']
 
@@ -1377,6 +1394,21 @@ export default function AccordeurPage() {
                 </div>
               </details>
 
+              {/* Lien calibration interne (dev uniquement) */}
+              {IS_DEV && (
+                <div style={{ marginTop: 16, textAlign: 'right' }}>
+                  <Link
+                    to="/accordeur/calibration"
+                    style={{
+                      fontSize: 11,
+                      color: 'var(--text-muted)',
+                      textDecoration: 'underline',
+                      opacity: 0.6,
+                    }}
+                  >Calibration interne →</Link>
+                </div>
+              )}
+
             </div>
           </>
         )}
@@ -1556,14 +1588,14 @@ export default function AccordeurPage() {
                     setVersionJustePlaying(true)
                     const totalMs = phraseDurationMs(notes)
                     const timer = setTimeout(() => {
-                      try { ctx.close() } catch {}
+                      closeAudibleContext(ctx)
                       setVersionJustePlaying(false)
                       stopVersionJusteRef.current = null
                     }, totalMs + 500)
                     stopVersionJusteRef.current = () => {
                       clearTimeout(timer)
                       srcs.forEach(s => { try { s.stop() } catch {} })
-                      try { ctx.close() } catch {}
+                      closeAudibleContext(ctx)
                       setVersionJustePlaying(false)
                       stopVersionJusteRef.current = null
                     }

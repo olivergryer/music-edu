@@ -14,6 +14,7 @@ import DashboardProf from './pages/DashboardProf'
 import DashboardProfEleve from './pages/DashboardProfEleve'
 import FeedbackPage from './pages/FeedbackPage'
 import QuestionsAdminPage from './QuestionsAdminPage'
+import CalibrationPage from './pages/CalibrationPage'
 import { IS_DEV } from './isDev'
 
 function ProtectedRoute({ children }) {
@@ -59,6 +60,7 @@ function AppRoutes() {
       {IS_DEV && <Route path="/theorie/questions" element={<QuestionsAdminPage />} />}
       <Route path="/accordeur" element={<AccordeurPage />} />
       <Route path="/accordeur/generateur" element={<GenerateurAccordPage />} />
+      {IS_DEV && <Route path="/accordeur/calibration" element={<ProtectedRoute><CalibrationPage /></ProtectedRoute>} />}
       <Route path="/profil" element={<ProtectedRoute><ProfilPage /></ProtectedRoute>} />
       <Route path="/dashboard/eleve" element={<ProtectedRoute><DashboardEleve /></ProtectedRoute>} />
       <Route path="/dashboard/prof" element={<ProtectedRoute><DashboardProf /></ProtectedRoute>} />

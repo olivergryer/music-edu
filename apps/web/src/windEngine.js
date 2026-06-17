@@ -5,7 +5,9 @@ import { midiToHz, JUST_RATIOS_CENTS } from './accordeurUtils'
 // Web Audio AudioContext.destination est coupé par le switch silence iOS.
 // Routage via MediaStreamDestination → HTMLAudioElement = catégorie "playback"
 // → audible en silencieux, comme une <audio> classique (≃ Réécouter du Blob).
-const _sinks = new WeakMap()
+// Map (pas WeakMap) pour pouvoir disposer explicitement (sinon HTMLAudio reste
+// vivant et continue de jouer le buffer décodé même après close du context).
+const _sinks = new Map()
 function audibleSink(rawCtx) {
   let s = _sinks.get(rawCtx)
   if (s) return s
@@ -26,6 +28,22 @@ function audibleSink(rawCtx) {
 function audibleOutput(ctx) {
   const sink = audibleSink(ctx)
   return sink?.node ?? ctx.destination
+}
+
+// Tue le sink + ferme proprement le contexte. À appeler à la place de ctx.close().
+// Sans ça, l'HTMLAudioElement orphelin peut continuer à diffuser des résidus de
+// buffer sur certains navigateurs (Chrome desktop notamment) — d'où des sons
+// qui persistent après stop / changement d'octave / quitter la page.
+export function closeAudibleContext(ctx) {
+  if (!ctx) return
+  const s = _sinks.get(ctx)
+  if (s) {
+    try { s.audio.pause() } catch {}
+    try { s.audio.srcObject = null } catch {}
+    try { s.node.disconnect() } catch {}
+    _sinks.delete(ctx)
+  }
+  try { ctx.close() } catch {}
 }
 
 // ─── Instruments ─────────────────────────────────────────────────────────────

@@ -7,7 +7,7 @@ import {
   midiToHz, JUST_RATIOS_CENTS, HARMONIQUE_OFFSETS,
   centsTempere, hzToMidi, frameRMS, preEmphasis, HZ_MIN, HZ_MAX,
 } from './accordeurUtils'
-import { INSTRUMENTS, isOscillatorInstrument, loadInstrumentSamples, playChord, playChordOscillator } from './windEngine'
+import { INSTRUMENTS, isOscillatorInstrument, loadInstrumentSamples, playChord, playChordOscillator, closeAudibleContext } from './windEngine'
 import TestPhaseWatermark from './TestPhaseWatermark'
 
 function computeUserOffsets(chordMidis, rootName, userTemperament) {
@@ -284,13 +284,21 @@ export default function GenerateurAccordPage() {
   const stopAll = useCallback(() => {
     sampleSrcsRef.current.forEach(({ src }) => { try { src.stop() } catch {} })
     sampleSrcsRef.current = []
-    const t = audioCtxRef.current?.currentTime ?? 0
-    oscSrcsRef.current.forEach(({ osc, gain }) => {
-      try { gain.gain.setTargetAtTime(0, t, 0.04) } catch {}
-      try { osc.stop(t + 0.1) } catch {}
-    })
-    oscSrcsRef.current = []
-    try { audioCtxRef.current?.close() } catch {}
+    const ctx = audioCtxRef.current
+    if (ctx) {
+      const t = ctx.currentTime
+      // Kill immédiat : annuler ramps en cours, gain à 0, osc.stop() now.
+      // (Ramp + osc.stop différé survivait à ctx.close() sur certains navigateurs.)
+      oscSrcsRef.current.forEach(({ osc, gain }) => {
+        try { gain.gain.cancelScheduledValues(t) } catch {}
+        try { gain.gain.setValueAtTime(0, t) } catch {}
+        try { osc.stop(t) } catch {}
+        try { osc.disconnect() } catch {}
+        try { gain.disconnect() } catch {}
+      })
+      oscSrcsRef.current = []
+      closeAudibleContext(ctx)
+    }
     audioCtxRef.current = null
   }, [])
 

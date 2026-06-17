@@ -491,8 +491,8 @@ const ACT_SHORT = {
 
 // Consignes synthétiques affichées à l'arrivée sur chaque activité (overlay).
 const CONSIGNES_RYTHME = {
-  1: ["Un rythme s'affiche sur la portée.", "Reproduis-le en tapant (ou au micro) en suivant le tempo. Commence après le décompte de 4 temps."],
-  2: ["Écoute le rythme : la portée reste cachée.", "Reproduis-le ensuite en tapant au bon moment."],
+  1: ["Un rythme s'affiche sur la portée.", "Reproduis-le en tapant (ou au micro) en suivant le tempo. Commence après le décompte de 4 temps.", "Tape ou chante des valeurs courtes : touche l'écran puis relève le doigt aussitôt."],
+  2: ["Écoute le rythme : la portée reste cachée.", "Reproduis-le ensuite en tapant au bon moment.", "Tape ou chante des valeurs courtes : touche l'écran puis relève le doigt aussitôt."],
   3: ["Écoute le rythme joué (après un décompte de 2 temps).", "Choisis, parmi les 4 portées, celle qui correspond."],
   4: ["Observe la portée affichée.", "Clique sur chaque proposition A/B/C/D pour les écouter une par une et choisis celle qui correspond."],
   5: ["Écoute le rythme, puis reconstitue-le en posant les cellules sur la portée.", "Valide pour voir ton score."],
@@ -826,6 +826,7 @@ export default function RythmApp() {
   const tapSoundRef    = useRef(true);
   const flashBorderRef = useRef(true);
   const metroSoundRef  = useRef(true);
+  const inputModeRef   = useRef("tap");
   rhythmSoundRef.current = rhythmSoundOn;
   tapSoundRef.current    = tapSoundOn;
   flashBorderRef.current = flashBorderOn;
@@ -881,6 +882,7 @@ export default function RythmApp() {
 
   // Microphone
   const [inputMode,    setInputMode]    = useState(() => loadSettings().inputMode ?? "tap"); // "tap" | "mic"
+  inputModeRef.current = inputMode; // sync (gate du beep métronome en mode micro)
   const [micActive,    setMicActive]    = useState(false);
   const [micLevel,     setMicLevel]     = useState(0);
   const [micThreshold, setMicThreshold] = useState(0.05);
@@ -902,6 +904,7 @@ export default function RythmApp() {
   const micRafRef      = useRef(null);
   const pendingTutoStartRef = useRef(false);
   const lastOnsetRef   = useRef(0);
+  const micArmedRef    = useRef(true); // hystérésis : prêt à détecter un onset (revenu au silence)
 
   const userSheetLoadRef = useRef(false);
   const setSheetId = useCallback((raw) => {
@@ -987,6 +990,8 @@ export default function RythmApp() {
   const beep = useCallback((strong = false, forced = false) => {
     // Métronome : indépendant du son de l'exemple (rhythmSoundRef) — gate sur le toggle métronome.
     if (!forced && !metroSoundRef.current) return;
+    // En mode micro : couper le son du métronome (le HP polluerait la détection) — flash conservé.
+    if (!forced && inputModeRef.current === "mic") return;
     try {
       const ac = getCtx();
       const [freqStrong, freqWeak] = [
@@ -1056,10 +1061,14 @@ export default function RythmApp() {
       // rapide sur les 70 derniers ms → silence net pendant un éventuel soupir suivant
       // (distingue noire+demi-soupir de noire pointée). Le gap est porté par le *0.85
       // appliqué à la durée dans playPatternAudio.
-      const rel = Math.min(0.07, dur * 0.35);
+      // Decay MARQUÉ progressif : crête → descente continue et audible jusqu'à ~22% en fin
+      // de note (on ENTEND la note décroître), puis extinction rapide sur les derniers ms
+      // → silence net pour un éventuel soupir. La longueur reste perceptible (blanche > noire)
+      // car la descente est étalée sur toute la durée.
+      const rel = Math.min(0.06, dur * 0.3);
       g.gain.setValueAtTime(0.0001, t);
       g.gain.exponentialRampToValueAtTime(peak, t + 0.008);              // attaque
-      g.gain.exponentialRampToValueAtTime(peak * 0.65, t + dur - rel);   // decay doux
+      g.gain.exponentialRampToValueAtTime(peak * 0.22, t + dur - rel);   // decay marqué
       g.gain.exponentialRampToValueAtTime(0.0008, t + dur);             // extinction rapide
       o.start(t); o.stop(t + dur + 0.02);
     } catch(_) {}
@@ -1684,13 +1693,22 @@ export default function RythmApp() {
     const analyser = micAnalyserRef.current;
     if (!analyser) return;
     const data = new Float32Array(analyser.fftSize);
-    const COOLDOWN = 200;
+    // Hystérésis double seuil + front montant : un son tenu = 1 seul onset.
+    // Onset armé à seuilHaut ; ré-armé seulement quand le niveau RMS redescend sous seuilBas.
+    const HIGH = micThreshold;
+    const LOW  = micThreshold * 0.5;   // seuil de ré-armement (retour vers le silence)
+    const MIN_GAP = 60;                // garde-fou anti-double-trigger sur le même front (ms)
+    micArmedRef.current = true;
     const detect = () => {
       analyser.getFloatTimeDomainData(data);
       const rms = Math.sqrt(data.reduce((s, v) => s + v * v, 0) / data.length);
       setMicLevel(rms);
       const now = performance.now();
-      if (rms > micThreshold && now - lastOnsetRef.current > COOLDOWN) {
+      // Ré-armement : le niveau est retombé sous le seuil bas → prêt pour le prochain onset
+      if (!micArmedRef.current && rms < LOW) micArmedRef.current = true;
+      // Onset : front montant franchissant le seuil haut, seulement si armé
+      if (micArmedRef.current && rms > HIGH && now - lastOnsetRef.current > MIN_GAP) {
+        micArmedRef.current = false;
         lastOnsetRef.current = now;
         const t = now - playStartRef.current;
         if (t >= -TOL.ok) {
