@@ -2,13 +2,51 @@ import { useEffect, useRef, useState } from "react";
 import { Renderer, Stave, StaveNote, Beam, Voice, Formatter, Dot, Tuplet } from "vexflow";
 
 const DUR_Q = {
-  w:4, h:2, hd:3, q:1, qd:1.5,
-  "8":0.5, "8d":0.75, "16":0.25,
-  wr:4, hr:2, qr:1, "8r":0.5, "16r":0.25,
+  w:4, wd:6, h:2, hd:3, q:1, qd:1.5,
+  "8":0.5, "8d":0.75, "16":0.25, "16d":0.375, "32":0.125,
+  wr:4, hr:2, qr:1, "8r":0.5, "16r":0.25, "32r":0.125,
 };
 
-const BEAT_SIZE = { "4/4":1, "3/4":1, "2/4":1, "12/8":1.5, "6/8":1.5, "9/8":1.5 };
-const BEAMABLE  = new Set(["8","16"]);
+// Beat size = nombre de quarts-de-note par pulsation (pour grouper les ligatures).
+// Inclut les métriques mises à l'échelle par l'unité de lecture (blanche / croche).
+// NB : les métriques internes générées sont uniquement 4/4 et 12/8 ; 4/2, 4/8, 6/2, 6/8
+// n'apparaissent QUE comme sorties mises à l'échelle → leurs pulsations valent le temps
+// interne × facteur (croche ternaire 6/8 : croche pointée = 0,75 quart, pas 1,5).
+const BEAT_SIZE = {
+  "4/4":1, "3/4":1, "2/4":1, "12/8":1.5, "9/8":1.5,
+  "4/2":2, "4/8":0.5,     // binaire : blanche 4/2, croche 4/8
+  "6/2":3, "6/8":0.75,    // ternaire : blanche 6/2 (blanche pointée), croche 6/8 (croche pointée)
+};
+const BEAMABLE  = new Set(["8","16","32"]);
+
+// ─── Unité de lecture : transformation AU RENDU uniquement ────────────────────
+// Le rythme interne (durées en noires) est inchangé ; on échelonne les durées écrites
+// (×2 blanche / ÷2 croche) et la métrique affichée. Le son reste identique.
+const READUNIT_TIMESIG = {
+  "4/4":  { noire:"4/4",  blanche:"4/2", croche:"4/8" },
+  "12/8": { noire:"12/8", blanche:"6/2", croche:"6/8" },
+};
+// Échelle des valeurs : w · h · q · 8 · 16 · 32
+const DUR_UP   = { "16":"8", "8":"q", q:"h", h:"w" };            // blanche (×2, plus long)
+const DUR_DOWN = { h:"q", q:"8", "8":"16", "16":"32", w:"h" };   // croche (÷2, plus court)
+
+function scaleTimeSig(timeSig, readUnit) {
+  if (readUnit === "noire") return timeSig;
+  return READUNIT_TIMESIG[timeSig]?.[readUnit] ?? timeSig;
+}
+
+// Transforme un code de durée (ex. "8d", "16r", "qd") en préservant point `d` et silence `r`.
+function scaleDur(durCode, readUnit) {
+  if (readUnit === "noire") return durCode;
+  const rest = durCode.endsWith("r");
+  let core = rest ? durCode.slice(0, -1) : durCode;
+  const dot = core.endsWith("d");
+  const base = dot ? core.slice(0, -1) : core;
+  const map = readUnit === "blanche" ? DUR_UP : DUR_DOWN;
+  const scaled = map[base];
+  if (!scaled) return durCode; // hors échelle → identité (garde-fou)
+  return scaled + (dot ? "d" : "") + (rest ? "r" : "");
+}
 
 // Couleur classique : le grade est porté par les points sous la portée (pas de redondance)
 function noteColor() {
@@ -84,6 +122,7 @@ export default function RythmStaff({
   showTimeSig  = true,
   compact      = false,
   strikeMeter  = false,
+  readUnit     = "noire",
 }) {
   const ref         = useRef(null);
   const [renderWidth, setRenderWidth] = useState(null);
@@ -106,6 +145,10 @@ export default function RythmStaff({
     if (!ref.current || !figures || !renderWidth) return;
     ref.current.innerHTML = "";
 
+    // ── Unité de lecture : durées + métrique mises à l'échelle (rendu uniquement) ──
+    const figs = figures.map(f => ({ ...f, dur: scaleDur(f.dur, readUnit) }));
+    const ts   = scaleTimeSig(timeSig, readUnit);
+
     try {
       const renderer = new Renderer(ref.current, Renderer.Backends.SVG);
       renderer.resize(renderWidth, height);
@@ -115,7 +158,7 @@ export default function RythmStaff({
       const staveY = height >= 150 ? 24 : Math.max(4, Math.round(height / 2 - 60));
       const stave  = new Stave(10, staveY, renderWidth - 20);
       if (showClef)    stave.addClef("treble");
-      if (showTimeSig) stave.addTimeSignature(timeSig);
+      if (showTimeSig) stave.addTimeSignature(ts);
       stave.setStyle({ strokeStyle: "#4b5563", fillStyle: "#4b5563" });
       stave.setContext(ctx).draw();
 
@@ -136,25 +179,25 @@ export default function RythmStaff({
       }
 
       // Portée vide (act 5, départ) : on affiche la métrique seule, pas de voix.
-      if (figures.length === 0) return;
+      if (figs.length === 0) return;
 
-      const vexNotes = figures.map((fig, i) =>
+      const vexNotes = figs.map((fig, i) =>
         makeVexNote(fig, i, activeIdx, scoreGrades)
       );
 
-      const [beats, beatVal] = timeSig.split("/").map(Number);
+      const [beats, beatVal] = ts.split("/").map(Number);
       const voice = new Voice({ num_beats: beats, beat_value: beatVal });
       voice.setMode(Voice.Mode.SOFT);
       voice.addTickables(vexNotes);
 
       // ── Ligatures créées AVANT le draw pour supprimer les drapeaux de croches ──
       const DECO = "#4b5563";
-      const beams = buildBeams(figures, vexNotes, timeSig);
+      const beams = buildBeams(figs, vexNotes, ts);
 
       const availableWidth = stave.getX() + stave.getWidth() - stave.getNoteStartX() - 10;
       // compact = limite la largeur de formatage pour éviter l'étirement des notes
       const formatWidth = compact
-        ? Math.min(availableWidth, figures.length * 55 + 20)
+        ? Math.min(availableWidth, figs.length * 55 + 20)
         : availableWidth;
 
       new Formatter().joinVoices([voice]).format([voice], formatWidth);
@@ -169,22 +212,22 @@ export default function RythmStaff({
 
       // ── Triolets ──────────────────────────────────────────────────────────────
       let i = 0;
-      while (i < figures.length) {
-        if (figures[i].triplet) {
+      while (i < figs.length) {
+        if (figs[i].triplet) {
           const start  = i;
           const tNotes = [];
-          while (i < figures.length && figures[i].triplet) {
+          while (i < figs.length && figs[i].triplet) {
             tNotes.push(vexNotes[i++]);
           }
           if (tNotes.length >= 2) {
-            const base0    = figures[start].dur.replace(/d$/, "").replace(/r$/, "");
+            const base0    = figs[start].dur.replace(/d$/, "").replace(/r$/, "");
             const isBeamed = BEAMABLE.has(base0);
             const tuplet   = new Tuplet(tNotes, {
               num_notes:      tNotes.length,
               notes_occupied: tNotes.length === 3 ? 2 : tNotes.length,
               ratioed:        false,
               bracketed:      !isBeamed,
-              beat_value:     parseInt(timeSig.split("/")[1] ?? "4"),
+              beat_value:     parseInt(ts.split("/")[1] ?? "4"),
             });
             tuplet.setStyle({ fillStyle: DECO, strokeStyle: DECO });
             tuplet.setContext(ctx).draw();
@@ -268,7 +311,7 @@ export default function RythmStaff({
     } catch (err) {
       console.warn("VexFlow:", err.message ?? err);
     }
-  }, [figures, timeSig, activeIdx, scoreGrades, scoreDevs, sessionBpm, renderWidth, height, showClef, showTimeSig, compact, strikeMeter]);
+  }, [figures, timeSig, activeIdx, scoreGrades, scoreDevs, sessionBpm, renderWidth, height, showClef, showTimeSig, compact, strikeMeter, readUnit]);
 
   return <div ref={ref} style={{ width:"100%", maxWidth:width, height:height, overflow:"hidden" }} />;
 }

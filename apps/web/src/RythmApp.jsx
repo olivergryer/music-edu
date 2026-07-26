@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { useTheme, ThemeToggleInline } from "./ThemeContext";
 import useSwipe from "./hooks/useSwipe";
@@ -183,14 +183,14 @@ const GRADE_COLOR = { perfect:"#a78bfa", good:"#34d399", ok:"#fbbf24", miss:"#f8
 // Activités 1-4 : accentuation plus marquée.
 const BEAT_WEIGHTS = {
   4: [2.5, 1.6, 2.1, 1.6], // 4/4, 12/8 (4 temps musicaux)
-  3: [2.5, 1.6, 1.6],      // 3/4, 9/8
-  2: [2.5, 1.6],           // 2/4, 6/8
+  //3: [2.5, 1.6, 1.6],      // 3/4, 9/8
+  //2: [2.5, 1.6],           // 2/4, 6/8
 };
 // Activités 3, 4, 5 : accentuation plus douce (rythme tenu / écoute longue / choix).
 const BEAT_WEIGHTS_SOFT = {
-  4: [2.0, 1.4, 1.8, 1.4],
-  3: [2.0, 1.4, 1.4],
-  2: [2.0, 1.4],
+  4: [1.8, 1.4, 1.6, 1.4],
+  //3: [2.0, 1.4, 1.4],
+  //2: [2.0, 1.4],
 };
 function beatsPerMeasure(timeSig) {
   if (timeSig === "3/4" || timeSig === "9/8") return 3;
@@ -771,6 +771,7 @@ export default function RythmApp() {
     if (ENABLE_TUTORIAL === true) return true;
     return !localStorage.getItem(`rythm-tuto-${TUTORIAL_VERSION}`);
   });
+  const [showDndNotice,   setShowDndNotice]   = useState(() => !localStorage.getItem("rythm-dnd-notice-v1")); // 1re popup : « Ne pas déranger »
   const [showHelp,         setShowHelp]         = useState(false);
   const [showConsigne,     setShowConsigne]     = useState(false); // overlay consigne d'arrivée (home + revue depuis "?")
   const [consigneReviewing,setConsigneReviewing]= useState(false); // true = consigne ouverte pour relecture (depuis "?")
@@ -784,7 +785,8 @@ export default function RythmApp() {
 
   // Tempo
   const [tempoMode,    setTempoMode]    = useState(() => loadSettings().tempoMode    ?? "fixed");
-  const [bpmFixed,     setBpmFixed]     = useState(() => loadSettings().bpmFixed     ?? 66);
+  const [bpmFixed,     setBpmFixed]     = useState(() => loadSettings().bpmFixed     ?? 60);
+  const [readUnit,     setReadUnit]     = useState(() => loadSettings().readUnit     ?? "noire"); // unité de lecture : noire | blanche | croche
   const [bpmMin,       setBpmMin]       = useState(() => loadSettings().bpmMin       ?? 50);
   const [bpmMax,       setBpmMax]       = useState(() => loadSettings().bpmMax       ?? 90);
   const [sessionBpm,   setSessionBpm]   = useState(80);
@@ -943,10 +945,10 @@ export default function RythmApp() {
       localStorage.setItem(SETTINGS_KEY, JSON.stringify({
         selectedFormulas: [...selectedFormulas],
         tempoMode, bpmFixed, bpmMin, bpmMax,
-        revealBeat, inputMode, flashOffsetMs,
+        revealBeat, inputMode, flashOffsetMs, readUnit,
       }));
     } catch {}
-  }, [selectedFormulas, tempoMode, bpmFixed, bpmMin, bpmMax, revealBeat, inputMode, flashOffsetMs]);
+  }, [selectedFormulas, tempoMode, bpmFixed, bpmMin, bpmMax, revealBeat, inputMode, flashOffsetMs, readUnit]);
 
   // ── Gestion formules / niveaux ─────────────────────────────────────────────
   const toggleFormula = useCallback(id => {
@@ -1236,8 +1238,16 @@ export default function RythmApp() {
   const tid       = (fn, ms) => { const id = setTimeout(fn, ms); tidsRef.current.push(id); return id; };
 
 
-  // Décompte : temps 1 & 2 DÉCOMPOSÉS (2 subdivisions binaire / 3 ternaire — on-beat grave
-  // fort + flash, off-beats aigu plus faible), temps 3 & 4 SEULS (on-beat uniquement).
+  // Décomposition du décompte autorisée uniquement pour le TERNAIRE en cycle C1.
+  // Binaire : jamais décomposé. Ternaire C2/C3 : jamais décomposé.
+  const ternaryDecompAllowed = useMemo(
+    () => deriveNiveau(selectedFormulas, niveauOrder, niveauFormulaIds).startsWith("C1"),
+    [selectedFormulas, niveauOrder, niveauFormulaIds]
+  );
+
+  // Décompte : en ternaire C1, temps 1 & 2 DÉCOMPOSÉS (3 subdivisions — on-beat grave fort +
+  // flash, off-beats aigu plus faible), temps 3 & 4 SEULS. Binaire et ternaire ≥ C2 : aucune
+  // décomposition (temps seuls sur les 4).
   // `beatNum` = numéro du temps annoncé (1..4) → pilote la décomposition.
   // `forced` = ignore metroSoundRef (pour count-in en mode extrême).
   // Count-in TOUJOURS flash + son, indépendant du toggle global.
@@ -1248,7 +1258,9 @@ export default function RythmApp() {
     setTimeout(() => setBeatFlash(false), strong ? 160 : 110);
     if (beatNum > 2) return; // temps 3 & 4 : on-beat seul, pas de subdivisions
     const isTernary = ["12/8", "6/8", "9/8"].includes(timeSig);
-    const subs = isTernary ? 3 : 2;
+    if (!isTernary) return;              // binaire : jamais décomposé
+    if (!ternaryDecompAllowed) return;   // ternaire hors C1 : jamais décomposé
+    const subs = 3;
     const subMs = beatMs / subs;
     for (let k = 1; k < subs; k++) {
       tid(() => { countBeep(false, true); }, k * subMs); // Forcer son=true (count-in)
@@ -1927,6 +1939,17 @@ export default function RythmApp() {
                       ))}
                     </div>
                   )}
+                  {/* Unité de lecture : transforme la notation (le son reste identique) */}
+                  <div style={{ marginTop:14, paddingTop:12, borderTop:'1px solid var(--border-c)' }}>
+                    <div style={{ fontSize:11, color:'var(--text-muted)', marginBottom:6, fontWeight:600 }}>Unité de lecture</div>
+                    <div style={{ display:'flex', gap:6 }}>
+                      {[["noire","Noire"],["blanche","Blanche"],["croche","Croche"]].map(([val,lbl]) => (
+                        <button key={val} onClick={() => setReadUnit(val)} style={{ flex:1, padding:'8px 0', borderRadius:10, border:'none', background: readUnit===val ? '#4A6CF7' : 'var(--surface-2)', color: readUnit===val ? '#fff' : 'var(--text-muted)', fontWeight:700, fontSize:12, cursor:'pointer' }}>
+                          {lbl}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               )}
 
@@ -2080,6 +2103,46 @@ export default function RythmApp() {
   if (currentPage === "home") {
     return (
       <>
+        {showDndNotice && (
+          <div
+            role="dialog"
+            aria-modal="true"
+            style={{
+              position: 'fixed', inset: 0, zIndex: 100,
+              background: 'rgba(3,7,18,0.82)', backdropFilter: 'blur(4px)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20,
+            }}
+          >
+            <div style={{
+              maxWidth: 380, width: '100%', background: 'var(--surface)',
+              border: '1px solid var(--border-c)', borderRadius: 20, padding: '28px 24px',
+              textAlign: 'center', boxShadow: '0 12px 40px rgba(0,0,0,0.45)',
+            }}>
+              <div style={{
+                width: 48, height: 48, margin: '0 auto 16px', borderRadius: '50%',
+                background: 'rgba(192,132,252,0.14)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#c084fc" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="9" /><line x1="8" y1="12" x2="16" y2="12" />
+                </svg>
+              </div>
+              <div style={{ fontSize: 17, fontWeight: 800, color: 'var(--text)', marginBottom: 10 }}>
+                Ne pas déranger
+              </div>
+              <div style={{ fontSize: 14, lineHeight: 1.5, color: 'var(--text-muted)', marginBottom: 22 }}>
+                Active le mode <strong style={{ color: 'var(--text)' }}>« Ne pas déranger »</strong> de ton
+                appareil pour ne pas être interrompu pendant l'exercice (notifications, appels).
+              </div>
+              <button
+                onClick={() => { localStorage.setItem("rythm-dnd-notice-v1", "1"); setShowDndNotice(false); }}
+                className="w-full border-none rounded-2xl text-sm font-bold cursor-pointer text-white"
+                style={{ padding: '13px 0', background: 'linear-gradient(135deg,#4A6CF7,#8B5CF6)' }}
+              >
+                J'ai compris
+              </button>
+            </div>
+          </div>
+        )}
         {showTutorial && <TutorialOverlay onDone={handleTutorialDone} niveauOrder={niveauOrder} activity={activity} inputMode={inputMode} />}
         {HelpOverlay}
         {SettingsModal}
@@ -2560,6 +2623,7 @@ export default function RythmApp() {
                     scoreGrades={phase==="results" ? gradeMap : undefined}
                     scoreDevs={phase==="results" ? devMap : undefined}
                     sessionBpm={sessionBpm}
+                    readUnit={readUnit}
                   />
                   {phase==="results" && scores.length > 0 && (
                     <div style={{
@@ -2808,6 +2872,7 @@ export default function RythmApp() {
                         height={120}
                         showClef={false}
                         showTimeSig={true}
+                        readUnit={readUnit}
                       />
                     </div>
                   );
@@ -2908,7 +2973,7 @@ export default function RythmApp() {
                   )}
                 </button>
                 {phase==="results" && <SpeakerHint color={selectedIdx===correctIdx ? '#22C55E' : '#f87171'} />}
-                <RythmStaff figures={pattern.figs} timeSig={pattern.timeSig} activeIdx={-1} />
+                <RythmStaff figures={pattern.figs} timeSig={pattern.timeSig} activeIdx={-1} readUnit={readUnit} />
                 {/* Overlay flash tempo — par-dessus le RythmStaff (toujours visible), piloté par targetFlash */}
                 <div
                   className="absolute inset-0 rounded-2xl pointer-events-none"
@@ -3020,7 +3085,7 @@ export default function RythmApp() {
                         className="relative rounded-xl overflow-hidden cursor-pointer"
                         style={{ background:'var(--surface-2)', padding:'8px 6px 4px', border:'2px solid #f87171' }}>
                         <SpeakerHint color="#f87171" />
-                        <RythmStaff figures={choices[selectedIdx].figs} timeSig={choices[selectedIdx].timeSig} activeIdx={-1} height={110}/>
+                        <RythmStaff figures={choices[selectedIdx].figs} timeSig={choices[selectedIdx].timeSig} activeIdx={-1} height={110} readUnit={readUnit}/>
                       </div>
                     </div>
                   )}
@@ -3068,7 +3133,7 @@ export default function RythmApp() {
                     className="rounded-2xl overflow-hidden mb-1 transition-colors duration-150"
                     style={{ background: 'var(--surface)', padding: '10px 6px 6px', border: `2px solid ${beatFlash ? '#4A6CF7' : 'var(--border-c)'}` }}
                   >
-                    <RythmStaff figures={act5Figs} timeSig={pattern.timeSig} activeIdx={-1} showClef={false} showTimeSig={true} compact={true} />
+                    <RythmStaff figures={act5Figs} timeSig={pattern.timeSig} activeIdx={-1} showClef={false} showTimeSig={true} compact={true} readUnit={readUnit} />
                   </div>
 
                   {/* Indicateur de conformité de la mesure */}
@@ -3091,7 +3156,7 @@ export default function RythmApp() {
                       >
                         {/* rendu à taille « correcte » puis scale uniforme → notation proportionnelle */}
                         <div style={{ width: 124, transformOrigin: 'top left', transform: 'scale(0.7)' }}>
-                          <RythmStaff figures={f.figs} timeSig={pattern.timeSig} activeIdx={-1} width={124} height={100} showClef={false} showTimeSig={false} compact={true} />
+                          <RythmStaff figures={f.figs} timeSig={pattern.timeSig} activeIdx={-1} width={124} height={100} showClef={false} showTimeSig={false} compact={true} readUnit={readUnit} />
                         </div>
                       </div>
                     ))}
@@ -3150,7 +3215,7 @@ export default function RythmApp() {
                         >
                           {act5Placed.length > 0 && <SpeakerHint color={userBorder} />}
                           {act5Placed.length > 0
-                            ? <RythmStaff figures={act5Figs} timeSig={pattern.timeSig} activeIdx={-1} showClef={false} compact={true} strikeMeter={act5Invalid} />
+                            ? <RythmStaff figures={act5Figs} timeSig={pattern.timeSig} activeIdx={-1} showClef={false} compact={true} strikeMeter={act5Invalid} readUnit={readUnit} />
                             : <div className="text-center text-[12px] text-app-muted py-8">(aucune cellule posée)</div>}
                         </div>
                         <div className="text-[11px] text-app-muted mb-1">Solution</div>
@@ -3162,7 +3227,7 @@ export default function RythmApp() {
                           style={{ background: 'var(--surface)', padding: '10px 6px 6px', border: '2px solid #22C55E' }}
                         >
                           <SpeakerHint color="#22C55E" />
-                          <RythmStaff figures={pattern.figs} timeSig={pattern.timeSig} activeIdx={-1} showClef={false} />
+                          <RythmStaff figures={pattern.figs} timeSig={pattern.timeSig} activeIdx={-1} showClef={false} readUnit={readUnit} />
                         </div>
                       </>
                     );
