@@ -2793,7 +2793,7 @@ export default function RythmApp() {
             </div>
           )}
 
-            {(activity === 1 || activity === 2) && phase==="results" && scores.length===0 && (
+            {(activity === 1 || activity === 2) && phase==="results" && (
               <div
                 className="w-full bg-surface border border-app rounded-2xl p-4 text-center"
                 onPointerDown={e => e.stopPropagation()}
