@@ -6,6 +6,7 @@ import {
   RANKS, TROPHIES,
   type ProgressState,
 } from '../hooks/progressLogic'
+import { MODULES, MODULE_IDS, moduleLabel, moduleColor, type ModuleId } from '../lib/modules'
 
 export interface HistoryEntry {
   date: string
@@ -14,9 +15,22 @@ export interface HistoryEntry {
   medal: string
 }
 
-export const MODULE_LABELS: Record<string, string> = { rythme: 'Rythme', theorie: 'Théorie', accordeur: 'Accordeur' }
-export const MODULE_COLORS: Record<string, string> = { rythme: '#4A6CF7', theorie: '#8B5CF6', accordeur: '#FF8B3D' }
-export const MODULE_ICONS:  Record<string, string> = { rythme: '🥁', theorie: '🎼', accordeur: '🎵' }
+// Libellés/couleurs dérivés du registre unique (lib/modules.ts).
+export const MODULE_LABELS: Record<string, string> = Object.fromEntries(MODULE_IDS.map(id => [id, MODULES[id].label]))
+export const MODULE_COLORS: Record<string, string> = Object.fromEntries(MODULE_IDS.map(id => [id, MODULES[id].color]))
+// Icônes : conservées localement (emojis, hors registre).
+export const MODULE_ICONS:  Record<string, string> = { rythme: '🥁', theorie: '🎼', accordeur: '🎵', notes: '🎼' }
+
+// Stat legacy affichée par module (le doc gamification global stocke des compteurs
+// de forme hétérogène). Fallback « — » pour un module sans compteur legacy (ex. Notes
+// tant qu'il n'écrit pas la couche progress/{moduleId}). Itérable sur MODULE_IDS.
+function legacyModuleStat(id: ModuleId, mods: ProgressState['modules']): { xpTotal: number; stat: string } {
+  const m = (mods as Record<string, { xpTotal?: number; seriesPlayed?: number; exercisesPlayed?: number; sessionsPlayed?: number }>)[id]
+  if (!m) return { xpTotal: 0, stat: '—' }
+  if (m.seriesPlayed !== undefined) return { xpTotal: m.xpTotal ?? 0, stat: `${m.seriesPlayed} séries · ${m.exercisesPlayed ?? 0} exos` }
+  if (m.sessionsPlayed !== undefined) return { xpTotal: m.xpTotal ?? 0, stat: `${m.sessionsPlayed} sessions` }
+  return { xpTotal: m.xpTotal ?? 0, stat: '—' }
+}
 
 const cardCls = "bg-surface rounded-2xl p-5 mb-3 border border-app"
 const labelCls = "text-xs font-bold text-app-muted uppercase tracking-widest mb-3 block"
@@ -169,17 +183,16 @@ export default function StudentDashboardView({ progress, rawProgress, history, t
       <div className={cardCls}>
         <span className={labelCls}>Activité par module</span>
         <div className="flex gap-2.5">
-          {([
-            { key: 'rythme',    label: 'Rythme',    stat: `${progress.modules.rythme.seriesPlayed} séries · ${progress.modules.rythme.exercisesPlayed ?? 0} exos`, xpTotal: progress.modules.rythme.xpTotal },
-            { key: 'theorie',   label: 'Théorie',   stat: `${progress.modules.theorie.sessionsPlayed} sessions`,  xpTotal: progress.modules.theorie.xpTotal },
-            { key: 'accordeur', label: 'Accordeur', stat: `${progress.modules.accordeur.sessionsPlayed} sessions`, xpTotal: progress.modules.accordeur.xpTotal },
-          ] as const).map(m => (
-            <div key={m.key} className="flex-1 bg-surface-2 rounded-xl p-2.5">
-              <div className="text-xs font-bold mb-1" style={{ color: MODULE_COLORS[m.key] }}>{m.label}</div>
-              <div className="text-base font-black text-app">{m.xpTotal}</div>
-              <div className="text-[10px] text-app-muted">XP · {m.stat}</div>
-            </div>
-          ))}
+          {MODULE_IDS.map(id => {
+            const { xpTotal, stat } = legacyModuleStat(id, progress.modules)
+            return (
+              <div key={id} className="flex-1 bg-surface-2 rounded-xl p-2.5">
+                <div className="text-xs font-bold mb-1" style={{ color: moduleColor(id) }}>{moduleLabel(id)}</div>
+                <div className="text-base font-black text-app">{xpTotal}</div>
+                <div className="text-[10px] text-app-muted">XP · {stat}</div>
+              </div>
+            )
+          })}
         </div>
       </div>
 

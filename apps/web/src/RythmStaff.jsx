@@ -207,8 +207,10 @@ export default function RythmStaff({
     const { origIndex, tiePairs } = tie;
 
     // ── Unité de lecture : durées + métrique mises à l'échelle (rendu uniquement) ──
-    const figs = tie.figs.map(f => ({ ...f, dur: scaleDur(f.dur, readUnit) }));
-    const ts   = scaleTimeSig(timeSig, readUnit);
+    // Croche désactivée en ternaire (pas de cas réaliste) → on garde 12/8 (noire).
+    const effReadUnit = (readUnit === "croche" && !isBinaryTimeSig(timeSig)) ? "noire" : readUnit;
+    const figs = tie.figs.map(f => ({ ...f, dur: scaleDur(f.dur, effReadUnit) }));
+    const ts   = scaleTimeSig(timeSig, effReadUnit);
 
     try {
       const renderer = new Renderer(ref.current, Renderer.Backends.SVG);
@@ -272,14 +274,14 @@ export default function RythmStaff({
       });
 
       // ── Liaisons (Phase C) : courbe de tenue entre les têtes scindées ──────────
+      // VexFlow 5 : propriétés camelCase (firstNote/lastNote) ; firstIndexes/lastIndexes → [0]
+      // par défaut. direction = 1 → arc vers le bas (arqué sous les têtes).
       tiePairs.forEach(([a, b]) => {
-        const t = new StaveTie({
-          first_note:  vexNotes[a],
-          last_note:   vexNotes[b],
-          first_indices: [0],
-          last_indices:  [0],
-        });
-        t.setContext(ctx).draw();
+        try {
+          new StaveTie({ firstNote: vexNotes[a], lastNote: vexNotes[b] })
+            .setDirection(1)
+            .setContext(ctx).draw();
+        } catch { /* liaison non dessinable : on garde la portée */ }
       });
 
       // ── Triolets ──────────────────────────────────────────────────────────────

@@ -1,7 +1,19 @@
 // Outils de calibration interne des paramètres de détection/segmentation
 // (clarté, gate, silence, saut, durée min). Voir CalibrationPage.
 
-import { analyserBuffer, segmenter } from './accordeurUtils'
+import { analyserBuffer, segmenter, noteNameToPC, NOTE_NAMES_FR, TRANSPOSITIONS } from './accordeurUtils'
+
+// ─── Écrit → concert ──────────────────────────────────────────────────────────
+// Le micro détecte la hauteur CONCERT (Hz absolu). Les exercices sont écrits en
+// Do majeur « tel que lu » par l'instrumentiste. Pour un instrument transpositeur
+// (transpoKey ≠ 'C'), on convertit les noms attendus vers le concert avant de
+// comparer : written = concert + offset  ⇒  concert = written − offset.
+// Octave-insensible : on ne compare que les classes de hauteur (noms).
+export function toConcertNames(names, transpoKey = 'C') {
+  const offset = TRANSPOSITIONS[transpoKey]?.offset ?? 0
+  if (offset === 0) return names
+  return names.map(n => NOTE_NAMES_FR[((noteNameToPC(n) - offset) % 12 + 12) % 12])
+}
 
 // ─── Set d'exercices ──────────────────────────────────────────────────────────
 // variant : 'sequence'   → noms doivent matcher dans l'ordre exact
@@ -152,11 +164,13 @@ export function findAcceptableRange(sweepResults) {
 }
 
 // ─── Sweep complet pour un exercice ───────────────────────────────────────────
-export function runSweepForExercise(audioBuffer, exercise, diapason = 442) {
+export function runSweepForExercise(audioBuffer, exercise, diapason = 442, transpoKey = 'C') {
+  // Noms attendus convertis en hauteur concert selon la transposition instrument.
+  const expectedConcert = toConcertNames(exercise.expectedNames, transpoKey)
   const sweep = {}
   const acceptableRanges = {}
   for (const key of PARAM_KEYS) {
-    const sw = sweepOneParam(audioBuffer, key, exercise.expectedNames, exercise.variant, diapason)
+    const sw = sweepOneParam(audioBuffer, key, expectedConcert, exercise.variant, diapason)
     sweep[key] = sw
     acceptableRanges[key] = findAcceptableRange(sw)
   }
@@ -173,6 +187,14 @@ export function runSweepForExercise(audioBuffer, exercise, diapason = 442) {
   return {
     id: exercise.id,
     detectedCountFinal: centerSegs.length,
+    // Notes réellement détectées avec les paramètres centraux (debug UI).
+    detectedNotes: centerSegs.map(s => ({
+      nom: s.nom,
+      octave: s.octave,
+      dureeMs: Math.round(s.finMs - s.debutMs),
+    })),
+    // Noms concert attendus (déjà transposés) pour comparaison à l'affichage.
+    expectedConcert,
     sweep,
     acceptableRanges,
   }

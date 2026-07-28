@@ -8,6 +8,7 @@ import { getRank, rankLabel, displayStreak, todayStr } from '../hooks/useProgres
 import { usePwaInstall } from '../hooks/usePwaInstall'
 import PwaInstallTutorial from '../components/PwaInstallTutorial'
 import PwaInAppBrowserOverlay from '../components/PwaInAppBrowserOverlay'
+import { MODULE_IDS, moduleColor, type ModuleId } from '../lib/modules'
 
 interface EleveProgress {
   xp: number
@@ -33,8 +34,17 @@ interface EleveData {
   lastSession: LastSession | null
 }
 
-const MODULE_ICONS: Record<string, string> = { rythme: '🥁', theorie: '🎼', accordeur: '🎵' }
-const MODULE_COLORS: Record<string, string> = { rythme: '#4A6CF7', theorie: '#8B5CF6', accordeur: '#FF8B3D' }
+const MODULE_ICONS: Record<string, string> = { rythme: '🥁', theorie: '🎼', accordeur: '🎵', notes: '🎼' }
+
+// Compteur legacy affiché par module (forme hétérogène du doc gamification global).
+// Fallback 0/« — » pour un module sans compteur legacy. Itérable sur MODULE_IDS.
+function profModuleStat(id: ModuleId, mods: EleveProgress['modules']): { count: number; unit: string } {
+  const m = (mods as Record<string, { seriesPlayed?: number; sessionsPlayed?: number }>)[id]
+  if (!m) return { count: 0, unit: '—' }
+  if (m.seriesPlayed !== undefined) return { count: m.seriesPlayed, unit: 'séries' }
+  if (m.sessionsPlayed !== undefined) return { count: m.sessionsPlayed, unit: 'sessions' }
+  return { count: 0, unit: '—' }
+}
 
 const DEFAULT_PROGRESS: EleveProgress = {
   xp: 0,
@@ -154,22 +164,23 @@ export default function DashboardProf() {
               </div>
 
               <div className="flex gap-2 mb-2.5">
-                {(['rythme', 'theorie', 'accordeur'] as const).map(k => (
-                  <div key={k} className="flex-1 bg-surface-2 rounded-lg p-2 text-center">
-                    <div className="text-sm">{MODULE_ICONS[k]}</div>
-                    <div className="text-sm font-bold text-app">
-                      {k === 'rythme' ? prog.modules.rythme.seriesPlayed : k === 'theorie' ? prog.modules.theorie.sessionsPlayed : prog.modules.accordeur.sessionsPlayed}
+                {MODULE_IDS.map(k => {
+                  const { count, unit } = profModuleStat(k, prog.modules)
+                  return (
+                    <div key={k} className="flex-1 bg-surface-2 rounded-lg p-2 text-center">
+                      <div className="text-sm">{MODULE_ICONS[k]}</div>
+                      <div className="text-sm font-bold text-app">{count}</div>
+                      <div className="text-[9px] text-app-muted">{unit}</div>
                     </div>
-                    <div className="text-[9px] text-app-muted">{k === 'rythme' ? 'séries' : 'sessions'}</div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
 
               {e.lastSession ? (
                 <div className="flex items-center gap-2 bg-surface-2 rounded-lg px-2.5 py-1.5">
                   <span className="text-sm">{e.lastSession.medal}</span>
                   <span className="text-xs text-app-muted">{MODULE_ICONS[e.lastSession.module] ?? ''} {e.lastSession.module}</span>
-                  <span className="text-xs font-bold ml-auto" style={{ color: MODULE_COLORS[e.lastSession.module] ?? '#4A6CF7' }}>
+                  <span className="text-xs font-bold ml-auto" style={{ color: moduleColor(e.lastSession.module) }}>
                     +{e.lastSession.xp} XP
                   </span>
                   <span className="text-[10px] text-app-muted">{e.lastSession.date}</span>

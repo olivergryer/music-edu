@@ -7,8 +7,9 @@ import { IS_DEV } from '../isDev'
 import {
   EXERCISES, runSweepForExercise, deriveSuggestedProfiles,
   writeProfilesOverride, clearProfilesOverride, readProfilesOverride,
-  PARAM_KEYS,
+  toConcertNames, PARAM_KEYS,
 } from '../calibrationUtils'
+import { TRANSPOSITIONS } from '../accordeurUtils'
 import CalibrationStrip from '../components/CalibrationStrip'
 
 const INSTRUMENT_OPTIONS = [
@@ -64,6 +65,8 @@ function CalibrationPageInner() {
   // ─── Session courante ──────────────────────────────────────────────────────
   const [sessionName, setSessionName] = useState('')
   const [instrument,  setInstrument]  = useState('clarinette')
+  // Transposition récupérée depuis l'accordeur (persistée `acc_transpo`).
+  const [transpoKey,  setTranspoKey]  = useState(() => localStorage.getItem('acc_transpo') || 'C')
   const [exResults,   setExResults]   = useState({})   // exId → { status, audioBuffer, blobUrl, sweepResult }
   const [recordingEx, setRecordingEx] = useState(null) // exId in recording, null sinon
   const [suggested,   setSuggested]   = useState(null)
@@ -167,10 +170,10 @@ function CalibrationPageInner() {
     setExResults(prev => ({ ...prev, [exId]: { ...prev[exId], status: 'analyzing' } }))
     // Yield au navigateur pour que l'état "analyzing" s'affiche avant le sweep bloquant.
     await new Promise(r => setTimeout(r, 30))
-    const sweepResult = runSweepForExercise(cur.audioBuffer, ex)
+    const sweepResult = runSweepForExercise(cur.audioBuffer, ex, 442, transpoKey)
     setExResults(prev => ({ ...prev, [exId]: { ...prev[exId], status: 'analyzed', sweepResult } }))
     setSuggested(null)
-  }, [exResults])
+  }, [exResults, transpoKey])
 
   // ─── Compilation profils + sauvegarde Firestore ───────────────────────────
   const allAnalyzed = EXERCISES.every(e => exResults[e.id]?.status === 'analyzed')
@@ -186,6 +189,7 @@ function CalibrationPageInner() {
       await addDoc(collection(db, 'users', user.uid, 'calibrations'), {
         nom: sessionName.trim() || `Séance ${new Date().toLocaleDateString('fr-FR')}`,
         instrument,
+        transpoKey,
         createdAt: serverTimestamp(),
         exercises: EXERCISES.map(e => ({
           id: e.id,
@@ -198,7 +202,7 @@ function CalibrationPageInner() {
       console.error('Calibration save failed', e)
       setSavingState('error')
     }
-  }, [allAnalyzed, user, exResults, sessionName, instrument])
+  }, [allAnalyzed, user, exResults, sessionName, instrument, transpoKey])
 
   // ─── Application des profils ──────────────────────────────────────────────
   const applyProfiles = useCallback((profiles) => {
@@ -209,6 +213,23 @@ function CalibrationPageInner() {
   const removeOverride = useCallback(() => {
     clearProfilesOverride()
     setOverrideActive(false)
+  }, [])
+
+  // ─── Changement de transposition ──────────────────────────────────────────
+  // Persisté dans `acc_transpo` (partagé avec l'accordeur). Les exercices déjà
+  // analysés dépendent des noms concert attendus : on repasse leur statut à
+  // 'recorded' pour forcer une réanalyse avec la nouvelle transposition.
+  const changeTranspo = useCallback((v) => {
+    setTranspoKey(v)
+    localStorage.setItem('acc_transpo', v)
+    setExResults(prev => {
+      const next = {}
+      for (const [id, r] of Object.entries(prev)) {
+        next[id] = r?.status === 'analyzed' ? { ...r, status: 'recorded', sweepResult: null } : r
+      }
+      return next
+    })
+    setSuggested(null)
   }, [])
 
   // ─── Cleanup blobs au démontage ───────────────────────────────────────────
@@ -303,6 +324,26 @@ function CalibrationPageInner() {
                     {INSTRUMENT_OPTIONS.map(i => <option key={i} value={i}>{i}</option>)}
                   </select>
                 </label>
+                <label className="text-xs text-app-muted">
+                  Transposition <span className="opacity-70">(récupérée de l'accordeur)</span>
+                  <select value={transpoKey} onChange={e => changeTranspo(e.target.value)}
+                    className="block mt-1 w-full bg-app text-app border border-app rounded-md px-2 py-1.5 text-sm">
+                    {Object.entries(TRANSPOSITIONS).map(([k, { label }]) => (
+                      <option key={k} value={k}>{label}</option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+
+              {/* Consigne transposition */}
+              <div className="mt-3 rounded-lg px-3 py-2 text-xs" style={{
+                background: 'rgba(255,139,61,0.10)', border: `1px solid ${ORANGE}`, lineHeight: 1.5,
+              }}>
+                {transpoKey === 'C' ? (
+                  <>Instrument <strong>non transpositeur</strong> : joue les gammes de Do majeur telles qu'écrites — elles sonnent en Do (concert).</>
+                ) : (
+                  <>Instrument en <strong style={{ color: ORANGE }}>{TRANSPOSITIONS[transpoKey].label}</strong> : joue les gammes de <strong>Do majeur telles qu'écrites pour toi</strong>. À la détection, elles sonnent <strong>{toConcertNames(['Do'], transpoKey)[0]} majeur (concert)</strong> — c'est normal, la calibration en tient compte. L'octave n'a aucune importance.</>
+                )}
               </div>
             </div>
 
@@ -363,6 +404,11 @@ function CalibrationPageInner() {
                           formatVal={PARAM_FMT[k]}
                         />
                       ))}
+                      <DetectedNotesDebug
+                        sweep={r.sweepResult}
+                        variant={ex.variant}
+                        expectedNames={ex.expectedNames}
+                      />
                     </div>
                   )}
                 </div>
@@ -425,6 +471,46 @@ function CalibrationPageInner() {
           </>
         )}
 
+      </div>
+    </div>
+  )
+}
+
+// Compare notes détectées (paramètres centraux) vs attendu concert.
+function DetectedNotesDebug({ sweep, variant, expectedNames }) {
+  const detected = sweep.detectedNotes || []
+  // expectedConcert stocké dans le sweep ; fallback = expectedNames bruts.
+  const expected = sweep.expectedConcert || expectedNames || []
+  const matchAt = (d, i) =>
+    (variant === 'repete' || variant === 'progressif')
+      ? d.nom === expected[0]
+      : d.nom === expected[i]
+  return (
+    <div className="mt-3 pt-3" style={{ borderTop: '1px dashed var(--border-c)' }}>
+      <div className="text-xs text-app-muted mb-1">
+        Attendu (concert) : <span className="text-app font-mono">{expected.join(' · ') || '—'}</span>
+      </div>
+      <div className="text-xs text-app-muted mb-1.5">
+        Détecté ({detected.length}) :
+      </div>
+      <div className="flex flex-wrap gap-1">
+        {detected.length === 0 && <span className="text-xs" style={{ color: '#f87171' }}>aucune note détectée</span>}
+        {detected.map((d, i) => {
+          const ok = matchAt(d, i)
+          return (
+            <span key={i} className="font-mono" style={{
+              fontSize: 10,
+              padding: '2px 6px',
+              borderRadius: 6,
+              whiteSpace: 'nowrap',
+              background: ok ? 'rgba(52,211,153,0.12)' : 'rgba(248,113,113,0.12)',
+              color: ok ? '#34d399' : '#f87171',
+              border: `1px solid ${ok ? '#34d399' : '#f87171'}`,
+            }}>
+              {d.nom}{d.octave} · {d.dureeMs}ms
+            </span>
+          )
+        })}
       </div>
     </div>
   )
@@ -493,7 +579,10 @@ function PastSessionDetail({ session, onClose, onApply }) {
           ← Retour
         </button>
         <div className="text-sm font-bold text-app">{session.nom}</div>
-        <span className="text-xs text-app-muted">{session.instrument}</span>
+        <span className="text-xs text-app-muted">
+          {session.instrument}
+          {session.transpoKey && session.transpoKey !== 'C' && ` · ${TRANSPOSITIONS[session.transpoKey]?.label || session.transpoKey}`}
+        </span>
       </div>
 
       {session.suggestedProfiles && (
@@ -518,6 +607,13 @@ function PastSessionDetail({ session, onClose, onApply }) {
                 formatVal={PARAM_FMT[k]}
               />
             ))}
+            {ex.detectedNotes && (
+              <DetectedNotesDebug
+                sweep={ex}
+                variant={exDef?.variant}
+                expectedNames={exDef?.expectedNames}
+              />
+            )}
           </div>
         )
       })}

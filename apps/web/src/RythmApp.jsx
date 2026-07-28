@@ -771,7 +771,8 @@ export default function RythmApp() {
     if (ENABLE_TUTORIAL === true) return true;
     return !localStorage.getItem(`rythm-tuto-${TUTORIAL_VERSION}`);
   });
-  const [showDndNotice,   setShowDndNotice]   = useState(() => !localStorage.getItem("rythm-dnd-notice-v1")); // 1re popup : « Ne pas déranger »
+  const [showDndNotice,   setShowDndNotice]   = useState(() => !localStorage.getItem("rythm-dnd-notice-v1")); // pop-alerte volume/silencieux (à chaque arrivée sauf « ne plus afficher »)
+  const [dndDontShow,     setDndDontShow]     = useState(false); // case « Ne plus afficher »
   const [showHelp,         setShowHelp]         = useState(false);
   const [showConsigne,     setShowConsigne]     = useState(false); // overlay consigne d'arrivée (home + revue depuis "?")
   const [consigneReviewing,setConsigneReviewing]= useState(false); // true = consigne ouverte pour relecture (depuis "?")
@@ -797,6 +798,7 @@ export default function RythmApp() {
   // Phase de jeu
   const [phase,        setPhase]        = useState("idle");
   const [pattern,      setPattern]      = useState(null);
+  const [tieRandomRoll, setTieRandomRoll] = useState(0); // tirage lié/pointé par exercice (Phase C, N+1+)
   const [countdownN,   setCountdownN]   = useState(1);
   const [revealed,     setRevealed]     = useState(false);
   const [activeIdx,    setActiveIdx]    = useState(-1);
@@ -1255,9 +1257,9 @@ export default function RythmApp() {
   }, [niveauOrder, niveauFormulaIds]);
 
   // Notation LIÉE (vs pointée) pour le pattern courant : une note pointée-à-cheval (binaire
-  // qd/hd) s'écrit liée tant que le niveau actif n'a pas dépassé le niveau d'intro du rythme
-  // (la notation pointée est apprise « au niveau d'après »). NOTATION seule — audio/scoring
-  // inchangés. Passé identiquement à toutes les portées de l'exercice.
+  // qd/hd). Règle : niveau d'intro N → toujours LIÉ ; niveau > N → tirage aléatoire lié/pointé
+  // par exercice (`tieRandomRoll`, stable sur les 4 choix act 3/4). NOTATION seule —
+  // audio/scoring inchangés. Passé identiquement à toutes les portées de l'exercice.
   const tieAcrossBeat = useMemo(() => {
     if (!pattern?.formulaSlots) return false;
     const activeIdx = niveauOrder.indexOf(activeNiveau);
@@ -1265,9 +1267,11 @@ export default function RythmApp() {
       if (!formula || formula.group !== "binary") return false;
       if (!formula.figs?.some(f => !f.rest && (f.dur === "qd" || f.dur === "hd"))) return false;
       const introIdx = niveauOrder.indexOf(idToNiveau[formula.id]);
-      return introIdx >= 0 && activeIdx <= introIdx; // pas encore dépassé le niveau d'intro → lié
+      if (introIdx < 0 || activeIdx < introIdx) return false;
+      if (activeIdx === introIdx) return true;   // niveau d'intro → toujours lié
+      return tieRandomRoll < 0.5;                // N+1 et au-delà → aléatoire lié/pointé
     });
-  }, [pattern, activeNiveau, niveauOrder, idToNiveau]);
+  }, [pattern, activeNiveau, niveauOrder, idToNiveau, tieRandomRoll]);
 
   // Décompte : en ternaire C1, temps 1 & 2 DÉCOMPOSÉS (3 subdivisions — on-beat grave fort +
   // flash, off-beats aigu plus faible), temps 3 & 4 SEULS. Binaire et ternaire ≥ C2 : aucune
@@ -1350,6 +1354,8 @@ export default function RythmApp() {
     const forced = replayPatternRef.current ?? reusePattern;
     replayPatternRef.current = null;
     const pat  = forced ?? randomPattern();
+    // Tirage lié/pointé : uniquement pour un NOUVEAU pattern (le rejeu garde la même écriture).
+    if (!forced) setTieRandomRoll(Math.random());
     // En mode série : BPM de base + ramp +5 tous les 3 exercices
     const bpm  = seriesBaseBpmRef.current !== null
       ? seriesBaseBpmRef.current + Math.floor(seriesIdxRef.current / 3) * 5
@@ -2147,18 +2153,29 @@ export default function RythmApp() {
                 background: 'rgba(192,132,252,0.14)', display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}>
                 <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#c084fc" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="12" cy="12" r="9" /><line x1="8" y1="12" x2="16" y2="12" />
+                  <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" fill="#c084fc" />
+                  <path d="M15.54 8.46a5 5 0 0 1 0 7.07M19.07 4.93a10 10 0 0 1 0 14.14" />
                 </svg>
               </div>
               <div style={{ fontSize: 17, fontWeight: 800, color: 'var(--text)', marginBottom: 10 }}>
-                Ne pas déranger
+                Avant de jouer
               </div>
-              <div style={{ fontSize: 14, lineHeight: 1.5, color: 'var(--text-muted)', marginBottom: 22 }}>
-                Active le mode <strong style={{ color: 'var(--text)' }}>« Ne pas déranger »</strong> de ton
-                appareil pour ne pas être interrompu pendant l'exercice (notifications, appels).
+              <div style={{ fontSize: 14, lineHeight: 1.5, color: 'var(--text-muted)', marginBottom: 18 }}>
+                Pense à désactiver le mode <strong style={{ color: 'var(--text)' }}>Ne pas déranger</strong> ou
+                <strong style={{ color: 'var(--text)' }}> Silencieux</strong> et monte le volume avant de commencer
+                à jouer pour bien entendre les exercices.
               </div>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center', marginBottom: 18, cursor: 'pointer', fontSize: 13, color: 'var(--text-muted)' }}>
+                <input
+                  type="checkbox"
+                  checked={dndDontShow}
+                  onChange={e => setDndDontShow(e.target.checked)}
+                  style={{ width: 17, height: 17, accentColor: '#4A6CF7', cursor: 'pointer' }}
+                />
+                Ne plus afficher
+              </label>
               <button
-                onClick={() => { localStorage.setItem("rythm-dnd-notice-v1", "1"); setShowDndNotice(false); }}
+                onClick={() => { if (dndDontShow) localStorage.setItem("rythm-dnd-notice-v1", "1"); setShowDndNotice(false); }}
                 className="w-full border-none rounded-2xl text-sm font-bold cursor-pointer text-white"
                 style={{ padding: '13px 0', background: 'linear-gradient(135deg,#4A6CF7,#8B5CF6)' }}
               >

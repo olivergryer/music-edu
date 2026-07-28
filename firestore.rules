@@ -20,6 +20,16 @@ service cloud.firestore {
         allow write: if request.auth.uid == uid;
       }
 
+      // Sessions per-module (schéma extensible) — collection plate, tous modules
+      // confondus, écrite sur le pattern (jamais sur la liste des modules).
+      // Immuables : créées une fois, jamais modifiées ni supprimées.
+      match /sessions/{sessionId} {
+        allow read: if request.auth.uid == uid
+          || (request.auth != null && request.auth.uid in get(/databases/$(db)/documents/users/$(uid)).data.profIds);
+        allow create: if request.auth.uid == uid && request.resource.data.schemaVersion is int;
+        allow update, delete: if false;
+      }
+
       // Calibration interne (outil dev), accès strictement perso
       match /calibrations/{session} {
         allow read, write: if request.auth.uid == uid;

@@ -9,12 +9,10 @@ import PwaInAppBrowserOverlay from './components/PwaInAppBrowserOverlay'
 import banniereDark from './assets/banniere_dark.svg'
 import banniereLight from './assets/banniere_light.svg'
 import { SHOW_TEST_BADGE } from './featureFlags'
+import { MODULES, MODULE_IDS } from './lib/modules'
 
-const MODULES = [
-  { id: 'rythme',    label: 'Rythme',    desc: 'Lecture et reproduction rythmique', to: '/rythme',    active: true, color: '#4A6CF7' },
-  { id: 'theorie',   label: 'Théorie',   desc: 'Intervalles, accords, armures',     to: '/theorie',   active: true, color: '#8B5CF6' },
-  { id: 'accordeur', label: 'Accordeur', desc: 'Accordeur par phrase et générateur d\'accords', to: '/accordeur', active: true, color: '#FF8B3D' },
-]
+// Cartes dérivées du registre unique (lib/modules.ts) — ajouter un module = 1 ligne là-bas.
+const MODULE_CARDS = MODULE_IDS.map(id => ({ id, to: MODULES[id].route, ...MODULES[id] }))
 
 function ModuleCard({ label, desc, active, color, testPhase }) {
   return (
@@ -90,7 +88,7 @@ export default function HubPage() {
         </div>
 
         <div className="grid gap-4 items-stretch" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))' }}>
-          {MODULES.map(m => {
+          {MODULE_CARDS.map(m => {
             const testPhase = SHOW_TEST_BADGE && m.id === 'accordeur'
             return m.active
               ? <Link key={m.id} to={m.to} className="no-underline">
