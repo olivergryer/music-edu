@@ -2728,7 +2728,7 @@ export default function RythmApp() {
           )}
 
           {/* BILAN act 1 & 2 */}
-          {(activity === 1 || activity === 2) && phase==="results" && scores.length>0 && (
+          {(activity === 1 || activity === 2) && phase==="results" && tapTimes.length>0 && (
             <div
               className="w-full bg-surface border border-app rounded-2xl p-4 text-center"
               onPointerDown={e => e.stopPropagation()}
