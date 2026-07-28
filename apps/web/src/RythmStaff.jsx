@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Renderer, Stave, StaveNote, Beam, Voice, Formatter, Dot, Tuplet } from "vexflow";
+import { Renderer, Stave, StaveNote, Beam, Voice, Formatter, Dot, Tuplet, StaveTie } from "vexflow";
 
 const DUR_Q = {
   w:4, wd:6, h:2, hd:3, q:1, qd:1.5,
@@ -48,6 +48,50 @@ function scaleDur(durCode, readUnit) {
   return scaled + (dot ? "d" : "") + (rest ? "r" : "");
 }
 
+// ─── Liaisons (Phase C) : NOTATION seule ──────────────────────────────────────
+// Une note pointée à cheval sur un temps (binaire : qd = 1,5 · hd = 3) peut s'écrire comme
+// deux têtes liées : [jusqu'à la frontière de temps] ⌒ [reste]. N'affecte ni l'audio ni le
+// scoring (transform au rendu). Durées en quarts → code de figure (valeurs simples uniquement).
+const QUARTERS_TO_CODE = { 4:"w", 3:"hd", 2:"h", 1.5:"qd", 1:"q", 0.75:"8d", 0.5:"8", 0.25:"16" };
+const codeForQuarters = (qv) => QUARTERS_TO_CODE[qv] ?? null;
+const isBinaryTimeSig = (timeSig) => !["12/8", "6/8", "9/8"].includes(timeSig);
+
+// Scinde les notes pointées-à-cheval en paires liées. Retourne les figures rendues, les paires
+// d'indices liés, et origIndex[renderedIdx] = index de la figure d'origine (-1 = tête liée-reste).
+function splitTiesAcrossBeats(figures, timeSig) {
+  const beatSize = BEAT_SIZE[timeSig] ?? 1;
+  const outFigs = [];
+  const origIndex = [];
+  const tiePairs = [];
+  let pos = 0;
+
+  figures.forEach((fig, i) => {
+    const raw = fig.dur;
+    const dur = DUR_Q[raw.replace(/r$/, "")] ?? 1;
+    const isDottedCross = !fig.rest && (raw === "qd" || raw === "hd"); // binaire uniquement (voir appelant)
+    const nextBoundary = (Math.floor(pos / beatSize + 1e-6) + 1) * beatSize;
+    const firstQ = nextBoundary - pos;
+
+    if (isDottedCross && firstQ > 1e-6 && firstQ < dur - 1e-6) {
+      const c1 = codeForQuarters(firstQ);
+      const c2 = codeForQuarters(dur - firstQ);
+      if (c1 && c2) {
+        const a = outFigs.length;
+        outFigs.push({ ...fig, dur: c1 }); origIndex.push(i);   // tête d'attaque
+        const b = outFigs.length;
+        outFigs.push({ ...fig, dur: c2 }); origIndex.push(-1);  // tête liée (reste)
+        tiePairs.push([a, b]);
+        pos += dur;
+        return;
+      }
+    }
+    outFigs.push(fig); origIndex.push(i);
+    pos += dur;
+  });
+
+  return { figs: outFigs, origIndex, tiePairs };
+}
+
 // Couleur classique : le grade est porté par les points sous la portée (pas de redondance)
 function noteColor() {
   return "#4b5563";
@@ -71,11 +115,18 @@ function makeVexNote(figure, idx, activeIdx, scoreGrades) {
   return note;
 }
 
-// Regroupe les notes ligatables par temps (binaire : 2/temps, ternaire : 3/temps)
+// Ligature les notes ligaturables CONSÉCUTIVES à l'intérieur d'un même temps.
+// Brise la ligature sur : (a) une note non-ligaturable (noire, blanche…) — on ne peut pas
+// ligaturer par-dessus une noire (syncope croche-noire-croche « 8,q,8 ») ; (b) une note qui
+// CHEVAUCHE une frontière de pulsation (syncope, ex. « 16,8,16 » à la croche : la croche
+// centrale straddle le temps) → elle n'est pas ligaturée. Les silences sont transparents.
 function buildBeams(figures, vexNotes, timeSig) {
-  const beatSize   = BEAT_SIZE[timeSig] ?? 1;
-  const beatGroups = {};
+  const beatSize = BEAT_SIZE[timeSig] ?? 1;
+  const beams = [];
+  let run = [];       // suite de notes ligaturables consécutives (même temps)
+  let runBeat = -1;
   let pos = 0;
+  const flush = () => { if (run.length >= 2) beams.push(new Beam(run)); run = []; };
 
   figures.forEach((fig, i) => {
     const raw    = fig.dur;
@@ -87,18 +138,21 @@ function buildBeams(figures, vexNotes, timeSig) {
       ? (DUR_Q[base] ?? 0.5) * (2 / 3)
       : (DUR_Q[raw.replace(/r$/, "")] ?? DUR_Q[base] ?? 1);
 
-    if (beamable) {
-      const beat = Math.floor(pos / beatSize + 1e-6);
-      if (!beatGroups[beat]) beatGroups[beat] = [];
-      beatGroups[beat].push(vexNotes[i]);
+    const startBeat = Math.floor(pos / beatSize + 1e-6);
+    const endBeat   = Math.floor((pos + dur - 1e-6) / beatSize);
+    const straddles = startBeat !== endBeat; // la note traverse une frontière de temps (syncope)
+
+    if (beamable && !straddles) {
+      if (run.length > 0 && startBeat !== runBeat) flush(); // franchit un temps → nouvelle ligature
+      if (run.length === 0) runBeat = startBeat;
+      run.push(vexNotes[i]);
+    } else if (!fig.rest) {
+      flush(); // note non-ligaturable OU note syncopée (chevauche un temps) → brise la ligature
     }
+    // silences : transparents (pas de flush)
     pos += dur;
   });
-
-  const beams = [];
-  Object.values(beatGroups).forEach(group => {
-    if (group.length >= 2) beams.push(new Beam(group));
-  });
+  flush();
   return beams;
 }
 
@@ -123,6 +177,7 @@ export default function RythmStaff({
   compact      = false,
   strikeMeter  = false,
   readUnit     = "noire",
+  tieAcrossBeat = false,
 }) {
   const ref         = useRef(null);
   const [renderWidth, setRenderWidth] = useState(null);
@@ -145,8 +200,14 @@ export default function RythmStaff({
     if (!ref.current || !figures || !renderWidth) return;
     ref.current.innerHTML = "";
 
+    // ── Liaisons (Phase C) : scinde les pointés-à-cheval AVANT l'échelle (structure interne) ──
+    const tie = (tieAcrossBeat && isBinaryTimeSig(timeSig))
+      ? splitTiesAcrossBeats(figures, timeSig)
+      : { figs: figures, origIndex: figures.map((_, i) => i), tiePairs: [] };
+    const { origIndex, tiePairs } = tie;
+
     // ── Unité de lecture : durées + métrique mises à l'échelle (rendu uniquement) ──
-    const figs = figures.map(f => ({ ...f, dur: scaleDur(f.dur, readUnit) }));
+    const figs = tie.figs.map(f => ({ ...f, dur: scaleDur(f.dur, readUnit) }));
     const ts   = scaleTimeSig(timeSig, readUnit);
 
     try {
@@ -210,6 +271,17 @@ export default function RythmStaff({
         b.setContext(ctx).draw();
       });
 
+      // ── Liaisons (Phase C) : courbe de tenue entre les têtes scindées ──────────
+      tiePairs.forEach(([a, b]) => {
+        const t = new StaveTie({
+          first_note:  vexNotes[a],
+          last_note:   vexNotes[b],
+          first_indices: [0],
+          last_indices:  [0],
+        });
+        t.setContext(ctx).draw();
+      });
+
       // ── Triolets ──────────────────────────────────────────────────────────────
       let i = 0;
       while (i < figs.length) {
@@ -254,11 +326,12 @@ export default function RythmStaff({
 
           const scored = [];
           vexNotes.forEach((note, idx) => {
-            if (scoreGrades?.[idx] == null) return; // silences / notes non scorées
+            const oi = origIndex[idx];            // index de la figure d'origine (-1 = tête liée-reste)
+            if (oi < 0 || scoreGrades?.[oi] == null) return; // silences / têtes liées / non scorées
             // Centre de la tête de note (getAbsoluteX vise le bord gauche)
             const xL = note.getNoteHeadBeginX?.() ?? note.getAbsoluteX();
             const xR = note.getNoteHeadEndX?.() ?? (xL + 10);
-            scored.push({ x: (xL + xR) / 2, dev: scoreDevs[idx], grade: scoreGrades[idx] });
+            scored.push({ x: (xL + xR) / 2, dev: scoreDevs[oi], grade: scoreGrades[oi] });
           });
 
           if (scored.length > 0) {
@@ -311,7 +384,7 @@ export default function RythmStaff({
     } catch (err) {
       console.warn("VexFlow:", err.message ?? err);
     }
-  }, [figures, timeSig, activeIdx, scoreGrades, scoreDevs, sessionBpm, renderWidth, height, showClef, showTimeSig, compact, strikeMeter, readUnit]);
+  }, [figures, timeSig, activeIdx, scoreGrades, scoreDevs, sessionBpm, renderWidth, height, showClef, showTimeSig, compact, strikeMeter, readUnit, tieAcrossBeat]);
 
   return <div ref={ref} style={{ width:"100%", maxWidth:width, height:height, overflow:"hidden" }} />;
 }

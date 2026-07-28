@@ -1238,12 +1238,36 @@ export default function RythmApp() {
   const tid       = (fn, ms) => { const id = setTimeout(fn, ms); tidsRef.current.push(id); return id; };
 
 
-  // Décomposition du décompte autorisée uniquement pour le TERNAIRE en cycle C1.
-  // Binaire : jamais décomposé. Ternaire C2/C3 : jamais décomposé.
-  const ternaryDecompAllowed = useMemo(
-    () => deriveNiveau(selectedFormulas, niveauOrder, niveauFormulaIds).startsWith("C1"),
+  // Niveau (cycle) actif dérivé de la sélection — partagé par le décompte (A2) et les liaisons (C).
+  const activeNiveau = useMemo(
+    () => deriveNiveau(selectedFormulas, niveauOrder, niveauFormulaIds),
     [selectedFormulas, niveauOrder, niveauFormulaIds]
   );
+  // Décomposition du décompte autorisée uniquement pour le TERNAIRE en cycle C1.
+  // Binaire : jamais décomposé. Ternaire C2/C3 : jamais décomposé.
+  const ternaryDecompAllowed = activeNiveau.startsWith("C1");
+
+  // Map inverse id → niveau d'introduction (pour la règle liaison/pointé — Phase C).
+  const idToNiveau = useMemo(() => {
+    const m = {};
+    for (const lv of niveauOrder) for (const id of (niveauFormulaIds[lv] ?? [])) m[id] = lv;
+    return m;
+  }, [niveauOrder, niveauFormulaIds]);
+
+  // Notation LIÉE (vs pointée) pour le pattern courant : une note pointée-à-cheval (binaire
+  // qd/hd) s'écrit liée tant que le niveau actif n'a pas dépassé le niveau d'intro du rythme
+  // (la notation pointée est apprise « au niveau d'après »). NOTATION seule — audio/scoring
+  // inchangés. Passé identiquement à toutes les portées de l'exercice.
+  const tieAcrossBeat = useMemo(() => {
+    if (!pattern?.formulaSlots) return false;
+    const activeIdx = niveauOrder.indexOf(activeNiveau);
+    return pattern.formulaSlots.some(({ formula }) => {
+      if (!formula || formula.group !== "binary") return false;
+      if (!formula.figs?.some(f => !f.rest && (f.dur === "qd" || f.dur === "hd"))) return false;
+      const introIdx = niveauOrder.indexOf(idToNiveau[formula.id]);
+      return introIdx >= 0 && activeIdx <= introIdx; // pas encore dépassé le niveau d'intro → lié
+    });
+  }, [pattern, activeNiveau, niveauOrder, idToNiveau]);
 
   // Décompte : en ternaire C1, temps 1 & 2 DÉCOMPOSÉS (3 subdivisions — on-beat grave fort +
   // flash, off-beats aigu plus faible), temps 3 & 4 SEULS. Binaire et ternaire ≥ C2 : aucune
@@ -2623,7 +2647,7 @@ export default function RythmApp() {
                     scoreGrades={phase==="results" ? gradeMap : undefined}
                     scoreDevs={phase==="results" ? devMap : undefined}
                     sessionBpm={sessionBpm}
-                    readUnit={readUnit}
+                    readUnit={readUnit} tieAcrossBeat={tieAcrossBeat}
                   />
                   {phase==="results" && scores.length > 0 && (
                     <div style={{
@@ -2872,7 +2896,7 @@ export default function RythmApp() {
                         height={120}
                         showClef={false}
                         showTimeSig={true}
-                        readUnit={readUnit}
+                        readUnit={readUnit} tieAcrossBeat={tieAcrossBeat}
                       />
                     </div>
                   );
@@ -2973,7 +2997,7 @@ export default function RythmApp() {
                   )}
                 </button>
                 {phase==="results" && <SpeakerHint color={selectedIdx===correctIdx ? '#22C55E' : '#f87171'} />}
-                <RythmStaff figures={pattern.figs} timeSig={pattern.timeSig} activeIdx={-1} readUnit={readUnit} />
+                <RythmStaff figures={pattern.figs} timeSig={pattern.timeSig} activeIdx={-1} readUnit={readUnit} tieAcrossBeat={tieAcrossBeat} />
                 {/* Overlay flash tempo — par-dessus le RythmStaff (toujours visible), piloté par targetFlash */}
                 <div
                   className="absolute inset-0 rounded-2xl pointer-events-none"
@@ -3085,7 +3109,7 @@ export default function RythmApp() {
                         className="relative rounded-xl overflow-hidden cursor-pointer"
                         style={{ background:'var(--surface-2)', padding:'8px 6px 4px', border:'2px solid #f87171' }}>
                         <SpeakerHint color="#f87171" />
-                        <RythmStaff figures={choices[selectedIdx].figs} timeSig={choices[selectedIdx].timeSig} activeIdx={-1} height={110} readUnit={readUnit}/>
+                        <RythmStaff figures={choices[selectedIdx].figs} timeSig={choices[selectedIdx].timeSig} activeIdx={-1} height={110} readUnit={readUnit} tieAcrossBeat={tieAcrossBeat}/>
                       </div>
                     </div>
                   )}
@@ -3133,7 +3157,7 @@ export default function RythmApp() {
                     className="rounded-2xl overflow-hidden mb-1 transition-colors duration-150"
                     style={{ background: 'var(--surface)', padding: '10px 6px 6px', border: `2px solid ${beatFlash ? '#4A6CF7' : 'var(--border-c)'}` }}
                   >
-                    <RythmStaff figures={act5Figs} timeSig={pattern.timeSig} activeIdx={-1} showClef={false} showTimeSig={true} compact={true} readUnit={readUnit} />
+                    <RythmStaff figures={act5Figs} timeSig={pattern.timeSig} activeIdx={-1} showClef={false} showTimeSig={true} compact={true} readUnit={readUnit} tieAcrossBeat={tieAcrossBeat} />
                   </div>
 
                   {/* Indicateur de conformité de la mesure */}
@@ -3156,7 +3180,7 @@ export default function RythmApp() {
                       >
                         {/* rendu à taille « correcte » puis scale uniforme → notation proportionnelle */}
                         <div style={{ width: 124, transformOrigin: 'top left', transform: 'scale(0.7)' }}>
-                          <RythmStaff figures={f.figs} timeSig={pattern.timeSig} activeIdx={-1} width={124} height={100} showClef={false} showTimeSig={false} compact={true} readUnit={readUnit} />
+                          <RythmStaff figures={f.figs} timeSig={pattern.timeSig} activeIdx={-1} width={124} height={100} showClef={false} showTimeSig={false} compact={true} readUnit={readUnit} tieAcrossBeat={tieAcrossBeat} />
                         </div>
                       </div>
                     ))}
@@ -3215,7 +3239,7 @@ export default function RythmApp() {
                         >
                           {act5Placed.length > 0 && <SpeakerHint color={userBorder} />}
                           {act5Placed.length > 0
-                            ? <RythmStaff figures={act5Figs} timeSig={pattern.timeSig} activeIdx={-1} showClef={false} compact={true} strikeMeter={act5Invalid} readUnit={readUnit} />
+                            ? <RythmStaff figures={act5Figs} timeSig={pattern.timeSig} activeIdx={-1} showClef={false} compact={true} strikeMeter={act5Invalid} readUnit={readUnit} tieAcrossBeat={tieAcrossBeat} />
                             : <div className="text-center text-[12px] text-app-muted py-8">(aucune cellule posée)</div>}
                         </div>
                         <div className="text-[11px] text-app-muted mb-1">Solution</div>
@@ -3227,7 +3251,7 @@ export default function RythmApp() {
                           style={{ background: 'var(--surface)', padding: '10px 6px 6px', border: '2px solid #22C55E' }}
                         >
                           <SpeakerHint color="#22C55E" />
-                          <RythmStaff figures={pattern.figs} timeSig={pattern.timeSig} activeIdx={-1} showClef={false} readUnit={readUnit} />
+                          <RythmStaff figures={pattern.figs} timeSig={pattern.timeSig} activeIdx={-1} showClef={false} readUnit={readUnit} tieAcrossBeat={tieAcrossBeat} />
                         </div>
                       </>
                     );
