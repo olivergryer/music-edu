@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore'
 import { db } from '../lib/firebase'
 import { useAuth } from '../auth/AuthProvider'
+import { MODULES, MODULE_IDS } from '../lib/modules'
 
 const MODULES_FEATURES: Record<string, string[]> = {
   rythme: ['Activité 1 — Reproduire vu', 'Activité 2 — Reproduire entendu', 'Activité 3 — Reconnaître écrit', 'Activité 4 — Reconnaître joué', 'Série de 10', 'Réglage BPM / Tempo', 'Son Rythme', 'Bouton TAP', 'Micro (MIC)'],
@@ -13,8 +14,10 @@ const MODULES_FEATURES: Record<string, string[]> = {
   general: ['Performance', 'Design global', 'Autre'],
 }
 
+// Modules jouables dérivés du registre unique (lib/modules.ts) — un nouveau module
+// actif apparaît ici automatiquement — puis catégories transverses (hors registre).
 const MODULE_LABELS: Record<string, string> = {
-  rythme: 'Rythme', theorie: 'Théorie', accordeur: 'Accordeur',
+  ...Object.fromEntries(MODULE_IDS.filter(id => MODULES[id].active).map(id => [id, MODULES[id].label])),
   auth: 'Auth / Compte', hub: 'Hub', general: 'Général',
 }
 

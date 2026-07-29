@@ -1784,6 +1784,8 @@ export default function RythmApp() {
     if (recordedPatternRef.current === pattern) return;
     // Act 1/2 : earnedPts est posé après le calcul de scores (1 tick plus tard) — on attend.
     if ((activity === 1 || activity === 2) && scores.length === 0) return;
+    // Act 1/2 : aucune frappe → pas de score, pas d'enregistrement (ni XP, ni historique/streak).
+    if ((activity === 1 || activity === 2) && tapTimesRef.current.length === 0) return;
     recordedPatternRef.current = pattern;
     const bonusMult     = 1 + REVEAL_BONUS[revealBeat] / 100;
     const maxPtsLocal   = activity === 5 ? 100 : Math.round(100 * bonusMult * (scoreWasExtreme ? 2 : 1));
@@ -2793,25 +2795,27 @@ export default function RythmApp() {
             </div>
           )}
 
-            {(activity === 1 || activity === 2) && phase==="results" && (
+            {/* Aucune frappe : pas de bilan/score, seulement Solution + Rejouer */}
+            {(activity === 1 || activity === 2) && phase==="results" && tapTimes.length === 0 && (
               <div
                 className="w-full bg-surface border border-app rounded-2xl p-4 text-center"
                 onPointerDown={e => e.stopPropagation()}
               >
-              <div className="flex gap-2 justify-center mt-3 flex-wrap">
-                        <button
-                          onPointerDown={e => e.stopPropagation()}
-                          onClick={() => playPatternAudio(pattern, sessionBpm, 0, true)}
-                          className="rounded-xl border-none px-3 py-1.5 text-[11px] font-bold cursor-pointer"
-                          style={{ background: 'rgba(52,211,153,0.12)', color: '#34d399' }}
-                        >▶ Solution</button>
-                        <button
-                          onPointerDown={e => e.stopPropagation()}
-                          onPointerUp={e => e.stopPropagation()}
-                          onClick={retryExercise}
-                          className="rounded-xl border-none px-3 py-1.5 text-[11px] font-bold cursor-pointer"
-                          style={{ background: 'rgba(251,191,36,0.12)', color: '#fbbf24' }}
-                        >↻ Rejouer</button>
+                <div className="text-xs text-app-muted mb-3">Aucune frappe détectée.</div>
+                <div className="flex gap-2 justify-center flex-wrap">
+                  <button
+                    onPointerDown={e => e.stopPropagation()}
+                    onClick={() => playPatternAudio(pattern, sessionBpm, 0, true)}
+                    className="rounded-xl border-none px-3 py-1.5 text-[11px] font-bold cursor-pointer"
+                    style={{ background: 'rgba(52,211,153,0.12)', color: '#34d399' }}
+                  >▶ Solution</button>
+                  <button
+                    onPointerDown={e => e.stopPropagation()}
+                    onPointerUp={e => e.stopPropagation()}
+                    onClick={retryExercise}
+                    className="rounded-xl border-none px-3 py-1.5 text-[11px] font-bold cursor-pointer"
+                    style={{ background: 'rgba(251,191,36,0.12)', color: '#fbbf24' }}
+                  >↻ Rejouer</button>
                 </div>
               </div>
             )}
