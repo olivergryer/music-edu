@@ -1,10 +1,12 @@
 // ─── Roue radiale relative (spec §5) ──────────────────────────────────────────
 //
-// Menu radial *relatif* SANS cadre : on peut poser le doigt N'IMPORTE OÙ sur la
-// zone de jeu (couche transparente plein écran) — la roue apparaît sous le doigt.
-// Sélection par ANGLE du vecteur origine→doigt, validation au pointerup, zone morte
-// centrale = annule. `onHover` remonte le nom courant pour l'afficher au-dessus de
-// la portée (le regard reste sur la portée). Haptique Android capability-gated.
+// Menu radial *relatif* SANS cadre : on pose le doigt N'IMPORTE OÙ (couche
+// transparente plein écran) → la roue apparaît. L'ANGLE de sélection est calculé
+// entre le POINT DE CONTACT et le point de drag (jamais depuis le centre d'affichage).
+// Si le contact est trop près d'un bord, le CENTRE D'AFFICHAGE de la roue est décalé
+// pour la montrer entièrement — sans changer le calcul d'angle. Toujours accessible
+// (aucun délai/blocage). `onHover` remonte le nom courant pour l'afficher au-dessus
+// de la portée. Haptique Android capability-gated.
 
 import { useRef, useState } from 'react'
 import { NOTE_NAMES, type Etayage, type NoteName } from './types.ts'
@@ -16,14 +18,12 @@ export const NOTE_LABELS: Record<NoteName, string> = {
 
 const ACCENT = '#c084fc'
 const ACCENT_DEEP = '#7c3aed'
-const OK = '#34d399'
 
 interface Props {
   etayage: Etayage
-  disabled?: boolean
-  reveal?: NoteName | null
   onSelect: (name: NoteName | null) => void
   onHover?: (name: NoteName | null) => void
+  onGestureStart?: () => void
   radiusPx?: number
   deadRadiusPx?: number
 }
@@ -31,14 +31,14 @@ interface Props {
 const CAN_VIBRATE = typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function'
 
 export default function RadialWheel({
-  etayage, disabled = false, reveal = null, onSelect, onHover,
-  radiusPx = 120, deadRadiusPx = DEFAULT_DEAD_RADIUS_PX,
+  etayage, onSelect, onHover, onGestureStart,
+  radiusPx = 118, deadRadiusPx = DEFAULT_DEAD_RADIUS_PX,
 }: Props) {
   const bandRef = useRef<HTMLDivElement>(null)
-  const originRef = useRef<{ x: number; y: number } | null>(null)
-  const lastOriginRef = useRef<{ x: number; y: number } | null>(null)
+  const originRef = useRef<{ x: number; y: number } | null>(null)  // point de contact (angle)
   const lastSectorRef = useRef<number | null>(null)
   const [origin, setOrigin] = useState<{ x: number; y: number } | null>(null)
+  const [displayCenter, setDisplayCenter] = useState<{ x: number; y: number } | null>(null)
   const [activeSector, setActiveSector] = useState<number | null>(null)
 
   const labelOpacity = etayage === 'visible' ? 1 : etayage === 'estompe' ? 0.35 : 0
@@ -48,20 +48,30 @@ export default function RadialWheel({
     return { x: e.clientX - rect.left, y: e.clientY - rect.top }
   }
 
+  // Décale le centre d'AFFICHAGE pour que la roue tienne entièrement à l'écran.
+  const clampCenter = (p: { x: number; y: number }) => {
+    const rect = bandRef.current!.getBoundingClientRect()
+    const m = radiusPx + 12
+    const maxX = Math.max(m, rect.width - m)
+    const maxY = Math.max(m, rect.height - m)
+    return { x: Math.min(Math.max(p.x, m), maxX), y: Math.min(Math.max(p.y, m), maxY) }
+  }
+
   const onPointerDown = (e: React.PointerEvent) => {
-    if (disabled) return
+    onGestureStart?.()
     const p = localXY(e)
     originRef.current = p
-    lastOriginRef.current = p
     lastSectorRef.current = null
     setOrigin(p)
+    setDisplayCenter(clampCenter(p))
     setActiveSector(null)
     bandRef.current?.setPointerCapture(e.pointerId)
   }
 
   const onPointerMove = (e: React.PointerEvent) => {
-    if (disabled || !originRef.current) return
+    if (!originRef.current) return
     const p = localXY(e)
+    // Angle TOUJOURS depuis le point de contact (origin), pas le centre d'affichage.
     const name = noteNameFromVector(p.x - originRef.current.x, p.y - originRef.current.y, deadRadiusPx)
     const sector = name == null ? null : NOTE_NAMES.indexOf(name)
     if (sector !== lastSectorRef.current) {
@@ -77,6 +87,7 @@ export default function RadialWheel({
     originRef.current = null
     lastSectorRef.current = null
     setOrigin(null)
+    setDisplayCenter(null)
     setActiveSector(null)
     onHover?.(null)
     if (!o) return
@@ -86,10 +97,6 @@ export default function RadialWheel({
     }
   }
 
-  // Rendu de la roue : pendant le drag (origin), OU pour révéler la bonne réponse
-  // après une erreur (reveal) au dernier point de contact.
-  const center = origin ?? (reveal != null ? lastOriginRef.current : null)
-
   return (
     <div
       ref={bandRef}
@@ -97,14 +104,9 @@ export default function RadialWheel({
       onPointerMove={onPointerMove}
       onPointerUp={e => endGesture(e, true)}
       onPointerCancel={e => endGesture(e, false)}
-      style={{
-        position: 'absolute', inset: 0,
-        touchAction: 'none', userSelect: 'none',
-        background: 'transparent',
-        cursor: disabled ? 'default' : 'pointer',
-      }}
+      style={{ position: 'absolute', inset: 0, touchAction: 'none', userSelect: 'none', background: 'transparent', cursor: 'pointer' }}
     >
-      {center == null && !disabled && (
+      {origin == null && (
         <div style={{
           position: 'absolute', left: 0, right: 0, bottom: 16, textAlign: 'center',
           color: 'var(--text-muted)', fontSize: 13, opacity: 0.7, pointerEvents: 'none',
@@ -112,21 +114,17 @@ export default function RadialWheel({
           Touche l’écran pour faire apparaître la roue
         </div>
       )}
-      {center && (
-        <Wheel
-          cx={center.x} cy={center.y} r={radiusPx} deadR={deadRadiusPx}
-          active={origin ? activeSector : null} reveal={reveal} labelOpacity={labelOpacity}
-        />
+      {displayCenter && (
+        <Wheel cx={displayCenter.x} cy={displayCenter.y} r={radiusPx} deadR={deadRadiusPx}
+          active={activeSector} labelOpacity={labelOpacity} />
       )}
     </div>
   )
 }
 
-function Wheel({ cx, cy, r, deadR, active, reveal, labelOpacity }: {
-  cx: number; cy: number; r: number; deadR: number
-  active: number | null; reveal: NoteName | null; labelOpacity: number
+function Wheel({ cx, cy, r, deadR, active, labelOpacity }: {
+  cx: number; cy: number; r: number; deadR: number; active: number | null; labelOpacity: number
 }) {
-  const revealSector = reveal == null ? null : NOTE_NAMES.indexOf(reveal)
   const half = (SECTOR_DEG * Math.PI) / 180 / 2
 
   const wedge = (i: number): string => {
@@ -143,29 +141,24 @@ function Wheel({ cx, cy, r, deadR, active, reveal, labelOpacity }: {
 
       {NOTE_NAMES.map((name, i) => {
         const isActive = i === active
-        const isReveal = i === revealSector
-        const fill = isReveal ? 'rgba(52,211,153,0.30)' : isActive ? 'rgba(124,58,237,0.32)' : 'transparent'
-        const stroke = isReveal ? OK : isActive ? ACCENT : 'var(--border-c)'
-        return <path key={name} d={wedge(i)} fill={fill} stroke={stroke} strokeWidth={isActive || isReveal ? 2 : 1} />
+        return <path key={name} d={wedge(i)}
+          fill={isActive ? 'rgba(124,58,237,0.32)' : 'transparent'}
+          stroke={isActive ? ACCENT : 'var(--border-c)'} strokeWidth={isActive ? 2 : 1} />
       })}
 
       <circle cx={cx} cy={cy} r={deadR} fill="var(--surface-2)" stroke="var(--border-c)" strokeWidth={1} />
 
       {NOTE_NAMES.map((name, i) => {
         const isActive = i === active
-        const isReveal = i === revealSector
         const c = sectorCenterAngle(i)
         const lr = r * 0.62
         const x = cx + lr * Math.cos(c), y = cy + lr * Math.sin(c)
-        const showText = labelOpacity > 0 || isActive || isReveal
-        if (!showText) return null
-        const op = isActive || isReveal ? 1 : labelOpacity
-        const size = isActive || isReveal ? 30 : 18
-        const color = isReveal ? OK : isActive ? '#fff' : 'var(--text)'
+        if (labelOpacity <= 0 && !isActive) return null
         return (
           <text key={`t-${name}`} x={x} y={y} textAnchor="middle" dominantBaseline="central"
-            fontSize={size} fontWeight={isActive || isReveal ? 800 : 600}
-            fill={color} opacity={op} style={{ fontFamily: "'Poppins', sans-serif" }}>
+            fontSize={isActive ? 30 : 18} fontWeight={isActive ? 800 : 600}
+            fill={isActive ? '#fff' : 'var(--text)'} opacity={isActive ? 1 : labelOpacity}
+            style={{ fontFamily: "'Poppins', sans-serif" }}>
             {NOTE_LABELS[name]}
           </text>
         )

@@ -81,15 +81,16 @@ export default function NotesPage() {
   const [sequence, setSequence] = useState<NoteItem[]>([])
   const [cursorIndex, setCursorIndex] = useState(0)
   const [results, setResults] = useState<CellResult[]>([])
-  const [reveal, setReveal] = useState<NoteName | null>(null)
-  const [inputDisabled, setInputDisabled] = useState(false)
+  const [correction, setCorrection] = useState<NoteName | null>(null) // bonne réponse après erreur (non bloquant)
   const [itemsDone, setItemsDone] = useState(0)
   const [elapsedS, setElapsedS] = useState(0)
   const [summary, setSummary] = useState<NotesSummary | null>(null)
 
-  // Refs (hors cycle de rendu)
+  // Refs (hors cycle de rendu) — source de vérité de la boucle, robuste aux réponses rapides.
   const configRef = useRef<NotesSessionConfig | null>(null)
   const poolRef = useRef<NoteItem[]>([])
+  const seqRef = useRef<NoteItem[]>([])
+  const cursorRef = useRef(0)
   const masteryRef = useRef<Mastery>({})
   const turnRef = useRef(0)
   const attemptsRef = useRef<Attempt[]>([])
@@ -98,11 +99,11 @@ export default function NotesPage() {
   const rngRef = useRef<Rng>(mulberry32((Date.now() & 0xffffffff) >>> 0))
   const startMsRef = useRef(0)
   const linesDoneRef = useRef(0)
-  const advanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const correctionTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const audioRef = useRef<AudioContext | null>(null)
 
   // Nettoyage
-  useEffect(() => () => { if (advanceTimer.current) clearTimeout(advanceTimer.current) }, [])
+  useEffect(() => () => { if (correctionTimer.current) clearTimeout(correctionTimer.current) }, [])
 
   // ── RT depuis la PEINTURE : horodatage dans un rAF après commit du rendu ───────
   useEffect(() => {
@@ -170,9 +171,11 @@ export default function NotesPage() {
 
   // Charge le prochain item isolé (P0/P1) ou la prochaine ligne (P2).
   function loadNext(config: NotesSessionConfig, pool: NoteItem[]) {
-    setReveal(null); setInputDisabled(false); setCursorIndex(0)
+    cursorRef.current = 0
+    setCursorIndex(0)
     if (config.phase === 'P2') {
       const line = generateLine(pool, DEFAULT_LINE_WEIGHTS, rngRef.current, LINE_LEN)
+      seqRef.current = line
       setSequence(line)
       setResults(Array(LINE_LEN).fill(null))
     } else {
@@ -181,22 +184,24 @@ export default function NotesPage() {
         turn: turnRef.current, previousItemId: prevIdRef.current,
       })
       prevIdRef.current = item.id
+      seqRef.current = [item]
       setSequence([item])
       setResults([null])
     }
   }
 
-  // ── Réponse (pointerup de la roue) ──────────────────────────────────────────────
+  // ── Réponse (pointerup de la roue) — jamais bloquante, enchaînable (spec §13.2) ──
   function handleAnswer(name: NoteName | null) {
     const config = configRef.current
-    if (!config || inputDisabled) return
-    if (name == null) return // annulation zone morte : reste en attente
-    const current = sequence[cursorIndex]
+    if (!config) return
+    if (name == null) return // annulation zone morte
+    const idx = cursorRef.current
+    const current = seqRef.current[idx]
     if (!current) return
 
     const rtMs = performance.now() - paintTsRef.current
     const correct = name === noteNameOf(current.diatonicIndex)
-    const isFirstOfLine = config.phase === 'P2' && cursorIndex === 0
+    const isFirstOfLine = config.phase === 'P2' && idx === 0
     const flags = classifyAttempt(rtMs, correct, config, { isFirstOfLine })
 
     const attempt: Attempt = {
@@ -213,24 +218,31 @@ export default function NotesPage() {
     })
     masteryRef.current = updateMastery(masteryRef.current, attempt, turnRef.current++)
 
-    setResults(prev => { const n = [...prev]; n[cursorIndex] = correct ? 'correct' : 'wrong'; return n })
-    beep(correct ? 660 : 196)          // APRÈS la réponse uniquement
-    setInputDisabled(true)
-    if (!correct) setReveal(noteNameOf(current.diatonicIndex)) // révèle la bonne réponse
+    setResults(prev => { const n = [...prev]; n[idx] = correct ? 'correct' : 'wrong'; return n })
+    beep(correct ? 660 : 196)          // APRÈS la réponse uniquement (§2)
 
-    const seqLen = sequence.length
-    const idx = cursorIndex
-    advanceTimer.current = setTimeout(() => advance(config, idx, seqLen), correct ? 350 : 750)
+    // Correction non bloquante : la bonne réponse s'affiche brièvement au-dessus de
+    // la portée, sans figer l'entrée ni la roue (on peut enchaîner).
+    if (!correct) {
+      setCorrection(noteNameOf(current.diatonicIndex))
+      if (correctionTimer.current) clearTimeout(correctionTimer.current)
+      correctionTimer.current = setTimeout(() => setCorrection(null), 1100)
+    }
+
+    advance(config) // avance immédiatement (aucun délai)
   }
 
-  // Avance TOUJOURS (jamais de rejeu immédiat — §13.2).
-  function advance(config: NotesSessionConfig, idx: number, seqLen: number) {
-    setReveal(null)
+  // Avance TOUJOURS, sans délai (jamais de rejeu immédiat — §13.2).
+  function advance(config: NotesSessionConfig) {
     const done = attemptsRef.current.length
     setItemsDone(done)
 
     if (config.phase === 'P2') {
-      if (idx < seqLen - 1) { setCursorIndex(idx + 1); setInputDisabled(false); return }
+      if (cursorRef.current < seqRef.current.length - 1) {
+        cursorRef.current += 1
+        setCursorIndex(cursorRef.current)
+        return
+      }
       linesDoneRef.current += 1
       if (linesDoneRef.current >= TARGET_LINES) { void endSession(config); return }
       loadNext(config, poolRef.current)
@@ -320,25 +332,33 @@ export default function NotesPage() {
               <span>{Math.min(itemsDone, target)} / {target}</span>
               {phase !== 'P0' && <span>{elapsedS}s</span>}
             </div>
-            {/* Nom sélectionné en gras au-dessus de la portée — évite de regarder la roue. */}
+            {/* Au-dessus de la portée : nom sélectionné pendant le drag (violet), sinon
+                la bonne réponse après une erreur (rouge) — évite de regarder la roue. */}
             <div style={{ minHeight: 52, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <span style={{ fontSize: 40, fontWeight: 900, lineHeight: 1, fontFamily: "'Poppins', sans-serif", color: hoverName ? '#c084fc' : 'transparent' }}>
-                {hoverName ? NOTE_LABELS[hoverName] : '·'}
-              </span>
+              {hoverName ? (
+                <span style={{ fontSize: 40, fontWeight: 900, lineHeight: 1, fontFamily: "'Poppins', sans-serif", color: '#c084fc' }}>
+                  {NOTE_LABELS[hoverName]}
+                </span>
+              ) : correction ? (
+                <span style={{ fontSize: 22, fontWeight: 800, lineHeight: 1, fontFamily: "'Poppins', sans-serif", color: '#f87171' }}>
+                  C’était {NOTE_LABELS[correction]}
+                </span>
+              ) : (
+                <span style={{ fontSize: 40, color: 'transparent' }}>·</span>
+              )}
             </div>
             <NotesStaff
               items={sequence} clef={configRef.current?.clef ?? 'treble'}
               cursorIndex={cursorIndex} results={results} coloriser={coloriser}
             />
           </div>
-          {/* Roue plein écran, au-dessus (sans cadre). */}
+          {/* Roue plein écran, au-dessus (sans cadre), toujours accessible. */}
           <div style={{ position: 'absolute', inset: 0, zIndex: 2 }}>
             <RadialWheel
               etayage={configRef.current?.etayage ?? 'visible'}
-              disabled={inputDisabled}
-              reveal={reveal}
               onSelect={handleAnswer}
               onHover={setHoverName}
+              onGestureStart={() => setCorrection(null)}
             />
           </div>
         </div>
