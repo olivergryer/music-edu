@@ -22,13 +22,14 @@ export interface ProgressState {
     rythme:    { seriesPlayed: number; exercisesPlayed: number; xpTotal: number }
     theorie:   { sessionsPlayed: number; xpTotal: number }
     accordeur: { sessionsPlayed: number; xpTotal: number }
+    notes:     { sessionsPlayed: number; xpTotal: number }
   }
   dailyRythmeIndiv: DailyCounter
   highestRankIdx: number  // plus haut rang jamais atteint (index dans RANKS)
 }
 
 export interface AddSessionParams {
-  module: 'rythme' | 'theorie' | 'accordeur'
+  module: 'rythme' | 'theorie' | 'accordeur' | 'notes'
   xpEarned: number
   medal: string
   meta?: { perfectSeries?: boolean; individual?: boolean }
@@ -173,6 +174,7 @@ export const DEFAULT_STATE: ProgressState = {
     rythme:    { seriesPlayed: 0, exercisesPlayed: 0, xpTotal: 0 },
     theorie:   { sessionsPlayed: 0, xpTotal: 0 },
     accordeur: { sessionsPlayed: 0, xpTotal: 0 },
+    notes:     { sessionsPlayed: 0, xpTotal: 0 },
   },
   dailyRythmeIndiv: { date: null, count: 0 },
   highestRankIdx: 0,
@@ -190,6 +192,7 @@ export function mergeWithDefaults(data: Record<string, unknown>): ProgressState 
       rythme:    { ...DEFAULT_STATE.modules.rythme,    ...(d.modules?.['rythme']    ?? {}) },
       theorie:   { ...DEFAULT_STATE.modules.theorie,   ...(d.modules?.['theorie']   ?? {}) },
       accordeur: { ...DEFAULT_STATE.modules.accordeur, ...(d.modules?.['accordeur'] ?? {}) },
+      notes:     { ...DEFAULT_STATE.modules.notes,     ...(d.modules?.['notes']     ?? {}) },
     },
   }
 }
@@ -358,6 +361,11 @@ export function applySession(
     moduleUpdate = {
       ...prev.modules,
       theorie: { sessionsPlayed: prev.modules.theorie.sessionsPlayed + 1, xpTotal: prev.modules.theorie.xpTotal + xpGained },
+    }
+  } else if (module === 'notes') {
+    moduleUpdate = {
+      ...prev.modules,
+      notes: { sessionsPlayed: prev.modules.notes.sessionsPlayed + 1, xpTotal: prev.modules.notes.xpTotal + xpGained },
     }
   } else {
     moduleUpdate = {

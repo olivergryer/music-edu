@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore'
+import { collection, query, where, getDocs, getDoc, doc, orderBy, limit } from 'firebase/firestore'
 import { signOut } from 'firebase/auth'
 import { db, auth } from '../lib/firebase'
 import { useAuth } from '../auth/AuthProvider'
@@ -17,6 +17,7 @@ interface EleveProgress {
     rythme: { seriesPlayed: number; xpTotal: number }
     theorie: { sessionsPlayed: number; xpTotal: number }
     accordeur: { sessionsPlayed: number; xpTotal: number }
+    notes: { sessionsPlayed: number; xpTotal: number }
   }
 }
 
@@ -53,6 +54,7 @@ const DEFAULT_PROGRESS: EleveProgress = {
     rythme: { seriesPlayed: 0, xpTotal: 0 },
     theorie: { sessionsPlayed: 0, xpTotal: 0 },
     accordeur: { sessionsPlayed: 0, xpTotal: 0 },
+    notes: { sessionsPlayed: 0, xpTotal: 0 },
   },
 }
 
@@ -80,11 +82,12 @@ export default function DashboardProf() {
         snap.docs.map(async d => {
           const uid = d.id
           const displayName = (d.data().displayName as string) ?? '—'
-          const [progSnap, histSnap] = await Promise.all([
-            getDocs(collection(db, 'users', uid, 'progress')),
+          const [progDoc, histSnap] = await Promise.all([
+            // Doc de gamification globale, PAS les docs progress/{moduleId} per-module.
+            getDoc(doc(db, 'users', uid, 'progress', 'data')),
             getDocs(query(collection(db, 'users', uid, 'history'), orderBy('createdAt', 'desc'), limit(1))),
           ])
-          const progress = progSnap.empty ? DEFAULT_PROGRESS : (progSnap.docs[0].data() as EleveProgress)
+          const progress = progDoc.exists() ? (progDoc.data() as EleveProgress) : DEFAULT_PROGRESS
           const lastSession = histSnap.empty ? null : (histSnap.docs[0].data() as LastSession)
           return { uid, displayName, progress, lastSession }
         })

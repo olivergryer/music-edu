@@ -16,6 +16,7 @@ Firebase Spark : Firestore + Authentication (email/password). **DB partagée dev
 | `/theorie` | `TheoriePage.jsx` | public |
 | `/accordeur` | `AccordeurPage.jsx` + `AccordeurStaff.jsx` + `accordeurUtils.js` | public |
 | `/accordeur/generateur` | `GenerateurAccordPage.jsx` — accessible uniquement depuis AccordeurPage | public |
+| `/notes` | `modules/notes/NotesPage.tsx` + `NotesStaff.tsx` + `RadialWheel.tsx` (+ logique pure `modules/notes/*.ts`) | public |
 | `/profil` | `ProfilPage.jsx` → redirect dashboard selon rôle | protégée |
 | `/dashboard/eleve` | `pages/DashboardEleve.tsx` | protégée |
 | `/dashboard/prof` | `pages/DashboardProf.tsx` | protégée |
@@ -127,3 +128,4 @@ Charger en début de session dédiée :
 - Rythme → `@apps/web/src/CLAUDE-rythme.md`
 - Théorie → `@apps/web/src/CLAUDE-theorie.md`
 - Accordeur → `@apps/web/src/CLAUDE-accordeur.md`
+- Notes → `@apps/web/src/CLAUDE-notes.md`

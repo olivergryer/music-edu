@@ -40,7 +40,7 @@ export const MODULES = {
   },
   notes: {
     label: 'Notes', colorToken: 'notes', color: '#34d399', route: '/notes',
-    desc: 'Lecture de notes sur la portée', active: false,
+    desc: 'Lecture de notes sur la portée', active: true,
   },
 } as const satisfies Record<string, ModuleDef>
 
