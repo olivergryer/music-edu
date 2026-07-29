@@ -98,7 +98,6 @@ export default function NotesPage() {
   const paintTsRef = useRef(0)
   const rngRef = useRef<Rng>(mulberry32((Date.now() & 0xffffffff) >>> 0))
   const startMsRef = useRef(0)
-  const linesDoneRef = useRef(0)
   const correctionTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const audioRef = useRef<AudioContext | null>(null)
 
@@ -160,7 +159,6 @@ export default function NotesPage() {
     turnRef.current = 0
     attemptsRef.current = []
     prevIdRef.current = undefined
-    linesDoneRef.current = 0
     startMsRef.current = performance.now()
     setItemsDone(0); setElapsedS(0); setSummary(null)
 
@@ -174,10 +172,16 @@ export default function NotesPage() {
     cursorRef.current = 0
     setCursorIndex(0)
     if (config.phase === 'P2') {
-      const line = generateLine(pool, DEFAULT_LINE_WEIGHTS, rngRef.current, LINE_LEN)
-      seqRef.current = line
-      setSequence(line)
-      setResults(Array(LINE_LEN).fill(null))
+      // Séquence P2 continue : TARGET_LINES phrases de 8 (chacune tonalement cohérente,
+      // début/fin stables) concaténées et rendues EN UNE PASSE → défilement continu
+      // sur les 24 notes, aucun re-render VexFlow de toute la session (§13.4).
+      const full: NoteItem[] = []
+      for (let l = 0; l < TARGET_LINES; l++) {
+        full.push(...generateLine(pool, DEFAULT_LINE_WEIGHTS, rngRef.current, LINE_LEN))
+      }
+      seqRef.current = full
+      setSequence(full)
+      setResults(Array(full.length).fill(null))
     } else {
       const item = selectNextItem(pool, masteryRef.current, rngRef.current, {
         rtTargetMs: config.rtTargetMs, floorWeight: FLOOR_WEIGHT,
@@ -201,7 +205,7 @@ export default function NotesPage() {
 
     const rtMs = performance.now() - paintTsRef.current
     const correct = name === noteNameOf(current.diatonicIndex)
-    const isFirstOfLine = config.phase === 'P2' && idx === 0
+    const isFirstOfLine = config.phase === 'P2' && idx % LINE_LEN === 0
     const flags = classifyAttempt(rtMs, correct, config, { isFirstOfLine })
 
     const attempt: Attempt = {
@@ -238,14 +242,13 @@ export default function NotesPage() {
     setItemsDone(done)
 
     if (config.phase === 'P2') {
+      // Défilement continu : on avance le curseur sur la séquence complète (24 notes).
       if (cursorRef.current < seqRef.current.length - 1) {
         cursorRef.current += 1
         setCursorIndex(cursorRef.current)
         return
       }
-      linesDoneRef.current += 1
-      if (linesDoneRef.current >= TARGET_LINES) { void endSession(config); return }
-      loadNext(config, poolRef.current)
+      void endSession(config)
     } else {
       if (done >= TARGET_ISOLATED) { void endSession(config); return }
       loadNext(config, poolRef.current)
