@@ -1,12 +1,13 @@
 // ─── Portée VexFlow + couche custom (spec §6) ─────────────────────────────────
 //
-// VexFlow pré-rend la portée + les têtes NOIRES À HAMPES (notation standard) en une
-// passe. Le curseur, la colorisation des têtes (juste/faux, ou par hauteur) vivent
-// sur la couche custom : ils sont appliqués par manipulation directe du SVG, SANS
-// re-render VexFlow entre deux items d'une même ligne (§13.4). Durées neutres
-// (noires) — hauteur seule en v1.
+// VexFlow pré-rend la portée + têtes NOIRES À HAMPES en une passe (durées neutres).
+// La ligne est rendue à sa largeur naturelle dans un viewport plus étroit ; on la
+// fait DÉFILER (translateX) pour garder la note courante centrée → empan visuel
+// STABLE, y compris sur iPhone portrait. Le défilement et la colorisation des têtes
+// vivent sur le DOM/CSS : AUCUN re-render VexFlow entre deux items d'une ligne
+// (§13.4). Colorisation par hauteur = toggle (OFF par défaut §6).
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Renderer, Stave, StaveNote, Voice, Formatter } from 'vexflow'
 import { useTheme } from '../../ThemeContext'
 import { toVexKey } from './diatonic.ts'
@@ -16,8 +17,6 @@ export type CellResult = 'correct' | 'wrong' | null
 
 const OK = '#34d399'
 const ERR = '#f87171'
-
-// Couleurs par degré (do…si) — utilisées seulement si `coloriser` (OFF par défaut §6).
 const PITCH_COLORS = ['#ef4444', '#f59e0b', '#eab308', '#22c55e', '#06b6d4', '#3b82f6', '#a855f7']
 
 function palette(dark: boolean) {
@@ -33,7 +32,7 @@ interface Props {
   results: CellResult[]
   coloriser?: boolean
   height?: number
-  width?: number
+  notePx?: number
 }
 
 interface Geom {
@@ -44,25 +43,41 @@ interface Geom {
 }
 
 export default function NotesStaff({
-  items, clef, cursorIndex, results, coloriser = false, height = 220, width = 520,
+  items, clef, cursorIndex, results, coloriser = false, height = 200, notePx = 84,
 }: Props) {
-  const hostRef = useRef<HTMLDivElement>(null)
+  const viewportRef = useRef<HTMLDivElement>(null)
+  const innerRef = useRef<HTMLDivElement>(null)
   const geomRef = useRef<Geom>({ heads: [], centersX: [], cursorEl: null, cursorY: 0 })
+  const [viewportW, setViewportW] = useState(360)
   const { dark } = useTheme()
 
-  // ── Rendu VexFlow (lourd) — uniquement quand la ligne/clef/thème change ────────
+  const idsKey = items.map(i => i.id).join('|')
+  const contentW = Math.max(viewportW, items.length * notePx + 120)
+
+  // Largeur réelle du viewport (responsive mobile/desktop).
   useEffect(() => {
-    const host = hostRef.current
+    const el = viewportRef.current
+    if (!el) return
+    const update = () => { const w = el.clientWidth; if (w > 0) setViewportW(w) }
+    update()
+    const ro = new ResizeObserver(update)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+
+  // ── Rendu VexFlow (lourd) — ligne/clef/thème/largeur/colorisation ─────────────
+  useEffect(() => {
+    const host = innerRef.current
     if (!host || items.length === 0) return
     host.innerHTML = ''
     const C = palette(dark)
 
     try {
       const renderer = new Renderer(host, Renderer.Backends.SVG)
-      renderer.resize(width, height)
+      renderer.resize(contentW, height)
       const ctx = renderer.getContext()
 
-      const stave = new Stave(10, 40, width - 20)
+      const stave = new Stave(10, 36, contentW - 20)
       stave.addClef(clef)
       stave.setContext(ctx).draw()
 
@@ -78,20 +93,18 @@ export default function NotesStaff({
       if (!svg) return
       svg.style.background = 'transparent'
 
-      // Recolore portée + hampes selon le thème (les têtes seront recolorées ensuite).
+      // Portée + hampes au thème (les têtes sont recolorées ensuite par applyVisuals).
       svg.querySelectorAll('path').forEach(p => {
-        const s = p.getAttribute('stroke') ?? ''
-        const f = p.getAttribute('fill') ?? ''
+        const s = p.getAttribute('stroke') ?? '', f = p.getAttribute('fill') ?? ''
         if (!s || s === '#000000' || s === 'black') p.setAttribute('stroke', C.stave)
         if (!f || f === '#000000' || f === 'black') p.setAttribute('fill', C.stave)
       })
-      svg.querySelectorAll('text').forEach(t => { t.setAttribute('fill', C.stave) })
+      svg.querySelectorAll('text').forEach(t => t.setAttribute('fill', C.stave))
 
       const heads = Array.from(svg.querySelectorAll('.vf-notehead'))
       const centersX = vexNotes.map(sn => (sn.getNoteHeadBeginX() + sn.getNoteHeadEndX()) / 2)
 
-      // Curseur : petit triangle sous la portée, pointant vers la note courante.
-      const cursorY = (stave.getBottomY?.() ?? 140) + 6
+      const cursorY = (stave.getBottomY?.() ?? 130) + 6
       const cursorEl = document.createElementNS(SVGNS, 'path')
       cursorEl.setAttribute('fill', '#c084fc')
       cursorEl.setAttribute('d', 'M -7 12 L 7 12 L 0 0 Z')
@@ -99,29 +112,41 @@ export default function NotesStaff({
 
       geomRef.current = { heads, centersX, cursorEl, cursorY }
       applyVisuals(geomRef.current, results, cursorIndex, coloriser, items, C.head)
+      applyScroll(innerRef.current, geomRef.current, cursorIndex, viewportW, contentW)
     } catch (err) {
       console.warn('NotesStaff VexFlow:', (err as Error).message ?? err)
     }
-    // Rebuild seulement si la ligne (ids), la clef, le thème ou la largeur changent.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [items.map(i => i.id).join('|'), clef, dark, width, height])
+  }, [idsKey, clef, dark, contentW, height, coloriser])
 
-  // ── Mise à jour légère : couleurs de têtes + curseur (pas de re-render VexFlow) ─
+  // ── Couleurs des têtes (résultats) — pas de re-render VexFlow ──────────────────
   useEffect(() => {
     applyVisuals(geomRef.current, results, cursorIndex, coloriser, items, palette(dark).head)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [results, cursorIndex, coloriser])
 
+  // ── Défilement : garder la note courante centrée (empan stable) ────────────────
+  useEffect(() => {
+    applyScroll(innerRef.current, geomRef.current, cursorIndex, viewportW, contentW)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cursorIndex, viewportW, contentW, idsKey])
+
   return (
-    <div style={{ width: '100%', maxWidth: width, margin: '0 auto', overflow: 'hidden' }}>
-      <div ref={hostRef} style={{ width, minWidth: width }} />
+    <div ref={viewportRef} style={{ width: '100%', overflow: 'hidden' }}>
+      <div ref={innerRef} style={{ width: contentW, willChange: 'transform', transition: 'transform 0.28s ease' }} />
     </div>
   )
 }
 
+function setFill(el: Element, color: string) {
+  el.setAttribute('fill', color)
+  const s = (el as unknown as { style?: CSSStyleDeclaration }).style
+  if (s) s.fill = color // certains navigateurs : VexFlow pose fill en style inline
+}
+
 function setHeadFill(head: Element, color: string) {
-  head.querySelectorAll('path').forEach(p => p.setAttribute('fill', color))
-  ;(head as SVGElement).setAttribute?.('fill', color)
+  setFill(head, color)
+  head.querySelectorAll('path').forEach(p => setFill(p, color))
 }
 
 function applyVisuals(
@@ -136,15 +161,18 @@ function applyVisuals(
       : headColor
     setHeadFill(head, color)
   })
-
   const { cursorEl, centersX, cursorY } = geom
   if (cursorEl) {
     const cx = centersX[cursorIndex]
-    if (cx == null) {
-      cursorEl.setAttribute('opacity', '0')
-    } else {
-      cursorEl.setAttribute('opacity', '1')
-      cursorEl.setAttribute('transform', `translate(${cx} ${cursorY})`)
-    }
+    cursorEl.setAttribute('opacity', cx == null ? '0' : '1')
+    if (cx != null) cursorEl.setAttribute('transform', `translate(${cx} ${cursorY})`)
   }
+}
+
+function applyScroll(inner: HTMLDivElement | null, geom: Geom, cursorIndex: number, viewportW: number, contentW: number) {
+  if (!inner) return
+  const cx = geom.centersX[cursorIndex] ?? contentW / 2
+  let tx = viewportW / 2 - cx          // centre la note courante
+  if (contentW > viewportW) tx = Math.max(viewportW - contentW, Math.min(0, tx)) // clamp aux bords
+  inner.style.transform = `translateX(${tx}px)`
 }

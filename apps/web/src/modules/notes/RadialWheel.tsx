@@ -1,17 +1,16 @@
 // ─── Roue radiale relative (spec §5) ──────────────────────────────────────────
 //
-// Menu radial *relatif* : pointerdown N'IMPORTE OÙ dans la bande basse fixe
-// l'origine du geste ; la roue apparaît centrée sur ce point. Sélection par ANGLE
-// du vecteur origine→doigt, validation au pointerup. Zone morte centrale = annule.
-// Aucun visé requis : le regard reste sur la portée (retour visuel périphérique,
-// secteur actif surdimensionné et fortement contrasté). Haptique = amélioration
-// facultative derrière détection de capacité (Android). Pas de son ici.
+// Menu radial *relatif* SANS cadre : on peut poser le doigt N'IMPORTE OÙ sur la
+// zone de jeu (couche transparente plein écran) — la roue apparaît sous le doigt.
+// Sélection par ANGLE du vecteur origine→doigt, validation au pointerup, zone morte
+// centrale = annule. `onHover` remonte le nom courant pour l'afficher au-dessus de
+// la portée (le regard reste sur la portée). Haptique Android capability-gated.
 
 import { useRef, useState } from 'react'
 import { NOTE_NAMES, type Etayage, type NoteName } from './types.ts'
 import { noteNameFromVector, sectorCenterAngle, DEFAULT_DEAD_RADIUS_PX, SECTOR_DEG } from './wheelGeometry.ts'
 
-const LABELS: Record<NoteName, string> = {
+export const NOTE_LABELS: Record<NoteName, string> = {
   do: 'Do', re: 'Ré', mi: 'Mi', fa: 'Fa', sol: 'Sol', la: 'La', si: 'Si',
 }
 
@@ -22,10 +21,9 @@ const OK = '#34d399'
 interface Props {
   etayage: Etayage
   disabled?: boolean
-  /** Secteur à révéler en surbrillance (bonne réponse après une erreur). */
   reveal?: NoteName | null
-  /** Appelé au pointerup : nom choisi, ou null si annulation (zone morte). */
   onSelect: (name: NoteName | null) => void
+  onHover?: (name: NoteName | null) => void
   radiusPx?: number
   deadRadiusPx?: number
 }
@@ -33,11 +31,12 @@ interface Props {
 const CAN_VIBRATE = typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function'
 
 export default function RadialWheel({
-  etayage, disabled = false, reveal = null, onSelect,
+  etayage, disabled = false, reveal = null, onSelect, onHover,
   radiusPx = 120, deadRadiusPx = DEFAULT_DEAD_RADIUS_PX,
 }: Props) {
   const bandRef = useRef<HTMLDivElement>(null)
   const originRef = useRef<{ x: number; y: number } | null>(null)
+  const lastOriginRef = useRef<{ x: number; y: number } | null>(null)
   const lastSectorRef = useRef<number | null>(null)
   const [origin, setOrigin] = useState<{ x: number; y: number } | null>(null)
   const [activeSector, setActiveSector] = useState<number | null>(null)
@@ -53,6 +52,7 @@ export default function RadialWheel({
     if (disabled) return
     const p = localXY(e)
     originRef.current = p
+    lastOriginRef.current = p
     lastSectorRef.current = null
     setOrigin(p)
     setActiveSector(null)
@@ -65,9 +65,10 @@ export default function RadialWheel({
     const name = noteNameFromVector(p.x - originRef.current.x, p.y - originRef.current.y, deadRadiusPx)
     const sector = name == null ? null : NOTE_NAMES.indexOf(name)
     if (sector !== lastSectorRef.current) {
-      if (CAN_VIBRATE && sector != null) navigator.vibrate(5) // amélioration facultative
+      if (CAN_VIBRATE && sector != null) navigator.vibrate(5)
       lastSectorRef.current = sector
       setActiveSector(sector)
+      onHover?.(name)
     }
   }
 
@@ -77,12 +78,17 @@ export default function RadialWheel({
     lastSectorRef.current = null
     setOrigin(null)
     setActiveSector(null)
+    onHover?.(null)
     if (!o) return
     if (commit) {
       const p = localXY(e)
       onSelect(noteNameFromVector(p.x - o.x, p.y - o.y, deadRadiusPx))
     }
   }
+
+  // Rendu de la roue : pendant le drag (origin), OU pour révéler la bonne réponse
+  // après une erreur (reveal) au dernier point de contact.
+  const center = origin ?? (reveal != null ? lastOriginRef.current : null)
 
   return (
     <div
@@ -92,38 +98,30 @@ export default function RadialWheel({
       onPointerUp={e => endGesture(e, true)}
       onPointerCancel={e => endGesture(e, false)}
       style={{
-        position: 'relative',
-        width: '100%',
-        height: '35vh',
-        minHeight: 220,
-        touchAction: 'none',
-        userSelect: 'none',
-        borderRadius: 20,
-        background: 'var(--surface)',
-        border: '1px solid var(--border-c)',
-        overflow: 'hidden',
-        opacity: disabled ? 0.6 : 1,
+        position: 'absolute', inset: 0,
+        touchAction: 'none', userSelect: 'none',
+        background: 'transparent',
         cursor: disabled ? 'default' : 'pointer',
       }}
     >
-      {origin == null ? (
+      {center == null && !disabled && (
         <div style={{
-          position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
-          color: 'var(--text-muted)', fontSize: 14, textAlign: 'center', padding: 24, pointerEvents: 'none',
+          position: 'absolute', left: 0, right: 0, bottom: 16, textAlign: 'center',
+          color: 'var(--text-muted)', fontSize: 13, opacity: 0.7, pointerEvents: 'none',
         }}>
-          Pose et fais glisser le pouce ici — la roue apparaît sous ton doigt.
+          Touche l’écran pour faire apparaître la roue
         </div>
-      ) : (
+      )}
+      {center && (
         <Wheel
-          cx={origin.x} cy={origin.y} r={radiusPx} deadR={deadRadiusPx}
-          active={activeSector} reveal={reveal} labelOpacity={labelOpacity}
+          cx={center.x} cy={center.y} r={radiusPx} deadR={deadRadiusPx}
+          active={origin ? activeSector : null} reveal={reveal} labelOpacity={labelOpacity}
         />
       )}
     </div>
   )
 }
 
-// Rendu SVG de la roue centrée sur l'origine du geste.
 function Wheel({ cx, cy, r, deadR, active, reveal, labelOpacity }: {
   cx: number; cy: number; r: number; deadR: number
   active: number | null; reveal: NoteName | null; labelOpacity: number
@@ -133,8 +131,7 @@ function Wheel({ cx, cy, r, deadR, active, reveal, labelOpacity }: {
 
   const wedge = (i: number): string => {
     const c = sectorCenterAngle(i)
-    const a0 = c - half
-    const a1 = c + half
+    const a0 = c - half, a1 = c + half
     const x0 = cx + r * Math.cos(a0), y0 = cy + r * Math.sin(a0)
     const x1 = cx + r * Math.cos(a1), y1 = cy + r * Math.sin(a1)
     return `M ${cx} ${cy} L ${x0.toFixed(1)} ${y0.toFixed(1)} A ${r} ${r} 0 0 1 ${x1.toFixed(1)} ${y1.toFixed(1)} Z`
@@ -142,31 +139,24 @@ function Wheel({ cx, cy, r, deadR, active, reveal, labelOpacity }: {
 
   return (
     <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }}>
-      {/* Disque de fond */}
-      <circle cx={cx} cy={cy} r={r} fill="rgba(124,58,237,0.06)" stroke="var(--border-c)" strokeWidth={1} />
+      <circle cx={cx} cy={cy} r={r} fill="rgba(124,58,237,0.10)" stroke="var(--border-c)" strokeWidth={1} />
 
       {NOTE_NAMES.map((name, i) => {
         const isActive = i === active
         const isReveal = i === revealSector
-        const fill = isReveal ? 'rgba(52,211,153,0.30)'
-          : isActive ? 'rgba(124,58,237,0.30)' : 'transparent'
+        const fill = isReveal ? 'rgba(52,211,153,0.30)' : isActive ? 'rgba(124,58,237,0.32)' : 'transparent'
         const stroke = isReveal ? OK : isActive ? ACCENT : 'var(--border-c)'
         return <path key={name} d={wedge(i)} fill={fill} stroke={stroke} strokeWidth={isActive || isReveal ? 2 : 1} />
       })}
 
-      {/* Zone morte centrale */}
       <circle cx={cx} cy={cy} r={deadR} fill="var(--surface-2)" stroke="var(--border-c)" strokeWidth={1} />
 
-      {/* Étiquettes des secteurs (étayage) + secteur actif surdimensionné */}
       {NOTE_NAMES.map((name, i) => {
         const isActive = i === active
         const isReveal = i === revealSector
         const c = sectorCenterAngle(i)
         const lr = r * 0.62
-        const x = cx + lr * Math.cos(c)
-        const y = cy + lr * Math.sin(c)
-        // Le secteur actif reste visible même en masqué (forme/contraste), les
-        // NOMS suivent l'étayage. Actif/révélé : agrandi et fortement contrasté.
+        const x = cx + lr * Math.cos(c), y = cy + lr * Math.sin(c)
         const showText = labelOpacity > 0 || isActive || isReveal
         if (!showText) return null
         const op = isActive || isReveal ? 1 : labelOpacity
@@ -176,12 +166,11 @@ function Wheel({ cx, cy, r, deadR, active, reveal, labelOpacity }: {
           <text key={`t-${name}`} x={x} y={y} textAnchor="middle" dominantBaseline="central"
             fontSize={size} fontWeight={isActive || isReveal ? 800 : 600}
             fill={color} opacity={op} style={{ fontFamily: "'Poppins', sans-serif" }}>
-            {isActive || isReveal || labelOpacity > 0 ? LABELS[name] : ''}
+            {NOTE_LABELS[name]}
           </text>
         )
       })}
 
-      {/* Halo du secteur actif pour lisibilité périphérique */}
       {active != null && (() => {
         const c = sectorCenterAngle(active)
         const hr = r * 0.62

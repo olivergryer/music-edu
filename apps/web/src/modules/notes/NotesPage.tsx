@@ -17,7 +17,7 @@ import ConsigneOverlayRaw, { consigneSeen } from '../../ConsigneOverlay'
 const ConsigneOverlay = ConsigneOverlayRaw as unknown as React.ComponentType<Record<string, unknown>>
 
 import NotesStaff, { type CellResult } from './NotesStaff.tsx'
-import RadialWheel from './RadialWheel.tsx'
+import RadialWheel, { NOTE_LABELS } from './RadialWheel.tsx'
 import { READING_PROFILES } from './profiles.ts'
 import { beginnerInstruments, getInstrument } from './instruments.ts'
 import { buildPool, resolveAmbitusStep } from './pool.ts'
@@ -38,6 +38,12 @@ const TARGET_LINES = 3       // lignes de 8 en P2
 const LINE_LEN = 8
 const FLOOR_WEIGHT = 0.15
 
+// Persistance des préférences entre sessions (spec point 5).
+const LS = {
+  get(k: string, d: string): string { try { return localStorage.getItem(k) ?? d } catch { return d } },
+  set(k: string, v: string) { try { localStorage.setItem(k, v) } catch { /* ignore */ } },
+}
+
 const PHASE_LABEL: Record<Phase, string> = { P0: 'Repères', P1: 'Extension', P2: 'Fluidité' }
 const PHASE_DESC: Record<Phase, string> = {
   P0: 'Notes repères, sans chrono, noms visibles sur la roue.',
@@ -53,11 +59,23 @@ export default function NotesPage() {
   const [showConsigne, setShowConsigne] = useState(() => !consigneSeen('notes'))
   const [screen, setScreen] = useState<'setup' | 'play' | 'summary'>('setup')
 
-  // Réglages de session
-  const [instrumentId, setInstrumentId] = useState(beginnerInstruments()[0].id)
-  const [phase, setPhase] = useState<Phase>('P0')
-  const [coloriser, setColoriser] = useState(false)
-  const [sonOn, setSonOn] = useState(true)
+  // Réglages de session — persistés entre sessions (instrument / niveau / son / couleur).
+  const [instrumentId, setInstrumentId] = useState(() => {
+    const v = LS.get('notes_instrument', '')
+    return getInstrument(v)?.beginnerFriendly ? v : beginnerInstruments()[0].id
+  })
+  const [phase, setPhase] = useState<Phase>(() => {
+    const v = LS.get('notes_phase', 'P0')
+    return (['P0', 'P1', 'P2'] as string[]).includes(v) ? (v as Phase) : 'P0'
+  })
+  const [coloriser, setColoriser] = useState(() => LS.get('notes_couleur', '0') === '1')
+  const [sonOn, setSonOn] = useState(() => LS.get('notes_son', '1') === '1')
+  const [hoverName, setHoverName] = useState<NoteName | null>(null)
+
+  useEffect(() => { LS.set('notes_instrument', instrumentId) }, [instrumentId])
+  useEffect(() => { LS.set('notes_phase', phase) }, [phase])
+  useEffect(() => { LS.set('notes_couleur', coloriser ? '1' : '0') }, [coloriser])
+  useEffect(() => { LS.set('notes_son', sonOn ? '1' : '0') }, [sonOn])
 
   // État de jeu
   const [sequence, setSequence] = useState<NoteItem[]>([])
@@ -294,22 +312,33 @@ export default function NotesPage() {
       )}
 
       {screen === 'play' && (
-        <div className="flex flex-col flex-1 px-4 pb-4" style={{ gap: 12 }}>
-          <div className="flex items-center justify-between" style={{ fontSize: 13, color: 'var(--text-muted)' }}>
-            <span>{PHASE_LABEL[phase]}</span>
-            <span>{Math.min(itemsDone, target)} / {target}</span>
-            {phase !== 'P0' && <span>{elapsedS}s</span>}
+        <div style={{ position: 'relative', flex: 1, display: 'flex', flexDirection: 'column' }}>
+          {/* Contenu visuel — transparent aux pointeurs : la roue capte sur tout l'écran. */}
+          <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', padding: '0 12px', pointerEvents: 'none', zIndex: 1 }}>
+            <div className="flex items-center justify-between" style={{ fontSize: 13, color: 'var(--text-muted)', padding: '4px 2px' }}>
+              <span>{PHASE_LABEL[phase]}</span>
+              <span>{Math.min(itemsDone, target)} / {target}</span>
+              {phase !== 'P0' && <span>{elapsedS}s</span>}
+            </div>
+            {/* Nom sélectionné en gras au-dessus de la portée — évite de regarder la roue. */}
+            <div style={{ minHeight: 52, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <span style={{ fontSize: 40, fontWeight: 900, lineHeight: 1, fontFamily: "'Poppins', sans-serif", color: hoverName ? '#c084fc' : 'transparent' }}>
+                {hoverName ? NOTE_LABELS[hoverName] : '·'}
+              </span>
+            </div>
+            <NotesStaff
+              items={sequence} clef={configRef.current?.clef ?? 'treble'}
+              cursorIndex={cursorIndex} results={results} coloriser={coloriser}
+            />
           </div>
-          <NotesStaff
-            items={sequence} clef={configRef.current?.clef ?? 'treble'}
-            cursorIndex={cursorIndex} results={results} coloriser={coloriser}
-          />
-          <div style={{ marginTop: 'auto' }}>
+          {/* Roue plein écran, au-dessus (sans cadre). */}
+          <div style={{ position: 'absolute', inset: 0, zIndex: 2 }}>
             <RadialWheel
               etayage={configRef.current?.etayage ?? 'visible'}
               disabled={inputDisabled}
               reveal={reveal}
               onSelect={handleAnswer}
+              onHover={setHoverName}
             />
           </div>
         </div>
