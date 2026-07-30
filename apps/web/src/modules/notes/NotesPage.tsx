@@ -327,29 +327,28 @@ export default function NotesPage() {
       )}
 
       {screen === 'play' && (
-        <div style={{ position: 'relative', flex: 1, display: 'flex', flexDirection: 'column' }}>
-          {/* Contenu visuel — transparent aux pointeurs : la roue capte sur tout l'écran. */}
-          <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', padding: '0 12px', pointerEvents: 'none', zIndex: 1 }}>
-            <div className="flex items-center justify-between" style={{ fontSize: 13, color: 'var(--text-muted)', padding: '4px 2px' }}>
-              <span>{PHASE_LABEL[phase]}</span>
-              <span>{Math.min(itemsDone, target)} / {target}</span>
-              {phase !== 'P0' && <span>{elapsedS}s</span>}
-            </div>
-            {/* Au-dessus de la portée : nom sélectionné pendant le drag (violet), sinon
-                la bonne réponse après une erreur (rouge) — évite de regarder la roue. */}
-            <div style={{ minHeight: 52, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              {hoverName ? (
-                <span style={{ fontSize: 40, fontWeight: 900, lineHeight: 1, fontFamily: "'Poppins', sans-serif", color: '#c084fc' }}>
-                  {NOTE_LABELS[hoverName]}
-                </span>
-              ) : correction ? (
-                <span style={{ fontSize: 22, fontWeight: 800, lineHeight: 1, fontFamily: "'Poppins', sans-serif", color: '#f87171' }}>
-                  C’était {NOTE_LABELS[correction]}
-                </span>
-              ) : (
-                <span style={{ fontSize: 40, color: 'transparent' }}>·</span>
-              )}
-            </div>
+        <div style={{ position: 'relative', flex: 1 }}>
+          {/* Chaque bloc est positionné en ABSOLU à un top fixe : la portée ne bouge
+              JAMAIS, quel que soit le contenu du label (survol/correction) ou la roue. */}
+          <div style={{ position: 'absolute', top: 6, left: 14, right: 14, display: 'flex', justifyContent: 'space-between', fontSize: 13, color: 'var(--text-muted)', pointerEvents: 'none', zIndex: 1 }}>
+            <span>{PHASE_LABEL[phase]}</span>
+            <span>{Math.min(itemsDone, target)} / {target}</span>
+            {phase !== 'P0' && <span>{elapsedS}s</span>}
+          </div>
+          {/* Label (hauteur fixe) — n'influence pas la position de la portée. */}
+          <div style={{ position: 'absolute', top: 40, left: 0, right: 0, height: 52, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none', zIndex: 1 }}>
+            {hoverName ? (
+              <span style={{ fontSize: 40, fontWeight: 900, lineHeight: 1, fontFamily: "'Poppins', sans-serif", color: '#c084fc' }}>
+                {NOTE_LABELS[hoverName]}
+              </span>
+            ) : correction ? (
+              <span style={{ fontSize: 22, fontWeight: 800, lineHeight: 1, fontFamily: "'Poppins', sans-serif", color: '#f87171' }}>
+                C’était {NOTE_LABELS[correction]}
+              </span>
+            ) : null}
+          </div>
+          {/* Portée — position FIXE (top constant). */}
+          <div style={{ position: 'absolute', top: 104, left: 12, right: 12, pointerEvents: 'none', zIndex: 1 }}>
             <NotesStaff
               items={sequence} clef={configRef.current?.clef ?? 'treble'}
               cursorIndex={cursorIndex} results={results} coloriser={coloriser}
