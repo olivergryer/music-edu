@@ -42,6 +42,14 @@ export const MODULES = {
     label: 'Notes', colorToken: 'notes', color: '#34d399', route: '/notes',
     desc: 'Lecture de notes sur la portée', active: true,
   },
+  // `active: false` volontaire : la route /harmonie fonctionne et se teste, mais
+  // les poids des matrices de transition ne sont pas encore validés. Le Hub
+  // affiche donc une carte « Bientôt », non cliquable. Passer à true quand le
+  // module est prêt pour les élèves.
+  harmonie: {
+    label: 'Harmonie', colorToken: 'harmony', color: '#c084fc', route: '/harmonie',
+    desc: "Chiffrage et détection d'erreur à l'oreille", active: false,
+  },
 } as const satisfies Record<string, ModuleDef>
 
 export type ModuleId = keyof typeof MODULES

@@ -7,6 +7,8 @@ import TheoriePage from './TheoriePage'
 import AccordeurPage from './AccordeurPage'
 import GenerateurAccordPage from './GenerateurAccordPage'
 import NotesPage from './modules/notes/NotesPage'
+import DetectionPage from './modules/harmonie/DetectionPage'
+import BancPage from './modules/harmonie/BancPage'
 import ProfilPage from './ProfilPage'
 import LoginPage from './auth/LoginPage'
 import RegisterPage from './auth/RegisterPage'
@@ -62,6 +64,9 @@ function AppRoutes() {
       <Route path="/accordeur" element={<AccordeurPage />} />
       <Route path="/accordeur/generateur" element={<GenerateurAccordPage />} />
       <Route path="/notes" element={<NotesPage />} />
+      <Route path="/harmonie" element={<DetectionPage />} />
+      {/* Banc d'écoute Harmonie — harnais de dev, aucun lien depuis le Hub */}
+      {IS_DEV && <Route path="/harmonie/banc" element={<BancPage />} />}
       {IS_DEV && <Route path="/accordeur/calibration" element={<ProtectedRoute><CalibrationPage /></ProtectedRoute>} />}
       <Route path="/profil" element={<ProtectedRoute><ProfilPage /></ProtectedRoute>} />
       <Route path="/dashboard/eleve" element={<ProtectedRoute><DashboardEleve /></ProtectedRoute>} />

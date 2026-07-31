@@ -23,13 +23,14 @@ export interface ProgressState {
     theorie:   { sessionsPlayed: number; xpTotal: number }
     accordeur: { sessionsPlayed: number; xpTotal: number }
     notes:     { sessionsPlayed: number; xpTotal: number }
+    harmonie:  { sessionsPlayed: number; xpTotal: number }
   }
   dailyRythmeIndiv: DailyCounter
   highestRankIdx: number  // plus haut rang jamais atteint (index dans RANKS)
 }
 
 export interface AddSessionParams {
-  module: 'rythme' | 'theorie' | 'accordeur' | 'notes'
+  module: 'rythme' | 'theorie' | 'accordeur' | 'notes' | 'harmonie'
   xpEarned: number
   medal: string
   meta?: { perfectSeries?: boolean; individual?: boolean }
@@ -175,6 +176,7 @@ export const DEFAULT_STATE: ProgressState = {
     theorie:   { sessionsPlayed: 0, xpTotal: 0 },
     accordeur: { sessionsPlayed: 0, xpTotal: 0 },
     notes:     { sessionsPlayed: 0, xpTotal: 0 },
+    harmonie:  { sessionsPlayed: 0, xpTotal: 0 },
   },
   dailyRythmeIndiv: { date: null, count: 0 },
   highestRankIdx: 0,
@@ -193,6 +195,7 @@ export function mergeWithDefaults(data: Record<string, unknown>): ProgressState 
       theorie:   { ...DEFAULT_STATE.modules.theorie,   ...(d.modules?.['theorie']   ?? {}) },
       accordeur: { ...DEFAULT_STATE.modules.accordeur, ...(d.modules?.['accordeur'] ?? {}) },
       notes:     { ...DEFAULT_STATE.modules.notes,     ...(d.modules?.['notes']     ?? {}) },
+      harmonie:  { ...DEFAULT_STATE.modules.harmonie,  ...(d.modules?.['harmonie']  ?? {}) },
     },
   }
 }
@@ -367,11 +370,23 @@ export function applySession(
       ...prev.modules,
       notes: { sessionsPlayed: prev.modules.notes.sessionsPlayed + 1, xpTotal: prev.modules.notes.xpTotal + xpGained },
     }
-  } else {
+  } else if (module === 'harmonie') {
+    moduleUpdate = {
+      ...prev.modules,
+      harmonie: { sessionsPlayed: prev.modules.harmonie.sessionsPlayed + 1, xpTotal: prev.modules.harmonie.xpTotal + xpGained },
+    }
+  } else if (module === 'accordeur') {
     moduleUpdate = {
       ...prev.modules,
       accordeur: { sessionsPlayed: prev.modules.accordeur.sessionsPlayed + 1, xpTotal: prev.modules.accordeur.xpTotal + xpGained },
     }
+  } else {
+    // Garde d'exhaustivité. Cette chaîne se terminait par un `else` qui créditait
+    // l'accordeur : tout nouveau module ajouté à l'union sans sa branche y voyait
+    // son XP atterrir SILENCIEUSEMENT. Désormais l'omission est une erreur de
+    // compilation.
+    const jamais: never = module
+    throw new Error(`addSession : module non géré (${String(jamais)})`)
   }
 
   // highestRankIdx : on garde le max entre l'ancien et le rang atteint après cette session.

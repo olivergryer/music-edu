@@ -17,6 +17,8 @@ Firebase Spark : Firestore + Authentication (email/password). **DB partagée dev
 | `/accordeur` | `AccordeurPage.jsx` + `AccordeurStaff.jsx` + `accordeurUtils.js` | public |
 | `/accordeur/generateur` | `GenerateurAccordPage.jsx` — accessible uniquement depuis AccordeurPage | public |
 | `/notes` | `modules/notes/NotesPage.tsx` + `NotesStaff.tsx` + `RadialWheel.tsx` (+ logique pure `modules/notes/*.ts`) | public |
+| `/harmonie` | `modules/harmonie/DetectionPage.tsx` — détection d'erreur (+ noyau pur `modules/harmonie/*.ts`) | public |
+| `/harmonie/banc` | `modules/harmonie/BancPage.tsx` — banc d'écoute, `IS_DEV` seulement | dev |
 | `/profil` | `ProfilPage.jsx` → redirect dashboard selon rôle | protégée |
 | `/dashboard/eleve` | `pages/DashboardEleve.tsx` | protégée |
 | `/dashboard/prof` | `pages/DashboardProf.tsx` | protégée |
@@ -129,3 +131,4 @@ Charger en début de session dédiée :
 - Théorie → `@apps/web/src/CLAUDE-theorie.md`
 - Accordeur → `@apps/web/src/CLAUDE-accordeur.md`
 - Notes → `@apps/web/src/CLAUDE-notes.md`
+- Harmonie → `@apps/web/src/CLAUDE-harmonie.md` (noyau pur + activité « détection d'erreur »)
