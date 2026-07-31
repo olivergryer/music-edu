@@ -9,17 +9,38 @@ import PwaInAppBrowserOverlay from './components/PwaInAppBrowserOverlay'
 import banniereDark from './assets/banniere_dark.svg'
 import banniereLight from './assets/banniere_light.svg'
 import { SHOW_TEST_BADGE } from './featureFlags'
+import { IS_DEV } from './isDev'
 import { MODULES, MODULE_IDS } from './lib/modules'
 
 // Cartes dérivées du registre unique (lib/modules.ts) — ajouter un module = 1 ligne là-bas.
 const MODULE_CARDS = MODULE_IDS.map(id => ({ id, to: MODULES[id].route, ...MODULES[id] }))
 
-function ModuleCard({ label, desc, active, color, testPhase }) {
+function ModuleCard({ label, desc, active, color, testPhase, devBadge }) {
   return (
     <div
       className="bg-surface rounded-2xl p-6 border border-app transition-all duration-200 hover:shadow-lg group h-full relative"
       style={{ opacity: active ? 1 : 0.4, cursor: active ? 'pointer' : 'default' }}
     >
+      {devBadge && (
+        <div
+          style={{
+            position: 'absolute',
+            top: 10,
+            right: 10,
+            background: 'rgba(192,132,252,0.14)',
+            color: '#c084fc',
+            border: '1px solid rgba(192,132,252,0.45)',
+            borderRadius: 999,
+            padding: '2px 8px',
+            fontSize: 10,
+            fontWeight: 700,
+            letterSpacing: 0.3,
+            textTransform: 'uppercase',
+          }}
+        >
+          Dev
+        </div>
+      )}
       {testPhase && (
         <div
           style={{
@@ -90,9 +111,13 @@ export default function HubPage() {
         <div className="grid gap-4 items-stretch" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))' }}>
           {MODULE_CARDS.map(m => {
             const testPhase = SHOW_TEST_BADGE && m.id === 'accordeur'
-            return m.active
+            // Un module `devOnly` est ouvert en local et sur la preview Vercel,
+            // « Bientôt » en production — pour le tester sans l'exposer aux élèves.
+            const enDev = Boolean(m.devOnly) && !m.active && IS_DEV
+            const jouable = m.active || enDev
+            return jouable
               ? <Link key={m.id} to={m.to} className="no-underline">
-                  <ModuleCard {...m} testPhase={testPhase} />
+                  <ModuleCard {...m} active testPhase={testPhase} devBadge={enDev} />
                 </Link>
               : <ModuleCard key={m.id} {...m} testPhase={testPhase} />
           })}

@@ -23,6 +23,12 @@ export interface ModuleDef {
   desc: string
   /** Module jouable (false = « Bientôt »). */
   active: boolean
+  /**
+   * Module en cours de développement : carte cliquable en local et sur la preview
+   * Vercel (`IS_DEV`), « Bientôt » en production. Permet de tester depuis le Hub
+   * sans ouvrir le module aux élèves. Sans effet si `active` vaut déjà true.
+   */
+  devOnly?: boolean
 }
 
 export const MODULES = {
@@ -42,13 +48,13 @@ export const MODULES = {
     label: 'Notes', colorToken: 'notes', color: '#34d399', route: '/notes',
     desc: 'Lecture de notes sur la portée', active: true,
   },
-  // `active: false` volontaire : la route /harmonie fonctionne et se teste, mais
-  // les poids des matrices de transition ne sont pas encore validés. Le Hub
-  // affiche donc une carte « Bientôt », non cliquable. Passer à true quand le
-  // module est prêt pour les élèves.
+  // `active: false` volontaire : les poids des matrices de transition ne sont pas
+  // encore validés, le module n'est donc pas ouvert aux élèves en production.
+  // `devOnly` le rend cliquable en local et sur la preview Vercel pour le tester.
+  // Passer `active: true` (et retirer `devOnly`) quand il est prêt.
   harmonie: {
     label: 'Harmonie', colorToken: 'harmony', color: '#c084fc', route: '/harmonie',
-    desc: "Chiffrage et détection d'erreur à l'oreille", active: false,
+    desc: "Chiffrage et détection d'erreur à l'oreille", active: false, devOnly: true,
   },
 } as const satisfies Record<string, ModuleDef>
 
