@@ -64,6 +64,8 @@ function AppRoutes() {
       <Route path="/accordeur" element={<AccordeurPage />} />
       <Route path="/accordeur/generateur" element={<GenerateurAccordPage />} />
       <Route path="/notes" element={<NotesPage />} />
+      {/* Route publique, mais la carte du Hub reste « Bientôt » tant que
+          MODULES.harmonie.active vaut false (lib/modules.ts). */}
       <Route path="/harmonie" element={<DetectionPage />} />
       {/* Banc d'écoute Harmonie — harnais de dev, aucun lien depuis le Hub */}
       {IS_DEV && <Route path="/harmonie/banc" element={<BancPage />} />}
