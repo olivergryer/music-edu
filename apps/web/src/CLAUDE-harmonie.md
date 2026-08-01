@@ -32,7 +32,9 @@ les imports de types — requis par `node --test`, qui efface les types sans les
 | `harmonieRef.ts` | **Tests uniquement.** Construction indépendante des accords, pour ne pas vérifier une table contre elle-même. |
 | `chiffrage.ts` | `chiffrer` / `romainChiffre` — casse et « ° » DÉRIVÉS de `qualite(mode, degre)`. Partagé par les deux écrans. |
 | `detection.ts` | Activité de détection, **pur** : `construireSession`, rampe de difficulté, `scorerSession`, `encoderDrapeaux`/`decoderDrapeaux`. |
+| `glyphe.ts` | Glyphe de correction A/B, **pur** : `geometrieGlyphe`, `lireDrapeaux`, `angleCercleDeg`/`pointCercle`. |
 | `audio.ts` | Chemin audio unique du module (soundfont GM). Hors de la règle « fonctions pures » : Web Audio. |
+| `Glyphes.tsx` | Les deux rendus SVG : `CercleTierces`, `EcartEmpilement`, `GlypheColonne`, `LegendeColonne`. |
 | `DetectionPage.tsx` · `BancPage.tsx` | Les deux écrans. `BancPage` est `IS_DEV` seulement. |
 
 ## Banc d'écoute — `/harmonie/banc`
@@ -182,9 +184,54 @@ classification peut évoluer, les données brutes ne se rejouent pas. »
 cardinalité, même arc : le vecteur serait nul et `diagnostiquer` répondrait `'exact'` sur un accord
 pourtant faux. D'où le **bit 12**. `vecteurErreur` refuse d'ailleurs les accords à qualité inversée,
 à juste titre : ne pas relâcher cette garde pour « faire marcher » le glyphe, cela produirait des
-vecteurs nuls trompeurs. Le glyphe devra décider d'un 5ᵉ canal ou d'un état visuel distinct.
+vecteurs nuls trompeurs.
+
+## Le glyphe de correction A/B — `glyphe.ts` + `Glyphes.tsx` (2026-08-01)
+
+Mappage **fixé par l'ordre de déclaration de `VecteurErreur`**, pas à réinventer :
+
+| donnée | canal visuel |
+|---|---|
+| `angulaire` −3…3 | position angulaire (inclinaison) |
+| `radial` −3…3 | renflement |
+| `cardinalite` −1…1 | hauteur de colonne |
+| `arcFranchi` | teinte — violet `#c084fc` interne, rouge `#f87171` arc franchi |
+| *(hors vecteur)* `modeInverse` | ambre `#fbbf24` **en pointillés** |
+
+**Deux rendus selon l'écran** (décidé avec Matthieu) :
+
+- **`<CercleTierces>`** au feedback de l'item — les 7 degrés d'`ORDRE_TIERCES`, I au sommet, l'écrit
+  en anneau creux, l'entendu en disque plein, la corde entre les deux teintée par `arcFranchi`. Le
+  modèle du module rendu visible.
+- **`<GlypheColonne>`** au bilan — abstrait mais **sériable** : les dix items en une ligne, et
+  l'élève voit que ses fautes penchent toutes du même côté. Accompagné de `LegendeColonne`, sans
+  laquelle il serait décoratif.
+- **`<EcartEmpilement>`** complète le cercle : l'accord en barres, le NOMBRE de barres dit la
+  cardinalité, la barre accentuée dit quel son est à la basse. Les deux canaux que le cercle ne
+  porte pas. Rendu seulement si la basse ou la septième a bougé.
+
+⚠ **Le piège du cercle** : dès que le degré n'a pas bougé — toujours sur `mode`, mais aussi sur
+`renversement` et `cardinalite` — les deux marqueurs se **superposent** et le cercle n'affiche qu'un
+rond qui ne montre rien. D'où l'anneau concentric : « même degré, autre chose a bougé ».
+
+⚠ `PAS_ANGULAIRE_DEG = 18` est une **convention de lisibilité, pas une dérivation géométrique**.
+L'écart réel sur le cercle vaut 360/7 ≈ 51,4° par pas : à trois pas la colonne serait couchée à 154°.
+
+`lireDrapeaux` rend la phrase française (« deux tierces plus bas · même fonction · septième
+ajoutée ») et sert **deux fois** : sous le cercle, et comme `aria-label` des SVG. Un glyphe abstrait
+sans équivalent textuel est inaccessible — ce n'est pas un supplément.
+
+### Le bilan dessine depuis `flags`, jamais depuis `ItemDetection`
+
+`ReponseDetection` porte un champ `flags` — exactement les bits persistés. Le bilan les **décode**.
+Ce n'est pas un détour : si le rendu est juste, c'est la preuve que les 13 bits suffisent à
+reconstruire le glyphe, donc qu'un futur écran d'historique lisant Firestore affichera les mêmes
+signes. L'invariant est gravé dans `harmonieGlyphe.test.ts` (« reconstructible depuis les seuls bits
+persistés »), qui compare la géométrie décodée à celle calculée directement depuis l'item, sur les
+deux modes × les niveaux 3→7 × trois graines.
 
 ## Suite
 
-Rendu du glyphe à 4 canaux (position angulaire, renflement, hauteur de colonne, teinte) sur la
-correction A/B — les données sont déjà là. Puis chiffrage en flux et exercice à trous.
+Chiffrage en flux · exercice à trous · poids des matrices à régler au banc (c'est ce qui débloque
+`active: true` sur le Hub) · niveau 8 · un écran d'historique consommant les `flags` de Firestore,
+que le glyphe rend désormais possible.

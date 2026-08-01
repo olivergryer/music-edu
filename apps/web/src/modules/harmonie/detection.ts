@@ -78,6 +78,13 @@ export interface ReponseDetection {
   rtMs: number
   type: TypePerturbation
   difficulte: number
+  // Exactement les bits persistés dans `EncodedItem.flags` (cf. plus bas). Le
+  // bilan dessine ses glyphes en les DÉCODANT, sans jamais retoucher aux objets
+  // `ItemDetection` : si le rendu est juste, c'est la preuve que ces 13 bits
+  // suffisent à le reconstruire, donc qu'un futur écran d'historique lisant
+  // Firestore affichera les mêmes glyphes. Sans cela, l'encodage resterait une
+  // promesse non vérifiée.
+  flags: number
 }
 
 // ─── Construction de la session ──────────────────────────────────────────────

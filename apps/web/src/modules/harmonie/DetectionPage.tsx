@@ -30,12 +30,15 @@ import {
   NIVEAU_MAX_DETECTION,
   NIVEAU_MIN_DETECTION,
   construireSession,
+  decoderDrapeaux,
   encoderDrapeaux,
   fautesParType,
   scorerSession,
   type ItemDetection,
   type ReponseDetection,
 } from './detection.ts'
+import { lireDrapeaux } from './glyphe.ts'
+import { CercleTierces, EcartEmpilement, GlypheColonne, LegendeColonne } from './Glyphes.tsx'
 import { creerAccord, type Accord, type Mode, type Progression } from './types.ts'
 
 const ACCENT = '#c084fc'
@@ -177,6 +180,9 @@ export default function DetectionPage() {
     if (repondu !== null || !item) return
     const rtMs = Math.round(performance.now() - (debutMsRef.current ?? affichageMsRef.current))
     const correct = index === item.indexPerturbe
+    // Encodé UNE fois : les mêmes bits partent en base et alimentent les glyphes
+    // du bilan. Cf. `ReponseDetection.flags`.
+    const flags = encoderDrapeaux(item, mode)
 
     setRepondu(index)
     reponsesRef.current.push({
@@ -187,13 +193,14 @@ export default function DetectionPage() {
       rtMs,
       type: item.perturbation.type,
       difficulte: item.perturbation.difficulte,
+      flags,
     })
     mp.recordItem({
       index: rang,
       expected: item.indexPerturbe,
       answered: index,
       rtMs,
-      flags: encoderDrapeaux(item, mode),
+      flags,
     })
   }
 
@@ -450,6 +457,10 @@ function EcranJeu({
   const aRepondu = repondu !== null
   const juste = repondu === item.indexPerturbe
 
+  // Décodé plutôt que lu sur l'item : le feedback et le bilan dessinent alors
+  // depuis exactement les mêmes bits que ceux persistés en base.
+  const drapeaux = useMemo(() => decoderDrapeaux(encoderDrapeaux(item, mode)), [item, mode])
+
   return (
     <main className="px-4 pb-8 flex flex-col gap-5">
       <div>
@@ -583,6 +594,32 @@ function EcranJeu({
             {chiffrer(item.perturbation.substitut, mode)}.
           </div>
 
+          {/* Le cercle des tierces : le modèle du module rendu visible. Il montre
+              l'écart au lieu de l'énoncer — le texte ci-dessus reste, le glyphe
+              le complète. */}
+          <div style={{ marginTop: 12 }}>
+            <CercleTierces
+              ecrit={item.perturbation.original}
+              entendu={item.perturbation.substitut}
+              mode={mode}
+              drapeaux={drapeaux}
+              taille={196}
+            />
+            <div style={{ marginTop: 8 }}>
+              <EcartEmpilement
+                ecrit={item.perturbation.original}
+                entendu={item.perturbation.substitut}
+                drapeaux={drapeaux}
+              />
+            </div>
+            <div
+              className="text-app-muted"
+              style={{ fontSize: 12, marginTop: 10, textAlign: 'center' }}
+            >
+              {lireDrapeaux(drapeaux)}
+            </div>
+          </div>
+
           <button
             onClick={onSuivant}
             style={{
@@ -641,6 +678,32 @@ function EcranBilan({
           temps de réponse médian {(resume.medianRtMs / 1000).toFixed(1)} s
         </div>
       </div>
+
+      {/* La signature de la session. Chaque colonne est dessinée en DÉCODANT les
+          bits persistés — jamais depuis l'`ItemDetection`. C'est le seul endroit
+          où l'élève voit que ses fautes se ressemblent. */}
+      {reponses.length > 0 && (
+        <Bloc titre="Tes fautes en un coup d’œil">
+          <div
+            className="bg-surface-2 flex flex-col"
+            style={{ borderRadius: 10, padding: '12px 10px', gap: 12 }}
+          >
+            <div className="flex flex-wrap justify-center" style={{ gap: 6 }}>
+              {reponses.map((r) => (
+                <div key={r.index} className="flex flex-col items-center">
+                  <GlypheColonne drapeaux={decoderDrapeaux(r.flags)} taille={40} />
+                  <span
+                    style={{ fontSize: 12, lineHeight: 1, color: r.correct ? SUCCES : ERREUR }}
+                  >
+                    {r.correct ? '✓' : '✗'}
+                  </span>
+                </div>
+              ))}
+            </div>
+            <LegendeColonne />
+          </div>
+        </Bloc>
+      )}
 
       {/* C'est CETTE donnée qui dira si l'échelle de difficulté tient sur de
           vrais élèves — d'où sa présence dès la première version. */}

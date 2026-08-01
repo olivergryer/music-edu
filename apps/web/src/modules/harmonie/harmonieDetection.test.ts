@@ -268,6 +268,7 @@ const reponse = (correct: boolean, rtMs: number, type: TypePerturbation): Repons
   rtMs,
   type,
   difficulte: 0.5,
+  flags: 0, // `scorerSession` ne lit pas les drapeaux — seul le bilan les dessine.
 })
 
 test('scorerSession : cas limites 0 %, 100 %, session vide', () => {
