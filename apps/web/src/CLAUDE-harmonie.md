@@ -30,7 +30,9 @@ les imports de types — requis par `node --test`, qui efface les types sans les
 | `dispositions.ts` | `TABLE_DISPOSITIONS` · `disposition` · `realiserProgression`/`hauteursReelles` (MIDI) · `plageTransposition` · `TESSITURES`. |
 | `rng.ts` | `mulberry32` + `weightedPick` — copie de `modules/notes/rng.ts`, modules indépendants. |
 | `harmonieRef.ts` | **Tests uniquement.** Construction indépendante des accords, pour ne pas vérifier une table contre elle-même. |
-| `chiffrage.ts` | `chiffrer` / `romainChiffre` — casse et « ° » DÉRIVÉS de `qualite(mode, degre)`. Partagé par les deux écrans. |
+| `chiffrage.ts` | Notation **française académique**. `chiffrageDe` (étages) · `chiffrer` (plat) · `romainChiffre` — casse et « ° » DÉRIVÉS de `qualite(mode, degre)`. |
+| `chiffrageObsolete.ts` | **Non branché.** L'ancienne notation anglo-saxonne, gardée pour pouvoir y revenir. |
+| `ChiffrageEmpile.tsx` | Rendu empilé des étages (6 sur 4, 7 sur +). |
 | `detection.ts` | Activité de détection, **pur** : `construireSession`, rampe de difficulté, `scorerSession`, `encoderDrapeaux`/`decoderDrapeaux`. |
 | `glyphe.ts` | Glyphe de correction A/B, **pur** : `geometrieGlyphe`, `lireDrapeaux`, `angleCercleDeg`/`pointCercle`. |
 | `audio.ts` | Chemin audio unique du module (soundfont GM). Hors de la règle « fonctions pures » : Web Audio. |
@@ -363,6 +365,50 @@ accords sont écartés des cibles.
 ⚠ **Le chiffrage n'est jamais affiché avant la réponse** — il donnerait le degré, la basse ET la
 septième, c'est-à-dire les trois questions à la fois. Seule la position est montrée ; le chiffrage
 apparaît au feedback. Même règle que le « ▶ A après la réponse » de la détection.
+
+## Notation française académique — `chiffrage.ts` (2026-08-02)
+
+Migration depuis les figures anglo-saxonnes (`I64`, `V65`, `V43`, `V2`). Chiffre romain conservé à
+côté du chiffrage : les activités reposent sur la lecture du degré.
+
+**3 sons** — `5` · `6` · `6/4`
+
+**4 sons, septième de DOMINANTE** — le `+` marque la **sensible**, et le chiffre dit à quel
+intervalle elle se trouve au-dessus de la basse. C'est ce qui rend la table cohérente plutôt
+qu'arbitraire (V7 en do = sol si ré fa, sensible = si) :
+
+| Renv. | Basse | Sensible | Chiffrage |
+|---|---|---|---|
+| fondamental | sol | tierce | `7` sur `+` (le `+` seul = tierce sensible) |
+| 1er | **si** — la sensible EST la basse | — | `6` sur `5̸` (quinte diminuée si–fa) |
+| 2e | ré | sixte | `+6` |
+| 3e | fa | quarte augmentée fa–si | `+4` |
+
+**4 sons, septièmes ordinaires** — `7` · `6/5` · `4/3` · `2`, sans `+` ni barre.
+
+⚠ **Ne pas étendre les formes de dominante « à tout accord contenant la sensible ».** La tentation
+est réelle — III en majeur et I7 au niveau 8 en contiennent une — mais la septième de dominante est
+un objet nommé et précis de la pédagogie française, pas une famille déduite. La règle est
+`degre === 5 && septieme`, et `modeInverse` retombe sur les figures ordinaires : la bascule M→m
+détruit la sensible, le `+` n'aurait plus rien à marquer.
+
+⚠ **`gabarits.ts` = syntaxe de SAISIE, `chiffrage.ts` = notation d'AFFICHAGE.** Les confondre
+obligerait à réécrire toutes les formules. Le round-trip `formatGabarit ∘ parseGabarit` reste
+l'identité, et un test le garde.
+
+⚠ **`chiffrageObsolete.ts` n'est branché nulle part** mais reste testé (`harmonieChiffrage.test.ts`
+épingle ses sorties) : un fichier gardé « au cas où » sans test pourrit en silence. Sa procédure de
+rebranchement est dans son en-tête.
+
+**Ouvert** : le V à trois sons ne porte pas de `+` (sa tierce est pourtant la sensible). La table
+fournie par Matthieu ne donne que `5` · `6` · `6/4` pour les trois sons, et on s'y tient.
+
+## Fiche PDF des chiffrages
+
+`npm run generate:chiffrages` → `docs/chiffrages-harmonie.pdf` (4 pages). **Générée depuis le code**
+par `apps/web/scripts/generer-chiffrages.ts`, qui lit `chiffrage.ts`, `gabarits.ts`, `niveaux.ts` et
+`contraintes.ts`. Ne jamais l'éditer à la main : c'est un document que des élèves auront en main, et
+une fiche retapée diverge en silence. Rendu par Chrome headless — **aucune dépendance npm ajoutée**.
 
 ## Suite
 

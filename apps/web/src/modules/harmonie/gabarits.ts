@@ -47,8 +47,9 @@ const CHIFFRAGES: Readonly<Record<string, Chiffrage>> = {
   '6/5': { renversement: 1, septieme: true },
   '43': { renversement: 2, septieme: true },
   '4/3': { renversement: 2, septieme: true },
+  '+6': { renversement: 2, septieme: true }, // notation française de la dominante
   '2': { renversement: 3, septieme: true },
-  '+4': { renversement: 3, septieme: true },
+  '+4': { renversement: 3, septieme: true }, // idem — la sensible à la quarte augmentée
 }
 
 // Chiffrage canonique pour la ré-écriture (`formatGabarit`).

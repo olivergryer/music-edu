@@ -27,6 +27,7 @@ import {
 } from './audio.ts'
 import { formatGabarit } from './gabarits.ts'
 import { ROMAINS, chiffrer } from './chiffrage.ts'
+import ChiffrageEmpile from './ChiffrageEmpile.tsx'
 import { genererProgression, longueursDisponibles } from './generateur.ts'
 import { NIVEAUX, NIVEAU_MAX_IMPLEMENTE, niveauSpec } from './niveaux.ts'
 import { ligneRestreinte } from './matrice.ts'
@@ -395,7 +396,7 @@ function Banc() {
                   }}
                 >
                   <div style={{ fontSize: 19, fontWeight: 600, color: ACCENT }}>
-                    {chiffrer(accord, mode)}
+                    <ChiffrageEmpile accord={accord} mode={mode} taille={19} couleur={ACCENT} />
                   </div>
                   <div className="text-app-muted" style={{ fontSize: 11, marginTop: 2 }}>
                     {accord.positionMetrique === 'fort' ? '● fort' : '○ faible'} · {accord.duree}p
@@ -445,10 +446,23 @@ function Banc() {
                   >
                     <code style={{ fontSize: 13, minWidth: 160 }}>{p.type}</code>
 
-                    <div style={{ minWidth: 120, fontSize: 15 }}>
-                      <span className="text-app-muted">{chiffrer(p.original, mode)}</span>
-                      <span className="text-app-muted"> → </span>
-                      <strong style={{ color: ACCENT }}>{chiffrer(p.substitut, mode)}</strong>
+                    <div
+                      className="flex items-center"
+                      style={{ minWidth: 120, fontSize: 15, gap: 6 }}
+                    >
+                      <ChiffrageEmpile
+                        accord={p.original}
+                        mode={mode}
+                        taille={15}
+                        couleur="var(--text-muted)"
+                      />
+                      <span className="text-app-muted">→</span>
+                      <ChiffrageEmpile
+                        accord={p.substitut}
+                        mode={mode}
+                        taille={15}
+                        couleur={ACCENT}
+                      />
                     </div>
 
                     <Jauge valeur={p.difficulte} />

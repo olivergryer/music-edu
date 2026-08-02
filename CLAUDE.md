@@ -116,6 +116,10 @@ teacherCodes/{code}
 npm run dev
 npm run build
 
+# Fiche PDF des chiffrages Harmonie → docs/chiffrages-harmonie.pdf
+# Générée DEPUIS LE CODE : relancer après toute modif de chiffrage/gabarits/niveaux.
+npm run generate:chiffrages
+
 # Depuis music-edu/ (racine) — travail courant sur dev
 git add . && git commit -m "..." && git push
 

@@ -17,7 +17,7 @@ import { useModuleProgress } from '../../hooks/useModuleProgress'
 import { ThemeToggleInline } from '../../ThemeContext'
 
 import { arreter, chargerInstrument, jouerSuite } from './audio.ts'
-import { chiffrer } from './chiffrage.ts'
+import ChiffrageEmpile from './ChiffrageEmpile.tsx'
 import { realiserProgression } from './dispositions.ts'
 import { niveauSpec } from './niveaux.ts'
 import {
@@ -330,7 +330,13 @@ export default function ChoixBinairePage() {
                   opacity: vise || repondu !== null ? 1 : 0.5,
                 }}
               >
-                {repondu !== null && vise ? chiffrer(accord, mode) : vise ? '?' : i + 1}
+                {repondu !== null && vise ? (
+                  <ChiffrageEmpile accord={accord} mode={mode} taille={17} couleur={ACCENT} />
+                ) : vise ? (
+                  '?'
+                ) : (
+                  i + 1
+                )}
               </div>
             )
           })}
@@ -401,8 +407,12 @@ export default function ChoixBinairePage() {
             <div style={{ fontSize: 16, fontWeight: 600, color: juste ? SUCCES : ERREUR }}>
               {juste ? 'Juste' : `C’était « ${spec.options[item.reponse]} »`}
             </div>
-            <div className="text-app-muted" style={{ fontSize: 13, marginTop: 6, lineHeight: 1.5 }}>
-              L’accord {item.cible + 1} était un {chiffrer(accordVise, mode)}.
+            <div
+              className="text-app-muted flex flex-wrap items-center"
+              style={{ fontSize: 13, marginTop: 6, lineHeight: 1.5, gap: 5 }}
+            >
+              L’accord {item.cible + 1} était un
+              <ChiffrageEmpile accord={accordVise} mode={mode} taille={15} />
             </div>
 
             <button onClick={suivant} style={{ ...boutonPlein, marginTop: 14, width: '100%' }}>

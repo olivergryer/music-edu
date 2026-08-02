@@ -23,6 +23,7 @@ const ConsigneOverlay = ConsigneOverlayRaw as unknown as React.ComponentType<
 
 import { arreter, chargerInstrument, jouerSuite } from './audio.ts'
 import { chiffrer } from './chiffrage.ts'
+import ChiffrageEmpile from './ChiffrageEmpile.tsx'
 import { realiserProgression } from './dispositions.ts'
 import { niveauSpec } from './niveaux.ts'
 import {
@@ -565,10 +566,19 @@ function EcranJeu({
                 opacity: aRepondu && !estFautif && !estChoisi ? 0.45 : 1,
               }}
             >
-              {chiffrer(accord, mode)}
+              <ChiffrageEmpile accord={accord} mode={mode} taille={19} />
               {aRepondu && estFautif && (
-                <div style={{ fontSize: 12, fontWeight: 400, color: SUCCES, marginTop: 3 }}>
-                  entendu {chiffrer(item.perturbation.substitut, mode)}
+                <div
+                  className="flex items-center justify-center"
+                  style={{ fontSize: 12, fontWeight: 400, color: SUCCES, marginTop: 3, gap: 4 }}
+                >
+                  entendu
+                  <ChiffrageEmpile
+                    accord={item.perturbation.substitut}
+                    mode={mode}
+                    taille={13}
+                    couleur={SUCCES}
+                  />
                 </div>
               )}
             </button>
@@ -629,10 +639,14 @@ function EcranJeu({
           <div style={{ fontSize: 16, fontWeight: 600, color: juste ? SUCCES : ERREUR }}>
             {juste ? 'Trouvé' : `C’était l’accord ${item.indexPerturbe + 1}`}
           </div>
-          <div className="text-app-muted" style={{ fontSize: 13, marginTop: 6, lineHeight: 1.5 }}>
-            {LIBELLES_TYPE[item.perturbation.type] ?? item.perturbation.type} —{' '}
-            {chiffrer(item.perturbation.original, mode)} devenu{' '}
-            {chiffrer(item.perturbation.substitut, mode)}.
+          <div
+            className="text-app-muted flex flex-wrap items-center"
+            style={{ fontSize: 13, marginTop: 6, lineHeight: 1.5, gap: 5 }}
+          >
+            {LIBELLES_TYPE[item.perturbation.type] ?? item.perturbation.type} —
+            <ChiffrageEmpile accord={item.perturbation.original} mode={mode} taille={15} />
+            devenu
+            <ChiffrageEmpile accord={item.perturbation.substitut} mode={mode} taille={15} />
           </div>
 
           {/* Le cercle des tierces : le modèle du module rendu visible. Il montre

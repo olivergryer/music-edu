@@ -11,6 +11,7 @@
     "test": "node --test \"src/**/*.test.ts\"",
     "test:protocol": "node test-protocol/run.ts",
     "generate:questions": "node scripts/generate-questions.js",
+    "generate:chiffrages": "node scripts/generer-chiffrages.ts",
     "release": "node scripts/bump-version.mjs",
     "release:minor": "node scripts/bump-version.mjs minor",
     "release:major": "node scripts/bump-version.mjs major"
