@@ -7,7 +7,11 @@ import TheoriePage from './TheoriePage'
 import AccordeurPage from './AccordeurPage'
 import GenerateurAccordPage from './GenerateurAccordPage'
 import NotesPage from './modules/notes/NotesPage'
+import HarmoniePage from './modules/harmonie/HarmoniePage'
 import DetectionPage from './modules/harmonie/DetectionPage'
+import DicteeBassePage from './modules/harmonie/DicteeBassePage'
+import IntervallesPage from './modules/harmonie/IntervallesPage'
+import ChoixBinairePage from './modules/harmonie/ChoixBinairePage'
 import BancPage from './modules/harmonie/BancPage'
 import ProfilPage from './ProfilPage'
 import LoginPage from './auth/LoginPage'
@@ -64,9 +68,14 @@ function AppRoutes() {
       <Route path="/accordeur" element={<AccordeurPage />} />
       <Route path="/accordeur/generateur" element={<GenerateurAccordPage />} />
       <Route path="/notes" element={<NotesPage />} />
-      {/* Route publique, mais la carte du Hub reste « Bientôt » tant que
-          MODULES.harmonie.active vaut false (lib/modules.ts). */}
-      <Route path="/harmonie" element={<DetectionPage />} />
+      {/* Routes publiques, mais la carte du Hub reste « Bientôt » tant que
+          MODULES.harmonie.active vaut false (lib/modules.ts). `/harmonie` est le
+          choix d'activité ; chaque activité a sa propre route et son en-tête. */}
+      <Route path="/harmonie" element={<HarmoniePage />} />
+      <Route path="/harmonie/detection" element={<DetectionPage />} />
+      <Route path="/harmonie/basse" element={<DicteeBassePage />} />
+      <Route path="/harmonie/intervalles" element={<IntervallesPage />} />
+      <Route path="/harmonie/binaire" element={<ChoixBinairePage />} />
       {/* Banc d'écoute Harmonie — harnais de dev, aucun lien depuis le Hub */}
       {IS_DEV && <Route path="/harmonie/banc" element={<BancPage />} />}
       {IS_DEV && <Route path="/accordeur/calibration" element={<ProtectedRoute><CalibrationPage /></ProtectedRoute>} />}

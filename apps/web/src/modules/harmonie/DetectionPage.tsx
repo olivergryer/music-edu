@@ -315,7 +315,7 @@ export default function DetectionPage() {
 
       <header className="flex items-center gap-3 px-4 py-3">
         <button
-          onClick={() => (ecran === 'reglages' ? navigate('/') : setEcran('reglages'))}
+          onClick={() => (ecran === 'reglages' ? navigate('/harmonie') : setEcran('reglages'))}
           aria-label="Retour"
           style={{
             background: 'var(--surface)',

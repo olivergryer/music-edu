@@ -258,8 +258,118 @@ signes. L'invariant est gravé dans `harmonieGlyphe.test.ts` (« reconstructible
 persistés »), qui compare la géométrie décodée à celle calculée directement depuis l'item, sur les
 deux modes × les niveaux 3→7 × trois graines.
 
+## Les activités — `/harmonie` est un choix, pas une activité (2026-08-02)
+
+La détection démarrait au niveau 3 : **les niveaux 0 à 2 n'avaient aucune porte d'entrée**, et
+`evaluerBasse` dormait depuis le premier jour. `HarmoniePage` ouvre le module par le bas du barème.
+
+| Route | Activité | Barème |
+|---|---|---|
+| `/harmonie` | choix d'activité | — |
+| `/harmonie/basse` | dictée de basse | niveau 1 |
+| `/harmonie/binaire` | choix binaire | niveaux 2, 4, 5 |
+| `/harmonie/detection` | détection d'erreur | niveaux 3-7 |
+| `/harmonie/intervalles` | reconnaissance d'intervalles | **hors barème** |
+
+Chaque activité est une **page à part entière**, avec sa route et son en-tête — pas un composant
+monté dans un conteneur. Deux en-têtes empilés sinon, et `DetectionPage` n'aurait pas pu rester
+intacte (seule sa flèche retour vise désormais `/harmonie`).
+
+Les intervalles sont **hors `NIVEAUX`** (décidé avec Matthieu) : reconnaître une tierce majeure
+n'est pas une compétence de fonction harmonique. Aucune renumérotation, donc aucune clé Firestore
+cassée. Les clés `levels` sont désormais **préfixées** — `basse:1`, `intervalles:moyen` — additif,
+la clé historique `"4"` de la détection n'est pas réécrite.
+
+## La roue figée — `roue.ts` + `RoueFigee.tsx`
+
+⚠ **À ne pas confondre avec `modules/notes/RadialWheel.tsx`**, qui est un menu radial *relatif* : on
+pose le doigt n'importe où, la roue naît sous le contact, on tire, on relâche (sa spec §5). Celle-ci
+est **figée** : affichée en permanence, on appuie SUR un secteur, et le glissement vertical choisit
+la qualité. Deux origines de calcul différentes, d'où deux fonctions (`secteurAuPoint` depuis le
+centre de la roue, `qualiteAuDrag` depuis le point d'appui).
+
+Le module Notes **n'est pas modifié** et n'est pas importé : la géométrie est *adaptée*, comme
+`rng.ts` l'avait été. Généralisée à des secteurs quelconques, elle sert les deux activités.
+
+⚠ **Le glissement n'a pas le même vocabulaire selon le secteur**, et c'est musical :
+
+| activité | secteurs | bas → haut | repos |
+|---|---|---|---|
+| dictée | do…si | ♭ · ♮ · ♯ | ♮ |
+| intervalles | 2de 3ce 6te 7e | mineure · Majeure | **aucun** |
+| intervalles | 1re 4te 5te | diminuée · juste · augmentée | juste |
+
+Il n'existe pas de tierce « neutre » : sur ces secteurs `SecteurRoue.defaut` vaut `null` et **le clic
+sec ne valide rien**. Ne pas « corriger » en mettant Majeure par défaut — l'élève validerait une
+qualité qu'il n'a pas choisie.
+
+⚠ **Taille en pixels réels, pas de mise à l'échelle** : les seuils sont en pixels client. Un SVG
+redimensionné ferait diverger les frontières visibles des secteurs et le calcul.
+
+## L'orthographieur — `tonalites.ts`
+
+Le module ne connaissait que des **demi-tons** (`Disposition.basse`, `Progression.tonique` en classe
+de hauteur 0-11). Ça suffit pour sonner, pas pour **nommer** : 3 demi-tons au-dessus de do s'écrit
+mi♭ et non ré♯, et une classe de hauteur ne tranche pas (6 = fa♯ ou sol♭).
+
+`gammeNommee` marche les sept **lettres** depuis la tonique puis calcule l'altération de chaque
+degré. Invariant testé sur les 24 tonalités : une gamme emploie les sept lettres, chacune une fois —
+c'est ce test qui attrape « ré♯ » là où on attend « mi♭ ». Les toniques usuelles sont une **table**
+et non une règle, comme `notesCommunes` : fa♯ majeur contre sol♭ majeur est un usage.
+
+⚠ **Découverte : sol♯ mineur harmonique exige un fa♯♯.** Hausser la sensible d'un mineur dont le 7ᵉ
+degré est déjà dièse donne un double dièse. C'est juste, et c'est le seul cas sur les douze toniques
+retenues — un test le verrouille précisément là. Sans effet sur la dictée : le niveau 1 n'emploie que
+I, IV et V, donc le 7ᵉ degré ne descend jamais à la basse.
+
+## Dictée de basse — `dictee.ts`
+
+⚠ **`evaluerBasse` n'est pas réutilisée et n'est pas modifiée.** Elle compare des **degrés** (1-7) :
+mi et mi♭ y tombent tous deux sur le degré 3, la faute d'altération serait invisible. La roue fait
+saisir des notes **nommées**, d'où `evaluerBasseNommee`, qui sépare faute de lettre (d'oreille) et
+faute d'altération (de tonalité).
+
+La tonique sonne ET la tonalité est écrite : on mesure l'audition de la basse, pas l'oreille absolue.
+Les items sont **transposés** — sans quoi la basse ne porterait jamais d'altération au niveau 1
+(vocabulaire `[1,4,5]` à l'état fondamental) et le geste ♯/♭ ne servirait jamais. C'est l'ARMURE qui
+amène les altérations, pas les accords. Un test garde cette raison d'être.
+
+## Intervalles — `intervalles.ts`
+
+Sept nombres, pas d'octave (la roue n'a que sept secteurs). `demiTons` **refuse** les combinaisons
+impossibles — une quinte majeure, une tierce juste — plutôt que de les tolérer en silence. Le triton
+est nommable des deux façons (4te augmentée, 5te diminuée) et `memeIntervalle` ne les confond pas.
+Alternance arpégé/plaqué **stricte, un item sur deux** : au hasard, la difficulté serait illisible
+d'une session à l'autre. Un test vérifie que tout intervalle des pools est **saisissable à la roue**.
+
+## Choix binaire — `binaire.ts`
+
+Trois niveaux, **une seule tâche** (`tache: 'choix_binaire'`) mais trois questions, donc un seul
+écran paramétré : dominante ou sous-dominante (2), fondamental ou renversé (4), avec ou sans
+septième (5). L'élève entend la suite et répond sur UN accord désigné par sa **position**.
+
+⚠ **L'équilibrage des réponses est la pièce maîtresse.** Laissé au générateur, le tirage est biaisé :
+`POIDS_RENVERSEMENT_V1` met l'état fondamental à .60, donc au niveau 4 « fondamental » serait la
+bonne réponse trois fois sur cinq et répondre toujours la même chose paierait. La session impose
+donc autant de 0 que de 1 (`reponsesEquilibrees`) **puis mélange cet ordre** — une alternance
+stricte serait équilibrée mais tout aussi devinable. Le builder cherche ensuite une progression dont
+un accord intérieur porte la réponse voulue. Deux tests gardent ça.
+
+⚠ **`reponseAttendue` rend `null`**, et ce n'est pas un cas dégénéré : c'est l'honnêteté de l'item.
+Demander « avec ou sans septième ? » sur un degré hors de `septiemeSur` donnerait une question à
+réponse unique ; demander « dominante ou sous-dominante ? » sur une tonique n'a pas de sens. Ces
+accords sont écartés des cibles.
+
+⚠ **Le chiffrage n'est jamais affiché avant la réponse** — il donnerait le degré, la basse ET la
+septième, c'est-à-dire les trois questions à la fois. Seule la position est montrée ; le chiffrage
+apparaît au feedback. Même règle que le « ▶ A après la réponse » de la détection.
+
 ## Suite
 
-Chiffrage en flux · exercice à trous · poids des matrices à régler au banc (c'est ce qui débloque
-`active: true` sur le Hub) · niveau 8 · un écran d'historique consommant les `flags` de Firestore,
-que le glyphe rend désormais possible.
+Chiffrage en flux (niveaux 6-8, la tâche `identification` — la seule qui exige une saisie complète
+degré + renversement + septième) · exercice à trous · poids des matrices à régler au banc (c'est ce
+qui débloque `active: true` sur le Hub) · niveau 8 · écran d'historique consommant les `flags`.
+
+**Couverture du barème** : 0 (aucune activité — `qualite_binaire`, majeur ou mineur) · 1 dictée ·
+2 binaire · 3 détection · 4-5 binaire + détection · 6-7 détection (mais leur tâche déclarée est
+`identification`, que seul le chiffrage en flux servira) · 8 non générable.
