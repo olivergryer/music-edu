@@ -271,6 +271,7 @@ La détection démarrait au niveau 3 : **les niveaux 0 à 2 n'avaient aucune por
 | `/harmonie/basse` | dictée de basse | niveau 1 |
 | `/harmonie/binaire` | choix binaire | niveaux 2, 4, 5 |
 | `/harmonie/detection` | détection d'erreur | niveaux 3-7 |
+| `/harmonie/flux` | chiffrage en flux | niveaux 6-7 |
 | `/harmonie/intervalles` | reconnaissance d'intervalles | **hors barème** |
 
 Chaque activité est une **page à part entière**, avec sa route et son en-tête — pas un composant
@@ -410,12 +411,44 @@ par `apps/web/scripts/generer-chiffrages.ts`, qui lit `chiffrage.ts`, `gabarits.
 `contraintes.ts`. Ne jamais l'éditer à la main : c'est un document que des élèves auront en main, et
 une fiche retapée diverge en silence. Rendu par Chrome headless — **aucune dépendance npm ajoutée**.
 
+## Chiffrage en flux — `flux.ts` (2026-08-02)
+
+La tâche `identification` des niveaux 6-8. **La seule activité qui remplit les quatre canaux** :
+partout ailleurs la réponse est un choix (quel accord est faux, dominante ou sous-dominante), donc
+`vecteurErreur` n'a rien à mesurer. Ici l'élève produit un chiffrage complet face à un chiffrage
+attendu, et les sept diagnostics de `metrique.ts` prennent enfin leur sens.
+
+C'est aussi la seule activité qui exploite **`indiceDeDeduction`**, écrit depuis le premier jour et
+jamais appelé : sur les seules fautes, à quel point l'élève a répondu l'enchaînement le plus attendu
+plutôt que ce qui a sonné. Élevé = il devine par le style au lieu d'écouter.
+
+⚠ Calculé **par item** (`indiceDeductionSession`) et non sur la session mise bout à bout :
+`indiceDeDeduction` conditionne chaque réponse sur l'accord précédent, et le précédent du premier
+chiffrage d'une suite appartiendrait à la suite d'avant.
+
+**Saisie en deux gestes** (décidé avec Matthieu) : roue figée pour le degré, puis bande d'états.
+La bande est bornée par le niveau **et par le degré choisi** — au niveau 6 la septième n'est offerte
+que sur V et II (`septiemeSur`). Un test garantit que **tout accord attendu est saisissable**, sans
+quoi l'élève verrait un accord qu'il ne peut pas nommer.
+
+**« En flux » désigne le flux de la MUSIQUE, pas un chronomètre** : la suite s'écoute d'un bloc,
+autant de fois qu'on veut. Une contrainte de vitesse mesurerait la dextérité de saisie plutôt que
+l'oreille.
+
+⚠ **Niveau 7 sans contexte tonal** (`contexteTonal: false`) : la tonique ne sonne pas, l'élève doit
+l'établir lui-même. Ne pas « corriger » en la jouant quand même — c'est la difficulté du niveau.
+
+⚠ **Niveau 8 hors jeu** : `NIVEAU_MAX_FLUX = min(8, NIVEAU_MAX_IMPLEMENTE)`, donc 7 aujourd'hui. La
+borne suivra d'elle-même le jour où les degrés secondaires atterriront.
+
+Le score compte les **accords** exacts, pas les suites parfaites : à 4-6 accords par suite, le taux
+de suites entièrement justes serait trop grossier pour progresser.
+
 ## Suite
 
-Chiffrage en flux (niveaux 6-8, la tâche `identification` — la seule qui exige une saisie complète
-degré + renversement + septième) · exercice à trous · poids des matrices à régler au banc (c'est ce
-qui débloque `active: true` sur le Hub) · niveau 8 · écran d'historique consommant les `flags`.
+Exercice à trous · **niveau 0** (`qualite_binaire`, majeur ou mineur — le dernier trou du barème) ·
+poids des matrices à régler au banc (c'est ce qui débloque `active: true` sur le Hub) · niveau 8
+(degrés secondaires) · écran d'historique consommant les `flags`.
 
-**Couverture du barème** : 0 (aucune activité — `qualite_binaire`, majeur ou mineur) · 1 dictée ·
-2 binaire · 3 détection · 4-5 binaire + détection · 6-7 détection (mais leur tâche déclarée est
-`identification`, que seul le chiffrage en flux servira) · 8 non générable.
+**Couverture du barème** : 0 aucune activité · 1 dictée · 2 binaire · 3 détection · 4-5 binaire +
+détection · 6-7 **flux** + détection · 8 non générable.

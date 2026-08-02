@@ -14,6 +14,7 @@ import { ThemeToggleInline } from '../../ThemeContext'
 import { NIVEAUX_BINAIRE } from './binaire.ts'
 import { NIVEAU_MAX_DETECTION, NIVEAU_MIN_DETECTION } from './detection.ts'
 import { NIVEAU_DICTEE } from './dictee.ts'
+import { NIVEAU_MAX_FLUX, NIVEAU_MIN_FLUX } from './flux.ts'
 
 const ACCENT = '#c084fc'
 
@@ -48,6 +49,14 @@ const ACTIVITES: Activite[] = [
     sousTitre:
       'Lis une suite d’accords, écoute-la, et repère celui qui ne correspond pas à ce qui est écrit.',
     niveau: `Niveaux ${NIVEAU_MIN_DETECTION} à ${NIVEAU_MAX_DETECTION}`,
+    disponible: true,
+  },
+  {
+    route: '/harmonie/flux',
+    titre: 'Chiffrage en flux',
+    sousTitre:
+      'Nomme le degré et l’état de chaque accord de la suite. C’est l’aboutissement du module — et la seule activité qui mesure les quatre canaux de l’erreur.',
+    niveau: `Niveaux ${NIVEAU_MIN_FLUX} à ${NIVEAU_MAX_FLUX}`,
     disponible: true,
   },
   {

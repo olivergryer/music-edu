@@ -21,6 +21,7 @@ Firebase Spark : Firestore + Authentication (email/password). **DB partagée dev
 | `/harmonie/detection` | `modules/harmonie/DetectionPage.tsx` — détection d'erreur, niveaux 3-7 | public |
 | `/harmonie/basse` | `modules/harmonie/DicteeBassePage.tsx` — dictée de basse à la roue figée, niveau 1 | public |
 | `/harmonie/binaire` | `modules/harmonie/ChoixBinairePage.tsx` — choix binaire, niveaux 2, 4, 5 | public |
+| `/harmonie/flux` | `modules/harmonie/ChiffrageFluxPage.tsx` — chiffrage en flux, niveaux 6-7 | public |
 | `/harmonie/intervalles` | `modules/harmonie/IntervallesPage.tsx` — reconnaissance d'intervalles, hors barème | public |
 | `/harmonie/banc` | `modules/harmonie/BancPage.tsx` — banc d'écoute, `IS_DEV` seulement | dev |
 | `/profil` | `ProfilPage.jsx` → redirect dashboard selon rôle | protégée |
