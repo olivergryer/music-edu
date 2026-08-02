@@ -9,9 +9,17 @@
 //
 // Toute la géométrie vient de `glyphe.ts` ; ici il n'y a que du tracé.
 
-import { ORDRE_TIERCES } from './geometrie.ts'
+import { ORDRE_TIERCES, franchitArc } from './geometrie.ts'
 import { romainChiffre } from './chiffrage.ts'
-import { geometrieGlyphe, lireDrapeaux, pointCercle, type TeinteGlyphe } from './glyphe.ts'
+import {
+  RETRAIT_TRAINE,
+  arcEntreDegres,
+  geometrieGlyphe,
+  intensiteTrace,
+  lireDrapeaux,
+  pointCercle,
+  type TeinteGlyphe,
+} from './glyphe.ts'
 import { type DrapeauxDetection } from './detection.ts'
 import { type Accord, type Degre, type Mode, type Renversement } from './types.ts'
 
@@ -27,20 +35,47 @@ const SUR_TEINTE = '#0d1026' // texte posé sur un aplat de teinte
 
 const CENTRE = 100
 const RAYON = 66
+const RAYON_TRAINE = RAYON - RETRAIT_TRAINE
 const MARQUEUR_R = 15
 const ANNEAU_R = 19
+const POINT_TRAINE_R = 5
+
+/**
+ * Trois états, et un seul cercle pour les trois :
+ *
+ *   `statique` — après la réponse, avant toute réécoute : l'écart du seul accord
+ *                fautif, plus la trajectoire de A en fantôme.
+ *   `lecture`  — une version se joue : sa traîne avance, accord par accord.
+ *   `figee`    — la lecture est finie : tout le parcours reste affiché.
+ */
+export type EtatTrace =
+  | { phase: 'statique' }
+  | { phase: 'lecture'; index: number }
+  | { phase: 'figee' }
+
+export type VersionJouee = 'ecrit' | 'entendu'
 
 export function CercleTierces({
   ecrit,
   entendu,
+  degresEcrits,
+  degresEntendus,
   mode,
   drapeaux,
+  trace = { phase: 'statique' },
+  version = 'entendu',
   taille = 200,
 }: {
   ecrit: Accord
   entendu: Accord
+  /** Trajectoire complète de A — ce qui est écrit. */
+  degresEcrits: readonly Degre[]
+  /** Trajectoire complète de B — ce qui a sonné. */
+  degresEntendus: readonly Degre[]
   mode: Mode
   drapeaux: DrapeauxDetection
+  trace?: EtatTrace
+  version?: VersionJouee
   taille?: number
 }) {
   const { teinte, pointille } = geometrieGlyphe(drapeaux)
@@ -53,6 +88,14 @@ export function CercleTierces({
   const confondus = ecrit.degre === entendu.degre
   const pEcrit = pointCercle(ecrit.degre, CENTRE, CENTRE, RAYON)
   const pEntendu = pointCercle(entendu.degre, CENTRE, CENTRE, RAYON)
+
+  const animes = version === 'ecrit' ? degresEcrits : degresEntendus
+  // Le fantôme est TOUJOURS l'autre version : c'est la superposition des deux qui
+  // fait voir la divergence à l'instant où elle sonne.
+  const fantome = version === 'ecrit' ? degresEntendus : degresEcrits
+  const enTrace = trace.phase !== 'statique'
+  const jusqua = trace.phase === 'lecture' ? trace.index : animes.length - 1
+  const degreCourant = trace.phase === 'lecture' ? animes[trace.index] : undefined
 
   return (
     <svg
@@ -72,8 +115,14 @@ export function CercleTierces({
         strokeWidth={1}
       />
 
-      {/* La corde : l'écart de degré, tracé avant les marqueurs pour passer dessous. */}
-      {!confondus && (
+      {/* Le fantôme : la trajectoire de l'autre version, en permanence. */}
+      <Trainee degres={fantome} jusqua={fantome.length - 1} fantome />
+
+      {/* La traîne animée, ou le parcours figé une fois la lecture finie. */}
+      {enTrace && <Trainee degres={animes} jusqua={jusqua} fantome={false} figee={trace.phase === 'figee'} />}
+
+      {/* L'écart du seul accord fautif — la vue d'avant réécoute, conservée. */}
+      {!enTrace && !confondus && (
         <line
           x1={pEcrit.x}
           y1={pEcrit.y}
@@ -84,8 +133,7 @@ export function CercleTierces({
           strokeDasharray={pointille ? '4 3' : undefined}
         />
       )}
-
-      {confondus && (
+      {!enTrace && confondus && (
         <circle
           cx={pEcrit.x}
           cy={pEcrit.y}
@@ -98,16 +146,16 @@ export function CercleTierces({
       )}
 
       {ORDRE_TIERCES.map((degre: Degre) => {
-        const p = pointCercle(degre, CENTRE, CENTRE, RAYON)
-        const estEcrit = degre === ecrit.degre
-        const estEntendu = degre === entendu.degre
+        const estCourant = degre === degreCourant
+        const estEcrit = !enTrace && degre === ecrit.degre
+        const estEntendu = !enTrace && degre === entendu.degre
 
         let remplissage = 'none'
         let contour = 'none'
         let couleurTexte = 'var(--text)'
         let opacite = 0.4
 
-        if (estEntendu) {
+        if (estEntendu || estCourant) {
           remplissage = couleur
           couleurTexte = SUR_TEINTE
           opacite = 1
@@ -115,6 +163,9 @@ export function CercleTierces({
           contour = 'var(--text)'
           opacite = 1
         }
+
+        const p = pointCercle(degre, CENTRE, CENTRE, RAYON)
+        const enAvant = estEcrit || estEntendu || estCourant
 
         return (
           <g key={degre} opacity={opacite}>
@@ -131,8 +182,8 @@ export function CercleTierces({
               y={p.y}
               textAnchor="middle"
               dominantBaseline="central"
-              fontSize={estEcrit || estEntendu ? 13 : 11}
-              fontWeight={estEcrit || estEntendu ? 600 : 400}
+              fontSize={enAvant ? 13 : 11}
+              fontWeight={enAvant ? 600 : 400}
               fill={couleurTexte}
             >
               {romainChiffre(degre, mode)}
@@ -142,6 +193,76 @@ export function CercleTierces({
       })}
     </svg>
   )
+}
+
+/**
+ * Le parcours sur la piste intérieure : un point par accord visité, un arc par
+ * déplacement. L'ancienneté commande l'opacité — `PERSISTANCE_ACCORDS` accords
+ * restent visibles, le plus ancien s'effaçant.
+ *
+ * Chaque arc est teinté selon qu'il FRANCHIT UN ARC FONCTIONNEL ou non : la
+ * traînée devient alors une lecture de la syntaxe, avec la même convention de
+ * couleur que le glyphe statique.
+ */
+function Trainee({
+  degres,
+  jusqua,
+  fantome,
+  figee = false,
+}: {
+  degres: readonly Degre[]
+  jusqua: number
+  fantome: boolean
+  figee?: boolean
+}) {
+  if (jusqua < 0) return null
+
+  const elements: React.ReactNode[] = []
+
+  for (let i = 0; i <= jusqua && i < degres.length; i++) {
+    // Figé ou fantôme : tout le parcours à intensité constante. En lecture :
+    // l'ancienneté décide.
+    const intensite = figee || fantome ? 1 : intensiteTrace(jusqua - i)
+    if (intensite === 0) continue
+
+    const depuis = i > 0 ? degres[i - 1] : undefined
+    const teinte: TeinteGlyphe =
+      depuis !== undefined && franchitArc(depuis, degres[i]) ? 'arc' : 'interne'
+    const couleur = fantome ? 'var(--text)' : TEINTES[teinte]
+    const opacite = fantome ? 0.22 : intensite
+
+    if (depuis !== undefined) {
+      const chemin = arcEntreDegres(depuis, degres[i], CENTRE, CENTRE, RAYON_TRAINE)
+      if (chemin) {
+        elements.push(
+          <path
+            key={`a${i}`}
+            d={chemin}
+            fill="none"
+            stroke={couleur}
+            strokeWidth={fantome ? 1.5 : 3}
+            strokeLinecap="round"
+            strokeDasharray={fantome ? '3 4' : undefined}
+            opacity={opacite}
+          />,
+        )
+      }
+    }
+
+    const p = pointCercle(degres[i], CENTRE, CENTRE, RAYON_TRAINE)
+    elements.push(
+      <circle
+        key={`p${i}`}
+        cx={p.x}
+        cy={p.y}
+        r={fantome ? 3 : POINT_TRAINE_R}
+        fill={couleur}
+        opacity={opacite}
+      />,
+    )
+  }
+
+  return <g>{elements}</g>
 }
 
 // ─── L'empilement — renversement et septième en une seule figure ─────────────

@@ -221,6 +221,34 @@ L'écart réel sur le cercle vaut 360/7 ≈ 51,4° par pas : à trois pas la col
 ajoutée ») et sert **deux fois** : sous le cercle, et comme `aria-label` des SVG. Un glyphe abstrait
 sans équivalent textuel est inaccessible — ce n'est pas un supplément.
 
+### Trajectoire animée sur le cercle — correction seulement (2026-08-02)
+
+Pendant la réécoute, le cercle ne montre plus seulement l'écart d'un accord : il montre le
+**parcours** de la progression, synchronisé au son via `onAccord` (déjà exposé par `jouerSuite`).
+
+- **A reste en fantôme permanent** — pointillés pâles, opacité .22. La version qu'on joue s'anime
+  par-dessus. Les deux traits sont confondus jusqu'à l'accord fautif, où ils divergent **à l'instant
+  où la faute sonne**. C'est là que le module tient sa promesse : voir l'écart, pas se le rappeler.
+- **Persistance de 3 accords** (`PERSISTANCE_ACCORDS`), intensité décroissante via `intensiteTrace`.
+- **Traîne sur les arcs** : `arcEntreDegres` suit le cercle **dans le sens du déplacement le plus
+  court** (`distanceAngulaireSignee`) au lieu de le traverser en corde — le trait parcourt donc
+  réellement le cercle des tierces. L'écart maximal valant 3 pas ≈ 154°, le grand arc SVG est
+  toujours à 0 (test dédié).
+- **Teinte saut par saut** : `franchitArc` → rouge si le déplacement change de fonction, violet
+  sinon. Même convention que le glyphe statique, rien de nouveau à apprendre.
+- **Piste intérieure** (`RETRAIT_TRAINE`) : l'anneau extérieur est la carte des sept degrés, la
+  piste intérieure le chemin parcouru. Sans ce retrait la traîne passerait sous les étiquettes.
+- **Fin de lecture** : `{ phase: 'figee' }` — la persistance cède et tout le parcours reste affiché.
+  Seul état où l'écart complet se lit sans réécouter.
+
+⚠ **APRÈS LA RÉPONSE UNIQUEMENT** (`anime = repondu !== null`). Animer la trajectoire de B pendant
+que l'élève cherche encore lui donnerait les degrés entendus un par un, donc la réponse. C'est la
+même règle que « ▶ A n'existe qu'après la réponse ».
+
+⚠ **Décalage du contexte tonal** : quand `spec.contexteTonal`, la tonique sonne EN TÊTE de la suite,
+donc l'index d'`onAccord` est décalé d'un cran (`decalageContexte`). L'index −1 pendant la tonique
+ne trace rien, volontairement.
+
 ### Le bilan dessine depuis `flags`, jamais depuis `ItemDetection`
 
 `ReponseDetection` porte un champ `flags` — exactement les bits persistés. Le bilan les **décode**.

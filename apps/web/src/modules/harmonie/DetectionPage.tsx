@@ -38,7 +38,14 @@ import {
   type ReponseDetection,
 } from './detection.ts'
 import { lireDrapeaux } from './glyphe.ts'
-import { CercleTierces, EcartEmpilement, GlypheColonne, LegendeColonne } from './Glyphes.tsx'
+import {
+  CercleTierces,
+  EcartEmpilement,
+  GlypheColonne,
+  LegendeColonne,
+  type EtatTrace,
+  type VersionJouee,
+} from './Glyphes.tsx'
 import { creerAccord, type Accord, type Mode, type Progression } from './types.ts'
 
 const ACCENT = '#c084fc'
@@ -73,6 +80,10 @@ export default function DetectionPage() {
   const [repondu, setRepondu] = useState<number | null>(null)
   const [enLecture, setEnLecture] = useState(false)
   const [erreur, setErreur] = useState<string | null>(null)
+
+  // Trajectoire sur le cercle des tierces — correction seulement.
+  const [trace, setTrace] = useState<EtatTrace>({ phase: 'statique' })
+  const [versionJouee, setVersionJouee] = useState<VersionJouee>('entendu')
 
   const reponsesRef = useRef<ReponseDetection[]>([])
   const grainesRef = useRef(1)
@@ -127,30 +138,52 @@ export default function DetectionPage() {
     [spec.contexteTonal, progressionEcrite],
   )
 
-  const jouer = useCallback(async (accords: number[][]) => {
-    if (finLectureRef.current) clearTimeout(finLectureRef.current)
-    setEnLecture(true)
-    try {
-      const duree = await jouerSuite(accords, { bpm: BPM })
-      finLectureRef.current = setTimeout(() => {
-        setEnLecture(false)
-        // Le chrono de réponse part à la FIN de la première écoute : c'est là que
-        // la décision commence, pas à l'affichage de l'item.
-        if (debutMsRef.current === null) debutMsRef.current = performance.now()
-      }, duree + 150)
-    } catch (e) {
-      setErreur(`Lecture impossible : ${String(e)}`)
-      setEnLecture(false)
-    }
-  }, [])
+  // Le contexte tonal sonne EN TÊTE de la suite : l'index que renvoie `onAccord`
+  // est alors décalé d'un cran par rapport à la progression.
+  const decalageContexte = spec.contexteTonal ? 1 : 0
 
+  const jouer = useCallback(
+    async (accords: number[][], quelle: VersionJouee, decalage: number, anime: boolean) => {
+      if (finLectureRef.current) clearTimeout(finLectureRef.current)
+      setEnLecture(true)
+      if (anime) {
+        setVersionJouee(quelle)
+        setTrace({ phase: 'lecture', index: -1 })
+      }
+      try {
+        const duree = await jouerSuite(accords, {
+          bpm: BPM,
+          onAccord: anime
+            ? (i: number) => setTrace({ phase: 'lecture', index: i - decalage })
+            : undefined,
+        })
+        finLectureRef.current = setTimeout(() => {
+          setEnLecture(false)
+          // À la dernière note, la persistance cède : tout le parcours reste
+          // affiché, seul état où l'écart complet se lit sans réécouter.
+          if (anime) setTrace({ phase: 'figee' })
+          // Le chrono de réponse part à la FIN de la première écoute : c'est là que
+          // la décision commence, pas à l'affichage de l'item.
+          if (debutMsRef.current === null) debutMsRef.current = performance.now()
+        }, duree + 150)
+      } catch (e) {
+        setErreur(`Lecture impossible : ${String(e)}`)
+        setEnLecture(false)
+      }
+    },
+    [],
+  )
+
+  // ⚠ `anime` vaut `repondu !== null` : AVANT la réponse, la trajectoire reste
+  // muette. L'animer donnerait les degrés entendus un par un, donc la réponse —
+  // même règle que « ▶ A n'existe qu'après la réponse ».
   const ecouterEntendu = useCallback(() => {
-    void jouer(avecContexte(realisationEntendue))
-  }, [jouer, avecContexte, realisationEntendue])
+    void jouer(avecContexte(realisationEntendue), 'entendu', decalageContexte, repondu !== null)
+  }, [jouer, avecContexte, realisationEntendue, decalageContexte, repondu])
 
   const ecouterEcrit = useCallback(() => {
-    void jouer(avecContexte(realisationEcrite))
-  }, [jouer, avecContexte, realisationEcrite])
+    void jouer(avecContexte(realisationEcrite), 'ecrit', decalageContexte, repondu !== null)
+  }, [jouer, avecContexte, realisationEcrite, decalageContexte, repondu])
 
   // ── Démarrage ──────────────────────────────────────────────────────────────
   async function commencer() {
@@ -164,6 +197,7 @@ export default function DetectionPage() {
       setItems(session)
       setRang(0)
       setRepondu(null)
+      setTrace({ phase: 'statique' })
       debutMsRef.current = null
       affichageMsRef.current = performance.now()
       mp.startSession({ mode, niveau, graine })
@@ -212,6 +246,7 @@ export default function DetectionPage() {
     }
     setRang(rang + 1)
     setRepondu(null)
+    setTrace({ phase: 'statique' })
     debutMsRef.current = null
     affichageMsRef.current = performance.now()
   }
@@ -341,6 +376,8 @@ export default function DetectionPage() {
           total={items.length}
           repondu={repondu}
           enLecture={enLecture}
+          trace={trace}
+          versionJouee={versionJouee}
           onEcouterEntendu={ecouterEntendu}
           onEcouterEcrit={ecouterEcrit}
           onRepondre={repondre}
@@ -438,6 +475,8 @@ function EcranJeu({
   total,
   repondu,
   enLecture,
+  trace,
+  versionJouee,
   onEcouterEntendu,
   onEcouterEcrit,
   onRepondre,
@@ -449,6 +488,8 @@ function EcranJeu({
   total: number
   repondu: number | null
   enLecture: boolean
+  trace: EtatTrace
+  versionJouee: VersionJouee
   onEcouterEntendu: () => void
   onEcouterEcrit: () => void
   onRepondre: (i: number) => void
@@ -601,8 +642,12 @@ function EcranJeu({
             <CercleTierces
               ecrit={item.perturbation.original}
               entendu={item.perturbation.substitut}
+              degresEcrits={item.progression.accords.map((a: Accord) => a.degre)}
+              degresEntendus={item.accordsEntendus.map((a: Accord) => a.degre)}
               mode={mode}
               drapeaux={drapeaux}
+              trace={trace}
+              version={versionJouee}
               taille={196}
             />
             <div style={{ marginTop: 8 }}>

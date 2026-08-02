@@ -5,8 +5,11 @@ import {
   HAUTEUR_BASE,
   PAS_ANGULAIRE_DEG,
   PAS_HAUTEUR,
+  PERSISTANCE_ACCORDS,
   angleCercleDeg,
+  arcEntreDegres,
   geometrieGlyphe,
+  intensiteTrace,
   lireDrapeaux,
   pointCercle,
 } from './glyphe.ts'
@@ -125,6 +128,52 @@ test('les sept positions sont sur le cercle et distinctes', () => {
     vus.add(`${p.x.toFixed(4)},${p.y.toFixed(4)}`)
   }
   assert.equal(vus.size, ORDRE_TIERCES.length)
+})
+
+// ─── Trajectoire animée ──────────────────────────────────────────────────────
+
+test('l’intensité décroît avec l’ancienneté puis s’annule hors persistance', () => {
+  assert.equal(intensiteTrace(0), 1)
+
+  for (let age = 1; age < PERSISTANCE_ACCORDS; age++) {
+    assert.ok(
+      intensiteTrace(age) < intensiteTrace(age - 1),
+      `l’âge ${age} doit être plus pâle que ${age - 1}`,
+    )
+    assert.ok(intensiteTrace(age) > 0, `l’âge ${age} est dans la persistance`)
+  }
+
+  // Au-delà, plus rien : c'est ce qui fait la traîne plutôt qu'un tracé complet.
+  assert.equal(intensiteTrace(PERSISTANCE_ACCORDS), 0)
+  assert.equal(intensiteTrace(PERSISTANCE_ACCORDS + 5), 0)
+  assert.equal(intensiteTrace(-1), 0)
+})
+
+test('la traîne suit le cercle dans le sens du déplacement le plus court', () => {
+  // I → III : un pas en avant dans ORDRE_TIERCES ⟹ sens horaire (sweep 1).
+  assert.match(arcEntreDegres(1, 3, 100, 100, 44) ?? '', / 0 1 /)
+  // III → I : le retour, sens inverse.
+  assert.match(arcEntreDegres(3, 1, 100, 100, 44) ?? '', / 0 0 /)
+
+  // Aucun déplacement possible sur un degré répété — et le cas se présente.
+  assert.equal(arcEntreDegres(5, 5, 100, 100, 44), null)
+})
+
+test('la traîne n’emprunte jamais le grand arc', () => {
+  for (const a of ORDRE_TIERCES) {
+    for (const b of ORDRE_TIERCES) {
+      const chemin = arcEntreDegres(a, b, 100, 100, 44)
+      if (chemin === null) {
+        assert.equal(a, b)
+        continue
+      }
+      // L'écart maximal vaut 3 pas ≈ 154°, toujours sous 180° : le drapeau
+      // « grand arc » doit rester à 0, sinon le trait ferait le tour du cercle.
+      const drapeaux = chemin.match(/A [\d.]+ [\d.]+ 0 (\d) (\d)/)
+      assert.ok(drapeaux, `chemin illisible : ${chemin}`)
+      assert.equal(drapeaux[1], '0', `grand arc entre ${a} et ${b}`)
+    }
+  }
 })
 
 // ─── Lecture en français ─────────────────────────────────────────────────────

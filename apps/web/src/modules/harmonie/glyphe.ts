@@ -18,7 +18,7 @@
 // « exact ». D'où `pointille` + la teinte `hors-tonalite` : sans elles, la seule
 // perturbation qui sorte de la tonalité serait aussi la seule à ne rien montrer.
 
-import { ORDRE_TIERCES } from './geometrie.ts'
+import { ORDRE_TIERCES, distanceAngulaireSignee } from './geometrie.ts'
 import { type DrapeauxDetection } from './detection.ts'
 import { type Degre } from './types.ts'
 
@@ -95,6 +95,59 @@ export function pointCercle(
 ): { x: number; y: number } {
   const rad = (angleCercleDeg(degre) * Math.PI) / 180
   return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) }
+}
+
+// ─── Trajectoire animée (correction seulement) ───────────────────────────────
+//
+// Pendant la réécoute, chaque accord marque sa position sur le cercle, les trois
+// derniers restent visibles en s'estompant, et une traîne relie chaque degré au
+// suivant. On lit alors le PARCOURS de la progression, pas seulement l'écart d'un
+// accord.
+//
+// ⚠ APRÈS LA RÉPONSE UNIQUEMENT. Animer la trajectoire de B pendant que l'élève
+// cherche encore lui donnerait les degrés entendus un par un, donc la réponse —
+// c'est la même règle que le « ▶ A n'existe qu'après la réponse » de l'activité.
+
+export const PERSISTANCE_ACCORDS = 3
+
+// La traîne court sur une piste INTÉRIEURE, dégagée des étiquettes de degrés.
+// Lecture qui en découle : l'anneau extérieur est la carte des sept degrés, la
+// piste intérieure est le chemin réellement parcouru.
+export const RETRAIT_TRAINE = 22
+
+/**
+ * Intensité d'un marquage selon son ancienneté — 0 = l'accord qui sonne.
+ * Décroît linéairement puis s'annule au-delà de la persistance.
+ */
+export function intensiteTrace(age: number, persistance: number = PERSISTANCE_ACCORDS): number {
+  if (age < 0 || age >= persistance) return 0
+  return 1 - age / persistance
+}
+
+/**
+ * Chemin SVG de la traîne entre deux degrés. Elle suit le cercle **dans le sens
+ * du déplacement le plus court** (`distanceAngulaireSignee`) : le trait parcourt
+ * donc réellement le cercle des tierces, au lieu de le traverser en corde.
+ *
+ * `null` si les deux degrés sont confondus — il n'y a alors aucun déplacement.
+ */
+export function arcEntreDegres(
+  a: Degre,
+  b: Degre,
+  cx: number,
+  cy: number,
+  r: number,
+): string | null {
+  if (a === b) return null
+
+  const p1 = pointCercle(a, cx, cy, r)
+  const p2 = pointCercle(b, cx, cy, r)
+
+  // L'écart maximal vaut 3 pas, soit ≈154° : toujours sous 180°, donc jamais de
+  // grand arc. Le sens du balayage suit le signe du déplacement — les angles
+  // croissent dans le sens horaire à l'écran (y vers le bas).
+  const sweep = distanceAngulaireSignee(a, b) > 0 ? 1 : 0
+  return `M ${p1.x} ${p1.y} A ${r} ${r} 0 0 ${sweep} ${p2.x} ${p2.y}`
 }
 
 // ─── Lecture en français ─────────────────────────────────────────────────────
