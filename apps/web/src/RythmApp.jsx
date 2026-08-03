@@ -1642,7 +1642,11 @@ export default function RythmApp() {
       const s = playable.map((p, i) => {
         const expected = p.tsBeats * beatMs;
         if (i >= userTaps.length) return { label: "Manqué ✕", pts: 0, grade: "miss", dev: null };
-        return scoreTap(userTaps[i], expected, beatMs);
+        // Même plancher de bruit que les motifs longs : une frappe sous la dead-zone compte
+        // Parfait (grade sur le dev dead-zoné ; dev brut conservé pour l'affichage).
+        const dev = userTaps[i] - expected;
+        const devGraded = scoringDeadzone(dev, RYTHM_SCORING_PARAMS.inputNoiseFloorMs);
+        return { ...scoreTap(devGraded, 0, beatMs), dev };
       });
       setScores(s);
       const totalNotePts = s.reduce((acc, x) => acc + x.pts, 0);

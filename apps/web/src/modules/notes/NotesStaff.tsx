@@ -26,7 +26,9 @@ const HEAD_RX = 7.2
 const HEAD_RY = 4.7
 
 function palette(dark: boolean) {
-  return { stave: dark ? '#9CA3AF' : '#6B7280', head: dark ? '#F4F5F7' : '#0D1026' }
+  // Portée + lignes supplémentaires : plus clair en dark pour un contraste net sur
+  // le fond très sombre (#030712), sinon les lignes supplémentaires disparaissent.
+  return { stave: dark ? '#C2C9D6' : '#6B7280', head: dark ? '#F4F5F7' : '#0D1026' }
 }
 
 const SVGNS = 'http://www.w3.org/2000/svg'
@@ -103,11 +105,12 @@ export default function NotesStaff({
       if (!svg) return
       svg.style.background = 'transparent'
 
-      // Portée + hampes au thème.
-      svg.querySelectorAll('path').forEach(p => {
+      // Portée + hampes + LIGNES SUPPLÉMENTAIRES au thème (path/line/rect : VexFlow
+      // peut dessiner les lignes supplémentaires hors <path>).
+      svg.querySelectorAll('path, line, rect').forEach(p => {
         const s = p.getAttribute('stroke') ?? '', f = p.getAttribute('fill') ?? ''
         if (!s || s === '#000000' || s === 'black') p.setAttribute('stroke', C.stave)
-        if (!f || f === '#000000' || f === 'black') p.setAttribute('fill', C.stave)
+        if (f === '#000000' || f === 'black') p.setAttribute('fill', C.stave)
       })
       svg.querySelectorAll('text').forEach(t => t.setAttribute('fill', C.stave))
 

@@ -18,18 +18,22 @@ const ConsigneOverlay = ConsigneOverlayRaw as unknown as React.ComponentType<Rec
 
 import NotesStaff, { type CellResult } from './NotesStaff.tsx'
 import RadialWheel, { NOTE_LABELS } from './RadialWheel.tsx'
-import { READING_PROFILES } from './profiles.ts'
-import { beginnerInstruments, getInstrument } from './instruments.ts'
+import { profileForClef, CLEF_LABELS, type ReadingProfile } from './profiles.ts'
+import { beginnerInstruments, getInstrument, instrumentClefs } from './instruments.ts'
 import { buildPool, resolveAmbitusStep } from './pool.ts'
 import { selectNextItem, generateLine, DEFAULT_LINE_WEIGHTS } from './selection.ts'
 import { classifyAttempt, updateMastery } from './mastery.ts'
 import { computeSessionSummary } from './summary.ts'
 import { flagsToBitmask } from './encode.ts'
-import { noteNameOf, degreeOfName } from './diatonic.ts'
+import { noteNameOf, degreeOfName, octaveOf } from './diatonic.ts'
 import { mulberry32, type Rng } from './rng.ts'
 import {
+  aggregatePerNote, mergePerNote, mergeContext, contextKey, noteMasteryLevel,
+  type PerNoteMap, type PerContextMap, type MasteryLevel,
+} from './progressStats.ts'
+import {
   DEFAULT_CONFIG,
-  type Attempt, type Mastery, type NoteItem, type NoteName,
+  type Attempt, type Clef, type Mastery, type NoteItem, type NoteName,
   type NotesSessionConfig, type NotesSummary, type Phase,
 } from './types.ts'
 
@@ -51,6 +55,42 @@ const PHASE_DESC: Record<Phase, string> = {
   P2: 'Lignes de 8 au curseur, débit mesuré, noms masqués.',
 }
 
+// Étape d'ambitus jouée selon la phase (identique à start()).
+function ambitusStepFor(profile: ReadingProfile, phase: Phase): number {
+  const last = profile.ambitusSequence.length - 1
+  return phase === 'P0' ? 0 : phase === 'P1' ? Math.min(1, last) : last
+}
+
+const MASTERY_COLOR: Record<MasteryLevel, string> = {
+  strong: '#34d399', mid: '#fbbf24', weak: '#f87171', unknown: 'var(--surface-2)',
+}
+
+function noteChipLabel(idx: number): string {
+  return `${NOTE_LABELS[noteNameOf(idx)]}${octaveOf(idx)}`
+}
+
+// Heatmap des notes : une puce par note, colorée par niveau de maîtrise cumulé.
+function NoteHeatmap({ items, perNote }: { items: NoteItem[]; perNote: PerNoteMap }) {
+  if (!items.length) return null
+  return (
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+      {items.map(it => {
+        const lvl = noteMasteryLevel(perNote[it.id])
+        const solid = lvl !== 'unknown'
+        const c = MASTERY_COLOR[lvl]
+        return (
+          <span key={it.id} style={{
+            fontSize: 12, fontWeight: 700, padding: '4px 8px', borderRadius: 8,
+            background: solid ? c : 'var(--surface-2)',
+            color: solid ? '#0a0f1a' : 'var(--text-muted)',
+            border: `1px solid ${solid ? c : 'var(--border-c)'}`,
+          }}>{noteChipLabel(it.diatonicIndex)}</span>
+        )
+      })}
+    </div>
+  )
+}
+
 export default function NotesPage() {
   const navigate = useNavigate()
   const { addSession } = useProgressFirebase()
@@ -68,14 +108,30 @@ export default function NotesPage() {
     const v = LS.get('notes_phase', 'P0')
     return (['P0', 'P1', 'P2'] as string[]).includes(v) ? (v as Phase) : 'P0'
   })
+  const [clef, setClef] = useState<Clef>(() => {
+    const inst = getInstrument(LS.get('notes_instrument', '')) ?? beginnerInstruments()[0]
+    const clefs = instrumentClefs(inst)
+    const v = LS.get('notes_clef', '') as Clef
+    return clefs.includes(v) ? v : clefs[0]
+  })
   const [coloriser, setColoriser] = useState(() => LS.get('notes_couleur', '0') === '1')
   const [sonOn, setSonOn] = useState(() => LS.get('notes_son', '1') === '1')
   const [hoverName, setHoverName] = useState<NoteName | null>(null)
 
   useEffect(() => { LS.set('notes_instrument', instrumentId) }, [instrumentId])
   useEffect(() => { LS.set('notes_phase', phase) }, [phase])
+  useEffect(() => { LS.set('notes_clef', clef) }, [clef])
   useEffect(() => { LS.set('notes_couleur', coloriser ? '1' : '0') }, [coloriser])
   useEffect(() => { LS.set('notes_son', sonOn ? '1' : '0') }, [sonOn])
+
+  // Réaligne la clef quand l'instrument change (si la clef courante n'est plus dispo).
+  useEffect(() => {
+    const inst = getInstrument(instrumentId)
+    if (!inst) return
+    const clefs = instrumentClefs(inst)
+    if (!clefs.includes(clef)) setClef(clefs[0])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [instrumentId])
 
   // État de jeu
   const [sequence, setSequence] = useState<NoteItem[]>([])
@@ -85,6 +141,7 @@ export default function NotesPage() {
   const [itemsDone, setItemsDone] = useState(0)
   const [elapsedS, setElapsedS] = useState(0)
   const [summary, setSummary] = useState<NotesSummary | null>(null)
+  const [summaryData, setSummaryData] = useState<{ perNote: PerNoteMap; items: NoteItem[] } | null>(null)
 
   // Refs (hors cycle de rendu) — source de vérité de la boucle, robuste aux réponses rapides.
   const configRef = useRef<NotesSessionConfig | null>(null)
@@ -138,7 +195,7 @@ export default function NotesPage() {
   // ── Démarrage d'une session ────────────────────────────────────────────────────
   function start() {
     const inst = getInstrument(instrumentId)!
-    const profile = READING_PROFILES[inst.primaryProfile]
+    const profile = profileForClef(inst.primaryProfile, clef) // clef sélectionnée
     const lastStep = profile.ambitusSequence.length - 1
     const step = phase === 'P0' ? 0 : phase === 'P1' ? Math.min(1, lastStep) : lastStep
     const pool = buildPool(profile, phase, step)
@@ -257,7 +314,8 @@ export default function NotesPage() {
 
   // ── Fin de session : EXACTEMENT 2 écritures Firestore + XP globale ──────────────
   async function endSession(config: NotesSessionConfig) {
-    const s = computeSessionSummary(attemptsRef.current)
+    const attempts = attemptsRef.current
+    const s = computeSessionSummary(attempts)
     const durationMs = Math.round(performance.now() - startMsRef.current)
     const t = mp.progress.totals
     const persistSummary = {
@@ -265,13 +323,27 @@ export default function NotesPage() {
       itemCount: s.itemCount, accuracy: s.accuracy, medianRtMs: s.medianRtMs,
       debitNotesMin: s.debitNotesMin, cvIntervalles: s.cvIntervalles, // §13.8 : persisté
     }
+
+    // Progression détaillée (fusion en mémoire → 1 seule écriture) : heatmap par note
+    // + stats par (instrument × clef × phase).
+    const prevPayload = (mp.progress.payload ?? {}) as { perNote?: PerNoteMap; perContext?: PerContextMap }
+    const nonGuess = attempts.filter(a => !a.flags.includes('guess'))
+    const sessCorrect = nonGuess.filter(a => a.correct).length
+    const sessSumRt = nonGuess.reduce((sum, a) => sum + a.rtMs, 0)
+    const perNote = mergePerNote(prevPayload.perNote ?? {}, aggregatePerNote(attempts))
+    const ctxK = contextKey(instrumentId, config.clef, config.phase)
+    const perContext: PerContextMap = {
+      ...(prevPayload.perContext ?? {}),
+      [ctxK]: mergeContext(prevPayload.perContext?.[ctxK], nonGuess.length, sessCorrect, sessSumRt, s.accuracy),
+    }
+
     try {
       await mp.commitSession({
         summary: persistSummary,
         progressPatch: {
           totals: { sessions: t.sessions + 1, items: t.items + s.itemCount, timeMs: t.timeMs + durationMs },
           levels: { [config.phase]: { best: s.accuracy, attempts: (mp.progress.levels[config.phase]?.attempts ?? 0) + 1, lastAt: Date.now() } },
-          payload: { lastPhase: config.phase, coloriser: config.coloriser, etayage: config.etayage },
+          payload: { lastPhase: config.phase, coloriser: config.coloriser, etayage: config.etayage, perNote, perContext },
         },
       })
     } catch (e) { console.warn('Notes commit', e) }
@@ -280,12 +352,18 @@ export default function NotesPage() {
     const xpEarned = Math.max(5, Math.round(s.accuracy * s.itemCount * 3))
     try { await addSession({ module: 'notes', xpEarned, medal }) } catch { /* offline ok */ }
 
+    // Notes travaillées cette session (dédoublonnées) pour la heatmap du bilan.
+    const practiced = new Map<string, NoteItem>()
+    for (const a of attempts) practiced.set(a.itemId, { id: a.itemId, clef: a.clef, diatonicIndex: a.diatonicIndex })
+    setSummaryData({ perNote, items: [...practiced.values()].sort((x, y) => x.diatonicIndex - y.diatonicIndex) })
     setSummary(s)
     setScreen('summary')
   }
 
   // ── Rendu ──────────────────────────────────────────────────────────────────────
   const target = phase === 'P2' ? TARGET_LINES * LINE_LEN : TARGET_ISOLATED
+  const payload = (mp.progress.payload ?? {}) as { perNote?: PerNoteMap; perContext?: PerContextMap }
+  const availableClefs = instrumentClefs(getInstrument(instrumentId) ?? beginnerInstruments()[0])
 
   return (
     <div className="bg-app min-h-dvh flex flex-col" style={{ maxWidth: 540, margin: '0 auto', width: '100%' }}>
@@ -319,9 +397,11 @@ export default function NotesPage() {
       {screen === 'setup' && (
         <SetupScreen
           instrumentId={instrumentId} setInstrumentId={setInstrumentId}
+          clef={clef} setClef={setClef} availableClefs={availableClefs}
           phase={phase} setPhase={setPhase}
           coloriser={coloriser} setColoriser={setColoriser}
           sonOn={sonOn} setSonOn={setSonOn}
+          perNote={payload.perNote ?? {}} perContext={payload.perContext ?? {}}
           onStart={start}
         />
       )}
@@ -368,7 +448,8 @@ export default function NotesPage() {
 
       {screen === 'summary' && summary && (
         <SummaryScreen
-          summary={summary} phase={phase}
+          summary={summary} phase={phase} clef={clef}
+          perNote={summaryData?.perNote ?? {}} items={summaryData?.items ?? []}
           onReplay={() => { setScreen('setup') }}
           onHome={() => navigate('/')}
         />
@@ -378,15 +459,22 @@ export default function NotesPage() {
 }
 
 // ── Écran de configuration ────────────────────────────────────────────────────
-function SetupScreen({ instrumentId, setInstrumentId, phase, setPhase, coloriser, setColoriser, sonOn, setSonOn, onStart }: {
+function SetupScreen({ instrumentId, setInstrumentId, clef, setClef, availableClefs, phase, setPhase, coloriser, setColoriser, sonOn, setSonOn, perNote, perContext, onStart }: {
   instrumentId: string; setInstrumentId: (v: string) => void
+  clef: Clef; setClef: (c: Clef) => void; availableClefs: Clef[]
   phase: Phase; setPhase: (p: Phase) => void
   coloriser: boolean; setColoriser: (v: boolean) => void
   sonOn: boolean; setSonOn: (v: boolean) => void
+  perNote: PerNoteMap; perContext: PerContextMap
   onStart: () => void
 }) {
   const label = "text-xs font-bold text-app-muted uppercase tracking-widest"
   const card: React.CSSProperties = { background: 'var(--surface)', border: '1px solid var(--border-c)', borderRadius: 16, padding: 16 }
+
+  const inst = getInstrument(instrumentId)
+  const profile = inst ? profileForClef(inst.primaryProfile, clef) : null
+  const heatItems = profile ? buildPool(profile, phase, ambitusStepFor(profile, phase)) : []
+
   return (
     <div className="flex flex-col px-4 pb-8" style={{ gap: 14 }}>
       <div style={card}>
@@ -395,6 +483,24 @@ function SetupScreen({ instrumentId, setInstrumentId, phase, setPhase, coloriser
           style={{ width: '100%', minHeight: 44, borderRadius: 10, padding: '0 12px', background: 'var(--surface-2)', color: 'var(--text)', border: '1px solid var(--border-c)' }}>
           {beginnerInstruments().map(i => <option key={i.id} value={i.id}>{i.label}</option>)}
         </select>
+      </div>
+
+      {/* Sélecteur de clef (clefs de l'instrument, ordre pédagogique). */}
+      <div style={card}>
+        <div className={label} style={{ marginBottom: 8 }}>Clef</div>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          {availableClefs.map(c => (
+            <button key={c} onClick={() => setClef(c)}
+              style={{
+                flex: '1 1 auto', minWidth: 64, minHeight: 44, borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: 'pointer',
+                border: `1.5px solid ${clef === c ? '#c084fc' : 'var(--border-c)'}`,
+                background: clef === c ? 'rgba(192,132,252,0.15)' : 'var(--surface-2)',
+                color: clef === c ? '#c084fc' : 'var(--text)',
+              }}>
+              {CLEF_LABELS[c]}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div style={card}>
@@ -417,6 +523,25 @@ function SetupScreen({ instrumentId, setInstrumentId, phase, setPhase, coloriser
       <div style={{ ...card, display: 'flex', gap: 10 }}>
         <ToggleChip on={sonOn} onClick={() => setSonOn(!sonOn)} label="Son de confirmation" />
         <ToggleChip on={coloriser} onClick={() => setColoriser(!coloriser)} label="Couleur des notes" />
+      </div>
+
+      {/* Progression détaillée : par (instrument × clef × phase) + heatmap par note. */}
+      <div style={card}>
+        <div className={label} style={{ marginBottom: 10 }}>Ta progression — {inst?.label} · {CLEF_LABELS[clef]}</div>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+          {(['P0', 'P1', 'P2'] as Phase[]).map(p => {
+            const ctx = perContext[contextKey(instrumentId, clef, p)]
+            return (
+              <div key={p} style={{ flex: 1, textAlign: 'center', background: 'var(--surface-2)', borderRadius: 10, padding: '8px 4px' }}>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 2 }}>{PHASE_LABEL[p]}</div>
+                <div style={{ fontSize: 18, fontWeight: 900, color: 'var(--text)' }}>{ctx ? `${Math.round(ctx.bestAccuracy * 100)}%` : '—'}</div>
+                <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>{ctx ? `${ctx.sessions} session${ctx.sessions > 1 ? 's' : ''}` : ''}</div>
+              </div>
+            )
+          })}
+        </div>
+        <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 6 }}>Notes de la phase {PHASE_LABEL[phase]} (vert = acquis, orange = fragile, rouge = à revoir) :</div>
+        <NoteHeatmap items={heatItems} perNote={perNote} />
       </div>
 
       <button onClick={onStart}
@@ -442,8 +567,10 @@ function ToggleChip({ on, onClick, label }: { on: boolean; onClick: () => void; 
 }
 
 // ── Écran de résumé ────────────────────────────────────────────────────────────
-function SummaryScreen({ summary, phase, onReplay, onHome }: {
-  summary: NotesSummary; phase: Phase; onReplay: () => void; onHome: () => void
+function SummaryScreen({ summary, phase, clef, perNote, items, onReplay, onHome }: {
+  summary: NotesSummary; phase: Phase; clef: Clef
+  perNote: PerNoteMap; items: NoteItem[]
+  onReplay: () => void; onHome: () => void
 }) {
   const stat = (v: string, l: string) => (
     <div style={{ flex: 1, textAlign: 'center' }}>
@@ -455,7 +582,7 @@ function SummaryScreen({ summary, phase, onReplay, onHome }: {
     <div className="flex flex-col px-4 pb-8" style={{ gap: 16 }}>
       <div style={{ background: 'var(--surface)', border: '1px solid var(--border-c)', borderRadius: 16, padding: 20 }}>
         <div style={{ textAlign: 'center', fontFamily: "'Righteous', sans-serif", fontSize: 22, color: 'var(--text)', marginBottom: 16 }}>
-          Bilan — {PHASE_LABEL[phase]}
+          Bilan — {PHASE_LABEL[phase]} · {CLEF_LABELS[clef]}
         </div>
         <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
           {stat(`${Math.round(summary.accuracy * 100)}%`, 'exactitude')}
@@ -469,6 +596,14 @@ function SummaryScreen({ summary, phase, onReplay, onHome }: {
           </div>
         )}
       </div>
+      {items.length > 0 && (
+        <div style={{ background: 'var(--surface)', border: '1px solid var(--border-c)', borderRadius: 16, padding: 16 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>
+            Maîtrise des notes travaillées
+          </div>
+          <NoteHeatmap items={items} perNote={perNote} />
+        </div>
+      )}
       <button onClick={onReplay}
         style={{ width: '100%', padding: '14px 0', borderRadius: 14, border: 'none', color: '#fff', fontSize: 15, fontWeight: 800, cursor: 'pointer', background: 'linear-gradient(135deg,#7c3aed,#c084fc)' }}>
         Rejouer

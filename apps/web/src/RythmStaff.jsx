@@ -101,8 +101,12 @@ function makeVexNote(figure, idx, activeIdx, scoreGrades) {
   const isRest = figure.rest || false;
   const color  = noteColor();
   const raw    = figure.dur;
-  const hasDot = raw.endsWith("d") && !raw.endsWith("rd");
-  const baseForVex = hasDot ? raw.slice(0, -1) : raw;
+  // Convention des codes : base + `d` (point) + `r` (silence), ex. "qd", "qr", "qdr".
+  // Le point peut précéder le suffixe silence → détecter le `d` sur le cœur sans le `r`.
+  const core   = isRest ? raw.replace(/r$/, "") : raw;
+  const hasDot = core.endsWith("d");
+  const base   = hasDot ? core.slice(0, -1) : core;
+  const baseForVex = base + (isRest ? "r" : ""); // durée VexFlow sans le point (posé via `dots`)
 
   const note = new StaveNote({
     keys:         ["b/4"],

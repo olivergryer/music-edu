@@ -12,6 +12,7 @@
 // partagée (l'Accordeur en a besoin). NE PAS écrire de code Notes qui la lit (§5.4).
 
 import type { Clef } from './types.ts'
+import { READING_PROFILES } from './profiles.ts'
 
 export interface Instrument {
   id: string
@@ -52,4 +53,11 @@ export function beginnerInstruments(): Instrument[] {
 
 export function getInstrument(id: string): Instrument | undefined {
   return INSTRUMENTS.find(i => i.id === id)
+}
+
+// Clefs travaillables pour un instrument, dans l'ordre pédagogique (primaire d'abord).
+export function instrumentClefs(inst: Instrument): Clef[] {
+  const primary = READING_PROFILES[inst.primaryProfile]?.clef
+  const all = primary ? [primary, ...inst.secondaryClefs] : inst.secondaryClefs
+  return [...new Set(all)]
 }

@@ -24,9 +24,11 @@ test('profils : clef valide, 3-4 repères, étapes d\'ambitus low ≤ high', () 
   }
 })
 
-test('profils : cor rattaché à treble-mid → 4 profils (pas de treble-low)', () => {
-  assert.equal(PROFILE_IDS.length, 4)
+test('profils : cor sur treble-mid, pas de treble-low ; tenor présent pour Ut4', () => {
   assert.ok(!PROFILE_IDS.includes('treble-low'))
+  // 4 profils de progression instrumentale + tenor (clef d'Ut4, sélection manuelle).
+  assert.deepEqual([...PROFILE_IDS].sort(), ['alto', 'bass', 'tenor', 'treble-high', 'treble-mid'])
+  assert.equal(INSTRUMENTS.find(i => i.id === 'cor-fa')?.primaryProfile, 'treble-mid')
 })
 
 // ── Table instruments (§5) ───────────────────────────────────────────────────
