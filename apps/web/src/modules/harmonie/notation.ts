@@ -21,7 +21,6 @@
 // toute hauteur réalisée doit se retrouver dans la table.
 
 import {
-  LETTRES,
   classeDeHauteur,
   gammeNommee,
   toniqueNommee,
@@ -188,6 +187,3 @@ export function transposerVersUt(
   const decalage = decalageVersUt(tonique, mode)
   return hauteurs.map((accord) => accord.map((midi) => midi + decalage))
 }
-
-/** Nom des sept lettres, ordre de `LETTRES` — réexporté pour les tests et le débogage. */
-export const ORDRE_LETTRES = LETTRES

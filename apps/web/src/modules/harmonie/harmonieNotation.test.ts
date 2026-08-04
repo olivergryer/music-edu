@@ -13,6 +13,14 @@ import {
 } from './notation.ts'
 import { classeDeHauteur, nomNote, type NoteNommee } from './tonalites.ts'
 import { realiserProgression } from './dispositions.ts'
+import { NIVEAUX_BINAIRE, construireSessionBinaire } from './binaire.ts'
+import {
+  NIVEAU_MAX_DETECTION,
+  NIVEAU_MIN_DETECTION,
+  construireSession,
+} from './detection.ts'
+import { construireSessionDictee } from './dictee.ts'
+import { NIVEAU_MAX_FLUX, NIVEAU_MIN_FLUX, construireSessionFlux } from './flux.ts'
 import {
   MODES,
   DEGRES,
@@ -185,6 +193,71 @@ test('transposer en Ut décale toutes les voix du même intervalle', () => {
   transpose.forEach((accord, i) => {
     accord.forEach((midi, j) => assert.equal(midi - hauteurs[i][j], decalage))
   })
+})
+
+// ─── Ce que la portée recevra vraiment ───────────────────────────────────────
+//
+// Les tests ci-dessus balaient la table des dispositions ; celui-ci passe par les
+// GÉNÉRATEURS des quatre activités, seuls à produire les progressions réelles —
+// avec leurs perturbations, leurs gabarits et leurs toniques mouvantes.
+// C'est le filet qui empêche `PorteeSATB` de tomber sur une note inécrivable.
+
+function toutEcrire(progression: Progression, contexte: string) {
+  const realisation = realiserProgression(progression)
+  for (const vue of ['tonalite', 'ut'] as const) {
+    const hauteurs =
+      vue === 'tonalite'
+        ? realisation
+        : transposerVersUt(realisation, progression.tonique, progression.mode)
+    const tonique = vue === 'tonalite' ? progression.tonique : TONIQUE_UT[progression.mode]
+
+    assert.doesNotThrow(() => armureVex(tonique, progression.mode), `${contexte} (${vue}) : armure`)
+    progression.accords.forEach((accord, i) => {
+      const notes = ecrireAccord(hauteurs[i], accord, tonique, progression.mode)
+      notes.forEach((note, j) => {
+        assert.equal(
+          classeDeHauteur(note),
+          ((hauteurs[i][j] % 12) + 12) % 12,
+          `${contexte} (${vue}) accord ${i} voix ${j} : ${nomNote(note)}`,
+        )
+        assert.match(cleVex(note), /^[a-g](#|##|b|bb)?\/-?\d+$/, `${contexte} : clé VexFlow`)
+      })
+    })
+  }
+}
+
+test('toute progression générée par les activités s’écrit', () => {
+  for (const mode of MODES) {
+    for (const graine of [1, 4242, 90210]) {
+      for (const item of construireSessionDictee(mode, graine)) {
+        toutEcrire(item.progression, `dictée ${mode}/${graine}`)
+      }
+      for (const niveau of NIVEAUX_BINAIRE) {
+        for (const item of construireSessionBinaire(mode, niveau, graine)) {
+          toutEcrire(item.progression, `binaire ${mode}/${niveau}`)
+        }
+      }
+      for (let niveau = NIVEAU_MIN_DETECTION; niveau <= NIVEAU_MAX_DETECTION; niveau++) {
+        for (const [rang, item] of construireSession(mode, niveau, graine).entries()) {
+          // La détection retranspose chaque item : c'est la formule de la page.
+          const tonique = (graine + rang * 7) % 12
+          const ecrite = { ...item.progression, tonique }
+          toutEcrire(ecrite, `détection écrite ${mode}/${niveau}`)
+          // Et la version ENTENDUE, qui contient les accords perturbés — dont les
+          // accords à mode inversé, hors tonalité.
+          toutEcrire(
+            { ...ecrite, accords: item.accordsEntendus },
+            `détection entendue ${mode}/${niveau}`,
+          )
+        }
+      }
+      for (let niveau = NIVEAU_MIN_FLUX; niveau <= NIVEAU_MAX_FLUX; niveau++) {
+        for (const item of construireSessionFlux(mode, niveau, graine)) {
+          toutEcrire(item.progression, `flux ${mode}/${niveau}`)
+        }
+      }
+    }
+  }
 })
 
 // Une suite remise en Ut doit rester écrivable dans SA nouvelle tonalité.

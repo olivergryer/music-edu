@@ -107,6 +107,44 @@ export function etatsPossibles(niveau: number, degre: Degre): EtatAccord[] {
   ]
 }
 
+/**
+ * Les mêmes états, rangés pour la SAISIE AU GESTE : appui sur le degré,
+ * glissement vertical pour l'état (décidé avec Matthieu).
+ *
+ *   ↑ vers le haut   les renversements de l'accord de TROIS SONS
+ *   · repos          le trois sons fondamental — un simple appui suffit
+ *   ↓ vers le bas    l'accord de SEPTIÈME, de plus en plus renversé
+ *
+ * D'où l'ordre de `etats` : septièmes en renversement DÉCROISSANT, puis les trois
+ * sons en renversement croissant. Cette convention bas → haut est celle de
+ * `SecteurRoue.qualites` (`roue.ts`) — ne pas l'inverser d'un seul côté.
+ *
+ * Le repos tombe sur l'état le plus fréquent, ce qui rend le geste courant
+ * gratuit. `etatsPossibles` reste la source de vérité de ce qui est saisissable.
+ */
+export interface EchelleEtats {
+  /** Du BAS vers le HAUT. */
+  etats: EtatAccord[]
+  /** Index du trois sons fondamental dans `etats`. */
+  repos: number
+}
+
+export function echelleEtats(niveau: number, degre: Degre): EchelleEtats {
+  const tous = etatsPossibles(niveau, degre)
+  const septiemes = tous.filter((e) => e.septieme)
+  const troisSons = tous.filter((e) => !e.septieme)
+
+  const etats = [...septiemes].reverse().concat(troisSons)
+  const repos = etats.findIndex((e) => !e.septieme && e.renversement === 0)
+  if (repos < 0) {
+    throw new Error(
+      `echelleEtats : aucun trois sons fondamental au niveau ${niveau} sur le degré ${degre} — ` +
+        `l'échelle n'aurait pas de repos`,
+    )
+  }
+  return { etats, repos }
+}
+
 /** Le vocabulaire saisissable, dans l'ordre des degrés. */
 export function degresPossibles(niveau: number): Degre[] {
   return [...niveauSpec(niveau).vocabulaire].sort((a, b) => a - b)

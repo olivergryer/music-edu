@@ -39,6 +39,8 @@ import {
   type ReponseDetection,
 } from './detection.ts'
 import { lireDrapeaux } from './glyphe.ts'
+import PorteeSATB, { type VuePortee } from './PorteeSATB.tsx'
+import TogglePortee, { estVuePortee } from './TogglePortee.tsx'
 import {
   CercleTierces,
   EcartEmpilement,
@@ -85,6 +87,8 @@ export default function DetectionPage() {
   // Trajectoire sur le cercle des tierces — correction seulement.
   const [trace, setTrace] = useState<EtatTrace>({ phase: 'statique' })
   const [versionJouee, setVersionJouee] = useState<VersionJouee>('entendu')
+  // Réglage commun aux quatre activités du module.
+  const [vuePortee, setVuePortee] = useState<VuePortee>('masquee')
 
   const reponsesRef = useRef<ReponseDetection[]>([])
   const grainesRef = useRef(1)
@@ -96,9 +100,14 @@ export default function DetectionPage() {
   // Réglages relus de la dernière session.
   useEffect(() => {
     if (!mp.loaded) return
-    const p = mp.progress.payload as { dernierMode?: Mode; dernierNiveau?: number }
+    const p = mp.progress.payload as {
+      dernierMode?: Mode
+      dernierNiveau?: number
+      porteeVue?: unknown
+    }
     if (p.dernierMode) setMode(p.dernierMode)
     if (typeof p.dernierNiveau === 'number') setNiveau(p.dernierNiveau)
+    if (estVuePortee(p.porteeVue)) setVuePortee(p.porteeVue)
   }, [mp.loaded, mp.progress.payload])
 
   useEffect(() => () => arreter(), [])
@@ -275,7 +284,7 @@ export default function DetectionPage() {
               lastAt: Date.now(),
             },
           },
-          payload: { dernierMode: mode, dernierNiveau: niveau },
+          payload: { dernierMode: mode, dernierNiveau: niveau, porteeVue: vuePortee },
         },
       })
     } catch (e) {
@@ -372,6 +381,7 @@ export default function DetectionPage() {
       {ecran === 'jeu' && item && progressionEcrite && (
         <EcranJeu
           item={item}
+          progressionEcrite={progressionEcrite}
           mode={mode}
           rang={rang}
           total={items.length}
@@ -383,6 +393,8 @@ export default function DetectionPage() {
           onEcouterEcrit={ecouterEcrit}
           onRepondre={repondre}
           onSuivant={suivant}
+          vuePortee={vuePortee}
+          onVuePortee={setVuePortee}
         />
       )}
 
@@ -471,6 +483,7 @@ function EcranReglages({
 
 function EcranJeu({
   item,
+  progressionEcrite,
   mode,
   rang,
   total,
@@ -482,8 +495,12 @@ function EcranJeu({
   onEcouterEcrit,
   onRepondre,
   onSuivant,
+  vuePortee,
+  onVuePortee,
 }: {
   item: ItemDetection
+  /** La progression RÉELLEMENT sonnée : sa tonique change à chaque item. */
+  progressionEcrite: Progression | null
   mode: Mode
   rang: number
   total: number
@@ -495,6 +512,8 @@ function EcranJeu({
   onEcouterEcrit: () => void
   onRepondre: (i: number) => void
   onSuivant: () => void
+  vuePortee: VuePortee
+  onVuePortee: (v: VuePortee) => void
 }) {
   const aRepondu = repondu !== null
   const juste = repondu === item.indexPerturbe
@@ -678,6 +697,29 @@ function EcranJeu({
               {lireDrapeaux(drapeaux)}
             </div>
           </div>
+
+          {/* La portée écrit la version qu'on écoute — A ou B, selon le bouton.
+              Comme « ▶ A », elle n'apparaît qu'après la réponse : elle donne le
+              corrigé. */}
+          {progressionEcrite && (
+            <div style={{ marginTop: 14 }}>
+              <TogglePortee vue={vuePortee} onChange={onVuePortee} />
+              {vuePortee !== 'masquee' && (
+                <div style={{ marginTop: 10 }}>
+                  <PorteeSATB
+                    progression={
+                      versionJouee === 'ecrit'
+                        ? progressionEcrite
+                        : { ...progressionEcrite, accords: item.accordsEntendus }
+                    }
+                    vue={vuePortee}
+                    indexCourant={trace.phase === 'lecture' ? trace.index : null}
+                    fautes={[item.indexPerturbe]}
+                  />
+                </div>
+              )}
+            </div>
+          )}
 
           <button
             onClick={onSuivant}

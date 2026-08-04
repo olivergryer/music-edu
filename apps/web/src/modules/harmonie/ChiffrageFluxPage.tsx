@@ -4,9 +4,11 @@
 // C'est la seule activité où les quatre canaux de `metrique.ts` se remplissent —
 // partout ailleurs la réponse est un choix, donc il n'y a pas d'écart à mesurer.
 //
-// Saisie en DEUX GESTES (décidé avec Matthieu) : la roue figée donne le degré,
-// puis une bande donne l'état. La bande est bornée par le niveau ET par le degré
-// choisi — au niveau 6 la septième n'est offerte que sur V et II.
+// Saisie en UN SEUL GESTE (décidé avec Matthieu) : on appuie sur le degré, on
+// glisse verticalement pour l'état, on relâche. Vers le haut les renversements du
+// trois sons, vers le bas l'accord de septième de plus en plus renversé — l'ordre
+// est celui d'`echelleEtats`. L'échelle est bornée par le niveau ET par le degré
+// choisi : au niveau 6 la septième n'est offerte que sur V et II.
 //
 // « En flux » désigne le flux de la MUSIQUE : la suite s'écoute d'un bloc, autant
 // de fois qu'on veut, et l'élève remplit à son rythme. Pas de chronomètre — il
@@ -24,9 +26,13 @@ import { ThemeToggleInline } from '../../ThemeContext'
 
 import { arreter, chargerInstrument, jouerSuite } from './audio.ts'
 import ChiffrageEmpile from './ChiffrageEmpile.tsx'
-import { chiffrageDe, romainChiffre } from './chiffrage.ts'
+import { chiffrageplat, romainChiffre } from './chiffrage.ts'
 import { realiserProgression } from './dispositions.ts'
+import { CercleTierces, type EtatTrace, type VersionJouee } from './Glyphes.tsx'
+import { lireDrapeaux } from './glyphe.ts'
 import { niveauSpec } from './niveaux.ts'
+import PorteeSATB, { type VuePortee } from './PorteeSATB.tsx'
+import TogglePortee, { estVuePortee } from './TogglePortee.tsx'
 import RoueFigee from './RoueFigee.tsx'
 import { SECTEURS, type SecteurRoue } from './roue.ts'
 import {
@@ -36,12 +42,13 @@ import {
   accordSaisi,
   construireSessionFlux,
   degresPossibles,
-  etatsPossibles,
+  echelleEtats,
   evaluerFlux,
   scorerFlux,
   type EtatAccord,
   type ItemFlux,
   type ReponseFlux,
+  type ResultatAccord,
 } from './flux.ts'
 import { creerAccord, type Accord, type Degre, type Diagnostic, type Mode } from './types.ts'
 
@@ -49,6 +56,18 @@ const ACCENT = '#c084fc'
 const SUCCES = '#34d399'
 const ERREUR = '#f87171'
 const BPM = 60
+
+// Six crans à parcourir au niveau 7 : le pas par défaut (30 px) sortirait de la
+// roue. 28 px les tient dans ±84 px, bien à l'intérieur d'un rayon de 130.
+const SEUIL_DRAG_PX = 28
+
+// ⚠ CORRESPONDANCE À NE PAS INVERSER. `CercleTierces` vient de la détection
+// d'erreur, où `ecrit` est la partition (la référence, tracée en contour) et
+// `entendu` ce qui a réellement sonné (l'écart, en aplat coloré). En flux, c'est
+// le SON qui fait référence et l'élève qui dévie : on garde donc le sens visuel
+// et non le nom des champs.
+const CORRIGE: VersionJouee = 'ecrit' // ce qui était attendu — le contour
+const MA_VERSION: VersionJouee = 'entendu' // ce que l'élève a chiffré — l'aplat
 
 const NIVEAUX = Array.from(
   { length: NIVEAU_MAX_FLUX - NIVEAU_MIN_FLUX + 1 },
@@ -81,10 +100,15 @@ export default function ChiffrageFluxPage() {
   const [rang, setRang] = useState(0)
   const [saisies, setSaisies] = useState<(Accord | null)[]>([])
   const [curseur, setCurseur] = useState(0)
-  const [degreEnCours, setDegreEnCours] = useState<Degre | null>(null)
   const [valide, setValide] = useState(false)
   const [enLecture, setEnLecture] = useState(false)
   const [erreur, setErreur] = useState<string | null>(null)
+
+  // Correction : l'accord dont on regarde l'écart, et l'état de la trajectoire.
+  const [focus, setFocus] = useState<number | null>(null)
+  const [trace, setTrace] = useState<EtatTrace>({ phase: 'statique' })
+  const [versionJouee, setVersionJouee] = useState<VersionJouee>(CORRIGE)
+  const [vuePortee, setVuePortee] = useState<VuePortee>('masquee')
 
   const reponsesRef = useRef<ReponseFlux[]>([])
   const debutMsRef = useRef<number | null>(null)
@@ -93,9 +117,11 @@ export default function ChiffrageFluxPage() {
 
   useEffect(() => {
     if (!mp.loaded) return
-    const p = mp.progress.payload as { fluxMode?: Mode; fluxNiveau?: number }
+    const p = mp.progress.payload as { fluxMode?: Mode; fluxNiveau?: number; porteeVue?: unknown }
     if (p.fluxMode) setMode(p.fluxMode)
     if (typeof p.fluxNiveau === 'number' && NIVEAUX.includes(p.fluxNiveau)) setNiveau(p.fluxNiveau)
+    // Réglage commun aux quatre activités du module.
+    if (estVuePortee(p.porteeVue)) setVuePortee(p.porteeVue)
   }, [mp.loaded, mp.progress.payload])
 
   useEffect(() => () => arreter(), [])
@@ -103,54 +129,105 @@ export default function ChiffrageFluxPage() {
   const item = items[rang]
   const spec = niveauSpec(niveau)
 
+  // Le chiffrage plat sert de CLÉ : c'est le libellé que la roue renvoie. Un test
+  // (`harmonieFlux.test.ts`) épingle son unicité par degré — deux états au même
+  // chiffrage rendraient l'un d'eux inatteignable.
+  const echelles = useMemo(() => {
+    const table = new Map<Degre, { etats: EtatAccord[]; repos: number; libelles: string[] }>()
+    for (const degre of degresPossibles(niveau)) {
+      const { etats, repos } = echelleEtats(niveau, degre)
+      table.set(degre, {
+        etats,
+        repos,
+        libelles: etats.map((e) => chiffrageplat(accordSaisi(degre, e, 0))),
+      })
+    }
+    return table
+  }, [niveau])
+
   // La roue porte les degrés du niveau. Les secteurs absents du vocabulaire
   // restent muets plutôt que d'être retirés : sept secteurs, toujours au même
   // endroit, pour que le geste ne change pas d'un niveau à l'autre.
-  const secteurs = useMemo<SecteurRoue[]>(() => {
-    const autorises = degresPossibles(niveau)
-    return Array.from({ length: SECTEURS }, (_, i) => {
-      const degre = (i + 1) as Degre
-      const ouvert = autorises.includes(degre)
-      return {
-        cle: String(degre),
-        label: ouvert ? romainChiffre(degre, mode) : '·',
-        qualites: ouvert ? ['degré'] : [],
-        defaut: ouvert ? 0 : null,
-      }
-    })
-  }, [niveau, mode])
-
-  const etats = useMemo<EtatAccord[]>(
-    () => (degreEnCours === null ? [] : etatsPossibles(niveau, degreEnCours)),
-    [niveau, degreEnCours],
+  const secteurs = useMemo<SecteurRoue[]>(
+    () =>
+      Array.from({ length: SECTEURS }, (_, i) => {
+        const degre = (i + 1) as Degre
+        const echelle = echelles.get(degre)
+        return {
+          cle: String(degre),
+          label: echelle ? romainChiffre(degre, mode) : '·',
+          qualites: echelle ? echelle.libelles : [],
+          defaut: echelle ? echelle.repos : null,
+        }
+      }),
+    [echelles, mode],
   )
 
-  const aJouer = useMemo(() => {
-    if (!item) return []
-    const suite = realiserProgression(item.progression)
-    if (!spec.contexteTonal) return suite
-    const [tonique] = realiserProgression({
-      ...item.progression,
-      accords: [creerAccord(0, { degre: 1 })],
-    })
-    return [tonique, ...suite]
-  }, [item, spec.contexteTonal])
+  const realisationAttendue = useMemo(
+    () => (item ? realiserProgression(item.progression) : []),
+    [item],
+  )
 
-  const ecouter = useCallback(async () => {
-    if (aJouer.length === 0) return
-    if (finLectureRef.current) clearTimeout(finLectureRef.current)
-    setEnLecture(true)
-    try {
-      const duree = await jouerSuite(aJouer, { bpm: BPM })
-      finLectureRef.current = setTimeout(() => {
+  // Ce que l'élève a chiffré, réalisé à quatre voix comme le corrigé. Vide tant
+  // que la grille n'est pas complète — la validation l'exige de toute façon.
+  const realisationSaisie = useMemo(() => {
+    if (!item || saisies.length === 0 || saisies.some((a) => a === null)) return []
+    return realiserProgression({ ...item.progression, accords: saisies as Accord[] })
+  }, [item, saisies])
+
+  const avecContexte = useCallback(
+    (accords: number[][]): number[][] => {
+      if (!spec.contexteTonal || !item) return accords
+      const [tonique] = realiserProgression({
+        ...item.progression,
+        accords: [creerAccord(0, { degre: 1 })],
+      })
+      return [tonique, ...accords]
+    },
+    [spec.contexteTonal, item],
+  )
+
+  // Le contexte tonal sonne EN TÊTE : l'index rendu par `onAccord` est alors
+  // décalé d'un cran par rapport à la progression.
+  const decalageContexte = spec.contexteTonal ? 1 : 0
+
+  /**
+   * ⚠ La trajectoire ne s'anime QU'APRÈS validation. L'animer pendant que l'élève
+   * cherche lui donnerait les degrés un par un, donc toute la réponse — même règle
+   * que le « ▶ A n'existe qu'après la réponse » de la détection.
+   */
+  const ecouter = useCallback(
+    async (quelle: VersionJouee) => {
+      const base = quelle === CORRIGE ? realisationAttendue : realisationSaisie
+      if (base.length === 0) return
+
+      const anime = valide
+      if (finLectureRef.current) clearTimeout(finLectureRef.current)
+      setEnLecture(true)
+      if (anime) {
+        setVersionJouee(quelle)
+        setTrace({ phase: 'lecture', index: -1 })
+      }
+      try {
+        const duree = await jouerSuite(avecContexte(base), {
+          bpm: BPM,
+          onAccord: anime
+            ? (i: number) => setTrace({ phase: 'lecture', index: i - decalageContexte })
+            : undefined,
+        })
+        finLectureRef.current = setTimeout(() => {
+          setEnLecture(false)
+          // À la dernière note la persistance cède : tout le parcours reste affiché.
+          if (anime) setTrace({ phase: 'figee' })
+          if (debutMsRef.current === null) debutMsRef.current = performance.now()
+        }, duree + 150)
+      } catch (e) {
+        setErreur(`Lecture impossible : ${String(e)}`)
         setEnLecture(false)
-        if (debutMsRef.current === null) debutMsRef.current = performance.now()
-      }, duree + 150)
-    } catch (e) {
-      setErreur(`Lecture impossible : ${String(e)}`)
-      setEnLecture(false)
-    }
-  }, [aJouer])
+      }
+    },
+    [realisationAttendue, realisationSaisie, avecContexte, decalageContexte, valide],
+  )
 
   function commencer() {
     setErreur(null)
@@ -163,8 +240,9 @@ export default function ChiffrageFluxPage() {
       setRang(0)
       setSaisies(Array(session[0].progression.accords.length).fill(null))
       setCurseur(0)
-      setDegreEnCours(null)
       setValide(false)
+      setFocus(null)
+      setTrace({ phase: 'statique' })
       debutMsRef.current = null
       mp.startSession({ activite: 'flux', mode, niveau, graine })
       setEcran('jeu')
@@ -174,17 +252,19 @@ export default function ChiffrageFluxPage() {
     }
   }
 
-  function choisirDegre({ cle }: { cle: string }) {
+  // Le geste complet arrive d'un bloc : `cle` = le degré, `qualite` = le chiffrage
+  // atteint par le glissement.
+  function chiffrer({ cle, qualite }: { cle: string; qualite: string }) {
     if (valide) return
-    setDegreEnCours(Number(cle) as Degre)
-  }
+    const degre = Number(cle) as Degre
+    const echelle = echelles.get(degre)
+    if (!echelle) return
+    const i = echelle.libelles.indexOf(qualite)
+    if (i < 0) return
 
-  function choisirEtat(etat: EtatAccord) {
-    if (valide || degreEnCours === null) return
     const suivantes = [...saisies]
-    suivantes[curseur] = accordSaisi(degreEnCours, etat, curseur)
+    suivantes[curseur] = accordSaisi(degre, echelle.etats[i], curseur)
     setSaisies(suivantes)
-    setDegreEnCours(null)
 
     // Avance à la première case encore vide, sinon reste en place.
     const vide = suivantes.findIndex((a) => a === null)
@@ -198,7 +278,12 @@ export default function ChiffrageFluxPage() {
     const justes = resultats.filter((r) => r.exact).length
 
     setValide(true)
-    setDegreEnCours(null)
+    // La correction s'ouvre sur la première faute comparable. Suite parfaite : rien
+    // à pointer, on fige d'emblée la trajectoire entière.
+    const premiereFaute = resultats.findIndex((r) => !r.exact && r.vecteur !== null)
+    setFocus(premiereFaute === -1 ? null : premiereFaute)
+    setTrace(premiereFaute === -1 ? { phase: 'figee' } : { phase: 'statique' })
+    setVersionJouee(CORRIGE)
     reponsesRef.current.push({
       index: rang,
       resultats,
@@ -230,8 +315,9 @@ export default function ChiffrageFluxPage() {
     setRang(prochain)
     setSaisies(Array(items[prochain].progression.accords.length).fill(null))
     setCurseur(0)
-    setDegreEnCours(null)
     setValide(false)
+    setFocus(null)
+    setTrace({ phase: 'statique' })
     debutMsRef.current = null
   }
 
@@ -262,7 +348,7 @@ export default function ChiffrageFluxPage() {
               lastAt: Date.now(),
             },
           },
-          payload: { fluxMode: mode, fluxNiveau: niveau },
+          payload: { fluxMode: mode, fluxNiveau: niveau, porteeVue: vuePortee },
         },
       })
     } catch (e) {
@@ -442,19 +528,51 @@ export default function ChiffrageFluxPage() {
           </span>
         </div>
 
-        <button
-          onClick={() => void ecouter()}
-          disabled={enLecture}
-          style={{ ...boutonPlein, opacity: enLecture ? 0.6 : 1 }}
-        >
-          {enLecture ? '▶ …' : '▶ Écouter'}
-        </button>
+        {!valide ? (
+          <button
+            onClick={() => void ecouter(CORRIGE)}
+            disabled={enLecture}
+            style={{ ...boutonPlein, opacity: enLecture ? 0.6 : 1 }}
+          >
+            {enLecture ? '▶ …' : '▶ Écouter'}
+          </button>
+        ) : (
+          // Deux écoutes en regard : ce qui a sonné, et ce que l'élève en a écrit.
+          // Le cercle suit celle qu'on lance.
+          <div className="flex" style={{ gap: 8 }}>
+            <button
+              onClick={() => void ecouter(CORRIGE)}
+              disabled={enLecture}
+              style={{
+                ...boutonPlein,
+                flex: 1,
+                fontSize: 15,
+                opacity: enLecture ? 0.6 : 1,
+              }}
+            >
+              ▶ Corrigé
+            </button>
+            <button
+              onClick={() => void ecouter(MA_VERSION)}
+              disabled={enLecture || realisationSaisie.length === 0}
+              style={{
+                ...boutonCreux,
+                flex: 1,
+                fontSize: 15,
+                opacity: enLecture || realisationSaisie.length === 0 ? 0.6 : 1,
+              }}
+            >
+              ▶ Ma version
+            </button>
+          </div>
+        )}
 
-        {/* Les cases à chiffrer. Toucher une case y ramène le curseur. */}
+        {/* Les cases. Avant validation elles portent le curseur ; après, elles
+            choisissent l'accord dont le cercle montre l'écart. */}
         <div className="flex flex-wrap justify-center" style={{ gap: 8 }}>
           {saisies.map((saisie, i) => {
             const resultat = resultats[i]
-            const actif = i === curseur && !valide
+            const actif = valide ? i === focus : i === curseur
             let bordure = actif ? ACCENT : 'var(--border-c)'
             if (valide) bordure = resultat?.exact ? SUCCES : ERREUR
 
@@ -462,11 +580,13 @@ export default function ChiffrageFluxPage() {
               <button
                 key={i}
                 onClick={() => {
-                  if (valide) return
-                  setCurseur(i)
-                  setDegreEnCours(null)
+                  if (!valide) {
+                    setCurseur(i)
+                    return
+                  }
+                  setFocus(i)
+                  setTrace({ phase: 'statique' })
                 }}
-                disabled={valide}
                 className="bg-surface"
                 style={{
                   borderWidth: actif ? 2 : 1,
@@ -502,47 +622,16 @@ export default function ChiffrageFluxPage() {
         {!valide && (
           <>
             <p className="text-app-muted" style={{ fontSize: 12, margin: 0, textAlign: 'center' }}>
-              Accord {curseur + 1} —{' '}
-              {degreEnCours === null ? 'choisis le degré' : 'choisis l’état'}
+              Accord {curseur + 1} — appuie sur le degré, glisse pour l’état
             </p>
 
-            {degreEnCours === null ? (
-              <RoueFigee
-                secteurs={secteurs}
-                onSelect={choisirDegre}
-                indice="Touche le degré entendu"
-                taille={260}
-              />
-            ) : (
-              <div className="flex flex-col" style={{ gap: 10 }}>
-                <div className="flex flex-wrap justify-center" style={{ gap: 8 }}>
-                  {etats.map((etat) => {
-                    const apercu = accordSaisi(degreEnCours, etat, curseur)
-                    return (
-                      <button
-                        key={`${etat.renversement}-${etat.septieme}`}
-                        onClick={() => choisirEtat(etat)}
-                        className="bg-surface border-app"
-                        style={{
-                          borderWidth: 1,
-                          borderStyle: 'solid',
-                          borderRadius: 12,
-                          padding: '12px 14px',
-                          minWidth: 66,
-                          minHeight: 60,
-                        }}
-                        aria-label={chiffrageDe(apercu).etages.join(' sur ')}
-                      >
-                        <ChiffrageEmpile accord={apercu} mode={mode} taille={18} />
-                      </button>
-                    )
-                  })}
-                </div>
-                <button onClick={() => setDegreEnCours(null)} style={boutonCreux}>
-                  ← Changer de degré
-                </button>
-              </div>
-            )}
+            <RoueFigee
+              secteurs={secteurs}
+              onSelect={chiffrer}
+              indice="Appuie sur le degré · glisse ↑ renversements · ↓ septième"
+              taille={260}
+              seuilPx={SEUIL_DRAG_PX}
+            />
 
             <button
               onClick={valider}
@@ -583,17 +672,61 @@ export default function ChiffrageFluxPage() {
             {resultats
               .filter((r) => !r.exact)
               .map((r) => (
-                <div
+                <button
                   key={r.index}
+                  onClick={() => {
+                    setFocus(r.index)
+                    setTrace({ phase: 'statique' })
+                  }}
                   className="text-app-muted"
-                  style={{ fontSize: 13, marginTop: 6, lineHeight: 1.5 }}
+                  style={{
+                    display: 'block',
+                    width: '100%',
+                    textAlign: 'left',
+                    background: 'none',
+                    border: 'none',
+                    padding: '4px 0',
+                    minHeight: 32,
+                    fontSize: 13,
+                    lineHeight: 1.5,
+                    color: r.index === focus ? 'var(--text)' : undefined,
+                  }}
                 >
                   Accord {r.index + 1} —{' '}
-                  {r.diagnostic
-                    ? LIBELLES_DIAGNOSTIC[r.diagnostic]
-                    : 'case laissée vide'}
-                </div>
+                  {r.diagnostic ? LIBELLES_DIAGNOSTIC[r.diagnostic] : 'case laissée vide'}
+                </button>
               ))}
+
+            {/* Le cercle des tierces : les deux trajectoires en regard, et l'écart
+                de l'accord en focus. Il s'anime au fil de la réécoute. */}
+            <Correction
+              item={item}
+              resultats={resultats}
+              focus={focus}
+              mode={mode}
+              trace={trace}
+              versionJouee={versionJouee}
+            />
+
+            {/* La portée, sur la version qu'on écoute. Elle suit les mêmes boutons
+                que le cercle : deux lectures d'un même geste. */}
+            <div style={{ marginTop: 14 }}>
+              <TogglePortee vue={vuePortee} onChange={setVuePortee} />
+            </div>
+            {vuePortee !== 'masquee' && (
+              <div style={{ marginTop: 10 }}>
+                <PorteeSATB
+                  progression={
+                    versionJouee === CORRIGE
+                      ? item.progression
+                      : { ...item.progression, accords: saisies as Accord[] }
+                  }
+                  vue={vuePortee}
+                  indexCourant={trace.phase === 'lecture' ? trace.index : null}
+                  fautes={resultats.filter((r) => !r.exact).map((r) => r.index)}
+                />
+              </div>
+            )}
 
             <button onClick={suivant} style={{ ...boutonPlein, marginTop: 14, width: '100%' }}>
               {rang + 1 >= items.length ? 'Voir le bilan' : 'Suivant'}
@@ -602,6 +735,70 @@ export default function ChiffrageFluxPage() {
         )}
       </main>
     </Cadre>
+  )
+}
+
+// ─── La correction visuelle ──────────────────────────────────────────────────
+//
+// Le cercle des tierces montre DEUX trajectoires : celle qui a sonné et celle que
+// l'élève a écrite. L'une est jouée et s'anime, l'autre reste en fantôme — c'est
+// leur superposition qui fait voir où la lecture a décroché.
+//
+// À la différence de la détection, qui n'a qu'un accord fautif par item, une suite
+// peut en compter plusieurs : l'écart tracé porte sur l'accord EN FOCUS, changé en
+// touchant une case ou une ligne de diagnostic.
+
+/** Aucun écart. Sert quand la suite est juste : le cercle reste alors en teinte interne. */
+const VECTEUR_NUL = { angulaire: 0, radial: 0, cardinalite: 0, arcFranchi: false } as const
+
+function Correction({
+  item,
+  resultats,
+  focus,
+  mode,
+  trace,
+  versionJouee,
+}: {
+  item: ItemFlux
+  resultats: ResultatAccord[]
+  focus: number | null
+  mode: Mode
+  trace: EtatTrace
+  versionJouee: VersionJouee
+}) {
+  const attendus = item.progression.accords
+  const cible = focus === null ? null : resultats[focus]
+
+  // La validation exige une grille complète : `repondu` est renseigné partout. Le
+  // filtre n'est là que pour ne pas relier deux degrés à travers un trou si cette
+  // garantie tombait un jour.
+  const degresSaisis = resultats.flatMap((r) => (r.repondu ? [r.repondu.degre] : []))
+  const ecart = { vecteur: cible?.vecteur ?? VECTEUR_NUL }
+  const reference = cible?.attendu ?? attendus[0]
+
+  return (
+    <div style={{ marginTop: 12 }}>
+      <CercleTierces
+        ecrit={reference}
+        entendu={cible?.repondu ?? reference}
+        degresEcrits={attendus.map((a) => a.degre)}
+        degresEntendus={degresSaisis}
+        mode={mode}
+        drapeaux={ecart}
+        trace={trace}
+        version={versionJouee}
+        taille={196}
+      />
+
+      <div
+        className="text-app-muted"
+        style={{ fontSize: 12, marginTop: 8, textAlign: 'center', lineHeight: 1.5 }}
+      >
+        {cible && cible.repondu
+          ? `Accord ${cible.index + 1} — ${lireDrapeaux(ecart)}`
+          : 'Trait plein : la version qui joue · pointillé : l’autre'}
+      </div>
+    </div>
   )
 }
 

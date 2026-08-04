@@ -301,6 +301,7 @@ Le module Notes **n'est pas modifié** et n'est pas importé : la géométrie es
 | dictée | do…si | ♭ · ♮ · ♯ | ♮ |
 | intervalles | 2de 3ce 6te 7e | mineure · Majeure | **aucun** |
 | intervalles | 1re 4te 5te | diminuée · juste · augmentée | juste |
+| flux | I…VII | septièmes renversées · **5** · 6 · 6/4 | **5** (cf. `echelleEtats`) |
 
 Il n'existe pas de tierce « neutre » : sur ces secteurs `SecteurRoue.defaut` vaut `null` et **le clic
 sec ne valide rien**. Ne pas « corriger » en mettant Majeure par défaut — l'élève validerait une
@@ -426,10 +427,29 @@ plutôt que ce qui a sonné. Élevé = il devine par le style au lieu d'écouter
 `indiceDeDeduction` conditionne chaque réponse sur l'accord précédent, et le précédent du premier
 chiffrage d'une suite appartiendrait à la suite d'avant.
 
-**Saisie en deux gestes** (décidé avec Matthieu) : roue figée pour le degré, puis bande d'états.
-La bande est bornée par le niveau **et par le degré choisi** — au niveau 6 la septième n'est offerte
-que sur V et II (`septiemeSur`). Un test garantit que **tout accord attendu est saisissable**, sans
-quoi l'élève verrait un accord qu'il ne peut pas nommer.
+**Saisie en un seul geste** — `echelleEtats` (2026-08-03, remplace la bande d'états à deux gestes).
+On appuie sur le degré, on glisse verticalement, on relâche :
+
+```
+  6/4   ↑ haut     trois sons renversés            (niveau 7 seulement)
+   6
+ ▸ 5    repos      trois sons fondamental          ← un simple appui suffit
+   7    ↓ bas      septième, de plus en plus
+  6/5̸              renversée
+```
+
+L'échelle est bornée par le niveau **et par le degré choisi** — au niveau 6 la septième n'est offerte
+que sur V et II (`septiemeSur`), donc I n'a aucun cran vers le bas. `etatsPossibles` reste la source
+de vérité de ce qui est saisissable ; `echelleEtats` ne fait que le RANGER pour le geste. Un test
+garantit que **tout accord attendu est saisissable**, sans quoi l'élève verrait un accord qu'il ne
+peut pas nommer.
+
+⚠ **Le chiffrage plat sert de clé** : `RoueFigee` renvoie le libellé affiché. Un test épingle son
+unicité par degré — deux états au même chiffrage rendraient l'un des deux inatteignable, en silence.
+
+⚠ **Le repos du VII est un piège assumé** : la contrainte dure n°2 interdit l'accord diminué en
+position fondamentale, que le générateur ne produit donc jamais. Un appui sec sur VII valide malgré
+tout `5`, réponse possible et toujours fausse. À revoir si ça gêne à l'usage.
 
 **« En flux » désigne le flux de la MUSIQUE, pas un chronomètre** : la suite s'écoute d'un bloc,
 autant de fois qu'on veut. Une contrainte de vitesse mesurerait la dextérité de saisie plutôt que
@@ -443,6 +463,64 @@ borne suivra d'elle-même le jour où les degrés secondaires atterriront.
 
 Le score compte les **accords** exacts, pas les suites parfaites : à 4-6 accords par suite, le taux
 de suites entièrement justes serait trop grossier pour progresser.
+
+## La correction visuelle du flux (2026-08-03)
+
+Le cercle des tierces servait à la seule détection d'erreur. Il sert maintenant aussi au flux, sans
+être dupliqué : `geometrieGlyphe` et `lireDrapeaux` ne lisaient **que `vecteur`**, jamais le type de
+perturbation. D'où `EcartGlyphe` dans `glyphe.ts` — `{ vecteur: VecteurErreur | null }`, que
+`DrapeauxDetection` satisfait structurellement. Aucun site d'appel n'a bougé.
+
+⚠ **Correspondance à ne pas inverser.** En détection, `ecrit` = la partition (référence, en contour)
+et `entendu` = ce qui a sonné (l'écart, en aplat coloré). **En flux c'est le SON qui fait référence
+et l'élève qui dévie**, donc `ecrit` ← l'accord attendu et `entendu` ← l'accord saisi. On garde le
+sens *visuel*, pas le nom des champs. Constantes `CORRIGE` / `MA_VERSION` dans `ChiffrageFluxPage`.
+
+La détection n'a qu'un accord fautif par item ; une suite peut en compter plusieurs. L'écart tracé
+porte donc sur un **accord en focus** — la première faute par défaut, changé en touchant une case ou
+une ligne de diagnostic. Suite entièrement juste : pas d'écart à pointer, la trajectoire se fige
+d'emblée.
+
+## Les portées SATB — `notation.ts` + `PorteeSATB.tsx` (2026-08-03)
+
+Clef de sol soprano + alto, clef de fa ténor + basse, accolade. Les hauteurs viennent telles quelles
+de `realiserProgression`, qui les range déjà dans cet ordre.
+
+**`notation.ts` — on ne devine JAMAIS l'orthographe depuis le MIDI.** Une classe de hauteur ne
+tranche pas : 6 s'écrit fa♯ ou sol♭, 3 mi♭ ou ré♯. On part donc de **l'accord** — chaque son est un
+degré de la gamme, donc une lettre connue d'avance (`orthographeAccord` → table pc → note écrite,
+`ecrireAccord` pour les quatre voix). Trois règles, les mêmes que `dispositions.ts` exprimées sur des
+lettres : empilement de tierces · III mineur pris naturel · `modeInverse` altère la seule tierce **en
+gardant sa lettre** (c'est ce qui distingue mi♭ de ré♯).
+
+Les deux implémentations sont **épinglées l'une à l'autre** par `harmonieNotation.test.ts` : toute
+hauteur réalisée doit se retrouver dans la table — les 24 tonalités, puis les progressions réellement
+produites par les quatre générateurs, perturbations comprises.
+
+⚠ **L'octave se déduit de la lettre, pas du MIDI brut** : si♯3 et do4 sonnent la même touche.
+
+**Le toggle a trois positions** (`TogglePortee`) : masquée · tonalité entendue · **remis en Ut**.
+« En Ut » vise **Do majeur et la mineur** (décidé avec Matthieu) : armure vide dans les deux modes,
+et la sensible du mineur apparaît alors en altération accidentelle — ce qui est précisément ce qu'on
+veut faire lire. La remise en Ut **transpose** la réalisation (`transposerVersUt`) au lieu de la
+recalculer : registre et disposition restent ceux qu'on a entendus.
+
+Le réglage vit dans `payload.porteeVue`, donc **commun aux quatre activités** et retrouvé d'une
+session à l'autre.
+
+⚠ **Jamais avant la réponse** : la portée donne le corrigé. Même règle que « ▶ A n'existe qu'après la
+réponse ».
+
+Rendu en deux effets, comme `NotesStaff` : un effet **lourd** qui grave (VexFlow), un effet **léger**
+qui recolore. L'accord courant s'illumine ainsi au fil de la réécoute sans reconstruire le SVG. Une
+gravure qui échoue affiche « Portée indisponible » et laisse intact le reste de la correction.
+
+| Page | Version montrée |
+|---|---|
+| `ChiffrageFluxPage` | suit ▶ Corrigé / ▶ Ma version |
+| `DetectionPage` | suit ▶ Écouter / ▶ Écouter ce qui était écrit |
+| `ChoixBinairePage` | la suite entendue, accord visé marqué |
+| `DicteeBassePage` | la suite entendue, basses fautives marquées |
 
 ## Suite
 

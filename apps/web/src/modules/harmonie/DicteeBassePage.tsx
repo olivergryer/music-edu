@@ -17,6 +17,8 @@ import { ThemeToggleInline } from '../../ThemeContext'
 
 import { arreter, chargerInstrument, jouerSuite } from './audio.ts'
 import { realiserProgression } from './dispositions.ts'
+import PorteeSATB, { type VuePortee } from './PorteeSATB.tsx'
+import TogglePortee, { estVuePortee } from './TogglePortee.tsx'
 import RoueFigee from './RoueFigee.tsx'
 import { LETTRES, nomNote, nomTonalite, type Alteration, type NoteNommee } from './tonalites.ts'
 import { type SecteurRoue } from './roue.ts'
@@ -65,6 +67,8 @@ export default function DicteeBassePage() {
   const [valide, setValide] = useState(false)
   const [enLecture, setEnLecture] = useState(false)
   const [erreur, setErreur] = useState<string | null>(null)
+  // Réglage commun aux quatre activités du module.
+  const [vuePortee, setVuePortee] = useState<VuePortee>('masquee')
 
   const reponsesRef = useRef<ReponseDictee[]>([])
   const debutMsRef = useRef<number | null>(null)
@@ -73,8 +77,9 @@ export default function DicteeBassePage() {
 
   useEffect(() => {
     if (!mp.loaded) return
-    const p = mp.progress.payload as { dicteeMode?: Mode }
+    const p = mp.progress.payload as { dicteeMode?: Mode; porteeVue?: unknown }
     if (p.dicteeMode) setMode(p.dicteeMode)
+    if (estVuePortee(p.porteeVue)) setVuePortee(p.porteeVue)
   }, [mp.loaded, mp.progress.payload])
 
   useEffect(() => () => arreter(), [])
@@ -206,7 +211,7 @@ export default function DicteeBassePage() {
               lastAt: Date.now(),
             },
           },
-          payload: { dicteeMode: mode },
+          payload: { dicteeMode: mode, porteeVue: vuePortee },
         },
       })
     } catch (e) {
@@ -489,6 +494,21 @@ export default function DicteeBassePage() {
               Basse {e.index + 1} — {lireErreurBasse(e)}
             </div>
           ))}
+
+          {/* La suite écrite : c'est là que l'élève voit la basse qu'il cherchait
+              À SA PLACE, sous les trois voix supérieures. */}
+          <div style={{ marginTop: 14 }}>
+            <TogglePortee vue={vuePortee} onChange={setVuePortee} />
+            {vuePortee !== 'masquee' && (
+              <div style={{ marginTop: 10 }}>
+                <PorteeSATB
+                  progression={item.progression}
+                  vue={vuePortee}
+                  fautes={erreurs.map((e) => e.index)}
+                />
+              </div>
+            )}
+          </div>
 
           <button
             onClick={suivant}

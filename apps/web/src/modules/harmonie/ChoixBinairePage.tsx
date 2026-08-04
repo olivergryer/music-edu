@@ -20,6 +20,8 @@ import { arreter, chargerInstrument, jouerSuite } from './audio.ts'
 import ChiffrageEmpile from './ChiffrageEmpile.tsx'
 import { realiserProgression } from './dispositions.ts'
 import { niveauSpec } from './niveaux.ts'
+import PorteeSATB, { type VuePortee } from './PorteeSATB.tsx'
+import TogglePortee, { estVuePortee } from './TogglePortee.tsx'
 import {
   ITEMS_PAR_SESSION_BINAIRE,
   NIVEAUX_BINAIRE,
@@ -52,6 +54,8 @@ export default function ChoixBinairePage() {
   const [repondu, setRepondu] = useState<Reponse | null>(null)
   const [enLecture, setEnLecture] = useState(false)
   const [erreur, setErreur] = useState<string | null>(null)
+  // Réglage commun aux quatre activités du module.
+  const [vuePortee, setVuePortee] = useState<VuePortee>('masquee')
 
   const reponsesRef = useRef<ReponseBinaire[]>([])
   const debutMsRef = useRef<number | null>(null)
@@ -60,11 +64,16 @@ export default function ChoixBinairePage() {
 
   useEffect(() => {
     if (!mp.loaded) return
-    const p = mp.progress.payload as { binaireMode?: Mode; binaireNiveau?: number }
+    const p = mp.progress.payload as {
+      binaireMode?: Mode
+      binaireNiveau?: number
+      porteeVue?: unknown
+    }
     if (p.binaireMode) setMode(p.binaireMode)
     if (typeof p.binaireNiveau === 'number' && NIVEAUX_BINAIRE.includes(p.binaireNiveau)) {
       setNiveau(p.binaireNiveau)
     }
+    if (estVuePortee(p.porteeVue)) setVuePortee(p.porteeVue)
   }, [mp.loaded, mp.progress.payload])
 
   useEffect(() => () => arreter(), [])
@@ -166,7 +175,7 @@ export default function ChoixBinairePage() {
               lastAt: Date.now(),
             },
           },
-          payload: { binaireMode: mode, binaireNiveau: niveau },
+          payload: { binaireMode: mode, binaireNiveau: niveau, porteeVue: vuePortee },
         },
       })
     } catch (e) {
@@ -413,6 +422,21 @@ export default function ChoixBinairePage() {
             >
               L’accord {item.cible + 1} était un
               <ChiffrageEmpile accord={accordVise} mode={mode} taille={15} />
+            </div>
+
+            {/* La suite écrite. Une seule version ici : il n'y a pas de « version
+                de l'élève » à opposer, la réponse est un choix. */}
+            <div style={{ marginTop: 14 }}>
+              <TogglePortee vue={vuePortee} onChange={setVuePortee} />
+              {vuePortee !== 'masquee' && (
+                <div style={{ marginTop: 10 }}>
+                  <PorteeSATB
+                    progression={item.progression}
+                    vue={vuePortee}
+                    fautes={juste ? [] : [item.cible]}
+                  />
+                </div>
+              )}
             </div>
 
             <button onClick={suivant} style={{ ...boutonPlein, marginTop: 14, width: '100%' }}>

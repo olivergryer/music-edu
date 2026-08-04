@@ -17,6 +17,7 @@ import {
   DEGRES_SECTEUR,
   RAYON_MORT_PX,
   SECTEURS,
+  SEUIL_QUALITE_PX,
   angleCentreSecteur,
   qualiteAuDrag,
   secteurAuPoint,
@@ -34,6 +35,7 @@ export default function RoueFigee({
   desactivee = false,
   indice = 'Touche un secteur',
   taille = 280,
+  seuilPx = SEUIL_QUALITE_PX,
 }: {
   /** Exactement `SECTEURS` entrées, dans le sens horaire depuis le haut. */
   secteurs: readonly SecteurRoue[]
@@ -42,6 +44,12 @@ export default function RoueFigee({
   /** Texte au centre au repos. */
   indice?: string
   taille?: number
+  /**
+   * Hauteur d'un cran de glissement, en pixels. À resserrer quand l'échelle est
+   * longue — le chiffrage en flux offre jusqu'à six crans, qui doivent tenir dans
+   * la roue. En pixels client, comme `taille` : les deux vont ensemble.
+   */
+  seuilPx?: number
 }) {
   const boiteRef = useRef<HTMLDivElement>(null)
   const appuiRef = useRef<{ x: number; y: number } | null>(null)
@@ -67,7 +75,7 @@ export default function RoueFigee({
 
     appuiRef.current = p
     setActif(index)
-    const q = qualiteAuDrag(secteurs[index], 0)
+    const q = qualiteAuDrag(secteurs[index], 0, seuilPx)
     derniereQualiteRef.current = q
     setQualite(q)
     boiteRef.current?.setPointerCapture(e.pointerId)
@@ -78,7 +86,7 @@ export default function RoueFigee({
     if (appui === null || actif === null || !secteurs[actif]) return
 
     const p = pointLocal(e)
-    const q = qualiteAuDrag(secteurs[actif], p.y - appui.y)
+    const q = qualiteAuDrag(secteurs[actif], p.y - appui.y, seuilPx)
     if (q !== derniereQualiteRef.current) {
       if (PEUT_VIBRER && q !== null) navigator.vibrate(5)
       derniereQualiteRef.current = q

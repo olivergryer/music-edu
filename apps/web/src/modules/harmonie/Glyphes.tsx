@@ -18,9 +18,9 @@ import {
   intensiteTrace,
   lireDrapeaux,
   pointCercle,
+  type EcartGlyphe,
   type TeinteGlyphe,
 } from './glyphe.ts'
-import { type DrapeauxDetection } from './detection.ts'
 import { type Accord, type Degre, type Mode, type Renversement } from './types.ts'
 
 const TEINTES: Record<TeinteGlyphe, string> = {
@@ -73,7 +73,7 @@ export function CercleTierces({
   /** Trajectoire complète de B — ce qui a sonné. */
   degresEntendus: readonly Degre[]
   mode: Mode
-  drapeaux: DrapeauxDetection
+  drapeaux: EcartGlyphe
   trace?: EtatTrace
   version?: VersionJouee
   taille?: number
@@ -316,7 +316,7 @@ export function EcartEmpilement({
 }: {
   ecrit: Accord
   entendu: Accord
-  drapeaux: DrapeauxDetection
+  drapeaux: EcartGlyphe
 }) {
   const { teinte, pointille } = geometrieGlyphe(drapeaux)
   if (ecrit.renversement === entendu.renversement && ecrit.septieme === entendu.septieme) return null
@@ -371,7 +371,7 @@ export function GlypheColonne({
   drapeaux,
   taille = COL_L,
 }: {
-  drapeaux: DrapeauxDetection
+  drapeaux: EcartGlyphe
   taille?: number
 }) {
   const g = geometrieGlyphe(drapeaux)

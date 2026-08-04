@@ -19,8 +19,21 @@
 // perturbation qui sorte de la tonalité serait aussi la seule à ne rien montrer.
 
 import { ORDRE_TIERCES, distanceAngulaireSignee } from './geometrie.ts'
-import { type DrapeauxDetection } from './detection.ts'
-import { type Degre } from './types.ts'
+import { type Degre, type VecteurErreur } from './types.ts'
+
+/**
+ * Ce dont le glyphe a RÉELLEMENT besoin : un écart entre deux accords, rien de
+ * plus. Ni le type de perturbation, ni l'item d'où il vient.
+ *
+ * `DrapeauxDetection` le satisfait structurellement, donc la détection continue
+ * de passer ses drapeaux tels quels ; mais le chiffrage en flux, qui n'a aucune
+ * perturbation à nommer, peut désormais alimenter le même glyphe avec le
+ * `VecteurErreur` que produit `evaluerFlux`. `null` = accord hors tonalité, seul
+ * cas où les quatre canaux ne s'appliquent pas.
+ */
+export interface EcartGlyphe {
+  vecteur: VecteurErreur | null
+}
 
 // ─── Conventions de tracé ────────────────────────────────────────────────────
 
@@ -52,7 +65,7 @@ export interface GeometrieGlyphe {
   pointille: boolean
 }
 
-export function geometrieGlyphe(d: DrapeauxDetection): GeometrieGlyphe {
+export function geometrieGlyphe(d: EcartGlyphe): GeometrieGlyphe {
   if (d.vecteur === null) {
     return {
       rotationDeg: 0,
@@ -158,7 +171,7 @@ export function arcEntreDegres(
 
 const NOMS_ECART: readonly string[] = ['', 'une tierce', 'deux tierces', 'trois tierces']
 
-export function lireDrapeaux(d: DrapeauxDetection): string {
+export function lireDrapeaux(d: EcartGlyphe): string {
   if (d.vecteur === null) return 'accord hors tonalité'
 
   const v = d.vecteur

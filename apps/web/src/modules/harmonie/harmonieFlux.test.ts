@@ -10,12 +10,14 @@ import {
   accordSaisi,
   construireSessionFlux,
   degresPossibles,
+  echelleEtats,
   etatsPossibles,
   evaluerFlux,
   longueurPourRangFlux,
   scorerFlux,
   type ReponseFlux,
 } from './flux.ts'
+import { chiffrageplat } from './chiffrage.ts'
 import { NIVEAU_MAX_IMPLEMENTE, niveauSpec } from './niveaux.ts'
 import { respecteContraintes } from './contraintes.ts'
 import { creerAccord, type Accord, type Degre, type Mode } from './types.ts'
@@ -83,6 +85,91 @@ test('les trois sons viennent avant les septièmes', () => {
   assert.ok(premierAvecSeptieme > 0)
   assert.ok(etats.slice(0, premierAvecSeptieme).every((e) => !e.septieme))
   assert.ok(etats.slice(premierAvecSeptieme).every((e) => e.septieme))
+})
+
+// ─── L'échelle de saisie au geste ────────────────────────────────────────────
+
+test('l’échelle contient exactement les états saisissables', () => {
+  for (const niveau of NIVEAUX_FLUX) {
+    for (const degre of degresPossibles(niveau)) {
+      const { etats } = echelleEtats(niveau, degre)
+      const attendus = etatsPossibles(niveau, degre)
+      assert.equal(etats.length, attendus.length, `niveau ${niveau} degré ${degre}`)
+      for (const e of attendus) {
+        assert.ok(
+          etats.some((x) => x.renversement === e.renversement && x.septieme === e.septieme),
+          `état absent de l’échelle : niveau ${niveau} degré ${degre}`,
+        )
+      }
+    }
+  }
+})
+
+test('le repos est le trois sons fondamental — un simple appui le valide', () => {
+  for (const niveau of NIVEAUX_FLUX) {
+    for (const degre of degresPossibles(niveau)) {
+      const { etats, repos } = echelleEtats(niveau, degre)
+      assert.deepEqual(etats[repos], { renversement: 0, septieme: false }, `degré ${degre}`)
+    }
+  }
+})
+
+// Le sens du geste EST la spec : vers le haut on renverse le trois sons, vers le
+// bas on passe à la septième et on la renverse.
+test('au-dessus du repos : les trois sons, de plus en plus renversés', () => {
+  for (const niveau of NIVEAUX_FLUX) {
+    for (const degre of degresPossibles(niveau)) {
+      const { etats, repos } = echelleEtats(niveau, degre)
+      const haut = etats.slice(repos)
+      assert.ok(haut.every((e) => !e.septieme), `degré ${degre} : une septième vers le haut`)
+      for (let i = 1; i < haut.length; i++) {
+        assert.ok(haut[i].renversement > haut[i - 1].renversement, `degré ${degre}`)
+      }
+    }
+  }
+})
+
+test('en dessous du repos : la septième, de plus en plus renversée', () => {
+  for (const niveau of NIVEAUX_FLUX) {
+    for (const degre of degresPossibles(niveau)) {
+      const { etats, repos } = echelleEtats(niveau, degre)
+      const bas = etats.slice(0, repos)
+      assert.ok(bas.every((e) => e.septieme), `degré ${degre} : un trois sons vers le bas`)
+      // Lu du repos vers le bas, donc l'ordre du tableau est décroissant en index.
+      for (let i = 1; i < bas.length; i++) {
+        assert.ok(bas[i].renversement < bas[i - 1].renversement, `degré ${degre}`)
+      }
+    }
+  }
+})
+
+test('un degré sans septième n’a pas de cran vers le bas', () => {
+  const { etats, repos } = echelleEtats(6, 1) // niveau 6 : septiemeSur = [5, 2]
+  assert.equal(repos, 0)
+  assert.deepEqual(etats, [
+    { renversement: 0, septieme: false },
+    { renversement: 1, septieme: false },
+  ])
+})
+
+// ⚠ Le chiffrage plat sert de CLÉ à la roue (`RoueFigee` renvoie le libellé
+// affiché). Deux états au même chiffrage rendraient la saisie silencieusement
+// fausse : l'un serait inatteignable.
+test('les chiffrages d’un même degré sont deux à deux distincts', () => {
+  for (const niveau of NIVEAUX_FLUX) {
+    for (const mode of MODES) {
+      for (const degre of degresPossibles(niveau)) {
+        const libelles = echelleEtats(niveau, degre).etats.map((e) =>
+          chiffrageplat(accordSaisi(degre, e, 0)),
+        )
+        assert.equal(
+          new Set(libelles).size,
+          libelles.length,
+          `collision de chiffrage : ${mode} niveau ${niveau} degré ${degre} — ${libelles.join(' ')}`,
+        )
+      }
+    }
+  }
 })
 
 test('le vocabulaire saisissable est celui du niveau, trié', () => {
