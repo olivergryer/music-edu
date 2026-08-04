@@ -84,7 +84,18 @@ function indiceDouble(
 // supérieures au-dessus de la basse, celui dont l'écart ténor–soprano est le plus
 // petit. Départage : ténor le plus grave, puis ordre d'énumération — le résultat
 // est donc parfaitement déterministe.
-function serrer(basse: number, superieures: number[]): [number, number, number] {
+//
+// `sommet` contraint la CLASSE DE HAUTEUR du soprano. Sans lui, le soprano est ce
+// que la position serrée a donné, et le module ne peut pas *vouloir* la tonique au
+// sommet — or c'est précisément ce qui distingue une cadence parfaite d'une
+// imparfaite. Le départage reste le même une fois la contrainte posée.
+function serrer(
+  basse: number,
+  superieures: number[],
+  sommet: number | null = null,
+): [number, number, number] {
+  const vise = sommet === null ? null : ((sommet % 12) + 12) % 12
+
   let meilleure: [number, number, number] | null = null
   let meilleurEcart = Infinity
   let meilleurTenor = Infinity
@@ -98,6 +109,8 @@ function serrer(basse: number, superieures: number[]): [number, number, number] 
       voix.push(son)
       plancher = son
     }
+    if (vise !== null && ((voix[2] % 12) + 12) % 12 !== vise) continue
+
     const ecart = voix[2] - voix[0]
     if (ecart < meilleurEcart || (ecart === meilleurEcart && voix[0] < meilleurTenor)) {
       meilleure = [voix[0], voix[1], voix[2]]
@@ -126,6 +139,7 @@ function calculer(
   renversement: Renversement,
   septieme: boolean,
   modeInverse = false,
+  sommet: number | null = null,
 ): Disposition {
   const sons = empilement(mode, degre, septieme, modeInverse)
   if (renversement >= sons.length) {
@@ -139,8 +153,86 @@ function calculer(
   const superieures = sons.filter((_, i) => i !== renversement).map((s) => ((s % 12) + 12) % 12)
   if (double !== null) superieures.push(((sons[double] % 12) + 12) % 12)
 
-  return { basse, voix: serrer(basse, superieures) }
+  return { basse, voix: serrer(basse, superieures, sommet) }
 }
+
+/**
+ * La disposition dont le SOPRANO porte le son demandé — en demi-tons relatifs à
+ * la tonique, donc `0` pour la tonique elle-même.
+ *
+ * ⚠ Hors de la table : la table n'a pas d'axe soprano, et lui en donner un la
+ * ferait tripler pour un seul usage. On recalcule, c'est instantané.
+ *
+ * Lève si aucun arrangement ne met ce son au sommet — typiquement parce que le
+ * son demandé n'appartient pas à l'accord, ou parce qu'il est à la basse.
+ */
+export function dispositionAuSoprano(accord: Accord, mode: Mode, soprano: number): Disposition {
+  try {
+    return calculer(
+      mode,
+      accord.degre,
+      accord.renversement,
+      accord.septieme,
+      accord.modeInverse ?? false,
+      soprano,
+    )
+  } catch {
+    throw new Error(
+      `dispositionAuSoprano : aucun arrangement de ${accord.id} (${mode}) ne place ` +
+        `le son ${((soprano % 12) + 12) % 12} au soprano`,
+    )
+  }
+}
+
+/**
+ * Même moteur, pour un accord HORS du modèle à sept degrés : les sons sont donnés
+ * tels quels, en demi-tons relatifs à la tonique et déjà ordonnés depuis la basse.
+ *
+ * ⚠ ON NE PERMUTE PAS les voix supérieures ici, contrairement à `serrer`. Les
+ * accords chromatiques sont définis par leur contenu d'intervalles au-dessus d'une
+ * basse fixe : dans une sixte augmentée, c'est l'écart ♭6 → ♯4 qui fait l'accord.
+ * Réarranger reviendrait à en changer. La doublure éventuelle se place une octave
+ * au-dessus de son original, et l'ensemble se réordonne en montant.
+ */
+export function dispositionLibre(
+  sons: readonly number[],
+  indexBasse: number,
+  double: number | null,
+): Disposition {
+  if (sons.length < 3) throw new Error(`dispositionLibre : ${sons.length} sons, il en faut au moins 3`)
+  if (indexBasse < 0 || indexBasse >= sons.length) {
+    throw new Error(`dispositionLibre : basse hors bornes (${indexBasse})`)
+  }
+
+  const basse = sons[indexBasse]
+  const superieures = sons.filter((_, i) => i !== indexBasse)
+  if (double !== null) {
+    if (double < 0 || double >= sons.length) {
+      throw new Error(`dispositionLibre : doublure hors bornes (${double})`)
+    }
+    superieures.push(sons[double] + 12)
+  }
+
+  const voix = superieures
+    .map((son) => {
+      let s = son
+      while (s <= basse) s += 12
+      return s
+    })
+    .sort((a, b) => a - b)
+
+  if (voix.length !== 3) {
+    throw new Error(`dispositionLibre : ${voix.length} voix supérieures, il en faut exactement 3`)
+  }
+  return { basse, voix: [voix[0], voix[1], voix[2]] }
+}
+
+/**
+ * Placement d'une disposition dans les tessitures, la basse au plus près de
+ * `cible`. Exposé pour les suites qui ne sont pas des `Progression` — la
+ * reconnaissance de cadences enchaîne des accords hors modèle.
+ */
+export { placer }
 
 // ─── La table ────────────────────────────────────────────────────────────────
 

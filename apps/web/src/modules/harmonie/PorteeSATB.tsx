@@ -22,15 +22,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Accidental, Formatter, Renderer, Stave, StaveConnector, StaveNote, Voice } from 'vexflow'
 
 import { useTheme } from '../../ThemeContext'
-import { realiserProgression } from './dispositions.ts'
-import {
-  TONIQUE_UT,
-  armureVex,
-  cleVex,
-  ecrireAccord,
-  transposerVersUt,
-} from './notation.ts'
-import { type Progression } from './types.ts'
+import { cleVex, type Partition } from './notation.ts'
 
 const ACCENT = '#c084fc'
 const ERREUR = '#f87171'
@@ -61,18 +53,18 @@ function palette(dark: boolean) {
 }
 
 export default function PorteeSATB({
-  progression,
-  vue,
+  partition,
   indexCourant = null,
   fautes = [],
+  legende = 'Réalisation à quatre voix',
 }: {
-  progression: Progression
-  /** `masquee` n'est pas rendu ici : l'appelant ne monte pas le composant. */
-  vue: Exclude<VuePortee, 'masquee'>
+  /** Notes déjà écrites et armure — cf. `notation.ts`. Ce composant ne fait que graver. */
+  partition: Partition
   /** Accord en train de sonner, illuminé. */
   indexCourant?: number | null
   /** Index des accords à marquer en rouge. */
   fautes?: readonly number[]
+  legende?: string
 }) {
   const viewportRef = useRef<HTMLDivElement>(null)
   const hoteRef = useRef<HTMLDivElement>(null)
@@ -81,8 +73,17 @@ export default function PorteeSATB({
   const [echec, setEchec] = useState(false)
   const { dark } = useTheme()
 
-  const accords = progression.accords
-  const contenuLargeur = Math.max(largeurVue, accords.length * LARGEUR_ACCORD + MARGE_CLEF)
+  const { notes, armure } = partition
+  const contenuLargeur = Math.max(largeurVue, notes.length * LARGEUR_ACCORD + MARGE_CLEF)
+
+  // Signature du CONTENU, pas de l'objet : les appelants reconstruisent leur
+  // partition à chaque rendu, et regraver le SVG à chaque fois ferait clignoter la
+  // portée pendant la réécoute.
+  const signature = useMemo(
+    () => `${armure}|${notes.map((a) => a.map(cleVex).join(',')).join(' ')}`,
+    [armure, notes],
+  )
+  const signatureFautes = fautes.join(',')
 
   useEffect(() => {
     const el = viewportRef.current
@@ -97,24 +98,10 @@ export default function PorteeSATB({
     return () => ro.disconnect()
   }, [])
 
-  // Les hauteurs écrites, dans la tonalité de la vue. La remise en Ut TRANSPOSE
-  // la réalisation au lieu de la recalculer : le registre et la disposition sont
-  // ceux qu'on a entendus, seule l'armure change.
-  const { hauteurs, toniqueEcrite } = useMemo(() => {
-    const realisation = realiserProgression(progression)
-    if (vue === 'tonalite') {
-      return { hauteurs: realisation, toniqueEcrite: progression.tonique }
-    }
-    return {
-      hauteurs: transposerVersUt(realisation, progression.tonique, progression.mode),
-      toniqueEcrite: TONIQUE_UT[progression.mode],
-    }
-  }, [progression, vue])
-
   // ── Effet LOURD : la portée ────────────────────────────────────────────────
   useEffect(() => {
     const hote = hoteRef.current
-    if (!hote || accords.length === 0) return
+    if (!hote || notes.length === 0) return
     hote.innerHTML = ''
     groupesRef.current = []
     const C = palette(dark)
@@ -124,7 +111,6 @@ export default function PorteeSATB({
       renderer.resize(contenuLargeur, HAUTEUR)
       const ctx = renderer.getContext()
 
-      const armure = armureVex(toniqueEcrite, progression.mode)
       const sol = new Stave(4, Y_SOL, contenuLargeur - 12).addClef('treble').addKeySignature(armure)
       const fa = new Stave(4, Y_FA, contenuLargeur - 12).addClef('bass').addKeySignature(armure)
       sol.setContext(ctx).draw()
@@ -135,18 +121,12 @@ export default function PorteeSATB({
       new StaveConnector(sol, fa).setType('brace').setContext(ctx).draw()
       new StaveConnector(sol, fa).setType('singleLeft').setContext(ctx).draw()
 
-      // Une note par voix et par accord, orthographiée depuis L'ACCORD et non
-      // depuis le MIDI — `notation.ts` explique pourquoi on ne devine jamais.
-      const ecrites = accords.map((accord, i) =>
-        ecrireAccord(hauteurs[i], accord, toniqueEcrite, progression.mode),
-      )
-
       const notesParVoix = [SOPRANO, ALTO, TENOR, BASSE].map((voix, rang) =>
-        ecrites.map(
-          (notes) =>
+        notes.map(
+          (accord) =>
             new StaveNote({
               clef: rang < 2 ? 'treble' : 'bass',
-              keys: [cleVex(notes[voix])],
+              keys: [cleVex(accord[voix])],
               duration: 'h',
               // Hampes opposées dans chaque portée : c'est ce qui rend les deux
               // voix distinctes quand elles se croisent ou se serrent.
@@ -155,10 +135,10 @@ export default function PorteeSATB({
         ),
       )
 
-      const voix = notesParVoix.map((notes) => {
-        const v = new Voice({ numBeats: accords.length * 2, beatValue: 4 })
+      const voix = notesParVoix.map((rangee) => {
+        const v = new Voice({ numBeats: notes.length * 2, beatValue: 4 })
         v.setMode(Voice.Mode.SOFT)
-        v.addTickables(notes)
+        v.addTickables(rangee)
         return v
       })
 
@@ -195,9 +175,9 @@ export default function PorteeSATB({
       }
 
       // Un groupe d'éléments SVG par accord : de quoi recolorer sans redessiner.
-      groupesRef.current = accords.map((_, i) =>
+      groupesRef.current = notes.map((_, i) =>
         notesParVoix
-          .map((notes) => notes[i].getSVGElement())
+          .map((rangee) => rangee[i].getSVGElement())
           .filter((el): el is SVGElement => el !== undefined),
       )
       setEchec(false)
@@ -207,7 +187,9 @@ export default function PorteeSATB({
       console.warn('PorteeSATB', e)
       setEchec(true)
     }
-  }, [accords, hauteurs, toniqueEcrite, progression.mode, contenuLargeur, dark])
+    // `signature` remplace `notes` : c'est le CONTENU qui commande la gravure.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [signature, contenuLargeur, dark])
 
   // ── Effet LÉGER : la couleur ───────────────────────────────────────────────
   useEffect(() => {
@@ -223,18 +205,17 @@ export default function PorteeSATB({
         })
       })
     })
-    // `contenuLargeur` et `accords` sont des dépendances de l'effet LOURD : quand
-    // il regrave, les groupes changent d'identité et la couleur doit être reposée.
-  }, [indexCourant, fautes, dark, hauteurs, toniqueEcrite, contenuLargeur, accords])
+    // `signature` et `contenuLargeur` commandent l'effet LOURD : quand il regrave,
+    // les groupes changent d'identité et la couleur doit être reposée.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [indexCourant, signatureFautes, dark, signature, contenuLargeur])
 
   return (
     <div
       ref={viewportRef}
       style={{ width: '100%', overflowX: 'auto', overflowY: 'hidden' }}
       role="img"
-      aria-label={`Réalisation à quatre voix, ${
-        vue === 'ut' ? 'remise en Ut' : 'dans la tonalité entendue'
-      }`}
+      aria-label={legende}
     >
       <div ref={hoteRef} style={{ width: contenuLargeur }} />
       {echec && (

@@ -14,6 +14,7 @@ import { ThemeToggleInline } from '../../ThemeContext'
 import { NIVEAUX_BINAIRE } from './binaire.ts'
 import { NIVEAU_MAX_DETECTION, NIVEAU_MIN_DETECTION } from './detection.ts'
 import { NIVEAU_DICTEE } from './dictee.ts'
+import { NIVEAU_CADENCES } from './cadences.ts'
 import { NIVEAU_MAX_FLUX, NIVEAU_MIN_FLUX } from './flux.ts'
 
 const ACCENT = '#c084fc'
@@ -41,6 +42,14 @@ const ACTIVITES: Activite[] = [
     sousTitre:
       'Une question, deux réponses, sur un seul accord de la suite : sa fonction, sa basse ou sa septième — selon le niveau.',
     niveau: `Niveaux ${NIVEAUX_BINAIRE.join(', ')}`,
+    disponible: true,
+  },
+  {
+    route: '/harmonie/cadences',
+    titre: 'Cadences',
+    sousTitre:
+      'Nomme la cadence entendue — et, au palier suivant, l’accord chromatique qui l’approche : napolitaine ou sixte augmentée.',
+    niveau: `Niveau ${NIVEAU_CADENCES} et plus`,
     disponible: true,
   },
   {

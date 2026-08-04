@@ -13,6 +13,7 @@ import DicteeBassePage from './modules/harmonie/DicteeBassePage'
 import IntervallesPage from './modules/harmonie/IntervallesPage'
 import ChoixBinairePage from './modules/harmonie/ChoixBinairePage'
 import ChiffrageFluxPage from './modules/harmonie/ChiffrageFluxPage'
+import CadencesPage from './modules/harmonie/CadencesPage'
 import BancPage from './modules/harmonie/BancPage'
 import ProfilPage from './ProfilPage'
 import LoginPage from './auth/LoginPage'
@@ -78,6 +79,7 @@ function AppRoutes() {
       <Route path="/harmonie/intervalles" element={<IntervallesPage />} />
       <Route path="/harmonie/binaire" element={<ChoixBinairePage />} />
       <Route path="/harmonie/flux" element={<ChiffrageFluxPage />} />
+      <Route path="/harmonie/cadences" element={<CadencesPage />} />
       {/* Banc d'écoute Harmonie — harnais de dev, aucun lien depuis le Hub */}
       {IS_DEV && <Route path="/harmonie/banc" element={<BancPage />} />}
       {IS_DEV && <Route path="/accordeur/calibration" element={<ProtectedRoute><CalibrationPage /></ProtectedRoute>} />}

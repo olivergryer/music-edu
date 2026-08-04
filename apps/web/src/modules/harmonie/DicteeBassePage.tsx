@@ -17,6 +17,7 @@ import { ThemeToggleInline } from '../../ThemeContext'
 
 import { arreter, chargerInstrument, jouerSuite } from './audio.ts'
 import { realiserProgression } from './dispositions.ts'
+import { partitionDeProgression } from './notation.ts'
 import PorteeSATB, { type VuePortee } from './PorteeSATB.tsx'
 import TogglePortee, { estVuePortee } from './TogglePortee.tsx'
 import RoueFigee from './RoueFigee.tsx'
@@ -502,8 +503,7 @@ export default function DicteeBassePage() {
             {vuePortee !== 'masquee' && (
               <div style={{ marginTop: 10 }}>
                 <PorteeSATB
-                  progression={item.progression}
-                  vue={vuePortee}
+                  partition={partitionDeProgression(item.progression, vuePortee)}
                   fautes={erreurs.map((e) => e.index)}
                 />
               </div>

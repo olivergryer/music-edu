@@ -270,6 +270,7 @@ La détection démarrait au niveau 3 : **les niveaux 0 à 2 n'avaient aucune por
 | `/harmonie` | choix d'activité | — |
 | `/harmonie/basse` | dictée de basse | niveau 1 |
 | `/harmonie/binaire` | choix binaire | niveaux 2, 4, 5 |
+| `/harmonie/cadences` | reconnaissance de cadences | niveau 3 + palier « toutes » hors barème |
 | `/harmonie/detection` | détection d'erreur | niveaux 3-7 |
 | `/harmonie/flux` | chiffrage en flux | niveaux 6-7 |
 | `/harmonie/intervalles` | reconnaissance d'intervalles | **hors barème** |
@@ -522,11 +523,89 @@ gravure qui échoue affiche « Portée indisponible » et laisse intact le reste
 | `ChoixBinairePage` | la suite entendue, accord visé marqué |
 | `DicteeBassePage` | la suite entendue, basses fautives marquées |
 
+## Reconnaissance de cadences — `cadences.ts` + `chromatiques.ts` (2026-08-04)
+
+Le barème DÉCLARAIT cette activité sans qu'elle existe : `niveaux.ts` donne au niveau 3
+`tache: 'choix_multiple'` — « type de cadence : parfaite, demi-cadence, rompue, plagale » — et ses
+`finales: [1, 5, 6]` sont exactement les finales de ces quatre cadences. Le palier `niveau3` la
+remplit ; le palier `tout`, **hors barème**, ajoute l'imparfaite et les quatre approches
+chromatiques. Clés : `cadences:3` et `cadences:tout`. Aucune renumérotation de `NIVEAUX`.
+
+### La couche chromatique — `chromatiques.ts`
+
+⚠ **Ces accords ne sont PAS des accords à degré.** `Degre = 1|…|7` indexe la géométrie, la matrice,
+les qualités et les dispositions ; la sixte allemande — `♭6 · 1 · ♭3 · ♯4` — ne s'empile pas en
+tierces depuis une fondamentale. Aucune extension de `Degre` ne la produirait. Ils vivent **à côté**
+du modèle, jamais dedans, et n'entrent donc ni dans `vecteurErreur`, ni dans la matrice, ni sur le
+cercle des tierces — dont l'activité, choix multiple, n'a besoin d'aucun.
+
+⚠ **La table est en (demi-tons, LETTRE), pas en altérations.** La hauteur d'un de ces sons ne dépend
+pas du mode, son écriture si : le ♭3 de l'allemande vaut trois demi-tons partout, mais s'écrit mi♭
+altéré en majeur et mi♭ diatonique en mineur. `noteSurDegre(degreGamme, demiTons, tonique, mode)`
+impose la lettre et déduit l'altération — juste dans les deux modes et sur les douze toniques. Cas
+limite épinglé par un test : le ♯4 de **sol♯ mineur s'écrit do♯♯**.
+
+Les trois sixtes augmentées partagent basse (♭6) et sommet (♯4) — dix demi-tons, à l'oreille une
+septième mineure. C'est ce qui se trouve **entre** les deux qui les distingue : rien, une seconde,
+une tierce.
+
+Le chiffrage seul est **ambigu et c'est assumé** : `+6` désigne déjà le V⁷ au 2ᵉ renversement dans la
+table française. D'où l'affichage systématique **chiffre + nom** (décidé avec Matthieu) — le nom lève
+ce que le chiffre ne peut pas lever. `ChiffrageBrut` (dans `ChiffrageEmpile.tsx`) rend un chiffrage
+qui ne vient pas d'un `Accord`.
+
+### L'axe soprano — `dispositions.ts`
+
+`serrer()` retenait la disposition la plus serrée : le soprano était figé, et le module ne pouvait
+pas *vouloir* la tonique au sommet. `dispositionAuSoprano(accord, mode, soprano)` contraint la classe
+de hauteur du sommet, puis reprend le même départage. `disposition()` est inchangé — rien ne bouge
+pour les autres activités, un test le vérifie.
+
+`dispositionLibre(sons, indexBasse, double)` sert les accords hors modèle. ⚠ **Elle ne permute pas**
+les voix supérieures, contrairement à `serrer` : dans une sixte augmentée c'est l'écart ♭6 → ♯4 qui
+fait l'accord, réarranger reviendrait à en changer.
+
+### Les deux axes de réponse
+
+⚠ **Une sixte allemande n'est pas un type de cadence** : c'est un accord d'approche, et les quatre
+résolvent sur V. La même napolitaine peut précéder une parfaite, une demi ou une rompue. D'où **deux
+questions par item** et deux exactitudes **qui ne s'additionnent jamais** — même principe que
+`parDiagnostic` en flux. `COMBINAISONS` est une **table** : la plagale n'a pas de dominante, donc
+aucune approche chromatique, et aucune formule ne le déduirait.
+
+⚠ **Pas d'imparfaite au niveau 3.** Sa spec impose `renversements: [0]` : l'imparfaite s'y réduirait
+au seul critère de soprano, trop fin pour une entrée en matière — et le barème n'énumère que les
+quatre autres. L'axe soprano sert malgré tout dès le niveau 3, sans quoi une « parfaite » sonnerait
+au hasard avec la tierce au sommet.
+
+⚠ **Pas de question d'approche au niveau 3** : elle n'aurait qu'une réponse possible.
+
+⚠ **La tierce picarde est hors liste** (décidé avec Matthieu) : c'est la qualité de la finale, pas un
+type de cadence. Une parfaite peut être picarde.
+
+⚠ **`respecteContraintes` n'est pas appliqué tel quel** : ses `finales` sont celles d'un niveau,
+pensées pour une autre activité — le niveau 7 n'admet que I et rejetterait toute demi-cadence.
+`violationsCadence` ne retient que les violations d'écriture. Le vrai contrat est `signatureRespectee`,
+vérifié sur toutes les cadences générées.
+
+### La partition — `notation.ts`
+
+`PorteeSATB` réalisait et orthographiait à partir d'une `Progression` : impossible pour une suite qui
+contient des accords hors modèle. La musique se calcule maintenant dans `notation.ts`
+(`Partition { notes, armure }`, `partitionDeProgression`), le dessin dans `PorteeSATB`, et chaque
+activité fabrique sa partition comme elle peut (`partitionDeCadence` pour les cadences). Le composant
+regrave sur la **signature du contenu**, pas sur l'identité de l'objet — sinon la portée clignoterait
+à chaque rendu pendant la réécoute.
+
 ## Suite
 
 Exercice à trous · **niveau 0** (`qualite_binaire`, majeur ou mineur — le dernier trou du barème) ·
 poids des matrices à régler au banc (c'est ce qui débloque `active: true` sur le Hub) · niveau 8
 (degrés secondaires) · écran d'historique consommant les `flags`.
+
+**À décider à l'usage** — le mode reste un réglage de SESSION (comme partout ailleurs), donc le
+« tirage privilégiant le mineur » se réduit à un défaut : choisir le palier « toutes » bascule
+l'écran en mineur. Un tirage par item demanderait de changer de mode en cours de session.
 
 **Couverture du barème** : 0 aucune activité · 1 dictée · 2 binaire · 3 détection · 4-5 binaire +
 détection · 6-7 **flux** + détection · 8 non générable.

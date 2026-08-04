@@ -20,6 +20,7 @@
 // implémentations sont épinglées l'une à l'autre par `harmonieNotation.test.ts` :
 // toute hauteur réalisée doit se retrouver dans la table.
 
+import { realiserProgression } from './dispositions.ts'
 import {
   classeDeHauteur,
   gammeNommee,
@@ -28,7 +29,7 @@ import {
   type Lettre,
   type NoteNommee,
 } from './tonalites.ts'
-import { qualite, type Accord, type Mode } from './types.ts'
+import { qualite, type Accord, type Mode, type Progression } from './types.ts'
 
 /** Une note nommée ET placée : c'est ce qu'il faut pour écrire sur une portée. */
 export interface NoteEcrite extends NoteNommee {
@@ -93,6 +94,33 @@ export function orthographeAccord(
   }
 
   return carte
+}
+
+/**
+ * La note qui porte la LETTRE du degré de gamme demandé, à `demiTons` au-dessus
+ * de la tonique. C'est la brique de l'orthographe chromatique : on impose la
+ * lettre, l'altération se déduit de l'écart avec la gamme.
+ *
+ * Pourquoi ça marche dans les deux modes sans table par mode : le ♭3 d'une sixte
+ * allemande vaut trois demi-tons partout, mais il s'écrit mi♭ (altéré) en majeur
+ * et mi♭ (diatonique) en mineur. En partant de la gamme, l'altération sort juste
+ * des deux côtés.
+ */
+export function noteSurDegre(
+  degreGamme: number,
+  demiTons: number,
+  tonique: number,
+  mode: Mode,
+): NoteNommee {
+  const gamme = gammeNommee(tonique, mode)
+  const note = gamme[degreGamme]
+  if (!note) throw new Error(`noteSurDegre : degré de gamme hors bornes (${degreGamme})`)
+
+  const dansLaGamme = (((classeDeHauteur(note) - tonique) % 12) + 12) % 12
+  let ecart = (((demiTons - dansLaGamme) % 12) + 12) % 12
+  if (ecart > 6) ecart -= 12
+
+  return alterer(note, ecart, `noteSurDegre (degré ${degreGamme}, ${demiTons} demi-tons)`)
 }
 
 /**
@@ -186,4 +214,43 @@ export function transposerVersUt(
 ): number[][] {
   const decalage = decalageVersUt(tonique, mode)
   return hauteurs.map((accord) => accord.map((midi) => midi + decalage))
+}
+
+// ─── La partition ────────────────────────────────────────────────────────────
+//
+// Ce qu'il faut, et rien de plus, pour graver : des notes écrites et une armure.
+//
+// ⚠ SÉPARATION VOULUE. `PorteeSATB` réalisait et orthographiait lui-même à partir
+// d'une `Progression` — impossible pour une suite qui contient des accords hors
+// modèle (les cadences chromatiques). La musique se calcule ici, le dessin là-bas,
+// et chaque activité fabrique sa partition comme elle peut.
+
+export interface Partition {
+  /** Un tableau par accord : quatre voix, dans l'ordre basse → soprano. */
+  notes: NoteEcrite[][]
+  /** Nom d'armure VexFlow de la tonalité D'ÉCRITURE — vide en vue « Ut ». */
+  armure: string
+}
+
+export type VueTonalite = 'tonalite' | 'ut'
+
+/** La tonalité dans laquelle on écrit, selon la vue. */
+export function toniqueEcrite(tonique: number, mode: Mode, vue: VueTonalite): number {
+  return vue === 'tonalite' ? tonique : TONIQUE_UT[mode]
+}
+
+export function partitionDeProgression(progression: Progression, vue: VueTonalite): Partition {
+  const realisation = realiserProgression(progression)
+  const hauteurs =
+    vue === 'tonalite'
+      ? realisation
+      : transposerVersUt(realisation, progression.tonique, progression.mode)
+  const ecrite = toniqueEcrite(progression.tonique, progression.mode, vue)
+
+  return {
+    notes: progression.accords.map((accord, i) =>
+      ecrireAccord(hauteurs[i], accord, ecrite, progression.mode),
+    ),
+    armure: armureVex(ecrite, progression.mode),
+  }
 }

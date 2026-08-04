@@ -8,6 +8,8 @@ import {
   TESSITURES,
   cleDisposition,
   disposition,
+  dispositionAuSoprano,
+  dispositionLibre,
   hauteursReelles,
   plageTransposition,
   realiserProgression,
@@ -277,4 +279,82 @@ test('plageTransposition : une demi-ton de plus sort des tessitures', () => {
     assert.equal(dedans(prog, minimum - 1), false, `${prog.id} : borne basse non serrée`)
     assert.equal(dedans(prog, maximum + 1), false, `${prog.id} : borne haute non serrée`)
   }
+})
+
+// ─── L'axe soprano (2026-08-04) ──────────────────────────────────────────────
+//
+// Ajouté pour la reconnaissance de cadences : sans lui, une « parfaite » sonnerait
+// au hasard avec la tierce au sommet, et ne serait donc pas parfaite.
+
+test('dispositionAuSoprano met bien le son demandé au sommet', () => {
+  for (const mode of MODES) {
+    for (const degre of DEGRES) {
+      for (const renversement of [0, 1] as Renversement[]) {
+        const accord = creerAccord(0, { degre, renversement })
+        const sons = triade(mode, degre)
+        for (const souhaite of sons) {
+          const basse = sons[renversement] % 12
+          if (souhaite % 12 === basse) continue // le son est à la basse, pas au sommet
+          const disp = dispositionAuSoprano(accord, mode, souhaite)
+          assert.equal(
+            disp.voix[2] % 12,
+            ((souhaite % 12) + 12) % 12,
+            `${mode} degré ${degre} renv ${renversement} : sommet ${disp.voix[2] % 12}`,
+          )
+        }
+      }
+    }
+  }
+})
+
+test('dispositionAuSoprano garde les voix ordonnées au-dessus de la basse', () => {
+  const disp = dispositionAuSoprano(creerAccord(0, { degre: 1 }), 'majeur', 0)
+  assert.ok(disp.voix[0] > disp.basse)
+  assert.ok(disp.voix[1] > disp.voix[0])
+  assert.ok(disp.voix[2] > disp.voix[1])
+})
+
+// Quand le sommet demandé est celui que la position serrée aurait choisi, la
+// contrainte ne doit rien changer : c'est la preuve qu'elle filtre sans réordonner.
+test('sans contrainte utile, dispositionAuSoprano retombe sur disposition', () => {
+  for (const mode of MODES) {
+    for (const degre of DEGRES) {
+      const accord = creerAccord(0, { degre })
+      const libre = disposition(accord, mode)
+      const contrainte = dispositionAuSoprano(accord, mode, libre.voix[2])
+      assert.deepEqual(contrainte, libre, `${mode} degré ${degre}`)
+    }
+  }
+})
+
+test('un sommet étranger à l’accord est refusé', () => {
+  // Le do♯ n'appartient à aucun accord de I en do majeur.
+  assert.throws(
+    () => dispositionAuSoprano(creerAccord(0, { degre: 1 }), 'majeur', 1),
+    /aucun arrangement/,
+  )
+})
+
+// ─── Dispositions hors modèle ────────────────────────────────────────────────
+
+test('dispositionLibre empile les sons donnés sans les permuter', () => {
+  // Sixte allemande en do : la♭ do mi♭ fa♯.
+  const disp = dispositionLibre([8, 12, 15, 18], 0, null)
+  assert.equal(disp.basse, 8)
+  assert.deepEqual(disp.voix, [12, 15, 18])
+  // Le sommet reste le ♯4 : c'est l'écart basse → sommet qui fait la sixte augmentée.
+  assert.equal(disp.voix[2] - disp.basse, 10)
+})
+
+test('dispositionLibre place la doublure une octave au-dessus', () => {
+  // Sixte italienne : trois sons, la tonique doublée pour tenir quatre voix.
+  const disp = dispositionLibre([8, 12, 18], 0, 1)
+  assert.equal(disp.basse, 8)
+  assert.deepEqual(disp.voix, [12, 18, 24])
+})
+
+test('dispositionLibre refuse une basse ou une doublure hors bornes', () => {
+  assert.throws(() => dispositionLibre([8, 12, 18], 3, null), /basse hors bornes/)
+  assert.throws(() => dispositionLibre([8, 12, 18], 0, 9), /doublure hors bornes/)
+  assert.throws(() => dispositionLibre([8, 12], 0, null), /au moins 3/)
 })

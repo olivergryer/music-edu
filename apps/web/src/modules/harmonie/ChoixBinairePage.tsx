@@ -20,6 +20,7 @@ import { arreter, chargerInstrument, jouerSuite } from './audio.ts'
 import ChiffrageEmpile from './ChiffrageEmpile.tsx'
 import { realiserProgression } from './dispositions.ts'
 import { niveauSpec } from './niveaux.ts'
+import { partitionDeProgression } from './notation.ts'
 import PorteeSATB, { type VuePortee } from './PorteeSATB.tsx'
 import TogglePortee, { estVuePortee } from './TogglePortee.tsx'
 import {
@@ -431,8 +432,7 @@ export default function ChoixBinairePage() {
               {vuePortee !== 'masquee' && (
                 <div style={{ marginTop: 10 }}>
                   <PorteeSATB
-                    progression={item.progression}
-                    vue={vuePortee}
+                    partition={partitionDeProgression(item.progression, vuePortee)}
                     fautes={juste ? [] : [item.cible]}
                   />
                 </div>

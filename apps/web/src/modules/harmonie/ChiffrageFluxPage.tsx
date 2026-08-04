@@ -31,6 +31,7 @@ import { realiserProgression } from './dispositions.ts'
 import { CercleTierces, type EtatTrace, type VersionJouee } from './Glyphes.tsx'
 import { lireDrapeaux } from './glyphe.ts'
 import { niveauSpec } from './niveaux.ts'
+import { partitionDeProgression } from './notation.ts'
 import PorteeSATB, { type VuePortee } from './PorteeSATB.tsx'
 import TogglePortee, { estVuePortee } from './TogglePortee.tsx'
 import RoueFigee from './RoueFigee.tsx'
@@ -716,14 +717,17 @@ export default function ChiffrageFluxPage() {
             {vuePortee !== 'masquee' && (
               <div style={{ marginTop: 10 }}>
                 <PorteeSATB
-                  progression={
+                  partition={partitionDeProgression(
                     versionJouee === CORRIGE
                       ? item.progression
-                      : { ...item.progression, accords: saisies as Accord[] }
-                  }
-                  vue={vuePortee}
+                      : { ...item.progression, accords: saisies as Accord[] },
+                    vuePortee,
+                  )}
                   indexCourant={trace.phase === 'lecture' ? trace.index : null}
                   fautes={resultats.filter((r) => !r.exact).map((r) => r.index)}
+                  legende={`Réalisation à quatre voix — ${
+                    versionJouee === CORRIGE ? 'le corrigé' : 'ta version'
+                  }`}
                 />
               </div>
             )}

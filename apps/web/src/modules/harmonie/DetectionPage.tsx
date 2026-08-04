@@ -39,6 +39,7 @@ import {
   type ReponseDetection,
 } from './detection.ts'
 import { lireDrapeaux } from './glyphe.ts'
+import { partitionDeProgression } from './notation.ts'
 import PorteeSATB, { type VuePortee } from './PorteeSATB.tsx'
 import TogglePortee, { estVuePortee } from './TogglePortee.tsx'
 import {
@@ -707,14 +708,17 @@ function EcranJeu({
               {vuePortee !== 'masquee' && (
                 <div style={{ marginTop: 10 }}>
                   <PorteeSATB
-                    progression={
+                    partition={partitionDeProgression(
                       versionJouee === 'ecrit'
                         ? progressionEcrite
-                        : { ...progressionEcrite, accords: item.accordsEntendus }
-                    }
-                    vue={vuePortee}
+                        : { ...progressionEcrite, accords: item.accordsEntendus },
+                      vuePortee,
+                    )}
                     indexCourant={trace.phase === 'lecture' ? trace.index : null}
                     fautes={[item.indexPerturbe]}
+                    legende={`Réalisation à quatre voix — ${
+                      versionJouee === 'ecrit' ? 'ce qui était écrit' : 'ce qui a sonné'
+                    }`}
                   />
                 </div>
               )}
