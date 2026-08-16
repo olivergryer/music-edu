@@ -753,6 +753,24 @@ export default function AccordeurPage() {
   const setMinDurationManual = useCallback((v) => { setMinNoteDurationMs(v); setProfile('custom') }, [])
   const setReattackManual   = useCallback((v) => { setReattackDropRatio(v); setProfile('custom') }, [])
 
+  // Retour au calibrage par défaut (built-in) : supprime l'override de la page
+  // calibration et restaure les valeurs d'usine du profil courant.
+  const resetToDefaultCalibration = useCallback(() => {
+    localStorage.removeItem('acc_profiles_custom')
+    // ACC_PROFILES a figé l'éventuel override au chargement du module → on restaure
+    // les défauts en mémoire pour que les bascules de profil soient propres sans reload.
+    for (const k of ['legato', 'detache', 'rapide']) Object.assign(ACC_PROFILES[k], _ACC_PROFILES_DEFAULTS[k])
+    const name = profile === 'custom' ? 'detache' : profile
+    const p = _ACC_PROFILES_DEFAULTS[name]
+    setProfile(name)
+    setClarityThreshold(p.clarityThreshold)
+    setGateLevel(p.gateLevel); gateLevelRef.current = p.gateLevel
+    setSilenceDurationMs(p.silenceDurationMs)
+    setNoteJumpCents(p.noteJumpCents)
+    setMinNoteDurationMs(p.minNoteDurationMs)
+    setReattackDropRatio(p.reattackDropRatio ?? 0)
+  }, [profile])
+
   useEffect(() => {
     demarrerLive()
     return () => arreterLive()
@@ -1274,6 +1292,17 @@ export default function AccordeurPage() {
                       </>
                     )
                   })()}
+
+                  <button
+                    onClick={resetToDefaultCalibration}
+                    className="w-full mt-3 rounded-lg text-xs font-bold py-2 cursor-pointer"
+                    style={{ background: 'transparent', color: 'var(--text-muted)', border: '1px solid var(--border-c)' }}
+                  >
+                    ↺ Retour au calibrage par défaut
+                  </button>
+                  <div className="text-app-muted text-[10px] mt-1" style={{ lineHeight: 1.4 }}>
+                    Restaure les réglages d'usine et supprime les profils calibrés appliqués.
+                  </div>
 
                   {phase === 'resultats' && (
                     <InfoTip text="Modification active le bouton ↻ Recalculer sur la portée." />

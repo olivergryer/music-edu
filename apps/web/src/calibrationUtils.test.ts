@@ -30,6 +30,30 @@ test('intersection vide → conflit + fallback plage la plus large', () => {
   assert.equal(p.legato.details.clarityThreshold.source, 'fallback-widest')
 })
 
+test('ré-attaque non contrainte (plage large) → reste à 0 (bas), pas le centre', () => {
+  // Deux sessions dont la ré-attaque passe partout [0, 0.6] → doit donner 0, pas 0.3.
+  const wide = { min: 0, max: 0.6, mid: 0.3 }
+  const sessions = [
+    { exercises: [{ id: 'gamme_lie_noire_60', acceptableRanges: { reattackDropRatio: wide } }] },
+    { exercises: [{ id: 'gamme_lie_croche',  acceptableRanges: { reattackDropRatio: wide } }] },
+  ]
+  const p = aggregateProfilesFromSessions(sessions)
+  assert.equal(p.legato.reattackDropRatio, 0)
+  assert.equal(p.legato.details.reattackDropRatio.source, 'intersection-low')
+})
+
+test('ré-attaque exigée par un exercice (plage haute) → prend le bas de cette plage', () => {
+  const sessions = [
+    { exercises: [
+      { id: 'gamme_lie_noire_60', acceptableRanges: { reattackDropRatio: { min: 0, max: 0.6, mid: 0.3 } } },
+      { id: 'gamme_lie_double',   acceptableRanges: { reattackDropRatio: { min: 0.35, max: 0.5, mid: 0.425 } } },
+    ] },
+  ]
+  const p = aggregateProfilesFromSessions(sessions)
+  // intersection [0.35, 0.6] → bas = 0.35 (assez pour l'exercice exigeant, sans sur-agressivité)
+  assert.equal(p.legato.reattackDropRatio, 0.35)
+})
+
 test('aucune plage → valeur centrale + conflit', () => {
   const p = aggregateProfilesFromSessions([{ exercises: [] }])
   assert.equal(p.legato.gateLevel, CENTER_PARAMS.gateLevel)

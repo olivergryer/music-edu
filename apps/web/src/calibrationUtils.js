@@ -154,6 +154,13 @@ export const SWEEP_RANGES = {
 
 export const PARAM_KEYS = ['clarityThreshold', 'gateLevel', 'silenceDurationMs', 'noteJumpCents', 'minNoteDurationMs', 'reattackDropRatio']
 
+// Paramètres « sûrs en bas » : quand la plage acceptable est large (donc peu
+// contrainte), une valeur haute est plus agressive et risque la sur-segmentation.
+// On prend le BAS de l'intersection au lieu du centre. La ré-attaque en fait partie :
+// non contrainte par les gammes (hauteurs différentes), elle doit rester à 0 (off),
+// et ne monter que si un exercice de même hauteur l'exige réellement.
+export const PARAM_PICK_LOW = new Set(['reattackDropRatio'])
+
 // ─── Sweep d'un paramètre sur un buffer ───────────────────────────────────────
 // Renvoie [{ value, pass }]
 function sweepOneParam(audioBuffer, paramKey, expectedNames, variant, diapason = 442) {
@@ -267,11 +274,12 @@ export function deriveSuggestedProfiles(exerciseResults) {
       const interMin = Math.max(...ranges.map(r => r.min))
       const interMax = Math.min(...ranges.map(r => r.max))
       if (interMin <= interMax) {
-        params[key] = +((interMin + interMax) / 2).toFixed(6)
+        // Paramètre « sûr en bas » (ré-attaque) : bas de l'intersection, pas le centre.
+        params[key] = PARAM_PICK_LOW.has(key) ? +interMin.toFixed(6) : +((interMin + interMax) / 2).toFixed(6)
       } else {
         // Pas d'intersection : prend la plus large
         const widest = ranges.reduce((a, b) => ((b.max - b.min) > (a.max - a.min) ? b : a))
-        params[key] = widest.mid
+        params[key] = PARAM_PICK_LOW.has(key) ? widest.min : widest.mid
         conflicts.push(key)
       }
     }
@@ -321,14 +329,15 @@ export function aggregateProfilesFromSessions(sessions, profileExercises = PROFI
       }
       const interMin = Math.max(...ranges.map(r => r.min))
       const interMax = Math.min(...ranges.map(r => r.max))
+      const pickLow = PARAM_PICK_LOW.has(key)
       if (interMin <= interMax) {
-        params[key] = PARAM_ROUND[key]((interMin + interMax) / 2)
-        details[key] = { n: ranges.length, inter: { min: interMin, max: interMax }, source: 'intersection' }
+        params[key] = PARAM_ROUND[key](pickLow ? interMin : (interMin + interMax) / 2)
+        details[key] = { n: ranges.length, inter: { min: interMin, max: interMax }, source: pickLow ? 'intersection-low' : 'intersection' }
       } else {
         const widest = ranges.reduce((a, b) => ((b.max - b.min) > (a.max - a.min) ? b : a))
-        params[key] = PARAM_ROUND[key](widest.mid)
+        params[key] = PARAM_ROUND[key](pickLow ? widest.min : widest.mid)
         conflicts.push(key)
-        details[key] = { n: ranges.length, inter: null, source: 'fallback-widest' }
+        details[key] = { n: ranges.length, inter: null, source: pickLow ? 'fallback-widest-low' : 'fallback-widest' }
       }
     }
     out[profile] = { ...params, conflicts, details }
