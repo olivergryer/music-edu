@@ -1,9 +1,10 @@
 // ─── Fiche des chiffrages du module Harmonie — générateur ────────────────────
 //
 // Produit `docs/chiffrages-harmonie.pdf` DEPUIS LE CODE, jamais à la main : le
-// jour où `chiffrage.ts`, `gabarits.ts` ou `niveaux.ts` bougent, il suffit de
-// relancer le script pour que la fiche redevienne juste. Une fiche retapée à la
-// main diverge en silence, et c'est un document que des élèves auront en main.
+// jour où `chiffrage.ts`, `chromatiques.ts`, `gabarits.ts` ou `niveaux.ts`
+// bougent, il suffit de relancer le script pour que la fiche redevienne juste.
+// Une fiche retapée à la main diverge en silence, et c'est un document que des
+// élèves auront en main.
 //
 //   npm run generate:chiffrages        (depuis apps/web/)
 //
@@ -15,8 +16,14 @@ import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { chiffrageDe, romainChiffre } from '../src/modules/harmonie/chiffrage.ts'
+import {
+  NOMS_CHROMATIQUES,
+  accordChromatique,
+  ecrireChromatique,
+} from '../src/modules/harmonie/chromatiques.ts'
 import { parseGabarit } from '../src/modules/harmonie/gabarits.ts'
 import { NIVEAUX } from '../src/modules/harmonie/niveaux.ts'
+import { nomNote } from '../src/modules/harmonie/tonalites.ts'
 import {
   DEGRES,
   creerAccord,
@@ -57,12 +64,14 @@ const echapper = (s: string) =>
 const accord = (degre: Degre, renversement: Renversement, septieme: boolean): Accord =>
   creerAccord(0, { degre, renversement, septieme })
 
+/** Les étages superposés. Partagé : tout ce qui se chiffre ici n'est pas un `Accord`. */
+function pile(etages: readonly string[]): string {
+  return `<span class="pile">${etages.map((e) => `<span>${echapper(e)}</span>`).join('')}</span>`
+}
+
 /** Les chiffres seuls, empilés. */
 function figure(a: Accord): string {
-  const etages = chiffrageDe(a)
-    .etages.map((e) => `<span>${echapper(e)}</span>`)
-    .join('')
-  return `<span class="pile">${etages}</span>`
+  return pile(chiffrageDe(a).etages)
 }
 
 /** Chiffre romain + chiffres empilés. */
@@ -266,8 +275,59 @@ function sectionGabarits(): string {
   niveau 3 n'enseigne pas encore les renversements. L'alternative était musicalement fausse.</p>`
 }
 
+function sectionChromatiques(): string {
+  const lignes = NOMS_CHROMATIQUES.map((nom) => {
+    const a = accordChromatique(nom)
+    // Les notes sont les MÊMES dans les deux modes — ce sont des emprunts au
+    // mineur. Une seule colonne suffit donc, et c'est en soi l'information.
+    const [basse, ...dessus] = ecrireChromatique(nom, 0, 'majeur').map(nomNote)
+
+    return `<tr>
+      <th>${echapper(a.libelle)}</th>
+      <td class="fig chrom"><span class="ch"><span class="rom">${echapper(
+        a.romain,
+      )}</span>${pile(a.chiffrage.etages)}</span></td>
+      <td class="notes"><b>${echapper(basse)}</b> ${echapper(dessus.join(' '))}</td>
+      <td class="fig">${echapper(romainChiffre(a.resout, 'majeur'))}</td>
+    </tr>`
+  }).join('')
+
+  return `<h2>5 · Les accords chromatiques d'approche</h2>
+  <p>Ces quatre accords ne sont <strong>pas des accords à degré</strong> : ils ne s'empilent pas en
+  tierces depuis une fondamentale, mais se définissent par leur <strong>contenu d'intervalles
+  au-dessus d'une basse</strong>. Le module les tient donc dans une table à part. Ils servent à la
+  reconnaissance de cadences, où ils préparent la dominante.</p>
+
+  <table class="chromatiques">
+    <thead><tr>
+      <th>Accord</th><th>Chiffrage</th><th>En do — basse en gras</th><th>Résout sur</th>
+    </tr></thead>
+    <tbody>${lignes}</tbody>
+  </table>
+
+  <p class="note"><strong>Les mêmes notes dans les deux modes.</strong> Ce sont des emprunts au
+  mineur : en majeur ils portent leurs altérations, en mineur une partie est déjà à l'armure. Seule
+  l'écriture change, jamais le son.</p>
+
+  <p class="note"><strong>Les trois sixtes augmentées partagent leur basse et leur sommet</strong>
+  — ♭6 en bas, ♯4 en haut, soit dix demi-tons : à l'oreille, une septième mineure. Ce qui les
+  distingue est ce qui se trouve <em>entre</em> les deux : rien pour l'italienne, une seconde pour
+  la française, une tierce pour l'allemande. L'italienne n'ayant que trois sons, c'est la
+  <strong>tonique</strong> qui s'y double.</p>
+
+  <p class="note"><strong>La sixte napolitaine</strong> est un accord de sixte sur le
+  4<sup>e</sup> degré — d'où son chiffrage <code>6</code>. Il est donné ici <em>sans</em> ses
+  altérations, qui dépendent du mode : en do majeur la basse porte un la♭ et un ré♭, en do mineur
+  le la♭ est déjà à l'armure.</p>
+
+  <p class="note"><strong>⚠ Le chiffre seul est ambigu, et c'est assumé.</strong> Le
+  <code>+6</code> des sixtes augmentées est aussi celui du V<sup>7</sup> au 2<sup>e</sup>
+  renversement (section 1). L'application affiche donc toujours ces accords <strong>avec leur
+  nom</strong> : c'est le nom qui lève ce que le chiffre ne peut pas lever.</p>`
+}
+
 function sectionNotes(): string {
-  return `<h2>5 · À savoir</h2>
+  return `<h2>6 · À savoir</h2>
   <ul>
     <li><strong>Le 6/4 est cadentiel</strong> jusqu'au niveau 6 inclus : il n'apparaît que sur un
     temps fort, suivi de V. Au niveau 7 la restriction saute — cadentiel contre passage devient
@@ -347,6 +407,11 @@ const html = `<!doctype html>
     font-family: 'SF Mono', Menlo, monospace; font-size: 8.5pt;
     font-weight: 600; background: #faf8ff; white-space: nowrap;
   }
+  .notes { font-size: 9.5pt; letter-spacing: 0.01em; }
+  .chrom .rom { font-size: 9.5pt; }
+  .chromatiques th:first-child { width: 34mm; }
+  .chromatiques td:nth-child(2) { width: 20mm; text-align: center; }
+  .chromatiques td:last-child { width: 20mm; text-align: center; }
   .voc { white-space: nowrap; }
   .voc .mode { color: #9aa0ac; font-size: 8pt; display: inline-block; width: 7mm; }
   .note { font-size: 8.5pt; color: #5b6070; }
@@ -364,11 +429,13 @@ ${sectionTable()}
 ${sectionDegres()}
 ${sectionNiveaux()}
 ${sectionGabarits()}
+${sectionChromatiques()}
 ${sectionNotes()}
 <footer>
   Document généré par <code>apps/web/scripts/generer-chiffrages.ts</code> à partir de
-  <code>chiffrage.ts</code>, <code>gabarits.ts</code>, <code>niveaux.ts</code> et
-  <code>contraintes.ts</code>. Ne pas éditer à la main — relancer le script.
+  <code>chiffrage.ts</code>, <code>chromatiques.ts</code>, <code>gabarits.ts</code>,
+  <code>niveaux.ts</code> et <code>contraintes.ts</code>. Ne pas éditer à la main — relancer le
+  script.
 </footer>
 </body></html>`
 

@@ -6,7 +6,7 @@
 
 import { useState } from "react";
 
-export const CONSIGNE_VERSION = "1"; // incrémenter force le réaffichage partout
+export const CONSIGNE_VERSION = "2"; // incrémenter force le réaffichage partout
 
 const keyFor = (storageKey) => `consigne-v${CONSIGNE_VERSION}-${storageKey}`;
 
@@ -19,6 +19,7 @@ export default function ConsigneOverlay({
   title,
   icon,
   lines = [],
+  demo,              // ReactNode — démonstration animée, insérée entre les lignes et les contrôles
   controls = [],     // [{ icon: ReactNode, name, desc }] — boutons de l'exercice à détailler
   warning,           // { tone: "sound" | "mic", text } | undefined
   startLabel = "Commencer",
@@ -56,6 +57,8 @@ export default function ConsigneOverlay({
             <div key={i} style={{ fontSize: 13, lineHeight: 1.45, color: "var(--text-muted)" }}>{l}</div>
           ))}
         </div>
+
+        {demo && <div style={{ marginBottom: 16 }}>{demo}</div>}
 
         {controls.length > 0 && (
           <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 16, textAlign: "left" }}>

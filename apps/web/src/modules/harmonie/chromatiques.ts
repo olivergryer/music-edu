@@ -82,7 +82,7 @@ export const ACCORDS_CHROMATIQUES: Readonly<Record<NomChromatique, AccordChromat
     double: 0, // la basse, comme tout accord de sixte dont on double la fondamentale réelle
     chiffrage: { etages: ['6'] },
     romain: '♭II',
-    libelle: 'napolitaine',
+    libelle: 'sixte napolitaine',
     resout: 5,
   },
 

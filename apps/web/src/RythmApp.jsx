@@ -13,6 +13,8 @@ import useSheetData from "./useSheetData";
 import useProgressFirebase, { TROPHIES as TROPHIES_IMPORT } from "./hooks/useProgressFirebase";
 import { generateDistractorSet, deriveNiveau } from "./rythmDistractors";
 import { buildPalette, scoreActivity5, measureStatus, groupOf } from "./rythmActivity5";
+import { RYTHME } from "./content/rythme.ts";
+import DemoDecompte from "./components/DemoDecompte.tsx";
 
 // ─── Figures de base ──────────────────────────────────────────────────────────
 const q  = { dur:"q"  };
@@ -169,10 +171,10 @@ function scoreTap(actual, expected, beatMs) {
   const pf  = beatMs * 0.02;  // modification manuelle --> ne pas altérer !
   const gd  = beatMs * 0.18;
   const ok  = beatMs * 0.30;
-  if (d <= pf) return { label:"Parfait ✦", pts:100, grade:"perfect", dev };
-  if (d <= gd) return { label:"Bien ✓",    pts:70,  grade:"good",    dev };
-  if (d <= ok) return { label:"Moyen",     pts:40,  grade:"ok",      dev };
-  return             { label:"Raté ✕",    pts:0,   grade:"miss",    dev };
+  if (d <= pf) return { label:RYTHME.grades.perfect, pts:100, grade:"perfect", dev };
+  if (d <= gd) return { label:RYTHME.grades.good,    pts:70,  grade:"good",    dev };
+  if (d <= ok) return { label:RYTHME.grades.ok,      pts:40,  grade:"ok",      dev };
+  return             { label:RYTHME.grades.miss,    pts:0,   grade:"miss",    dev };
 }
 const GRADE_COLOR = { perfect:"#a78bfa", good:"#34d399", ok:"#fbbf24", miss:"#f87171" };
 
@@ -245,49 +247,49 @@ function TapDiagnostics({ beatMs, analysis }) {
   const tempoPct = a.hasTempo ? Math.round(Math.abs(a.tempoErr ?? 0) * 100) : 0;
   let tempoText, tempoColor;
   if (!a.hasTempo) {
-    tempoText = '—'; tempoColor = 'var(--text-muted)';
+    tempoText = RYTHME.diagnostic.vide; tempoColor = 'var(--text-muted)';
   } else if (has('TEMPO_FAST')) {
-    tempoText = `Tu joues plus vite que le modèle (~${tempoPct}%)`;
+    tempoText = RYTHME.diagnostic.tempoRapide(tempoPct);
     tempoColor = Math.abs(a.tempoErr ?? 0) < 0.05 ? '#fbbf24' : '#f87171';
   } else if (has('TEMPO_SLOW')) {
-    tempoText = `Tu ralentis (~${tempoPct}% trop lent)`;
+    tempoText = RYTHME.diagnostic.tempoLent(tempoPct);
     tempoColor = Math.abs(a.tempoErr ?? 0) < 0.05 ? '#fbbf24' : '#f87171';
   } else {
-    tempoText = 'Tempo juste'; tempoColor = '#34d399';
+    tempoText = RYTHME.diagnostic.tempoJuste; tempoColor = '#34d399';
   }
 
   // Décalage : piloté par flags OFFSET_LATE / OFFSET_EARLY
   const off = a.offsetMs ?? 0;
   let offText, offColor;
-  if (has('OFFSET_LATE'))       { offText = `Tu démarres en retard (~${Math.round(off)} ms)`;       offColor = '#fbbf24'; }
-  else if (has('OFFSET_EARLY')) { offText = `Tu démarres en avance (~${Math.abs(Math.round(off))} ms)`; offColor = '#fbbf24'; }
-  else                          { offText = 'Bien calé';                                            offColor = '#34d399'; }
+  if (has('OFFSET_LATE'))       { offText = RYTHME.diagnostic.offsetRetard(Math.round(off));            offColor = '#fbbf24'; }
+  else if (has('OFFSET_EARLY')) { offText = RYTHME.diagnostic.offsetAvance(Math.abs(Math.round(off)));  offColor = '#fbbf24'; }
+  else                          { offText = RYTHME.diagnostic.offsetBienCale;                           offColor = '#34d399'; }
 
   // Régularité : ratio regularityStd / beatMs
   const r = a.regularityStd != null && beatMs ? a.regularityStd / beatMs : null;
   let regText, regColor;
-  if (r == null)         { regText = '—';                regColor = 'var(--text-muted)'; }
-  else if (has('IRREGULAR')) { regText = 'Ton tempo est en dents de scie'; regColor = '#f87171'; }
-  else if (r < 0.05)     { regText = 'Très régulier';    regColor = '#34d399'; }
-  else if (r < 0.12)     { regText = 'Régulier';         regColor = '#34d399'; }
-  else                   { regText = 'Assez régulier';   regColor = '#fbbf24'; }
+  if (r == null)         { regText = RYTHME.diagnostic.vide;             regColor = 'var(--text-muted)'; }
+  else if (has('IRREGULAR')) { regText = RYTHME.diagnostic.regIrregulier;    regColor = '#f87171'; }
+  else if (r < 0.05)     { regText = RYTHME.diagnostic.regTresRegulier;  regColor = '#34d399'; }
+  else if (r < 0.12)     { regText = RYTHME.diagnostic.regRegulier;      regColor = '#34d399'; }
+  else                   { regText = RYTHME.diagnostic.regAssezRegulier; regColor = '#fbbf24'; }
 
   // Dérive (nouveau) : DRIFT_ACCEL / DRIFT_DECEL
   let driftText = null, driftColor = '#fbbf24';
-  if (has('DRIFT_ACCEL')) driftText = 'Tu accélères vers la fin';
-  if (has('DRIFT_DECEL')) driftText = 'Tu ralentis vers la fin';
+  if (has('DRIFT_ACCEL')) driftText = RYTHME.diagnostic.driftAccel;
+  if (has('DRIFT_DECEL')) driftText = RYTHME.diagnostic.driftDecel;
 
   const extras  = a.extras  ?? [];
   const missing = a.missing ?? [];
 
   return (
     <div style={{ marginTop:12, textAlign:'left', borderTop:'1px solid var(--border-c)', paddingTop:10 }}>
-      <DiagRow label="Tempo"      value={tempoText} color={tempoColor} />
-      <DiagRow label="Décalage"   value={offText}   color={offColor} />
-      <DiagRow label="Régularité" value={regText}   color={regColor} />
-      {driftText && <DiagRow label="Dérive" value={driftText} color={driftColor} />}
-      {extras.length  > 0 && <DiagRow label="Frappes en trop" value={`${extras.length}`}  color="#f87171" />}
-      {missing.length > 0 && <DiagRow label="Frappes manquées" value={`${missing.length}`} color="#f87171" />}
+      <DiagRow label={RYTHME.diagnostic.tempo}      value={tempoText} color={tempoColor} />
+      <DiagRow label={RYTHME.diagnostic.decalage}   value={offText}   color={offColor} />
+      <DiagRow label={RYTHME.diagnostic.regularite} value={regText}   color={regColor} />
+      {driftText && <DiagRow label={RYTHME.diagnostic.derive} value={driftText} color={driftColor} />}
+      {extras.length  > 0 && <DiagRow label={RYTHME.diagnostic.frappesEnTrop}   value={`${extras.length}`}  color="#f87171" />}
+      {missing.length > 0 && <DiagRow label={RYTHME.diagnostic.frappesManquees} value={`${missing.length}`} color="#f87171" />}
     </div>
   );
 }
@@ -299,11 +301,11 @@ const BINARY_PROBABILITY = 0.7;
 
 const REVEAL_BONUS = { 1:0, 2:10, 3:20, 4:50 };
 const ACTIVITIES   = [
-  { id:1, label:"Reproduire vu" },
-  { id:2, label:"Reproduire entendu" },
-  { id:3, label:"Reconnaître écrit" },
-  { id:4, label:"Reconnaître joué" },
-  { id:5, label:"Reconstituer" },
+  { id:1, label: RYTHME.activites[1].label },
+  { id:2, label: RYTHME.activites[2].label },
+  { id:3, label: RYTHME.activites[3].label },
+  { id:4, label: RYTHME.activites[4].label },
+  { id:5, label: RYTHME.activites[5].label },
 ];
 
 // ─── Métronome visuel ────────────────────────────────────────────────────────
@@ -348,16 +350,16 @@ function SeriesEndScreen({ xpLog, medals, totalXp, dominantMedal, perfectSeries,
       <div className="w-full max-w-xl">
         <div className="text-center mb-6">
           <div className="text-5xl mb-2">{dominantMedal}</div>
-          <div className="text-2xl font-black" style={{ color: '#4A6CF7' }}>Série terminée !</div>
+          <div className="text-2xl font-black" style={{ color: '#4A6CF7' }}>{RYTHME.serie.titre}</div>
           <div className="text-sm text-app-muted mt-1">
-            {perfectSeries ? "Série parfaite — incroyable !" : `Score total : +${totalXp} XP`}
+            {perfectSeries ? RYTHME.serie.parfaite : RYTHME.serie.scoreTotal(totalXp)}
           </div>
         </div>
 
         {/* Grille des 10 exercices */}
         <div className="bg-surface rounded-2xl p-3.5 mb-4">
           <div className="text-[10px] font-bold text-app-muted uppercase tracking-wider mb-2.5">
-            Détail de la série
+            {RYTHME.serie.detail}
           </div>
           <div className="grid grid-cols-5 gap-1.5">
             {medals.map((m, i) => (
@@ -371,7 +373,7 @@ function SeriesEndScreen({ xpLog, medals, totalXp, dominantMedal, perfectSeries,
 
         {/* XP total */}
         <div className="bg-surface rounded-2xl p-3.5 mb-4 flex justify-between items-center">
-          <span className="text-sm text-app-muted">XP gagné</span>
+          <span className="text-sm text-app-muted">{RYTHME.serie.xpGagne}</span>
           <span className="text-xl font-black" style={{ color: '#4A6CF7' }}>+{totalXp} ⭐</span>
         </div>
 
@@ -379,7 +381,7 @@ function SeriesEndScreen({ xpLog, medals, totalXp, dominantMedal, perfectSeries,
         {result?.newTrophies?.length > 0 && (
           <div className="rounded-2xl p-3.5 mb-4 border" style={{ background: 'rgba(74,108,247,0.08)', borderColor: '#4A6CF7' }}>
             <div className="text-[11px] font-bold mb-2" style={{ color: '#4A6CF7' }}>
-              🏅 Trophée{result.newTrophies.length > 1 ? "s" : ""} débloqué{result.newTrophies.length > 1 ? "s" : ""} !
+              🏅 {result.newTrophies.length > 1 ? RYTHME.serie.tropheesDebloques : RYTHME.serie.tropheeDebloque}
             </div>
             {result.newTrophies.map(id => {
               const t = TROPHIES_IMPORT.find(x => x.id === id);
@@ -394,16 +396,16 @@ function SeriesEndScreen({ xpLog, medals, totalXp, dominantMedal, perfectSeries,
         {result?.rankedUp && (
           <div className="rounded-2xl p-3.5 mb-4 text-center border" style={{ background: 'rgba(74,108,247,0.08)', borderColor: '#4A6CF7' }}>
             <div className="text-2xl mb-1">🎉</div>
-            <div className="text-sm font-bold" style={{ color: '#4A6CF7' }}>Rang supérieur !</div>
+            <div className="text-sm font-bold" style={{ color: '#4A6CF7' }}>{RYTHME.serie.rangSuperieur}</div>
           </div>
         )}
 
         <div className="flex gap-2.5 mt-2">
           <button onClick={onBack} className="flex-1 py-3.5 rounded-2xl cursor-pointer bg-surface-2 border border-app text-app-muted text-sm font-bold">
-            ← Activités
+            {RYTHME.serie.retour}
           </button>
           <button onClick={onReplay} className="flex-[2] py-3.5 rounded-2xl cursor-pointer text-white text-sm font-bold border-none" style={{ background: 'linear-gradient(135deg,#4A6CF7,#8B5CF6)', boxShadow: '0 8px 32px rgba(74,108,247,0.4)' }}>
-            🔄 Rejouer la série
+            {RYTHME.serie.rejouer}
           </button>
         </div>
       </div>
@@ -482,109 +484,93 @@ const ACT_ICONS = {
 };
 
 const ACT_SHORT = {
-  1: "Reproduis ce que tu vois",
-  2: "Reproduis ce que tu entends",
-  3: "Identifie le rythme entendu parmi les 4 rythmes écrits",
-  4: "Identifie le rythme écrit parmi les 4 rythmes entendus",
-  5: "Reconstitue le rythme entendu en posant des cellules",
+  1: RYTHME.activites[1].court,
+  2: RYTHME.activites[2].court,
+  3: RYTHME.activites[3].court,
+  4: RYTHME.activites[4].court,
+  5: RYTHME.activites[5].court,
 };
 
 // Consignes synthétiques affichées à l'arrivée sur chaque activité (overlay).
 const CONSIGNES_RYTHME = {
-  1: ["Un rythme s'affiche sur la portée.", "Reproduis-le en tapant (ou au micro) en suivant le tempo. Commence après le décompte de 4 temps.", "Tape ou chante des valeurs courtes : touche l'écran puis relève le doigt aussitôt."],
-  2: ["Écoute le rythme : la portée reste cachée.", "Reproduis-le ensuite en tapant au bon moment.", "Tape ou chante des valeurs courtes : touche l'écran puis relève le doigt aussitôt."],
-  3: ["Écoute le rythme joué (après un décompte de 2 temps).", "Choisis, parmi les 4 portées, celle qui correspond."],
-  4: ["Observe la portée affichée.", "Clique sur chaque proposition A/B/C/D pour les écouter une par une et choisis celle qui correspond."],
-  5: ["Écoute le rythme, puis reconstitue-le en posant les cellules sur la portée.", "Valide pour voir ton score."],
+  1: RYTHME.activites[1].consigne,
+  2: RYTHME.activites[2].consigne,
+  3: RYTHME.activites[3].consigne,
+  4: RYTHME.activites[4].consigne,
+  5: RYTHME.activites[5].consigne,
 };
-const RYTHME_SOUND_WARNING = { tone: "sound", text: "Monte le volume et désactive le mode silencieux de ton appareil — le son est nécessaire." };
+const RYTHME_SOUND_WARNING = { tone: "sound", text: RYTHME.avertissements.son };
+
+// Icônes des sections de la popup d'explications des réglages — appariées aux
+// textes de `RYTHME.reglagesExpl.sections` par la clé `cle`.
+const REGLAGES_ICONS = {
+  saisie: (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="2.5" fill="currentColor" stroke="none"/>
+      <circle cx="12" cy="12" r="6.5"/>
+      <circle cx="12" cy="12" r="10.5" strokeOpacity="0.4"/>
+    </svg>
+  ),
+  tempo: (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M7 21h10l-2-17h-6z"/>
+      <line x1="12" y1="6" x2="16.5" y2="14"/>
+      <line x1="6" y1="21" x2="18" y2="21"/>
+    </svg>
+  ),
+  niveau: (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+      <rect x="3"  y="14" width="4" height="7"  rx="1"/>
+      <rect x="10" y="10" width="4" height="11" rx="1"/>
+      <rect x="17" y="5"  width="4" height="16" rx="1"/>
+    </svg>
+  ),
+  extreme: (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M13 2L4.5 13.5H11L10 22L19.5 10.5H13L13 2Z"/>
+    </svg>
+  ),
+  revelation: (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12z"/>
+      <circle cx="12" cy="12" r="2.8" fill="currentColor" stroke="none"/>
+    </svg>
+  ),
+  boutons: (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+      <line x1="3" y1="6"  x2="21" y2="6"/>
+      <circle cx="9"  cy="6"  r="2.5" fill="currentColor" stroke="none"/>
+      <line x1="3" y1="12" x2="21" y2="12"/>
+      <circle cx="16" cy="12" r="2.5" fill="currentColor" stroke="none"/>
+      <line x1="3" y1="18" x2="21" y2="18"/>
+      <circle cx="11" cy="18" r="2.5" fill="currentColor" stroke="none"/>
+    </svg>
+  ),
+};
 
 // Sections de la popup d'explications avancées des réglages (depuis le bouton "?").
-const REGLAGES_SECTIONS = [
-  {
-    title: "Saisie",
-    body: "TAP : touche l'écran au rythme. Micro : chante, frappe ou joue à l'instrument — la détection sonore valide chaque attaque.",
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <circle cx="12" cy="12" r="2.5" fill="currentColor" stroke="none"/>
-        <circle cx="12" cy="12" r="6.5"/>
-        <circle cx="12" cy="12" r="10.5" strokeOpacity="0.4"/>
-      </svg>
-    ),
-  },
-  {
-    title: "Tempo",
-    body: "Fixe (BPM choisi) ou variable (BPM tiré au hasard dans une plage min–max à chaque exercice).",
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M7 21h10l-2-17h-6z"/>
-        <line x1="12" y1="6" x2="16.5" y2="14"/>
-        <line x1="6" y1="21" x2="18" y2="21"/>
-      </svg>
-    ),
-  },
-  {
-    title: "Niveau",
-    body: "Sélectionne les formules rythmiques par cycle scolaire (C1/1 → C3). Pilote la difficulté des rythmes et des distracteurs (act. 3, 4, 5).",
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-        <rect x="3"  y="14" width="4" height="7"  rx="1"/>
-        <rect x="10" y="10" width="4" height="11" rx="1"/>
-        <rect x="17" y="5"  width="4" height="16" rx="1"/>
-      </svg>
-    ),
-  },
-  {
-    title: "Mode Extrême",
-    body: "Activité 1 : son du rythme et flash bordure désactivés → score ×2. Cumulable avec le bonus de révélation.",
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-        <path d="M13 2L4.5 13.5H11L10 22L19.5 10.5H13L13 2Z"/>
-      </svg>
-    ),
-  },
-  {
-    title: "Révélation",
-    body: "Activité 1 uniquement : la portée n'apparaît qu'au temps 1, 2, 3 ou 4 du rythme. Plus tardif = bonus de score (+10 %, +20 %, +50 %).",
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12z"/>
-        <circle cx="12" cy="12" r="2.8" fill="currentColor" stroke="none"/>
-      </svg>
-    ),
-  },
-  {
-    title: "Boutons en jeu",
-    body: "Son du rythme, Flash et Son du tap : (dés)activables en cours d'exercice — détaillés dans la consigne d'arrivée.",
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
-        <line x1="3" y1="6"  x2="21" y2="6"/>
-        <circle cx="9"  cy="6"  r="2.5" fill="currentColor" stroke="none"/>
-        <line x1="3" y1="12" x2="21" y2="12"/>
-        <circle cx="16" cy="12" r="2.5" fill="currentColor" stroke="none"/>
-        <line x1="3" y1="18" x2="21" y2="18"/>
-        <circle cx="11" cy="18" r="2.5" fill="currentColor" stroke="none"/>
-      </svg>
-    ),
-  },
-];
+const REGLAGES_SECTIONS = RYTHME.reglagesExpl.sections.map(s => ({
+  title: s.titre,
+  body:  s.corps,
+  icon:  REGLAGES_ICONS[s.cle],
+}));
 
 // Boutons de l'exercice détaillés dans la consigne d'arrivée (icônes identiques à l'UI).
 const CONSIGNE_CONTROLS = {
-  rhythmSound: { icon: "🔊", name: "Son du rythme", desc: "Active ou coupe la lecture sonore du rythme à reproduire." },
+  rhythmSound: { icon: "🔊", name: RYTHME.controles.rhythmSound.nom, desc: RYTHME.controles.rhythmSound.desc },
   flash: {
     icon: (
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
         <path d="M13 2L4.5 13.5H11L10 22L19.5 10.5H13L13 2Z" fill="#4A6CF7" />
       </svg>
     ),
-    name: "Flash",
-    desc: "Fait clignoter le cadre à chaque temps — un repère visuel du tempo.",
+    name: RYTHME.controles.flash.nom,
+    desc: RYTHME.controles.flash.desc,
   },
-  tapSound: { icon: "🥁", name: "Son du tap", desc: "Active ou coupe le son joué à chacune de tes frappes." },
+  tapSound: { icon: "🥁", name: RYTHME.controles.tapSound.nom, desc: RYTHME.controles.tapSound.desc },
 };
 
-const TUTO_TOTAL = 3;
+const TUTO_TOTAL = RYTHME.tutoriel.slides.length;
 
 function TutorialOverlay({ onDone, niveauOrder, activity: initActivity, inputMode: initInputMode }) {
   const [slide, setSlide] = useState(0);
@@ -599,20 +585,7 @@ function TutorialOverlay({ onDone, niveauOrder, activity: initActivity, inputMod
   const niveaux = niveauOrder.length > 0 ? niveauOrder : NIVEAUX;
   const [tutoNiveau, setTutoNiveau] = useState(niveaux[0] ?? null);
 
-  const SLIDES = [
-    {
-      title: "Bienvenue dans Rythme !",
-      body: "Entraîne-toi à reproduire et reconnaître des rythmes musicaux, du débutant au virtuose. Choisis ton activité ci-dessous.",
-    },
-    {
-      title: "Tap ou Micro ?",
-      body: "Comment vas-tu saisir le rythme ?",
-    },
-    {
-      title: "Choisis ton niveau",
-      body: "Tu pourras en changer à tout moment dans les réglages.",
-    },
-  ];
+  const SLIDES = RYTHME.tutoriel.slides.map(s => ({ title: s.titre, body: s.corps }));
 
   const { title, body } = SLIDES[slide];
 
@@ -722,7 +695,7 @@ function TutorialOverlay({ onDone, niveauOrder, activity: initActivity, inputMod
         <button
           onClick={() => onDone(null)}
           style={{ background:'none', border:'none', color: dark ? '#6b7280' : '#9ca3af', fontSize:13, fontWeight:700, cursor:'pointer', padding:'4px 8px' }}
-        >Ignorer</button>
+        >{RYTHME.tutoriel.ignorer}</button>
       </div>
 
       {/* Visual */}
@@ -742,12 +715,12 @@ function TutorialOverlay({ onDone, niveauOrder, activity: initActivity, inputMod
           <button
             onClick={() => setSlide(s => s - 1)}
             style={{ flex:1, padding:'14px 0', borderRadius:16, border:'2px solid rgba(74,108,247,0.3)', background:'none', color:'#4A6CF7', fontSize:14, fontWeight:700, cursor:'pointer' }}
-          >← Précédent</button>
+          >{RYTHME.tutoriel.precedent}</button>
         )}
         <button
           onClick={() => slide < TUTO_TOTAL - 1 ? setSlide(s => s + 1) : onDone({ activity: tutoActivity, inputMode: tutoInputMode, niveau: tutoNiveau })}
           style={{ flex:2, padding:'14px 0', borderRadius:16, border:'none', background:'linear-gradient(135deg,#4A6CF7,#8B5CF6)', color:'#fff', fontSize:15, fontWeight:900, cursor:'pointer', boxShadow:'0 8px 24px rgba(74,108,247,0.35)' }}
-        >{slide < TUTO_TOTAL - 1 ? "Suivant →" : "▶ Commencer !"}</button>
+        >{slide < TUTO_TOTAL - 1 ? RYTHME.tutoriel.suivant : RYTHME.tutoriel.commencer}</button>
       </div>
     </div>
   );
@@ -1192,7 +1165,7 @@ export default function RythmApp() {
       setMicActive(true);
       setMicError("");
     } catch (e) {
-      setMicError(e.message ?? "Microphone refusé");
+      setMicError(e.message ?? RYTHME.erreurs.microRefuse);
       setInputMode("tap");
     }
   }, [getCtx]);
@@ -1386,7 +1359,7 @@ export default function RythmApp() {
       const res    = generateDistractorSet(pat, { selectedFormulas, formulaCatalog, niveau });
       if (res.blocked) {
         // Génération impossible (sélection trop pauvre) → blocage propre, pas de jeu.
-        setAct34Error("Pas assez de figures pour générer 3 réponses distinctes dans ce mode. Sélectionne davantage de figures.");
+        setAct34Error(RYTHME.erreurs.figuresInsuffisantes);
         setPhase("idle"); setPattern(null);
         return;
       }
@@ -1641,7 +1614,7 @@ export default function RythmApp() {
       const userTaps = [...tapTimesRef.current];
       const s = playable.map((p, i) => {
         const expected = p.tsBeats * beatMs;
-        if (i >= userTaps.length) return { label: "Manqué ✕", pts: 0, grade: "miss", dev: null };
+        if (i >= userTaps.length) return { label: RYTHME.grades.manque, pts: 0, grade: "miss", dev: null };
         // Même plancher de bruit que les motifs longs : une frappe sous la dead-zone compte
         // Parfait (grade sur le dev dead-zoné ; dev brut conservé pour l'affichage).
         const dev = userTaps[i] - expected;
@@ -1679,7 +1652,7 @@ export default function RythmApp() {
     });
     const s = playable.map((_, i) => {
       if (!pairByTargetIdx.has(i)) {
-        return { label: "Manqué ✕", pts: 0, grade: "miss", dev: null };
+        return { label: RYTHME.grades.manque, pts: 0, grade: "miss", dev: null };
       }
       const dev = pairByTargetIdx.get(i);
       // Le grade utilise le résidu DEAD-ZONÉ (cohérent avec la régularité globale :
@@ -1892,17 +1865,17 @@ export default function RythmApp() {
         {/* Handle + titre */}
         <div style={{ width:40, height:4, borderRadius:2, background:'rgba(255,255,255,0.15)', margin:'0 auto 16px' }}/>
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16 }}>
-          <span style={{ fontSize:16, fontWeight:900, color:'var(--text)' }}>Réglages</span>
+          <span style={{ fontSize:16, fontWeight:900, color:'var(--text)' }}>{RYTHME.reglages.titre}</span>
           <button onClick={() => setSettingsModalOpen(false)} style={{ background:'none', border:'none', color:'var(--text-muted)', fontSize:20, cursor:'pointer', lineHeight:1 }}>✕</button>
         </div>
 
         {/* Accordion helper */}
         {[
-          { key:"saisie",    label:"① Saisie" },
-          { key:"tempo",     label:"② Tempo" },
-          { key:"niveau",    label:"③ Niveau · Formules" },
-          { key:"mode",      label:"④ Mode de jeu" },
-          { key:"reveal",    label:"⑤ Révélation", disabled: activity===3||activity===4 },
+          { key:"saisie",    label:RYTHME.reglages.accordeon.saisie },
+          { key:"tempo",     label:RYTHME.reglages.accordeon.tempo },
+          { key:"niveau",    label:RYTHME.reglages.accordeon.niveau },
+          { key:"mode",      label:RYTHME.reglages.accordeon.mode },
+          { key:"reveal",    label:RYTHME.reglages.accordeon.reveal, disabled: activity===3||activity===4 },
         ].map(({ key, label, disabled }) => {
           const open = openAccordion === key;
           return (
@@ -1918,20 +1891,20 @@ export default function RythmApp() {
 
               {open && key==="saisie" && (
                 <div style={{ padding:'12px 14px 4px' }}>
-                  <div style={{ fontSize:11, color:'var(--text-muted)', marginBottom:8 }}>Mode de saisie (activités 1 &amp; 2)</div>
+                  <div style={{ fontSize:11, color:'var(--text-muted)', marginBottom:8 }}>{RYTHME.reglages.saisieLabel}</div>
                   <div style={{ display:'flex', gap:8, marginBottom: inputMode==="mic" ? 12 : 0 }}>
                     <button onClick={() => { setInputMode("tap"); stopMic(); }} style={{ flex:1, padding:'14px 0', borderRadius:14, border:'none', background: inputMode==="tap" ? 'linear-gradient(135deg,#4A6CF7,#8B5CF6)' : 'var(--surface-2)', color: inputMode==="tap" ? '#fff' : 'var(--text-muted)', fontWeight:900, fontSize:15, cursor:'pointer' }}>
-                      TAP
+                      {RYTHME.reglages.tap}
                     </button>
                     <button onClick={() => { setInputMode("mic"); startMic(); }} style={{ flex:1, padding:'14px 0', borderRadius:14, border:'none', background: inputMode==="mic" ? 'linear-gradient(135deg,#4A6CF7,#8B5CF6)' : 'var(--surface-2)', color: inputMode==="mic" ? '#fff' : 'var(--text-muted)', fontWeight:700, fontSize:13, cursor:'pointer' }}>
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style={{ verticalAlign:'middle', marginRight:4 }}><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" stroke="currentColor" strokeWidth="2" fill="none"/><path d="M19 10v2a7 7 0 0 1-14 0v-2" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/><line x1="12" y1="19" x2="12" y2="23" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
-                      Micro
+                      {RYTHME.reglages.micro}
                     </button>
                   </div>
                   {inputMode==="mic" && (
                     <div style={{ background:'var(--surface-2)', borderRadius:10, padding:'10px 12px' }}>
                       <div style={{ display:'flex', justifyContent:'space-between', fontSize:10, color:'var(--text-muted)', marginBottom:4 }}>
-                        <span>Seuil détection</span>
+                        <span>{RYTHME.reglages.seuilDetection}</span>
                         <span style={{ fontWeight:700, color:'#4A6CF7' }}>{(micThreshold*200).toFixed(1)}</span>
                       </div>
                       <input type="range" min={0} max={10} step={0.5} value={micThreshold*200}
@@ -1941,7 +1914,7 @@ export default function RythmApp() {
                         onClick={() => setShowMicCalib(true)}
                         style={{ marginTop:8, width:'100%', padding:'8px 0', borderRadius:10, border:'1px solid rgba(74,108,247,0.35)', background:'none', color:'#4A6CF7', fontSize:11, fontWeight:700, cursor:'pointer' }}
                       >
-                        Calibrer automatiquement
+                        {RYTHME.reglages.calibrer}
                       </button>
                     </div>
                   )}
@@ -1954,7 +1927,7 @@ export default function RythmApp() {
                   <div style={{ display:'flex', gap:6, marginBottom:12 }}>
                     {["fixed","range"].map(mode => (
                       <button key={mode} onClick={() => setTempoMode(mode)} style={{ flex:1, padding:'8px 0', borderRadius:10, border:'none', background: tempoMode===mode ? '#4A6CF7' : 'var(--surface-2)', color: tempoMode===mode ? '#fff' : 'var(--text-muted)', fontWeight:700, fontSize:12, cursor:'pointer' }}>
-                        {mode==="fixed" ? "Fixe" : "Variable"}
+                        {mode==="fixed" ? RYTHME.reglages.tempoFixe : RYTHME.reglages.tempoVariable}
                       </button>
                     ))}
                   </div>
@@ -1966,7 +1939,7 @@ export default function RythmApp() {
                   )}
                   {tempoMode==="range" && (
                     <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
-                      {[["Min",bpmMin,setBpmMin],["Max",bpmMax,setBpmMax]].map(([lbl,val,setter]) => (
+                      {[[RYTHME.reglages.tempoMin,bpmMin,setBpmMin],[RYTHME.reglages.tempoMax,bpmMax,setBpmMax]].map(([lbl,val,setter]) => (
                         <div key={lbl} style={{ display:'flex', alignItems:'center', gap:8 }}>
                           <span style={{ fontSize:10, color:'var(--text-muted)', width:24 }}>{lbl}</span>
                           <input type="range" min={0} max={TEMPI.length-1} value={closestTempoIdx(val)} onChange={e => setter(TEMPI[+e.target.value])} style={{ flex:1, accentColor:'#4A6CF7' }}/>
@@ -1977,9 +1950,9 @@ export default function RythmApp() {
                   )}
                   {/* Unité de lecture : transforme la notation (le son reste identique) */}
                   <div style={{ marginTop:14, paddingTop:12, borderTop:'1px solid var(--border-c)' }}>
-                    <div style={{ fontSize:11, color:'var(--text-muted)', marginBottom:6, fontWeight:600 }}>Unité de lecture</div>
+                    <div style={{ fontSize:11, color:'var(--text-muted)', marginBottom:6, fontWeight:600 }}>{RYTHME.reglages.uniteLecture}</div>
                     <div style={{ display:'flex', gap:6 }}>
-                      {[["noire","Noire"],["blanche","Blanche"],["croche","Croche"]].map(([val,lbl]) => (
+                      {[["noire",RYTHME.reglages.uniteNoire],["blanche",RYTHME.reglages.uniteBlanche],["croche",RYTHME.reglages.uniteCroche]].map(([val,lbl]) => (
                         <button key={val} onClick={() => setReadUnit(val)} style={{ flex:1, padding:'8px 0', borderRadius:10, border:'none', background: readUnit===val ? '#4A6CF7' : 'var(--surface-2)', color: readUnit===val ? '#fff' : 'var(--text-muted)', fontWeight:700, fontSize:12, cursor:'pointer' }}>
                           {lbl}
                         </button>
@@ -2004,7 +1977,7 @@ export default function RythmApp() {
                   </div>
                   <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
                     <span style={{ fontSize:11, color:'var(--text-muted)' }}>{formulaCountModal} formule{formulaCountModal!==1?"s":""} sélectionnée{formulaCountModal!==1?"s":""}</span>
-                    <button onClick={() => { setSettingsModalOpen(false); setCurrentPage("settings"); }} style={{ background:'none', border:'none', color:'#4A6CF7', fontSize:11, fontWeight:700, cursor:'pointer' }}>Détail formules →</button>
+                    <button onClick={() => { setSettingsModalOpen(false); setCurrentPage("settings"); }} style={{ background:'none', border:'none', color:'#4A6CF7', fontSize:11, fontWeight:700, cursor:'pointer' }}>{RYTHME.reglages.detailFormules}</button>
                   </div>
                 </div>
               )}
@@ -2012,7 +1985,7 @@ export default function RythmApp() {
               {open && key==="mode" && (
                 <div style={{ padding:'12px 14px 4px' }}>
                   <div style={{ display:'flex', gap:8 }}>
-                    {[["single","Exercice seul"],["series","Série de 10"]].map(([mode,label]) => {
+                    {[["single",RYTHME.reglages.modeExerciceSeul],["series",RYTHME.reglages.modeSerie]].map(([mode,label]) => {
                       const active = seriesMode ? mode==="series" : mode==="single";
                       return (
                         <button key={mode} onClick={() => setSeriesMode(mode==="series")}
@@ -2026,7 +1999,7 @@ export default function RythmApp() {
 
               {open && key==="reveal" && !disabled && (
                 <div style={{ padding:'12px 14px 4px' }}>
-                  <div style={{ fontSize:11, color:'var(--text-muted)', marginBottom:8 }}>Afficher la portée au temps… (activité 1)</div>
+                  <div style={{ fontSize:11, color:'var(--text-muted)', marginBottom:8 }}>{RYTHME.reglages.revealLabel}</div>
                   <div style={{ display:'flex', gap:6 }}>
                     {[1,2,3,4].map(beat => (
                       <button key={beat} onClick={() => setRevealBeat(beat)}
@@ -2046,7 +2019,7 @@ export default function RythmApp() {
         {/* Réglages avancés */}
         <button onClick={() => { setSettingsModalOpen(false); setCurrentPage("settings"); }}
           style={{ width:'100%', marginTop:16, padding:'11px 0', borderRadius:12, border:'1px solid rgba(255,255,255,0.06)', background:'none', color:'var(--text-muted)', fontSize:12, fontWeight:600, cursor:'pointer' }}>
-          Réglages avancés (feuille CSV, calibration…)
+          {RYTHME.reglages.avances}
         </button>
       </div>
     </div>
@@ -2059,19 +2032,19 @@ export default function RythmApp() {
     <>
       <div onClick={() => setShowHelp(false)} style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.6)', zIndex:200 }}/>
       <div style={{ position:'fixed', top:'50%', left:'50%', transform:'translate(-50%,-50%)', zIndex:201, width:'min(320px, 90vw)', background:'var(--surface)', border:'1.5px solid rgba(74,108,247,0.3)', borderRadius:20, padding:'28px 24px', textAlign:'center' }}>
-        <div style={{ fontSize:18, fontWeight:900, color:'var(--text)', marginBottom:6 }}>Aide</div>
-        <div style={{ fontSize:12, color:'var(--text-muted)', marginBottom:24 }}>Que veux-tu consulter ?</div>
+        <div style={{ fontSize:18, fontWeight:900, color:'var(--text)', marginBottom:6 }}>{RYTHME.aide.titre}</div>
+        <div style={{ fontSize:12, color:'var(--text-muted)', marginBottom:24 }}>{RYTHME.aide.sousTitre}</div>
         <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
           <button onClick={() => { setShowHelp(false); setConsigneReviewing(true); setShowConsigne(true); }}
             style={{ padding:'14px 0', borderRadius:14, border:'none', background:'linear-gradient(135deg,#3b82f6,#4A6CF7)', color:'#fff', fontSize:14, fontWeight:800, cursor:'pointer' }}>
-            Consignes
+            {RYTHME.aide.consignes}
           </button>
           <button onClick={() => { setShowHelp(false); setShowReglagesExpl(true); }}
             style={{ padding:'14px 0', borderRadius:14, border:'2px solid rgba(74,108,247,0.35)', background:'none', color:'#4A6CF7', fontSize:14, fontWeight:800, cursor:'pointer' }}>
-            Réglages
+            {RYTHME.aide.reglages}
           </button>
         </div>
-        <button onClick={() => setShowHelp(false)} style={{ marginTop:16, background:'none', border:'none', color:'var(--text-muted)', fontSize:12, cursor:'pointer' }}>Fermer</button>
+        <button onClick={() => setShowHelp(false)} style={{ marginTop:16, background:'none', border:'none', color:'var(--text-muted)', fontSize:12, cursor:'pointer' }}>{RYTHME.aide.fermer}</button>
       </div>
     </>
   ) : null;
@@ -2088,7 +2061,8 @@ export default function RythmApp() {
         ...((inputMode === "tap" && (activity === 1 || activity === 2)) ? [CONSIGNE_CONTROLS.tapSound] : []),
       ]}
       warning={RYTHME_SOUND_WARNING}
-      startLabel={consigneReviewing ? "Fermer" : (seriesMode ? "▶ Commencer la série" : "▶ Commencer")}
+      demo={(activity === 1 || activity === 2) ? <DemoDecompte /> : undefined}
+      startLabel={consigneReviewing ? RYTHME.aide.fermer : (seriesMode ? RYTHME.accueil.commencerSerie : RYTHME.accueil.commencer)}
       onStart={consigneReviewing ? closeConsigneReview : startFromConsigne}
       onClose={consigneReviewing ? closeConsigneReview : () => setShowConsigne(false)}
     />
@@ -2109,8 +2083,8 @@ export default function RythmApp() {
     <>
       <div onClick={() => setShowReglagesExpl(false)} style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.6)', zIndex:300 }}/>
       <div style={{ position:'fixed', top:'50%', left:'50%', transform:'translate(-50%,-50%)', zIndex:301, width:'min(360px, 92vw)', maxHeight:'88vh', overflowY:'auto', background:'var(--surface)', border:'1.5px solid rgba(74,108,247,0.3)', borderRadius:20, padding:'26px 22px 20px' }}>
-        <div style={{ fontSize:18, fontWeight:900, color:'var(--text)', marginBottom:4, textAlign:'center' }}>Réglages — Rythme</div>
-        <div style={{ fontSize:12, color:'var(--text-muted)', marginBottom:16, textAlign:'center' }}>À quoi servent les options ?</div>
+        <div style={{ fontSize:18, fontWeight:900, color:'var(--text)', marginBottom:4, textAlign:'center' }}>{RYTHME.reglagesExpl.titre}</div>
+        <div style={{ fontSize:12, color:'var(--text-muted)', marginBottom:16, textAlign:'center' }}>{RYTHME.reglagesExpl.sousTitre}</div>
         <div style={{ display:'flex', flexDirection:'column', gap:12, marginBottom:18 }}>
           {REGLAGES_SECTIONS.map((s, i) => (
             <div key={i} style={{ display:'flex', alignItems:'flex-start', gap:10 }}>
@@ -2129,7 +2103,7 @@ export default function RythmApp() {
         </div>
         <button onClick={() => setShowReglagesExpl(false)}
           style={{ width:'100%', padding:'13px 0', borderRadius:14, border:'none', background:'linear-gradient(135deg,#4A6CF7,#8B5CF6)', color:'#fff', fontSize:15, fontWeight:800, cursor:'pointer' }}>
-          Fermer
+          {RYTHME.reglagesExpl.fermer}
         </button>
       </div>
     </>
@@ -2164,12 +2138,14 @@ export default function RythmApp() {
                 </svg>
               </div>
               <div style={{ fontSize: 17, fontWeight: 800, color: 'var(--text)', marginBottom: 10 }}>
-                Avant de jouer
+                {RYTHME.dnd.titre}
               </div>
               <div style={{ fontSize: 14, lineHeight: 1.5, color: 'var(--text-muted)', marginBottom: 18 }}>
-                Pense à désactiver le mode <strong style={{ color: 'var(--text)' }}>Ne pas déranger</strong> ou
-                <strong style={{ color: 'var(--text)' }}> Silencieux</strong> et monte le volume avant de commencer
-                à jouer pour bien entendre les exercices.
+                {RYTHME.dnd.corpsAvant}
+                <strong style={{ color: 'var(--text)' }}>{RYTHME.dnd.modeDnd}</strong>
+                {RYTHME.dnd.corpsOu}
+                <strong style={{ color: 'var(--text)' }}>{RYTHME.dnd.modeSilencieux}</strong>
+                {RYTHME.dnd.corpsApres}
               </div>
               <label style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center', marginBottom: 18, cursor: 'pointer', fontSize: 13, color: 'var(--text-muted)' }}>
                 <input
@@ -2178,14 +2154,14 @@ export default function RythmApp() {
                   onChange={e => setDndDontShow(e.target.checked)}
                   style={{ width: 17, height: 17, accentColor: '#4A6CF7', cursor: 'pointer' }}
                 />
-                Ne plus afficher
+                {RYTHME.dnd.nePlusAfficher}
               </label>
               <button
                 onClick={() => { if (dndDontShow) localStorage.setItem("rythm-dnd-notice-v1", "1"); setShowDndNotice(false); }}
                 className="w-full border-none rounded-2xl text-sm font-bold cursor-pointer text-white"
                 style={{ padding: '13px 0', background: 'linear-gradient(135deg,#4A6CF7,#8B5CF6)' }}
               >
-                J'ai compris
+                {RYTHME.dnd.valider}
               </button>
             </div>
           </div>
@@ -2196,26 +2172,26 @@ export default function RythmApp() {
         <div className="bg-app text-app min-h-dvh flex flex-col items-center px-3.5 py-3 pb-8 select-none">
           {/* Header */}
           <div className="w-full max-w-xl flex justify-between items-center mb-4">
-            <Link to="/" className="bg-surface-2 border border-app rounded-lg px-2.5 py-1 font-bold text-xs no-underline" style={{ color: '#4A6CF7' }}>← Tessitura</Link>
+            <Link to="/" className="bg-surface-2 border border-app rounded-lg px-2.5 py-1 font-bold text-xs no-underline" style={{ color: '#4A6CF7' }}>{RYTHME.accueil.retour}</Link>
             <div style={{ display:'flex', gap:6, alignItems:'center' }}>
               <ThemeToggleInline />
               <button
                 onClick={() => setShowHelp(true)}
-                title="Aide"
+                title={RYTHME.jeu.titreAide}
                 className="bg-surface-2 border border-app rounded-lg cursor-pointer flex items-center justify-center"
                 style={{ width:32, height:32, fontWeight:700, fontSize:15, color:'var(--text-muted)' }}
               >?</button>
               <button
                 onClick={() => { setOpenAccordion("saisie"); setSettingsModalOpen(true); }}
                 className="bg-surface-2 border border-app rounded-xl text-app-muted text-lg cursor-pointer px-2 py-0.5 leading-none"
-                title="Réglages"
+                title={RYTHME.jeu.titreReglages}
                 data-tour="btn-reglages-rythme"
               >⚙</button>
             </div>
           </div>
 
           <div className="w-full max-w-xl">
-            <div className="text-3xl font-black mb-5" style={{ color: '#4A6CF7' }}>Rythme</div>
+            <div className="text-3xl font-black mb-5" style={{ color: '#4A6CF7' }}>{RYTHME.titre}</div>
 
             {/* grille activités (dernière carte pleine largeur si nombre impair) */}
             <div className="grid grid-cols-2 gap-3 mb-5" data-tour="activite-grid">
@@ -2250,12 +2226,12 @@ export default function RythmApp() {
               style={{ background:'var(--surface)', border:'1px solid var(--border-c)', padding:'12px 16px', cursor:'pointer' }}
             >
               <div style={{ display:'flex', flexDirection:'column', gap:3, textAlign:'left' }}>
-                <span style={{ fontSize:12, fontWeight:700, color:'var(--text)' }}>Réglages</span>
+                <span style={{ fontSize:12, fontWeight:700, color:'var(--text)' }}>{RYTHME.accueil.reglagesResume}</span>
                 <span style={{ fontSize:11, color:'var(--text-muted)' }}>
                   {tempoMode==="fixed" ? `${bpmFixed} BPM` : `${bpmMin}–${bpmMax} BPM`}
                   {" · "}{selectedFormulas.size} formule{selectedFormulas.size!==1?"s":""}
-                  {" · "}{seriesMode?"Série de 10":"Exercice seul"}
-                  {(activity===1||activity===2) && ` · ${inputMode==="tap"?"TAP":"Micro"}`}
+                  {" · "}{seriesMode?RYTHME.reglages.modeSerie:RYTHME.reglages.modeExerciceSeul}
+                  {(activity===1||activity===2) && ` · ${inputMode==="tap"?RYTHME.reglages.tap:RYTHME.reglages.micro}`}
                 </span>
               </div>
               <span style={{ fontSize:18, color:'#4A6CF7' }}>⚙</span>
@@ -2267,7 +2243,7 @@ export default function RythmApp() {
               data-tour="btn-commencer"
               className="w-full border-none rounded-2xl cursor-pointer text-white text-base font-bold"
               style={{ padding: '18px 0', background: 'linear-gradient(135deg,#4A6CF7,#8B5CF6)', boxShadow: '0 8px 32px rgba(74,108,247,0.4)' }}
-            >{seriesMode ? "▶ Commencer la série" : "▶ Commencer"}</button>
+            >{seriesMode ? RYTHME.accueil.commencerSerie : RYTHME.accueil.commencer}</button>
           </div>
         </div>
 
@@ -2443,10 +2419,10 @@ export default function RythmApp() {
           onPointerDown={e => e.stopPropagation()}
           className="bg-surface-2 border border-app rounded-lg font-bold text-xs cursor-pointer px-2.5 py-1"
           style={{ color: '#4A6CF7' }}
-        >← Activités</button>
+        >{RYTHME.jeu.retourActivites}</button>
         {activity === 5 && (phase === "building" || phase === "results") && (
           <span className="text-[12px] font-bold text-app truncate px-2" style={{ maxWidth: 200 }}>
-            Reconstitue le rythme{pattern ? ` · ${pattern.timeSig}` : ""}
+            {RYTHME.act5.enTete}{pattern ? ` · ${pattern.timeSig}` : ""}
           </span>
         )}
         <div className="flex gap-2 items-center">
@@ -2455,7 +2431,7 @@ export default function RythmApp() {
           <button
             onPointerDown={e => e.stopPropagation()}
             onClick={e => { e.stopPropagation(); setShowHelp(true); }}
-            title="Aide"
+            title={RYTHME.jeu.titreAide}
             className="bg-surface-2 border border-app rounded-lg cursor-pointer flex items-center justify-center"
             style={{ width:32, height:32, fontWeight:700, fontSize:15, color:'var(--text-muted)' }}
           >?</button>
@@ -2474,7 +2450,7 @@ export default function RythmApp() {
               setSettingsModalOpen(true);
             }}
             className="bg-surface-2 border border-app rounded-xl text-app-muted text-lg cursor-pointer px-2 py-0.5 leading-none"
-            title="Réglages"
+            title={RYTHME.jeu.titreReglages}
           >⚙</button>
         </div>
       </div>
@@ -2508,10 +2484,10 @@ export default function RythmApp() {
               >
                 <div style={{ fontSize: 40, lineHeight: 1 }}>⚡</div>
                 <div style={{ fontSize: 22, fontWeight: 900, color: '#f87171', marginTop: 6 }}>
-                  Mode Extrême Activé
+                  {RYTHME.jeu.extremeActive}
                 </div>
                 <div style={{ fontSize: 13, fontWeight: 700, color: '#fbbf24', marginTop: 2 }}>
-                  Score ×2
+                  {RYTHME.jeu.extremeScore}
                 </div>
               </div>
             </div>
@@ -2524,11 +2500,7 @@ export default function RythmApp() {
                 {activity===1?"🥁":activity===2?"👂":activity===3?"🎵":activity===4?"🎼":"🧩"}
               </div>
               <p className="text-app-muted text-sm leading-relaxed" style={{ maxWidth: 300 }}>
-                {activity===1 && "Un rythme aléatoire s'affiche sur la portée. Reproduis-le en tapant sur le bouton au bon moment."}
-                {activity===2 && "Écoute le rythme et reproduis-le en tapant. La portée reste cachée pendant le jeu."}
-                {activity===3 && "Écoute le rythme joué et identifie la bonne portée parmi 4 propositions."}
-                {activity===4 && "Observe la portée et identifie parmi 4 lectures audio celle qui correspond."}
-                {activity===5 && "Écoute le rythme, puis reconstitue-le en posant des cellules rythmiques sur la portée. Score partiel selon la justesse."}
+                {RYTHME.activites[activity]?.resume}
               </p>
               <p className="text-[11px] text-app-muted mt-1.5">
                 {formulaCount} formule{formulaCount>1?"s":""} sélectionnée{formulaCount>1?"s":""}
@@ -2538,7 +2510,7 @@ export default function RythmApp() {
                   className="cursor-pointer underline"
                   style={{ color: '#4A6CF7' }}
                 >
-                  modifier
+                  {RYTHME.accueil.modifier}
                 </span>
               </p>
               {(activity===3 || activity===4) && act34Error && (
@@ -2556,7 +2528,7 @@ export default function RythmApp() {
                     className="cursor-pointer underline mt-1.5"
                     style={{ color: '#4A6CF7' }}
                   >
-                    Ouvrir les réglages
+                    {RYTHME.accueil.ouvrirReglages}
                   </div>
                 </div>
               )}
@@ -2574,14 +2546,14 @@ export default function RythmApp() {
                       {countdownN ?? ""}
                     </div>
                     <p className="text-app-muted text-xs mt-1">
-                      {activity===1 && (revealed ? "Mémorise le rythme…" : "Prépare-toi…")}
-                      {activity===2 && phase==="countdown" && (countdownN ? "Prépare-toi…" : "")}
-                      {activity===2 && phase==="listening" && "Écoute le rythme…"}
+                      {activity===1 && (revealed ? RYTHME.jeu.memorise : RYTHME.jeu.prepareToi)}
+                      {activity===2 && phase==="countdown" && (countdownN ? RYTHME.jeu.prepareToi : "")}
+                      {activity===2 && phase==="listening" && RYTHME.jeu.ecoute}
                     </p>
                   </>
                 ) : phase==="playing" && activity===2 ? (
                   <div className="text-center text-base font-bold" style={{ color: '#4A6CF7' }}>
-                    À toi de jouer !
+                    {RYTHME.jeu.aToiDeJouer}
                   </div>
                 ) : (
                   <div className="text-center text-[11px] text-app-muted">
@@ -2633,10 +2605,10 @@ export default function RythmApp() {
                       background: flashMetroState > 0 ? 'rgba(74,108,247,0.18)' : 'rgba(0,0,0,0.25)',
                     }}
                     title={
-                      flashMetroState === 0 ? "Flash + Métro OFF" :
-                      flashMetroState === 1 ? "Flash seulement" :
-                      flashMetroState === 2 ? "Métro seulement" :
-                      "Flash + Métro ON"
+                      flashMetroState === 0 ? RYTHME.jeu.flashMetro.off :
+                      flashMetroState === 1 ? RYTHME.jeu.flashMetro.flashSeul :
+                      flashMetroState === 2 ? RYTHME.jeu.flashMetro.metroSeul :
+                      RYTHME.jeu.flashMetro.both
                     }
                   >
                     {flashMetroState === 0 && (
@@ -2703,7 +2675,7 @@ export default function RythmApp() {
                       onClick={e => { e.stopPropagation(); setFlashBorderOn(v => !v); }}
                       className="absolute top-1.5 right-1.5 z-10 rounded-full border-0 cursor-pointer h-7 w-7 flex items-center justify-center"
                       style={{ background: flashBorderOn ? 'rgba(74,108,247,0.18)' : 'rgba(0,0,0,0.25)' }}
-                      title={flashBorderOn ? "Désactiver flash bordure" : "Activer flash bordure"}
+                      title={flashBorderOn ? RYTHME.jeu.flashBordureOn : RYTHME.jeu.flashBordureOff}
                     >
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
                         <path d="M13 2L4.5 13.5H11L10 22L19.5 10.5H13L13 2Z" fill={flashBorderOn ? "#4A6CF7" : "#6b7280"} />
@@ -2725,7 +2697,7 @@ export default function RythmApp() {
                       />
                     </div>
                     <div className="text-right text-[10px] text-app-muted mt-0.5">
-                      {tapTimes.length} / {playableCount} taps
+                      {tapTimes.length} / {playableCount} {RYTHME.jeu.taps}
                     </div>
                   </>
                 )}
@@ -2752,7 +2724,7 @@ export default function RythmApp() {
                     {i+1} · {s.label}
                     {expandedBadge === i && s.dev !== null && s.dev !== undefined && (
                       <span style={{ marginLeft: 6, color: s.dev > 0 ? '#fbbf24' : '#60a5fa' }}>
-                        {`${Math.round(Math.abs(s.dev) / 10) * 10}ms ${s.dev > 0 ? 'trop tard' : 'trop tôt'}`}
+                        {`${Math.round(Math.abs(s.dev) / 10) * 10} ms ${s.dev > 0 ? RYTHME.resultats12.tropTard : RYTHME.resultats12.tropTot}`}
                       </span>
                     )}
                   </div>
@@ -2767,20 +2739,20 @@ export default function RythmApp() {
                       onClick={replayTaps}
                       className="rounded-xl border-none px-3 py-1.5 text-[11px] font-bold cursor-pointer"
                       style={{ background: 'rgba(74,108,247,0.12)', color: '#4A6CF7' }}
-                    >▶ Réécouter</button>
+                    >{RYTHME.resultats12.reecouter}</button>
                     <button
                       onPointerDown={e => e.stopPropagation()}
                       onClick={() => playPatternAudio(pattern, sessionBpm, 0, true)}
                       className="rounded-xl border-none px-3 py-1.5 text-[11px] font-bold cursor-pointer"
                       style={{ background: 'rgba(52,211,153,0.12)', color: '#34d399' }}
-                    >▶ Solution</button>
+                    >{RYTHME.resultats12.solution}</button>
                     <button
                       onPointerDown={e => e.stopPropagation()}
                       onPointerUp={e => e.stopPropagation()}
                       onClick={retryExercise}
                       className="rounded-xl border-none px-3 py-1.5 text-[11px] font-bold cursor-pointer"
                       style={{ background: 'rgba(251,191,36,0.12)', color: '#fbbf24' }}
-                    >↻ Rejouer</button>
+                    >{RYTHME.resultats12.rejouer}</button>
                   </div>
                   {tapAnalysis?.fit && tapAnalysis?.targetBeatMs && (
                     <div className="text-[10px] text-app-muted mt-1.5">
@@ -2788,9 +2760,11 @@ export default function RythmApp() {
                         const tempoPct = Math.round((tapAnalysis.targetBeatMs / tapAnalysis.fit.a - 1) * 100);
                         const offMs    = Math.round(tapAnalysis.fit.b);
                         const parts = [];
-                        if (tempoPct !== 0) parts.push(`Tempo ${tempoPct > 0 ? '+' : ''}${tempoPct}%`);
-                        if (offMs !== 0)    parts.push(`Décalage ${offMs > 0 ? '+' : ''}${offMs} ms`);
-                        return parts.length > 0 ? `${parts.join(' · ')} compensés` : 'Aucune correction nécessaire';
+                        if (tempoPct !== 0) parts.push(`${RYTHME.diagnostic.tempo} ${tempoPct > 0 ? '+' : ''}${tempoPct} %`);
+                        if (offMs !== 0)    parts.push(`${RYTHME.diagnostic.decalage} ${offMs > 0 ? '+' : ''}${offMs} ms`);
+                        return parts.length > 0
+                          ? `${parts.join(' · ')} ${RYTHME.resultats12.compenses}`
+                          : RYTHME.resultats12.aucuneCorrection;
                       })()}
                     </div>
                   )}
@@ -2805,21 +2779,21 @@ export default function RythmApp() {
                 className="w-full bg-surface border border-app rounded-2xl p-4 text-center"
                 onPointerDown={e => e.stopPropagation()}
               >
-                <div className="text-xs text-app-muted mb-3">Aucune frappe détectée.</div>
+                <div className="text-xs text-app-muted mb-3">{RYTHME.resultats12.aucuneFrappe}</div>
                 <div className="flex gap-2 justify-center flex-wrap">
                   <button
                     onPointerDown={e => e.stopPropagation()}
                     onClick={() => playPatternAudio(pattern, sessionBpm, 0, true)}
                     className="rounded-xl border-none px-3 py-1.5 text-[11px] font-bold cursor-pointer"
                     style={{ background: 'rgba(52,211,153,0.12)', color: '#34d399' }}
-                  >▶ Solution</button>
+                  >{RYTHME.resultats12.solution}</button>
                   <button
                     onPointerDown={e => e.stopPropagation()}
                     onPointerUp={e => e.stopPropagation()}
                     onClick={retryExercise}
                     className="rounded-xl border-none px-3 py-1.5 text-[11px] font-bold cursor-pointer"
                     style={{ background: 'rgba(251,191,36,0.12)', color: '#fbbf24' }}
-                  >↻ Rejouer</button>
+                  >{RYTHME.resultats12.rejouer}</button>
                 </div>
               </div>
             )}
@@ -2842,10 +2816,10 @@ export default function RythmApp() {
                   background: flashMetroState > 0 ? 'rgba(74,108,247,0.18)' : 'rgba(0,0,0,0.25)',
                 }}
                 title={
-                  flashMetroState === 0 ? "Flash + Métro OFF" :
-                  flashMetroState === 1 ? "Flash seulement" :
-                  flashMetroState === 2 ? "Métro seulement" :
-                  "Flash + Métro ON"
+                  flashMetroState === 0 ? RYTHME.jeu.flashMetro.off :
+                  flashMetroState === 1 ? RYTHME.jeu.flashMetro.flashSeul :
+                  flashMetroState === 2 ? RYTHME.jeu.flashMetro.metroSeul :
+                  RYTHME.jeu.flashMetro.both
                 }
               >
                 {flashMetroState === 0 && (
@@ -2878,7 +2852,7 @@ export default function RythmApp() {
                   <span className="text-[40px] font-black leading-none" style={{ color: '#4A6CF7' }}>{countdownN}</span>
                 ) : (
                   <span>
-                    {phase==="playing" ? "Quelle portée ?" : "Résultat — touche une mesure pour la réécouter"} · {sessionBpm} BPM
+                    {phase==="playing" ? RYTHME.act3.question : RYTHME.act3.resultat} · {sessionBpm} BPM
                   </span>
                 )}
               </div>
@@ -2959,7 +2933,7 @@ export default function RythmApp() {
                     onClick={() => playPatternAudio(pattern, sessionBpm, 0, false, true, true)}
                     className="rounded-lg border-none px-3 py-1.5 text-[11px] font-bold cursor-pointer"
                     style={{ background: 'rgba(74,108,247,0.12)', color: '#4A6CF7' }}
-                  >▶ Réécouter la mesure</button>
+                  >{RYTHME.act3.reecouterMesure}</button>
                 </div>
               )}
 
@@ -2967,7 +2941,7 @@ export default function RythmApp() {
                 <>
                   <div className="mt-3 text-center text-sm font-bold"
                     style={{ color: selectedIdx === correctIdx ? '#22C55E' : '#f87171' }}>
-                    {selectedIdx === correctIdx ? "✓ Bonne réponse ! +100 pts" : "✕ Mauvaise réponse."}
+                    {selectedIdx === correctIdx ? RYTHME.act3.bonneReponse : RYTHME.act3.mauvaiseReponse}
                   </div>
                 </>
               )}
@@ -3014,10 +2988,10 @@ export default function RythmApp() {
                     background: flashMetroState > 0 ? 'rgba(74,108,247,0.18)' : 'rgba(0,0,0,0.25)',
                   }}
                   title={
-                    flashMetroState === 0 ? "Flash + Métro OFF" :
-                    flashMetroState === 1 ? "Flash seulement" :
-                    flashMetroState === 2 ? "Métro seulement" :
-                    "Flash + Métro ON"
+                    flashMetroState === 0 ? RYTHME.jeu.flashMetro.off :
+                    flashMetroState === 1 ? RYTHME.jeu.flashMetro.flashSeul :
+                    flashMetroState === 2 ? RYTHME.jeu.flashMetro.metroSeul :
+                    RYTHME.jeu.flashMetro.both
                   }
                 >
                   {flashMetroState === 0 && (
@@ -3136,7 +3110,7 @@ export default function RythmApp() {
                     transition: "all 0.2s",
                   }}
                 >
-                  {pendingIdx !== null ? `Valider : ${String.fromCharCode(65+pendingIdx)}` : "Écoute puis valide"}
+                  {pendingIdx !== null ? RYTHME.act4.valider(String.fromCharCode(65+pendingIdx)) : RYTHME.act4.ecoutePuisValide}
                 </button>
               )}
               {phase === "results" && (
@@ -3144,12 +3118,12 @@ export default function RythmApp() {
                   <div className="text-center text-sm font-bold"
                     style={{ color: selectedIdx === correctIdx ? '#22C55E' : '#f87171' }}>
                     {selectedIdx === correctIdx
-                      ? "✓ Bonne réponse ! +100 pts"
-                      : `✕ Mauvaise réponse. La bonne réponse était ${String.fromCharCode(65+correctIdx)}.`}
+                      ? RYTHME.act4.bonneReponse
+                      : RYTHME.act4.mauvaiseReponse(String.fromCharCode(65+correctIdx))}
                   </div>
                   {selectedIdx !== null && choices[selectedIdx] && selectedIdx !== correctIdx && (
                     <div className="mt-3">
-                      <div className="text-[10px] text-app-muted text-center mb-1">Ta réponse — {String.fromCharCode(65+selectedIdx)} (touche pour réécouter)</div>
+                      <div className="text-[10px] text-app-muted text-center mb-1">{RYTHME.act4.taReponse(String.fromCharCode(65+selectedIdx))}</div>
                       <div
                         role="button"
                         onPointerDown={e => e.stopPropagation()}
@@ -3181,7 +3155,7 @@ export default function RythmApp() {
                           onClick={() => playPatternAudio(pattern, sessionBpm, 0, false, true, true)}
                           className="flex items-center gap-1.5 rounded-full text-[12px] font-semibold cursor-pointer text-white"
                           style={{ background: '#4A6CF7', padding: '6px 16px' }}
-                        >▶ Réécouter</button>
+                        >{RYTHME.act5.reecouter}</button>
                         {act5Placed.length > 0 && (
                           <button
                             onPointerDown={e => e.stopPropagation()}
@@ -3192,7 +3166,7 @@ export default function RythmApp() {
                             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
                               <path d="M9 14 4 9l5-5" /><path d="M4 9h11a5 5 0 0 1 0 10h-1" />
                             </svg>
-                            Annuler
+                            {RYTHME.act5.annuler}
                           </button>
                         )}
                       </>
@@ -3211,11 +3185,11 @@ export default function RythmApp() {
                   {/* Indicateur de conformité de la mesure */}
                   <div className="text-center text-[11px] font-bold mb-2"
                     style={{ color: act5Stat === "complete" ? '#34d399' : act5Stat === "over" ? '#f87171' : '#fbbf24' }}>
-                    {act5Stat === "complete" ? "● Mesure complète" : act5Stat === "over" ? "⚠ Mesure trop longue" : "○ Mesure incomplète"}
+                    {act5Stat === "complete" ? RYTHME.act5.mesureComplete : act5Stat === "over" ? RYTHME.act5.mesureTropLongue : RYTHME.act5.mesureIncomplete}
                   </div>
 
                   {/* Palette de cellules disponibles (tap = poser) — sans card */}
-                  <div className="text-[11px] text-app-muted text-center mb-1.5">Cellules disponibles</div>
+                  <div className="text-[11px] text-app-muted text-center mb-1.5">{RYTHME.act5.cellulesDisponibles}</div>
                   <div className="flex flex-wrap gap-1.5 justify-center mb-3">
                     {act5Palette.map((f, i) => (
                       <div
@@ -3245,7 +3219,7 @@ export default function RythmApp() {
                       color: act5Placed.length > 0 ? '#fff' : 'var(--text-muted)',
                       transition: 'all 0.2s',
                     }}
-                  >Valider</button>
+                  >{RYTHME.act5.valider}</button>
                 </>
               )}
 
@@ -3253,9 +3227,10 @@ export default function RythmApp() {
                 <>
                   {act5Invalid ? (
                     <div className="text-center mb-2">
-                      <div className="text-lg font-black" style={{ color: '#f87171' }}>✕ Exercice non valide</div>
+                      <div className="text-lg font-black" style={{ color: '#f87171' }}>{RYTHME.act5.invalide}</div>
                       <div className="text-[12px] text-app-muted mt-1">
-                        {act5Stat === "over" ? "Mesure trop longue" : "Mesure incomplète"} — la métrique n'est pas respectée. Aucun point.
+                        {act5Stat === "over" ? RYTHME.act5.invalideDetailLongue : RYTHME.act5.invalideDetailIncomplete}
+                        {RYTHME.act5.invalideSuffixe}
                       </div>
                     </div>
                   ) : (
@@ -3277,7 +3252,7 @@ export default function RythmApp() {
                     const playSolution = () => playPatternAudio(pattern, sessionBpm, 0, true, true, true);
                     return (
                       <>
-                        <div className="text-[11px] text-app-muted mb-1">Ta réponse — touche pour réécouter</div>
+                        <div className="text-[11px] text-app-muted mb-1">{RYTHME.act5.taReponse}</div>
                         <div
                           role="button"
                           onPointerDown={e => e.stopPropagation()}
@@ -3288,9 +3263,9 @@ export default function RythmApp() {
                           {act5Placed.length > 0 && <SpeakerHint color={userBorder} />}
                           {act5Placed.length > 0
                             ? <RythmStaff figures={act5Figs} timeSig={pattern.timeSig} activeIdx={-1} showClef={false} compact={true} strikeMeter={act5Invalid} readUnit={readUnit} tieAcrossBeat={tieAcrossBeat} />
-                            : <div className="text-center text-[12px] text-app-muted py-8">(aucune cellule posée)</div>}
+                            : <div className="text-center text-[12px] text-app-muted py-8">{RYTHME.act5.aucuneCellule}</div>}
                         </div>
-                        <div className="text-[11px] text-app-muted mb-1">Solution</div>
+                        <div className="text-[11px] text-app-muted mb-1">{RYTHME.act5.solution}</div>
                         <div
                           role="button"
                           onPointerDown={e => e.stopPropagation()}
@@ -3327,7 +3302,7 @@ export default function RythmApp() {
                 borderColor: 'rgba(0,0,0,0.08)',
                 color: tapSoundOn ? '#4A6CF7' : 'var(--text-muted)',
               }}
-            >{tapSoundOn?"🥁 Son TAP":"🔕 Son TAP"}</button>
+            >{tapSoundOn ? `🥁 ${RYTHME.jeu.sonTap}` : `🔕 ${RYTHME.jeu.sonTap}`}</button>
           </div>
         )}
 
@@ -3362,7 +3337,7 @@ export default function RythmApp() {
                 color: tapSoundOn ? '#e9d5ff' : 'var(--text-muted)',
               }}
             >{tapSoundOn?"🥁":"🔕"}</button>
-            Tap anywhere
+            {RYTHME.jeu.zoneTap}
           </div>
         )}
 
@@ -3377,7 +3352,7 @@ export default function RythmApp() {
             }}
           >
             <div className="text-sm font-bold" style={{ color: micActive ? '#4A6CF7' : 'var(--text-muted)' }}>
-              {micActive ? "🎤 Écoute…" : "🎤 Micro inactif"}
+              {micActive ? RYTHME.jeu.micEcoute : RYTHME.jeu.micInactif}
             </div>
             {/* Barre de niveau */}
             <div className="w-4/5 h-2 bg-surface-2 rounded-full overflow-hidden">
@@ -3398,7 +3373,7 @@ export default function RythmApp() {
             className="w-full text-center text-sm font-bold"
             style={{ padding: '20px 0', color: 'var(--text-muted)', animation: 'pulse-hint 1.5s ease-in-out infinite' }}
           >
-            Tape pour continuer →
+            {RYTHME.jeu.tapePourContinuer}
           </div>
         )}
         {phase === 'idle' && (
@@ -3408,7 +3383,7 @@ export default function RythmApp() {
             className="w-full border-none rounded-2xl cursor-pointer text-white text-base font-bold"
             style={{ padding: '18px 0', background: 'linear-gradient(135deg,#4A6CF7,#8B5CF6)', boxShadow: '0 8px 32px rgba(74,108,247,0.4)' }}
           >
-            {seriesMode ? "▶ Commencer la série" : "▶ Commencer"}
+            {seriesMode ? RYTHME.accueil.commencerSerie : RYTHME.accueil.commencer}
           </button>
         )}
       </div>
