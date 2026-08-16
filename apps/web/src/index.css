@@ -110,18 +110,27 @@ button:focus-visible, a:focus-visible {
 .scroll-x-hint::-webkit-scrollbar-thumb    { background: #FF8B3D; border-radius: 4px; }
 .scroll-x-hint::-webkit-scrollbar-thumb:hover { background: #ff7a1f; }
 
-/* Démo du décompte (Rythme, act. 1 & 2) — geste de frappe.
-   La main entre par le bas-droite, vient poser la pulpe, l'écrase légèrement au
-   contact, puis se retire du même côté : c'est le mouvement, pas l'icône, qui
-   rend le tap lisible. Le `scale` s'applique autour du point de contact
-   (transform-origin posé côté composant), donc la pulpe reste plaquée pendant
-   l'écrasement. L'onde part de ce même point. */
-@keyframes demo-doigt-appui {
-  0%   { transform: translate(26px, 22px) scale(0.94); opacity: 0; }
-  20%  { transform: translate(0, 0)       scale(1);    opacity: 1; }
-  30%  { transform: translate(0, 2px)     scale(0.98); opacity: 1; }
-  55%  { transform: translate(0, 0)       scale(1);    opacity: 1; }
-  100% { transform: translate(20px, 17px) scale(0.96); opacity: 0; }
+/* Démo du décompte (Rythme, act. 1 & 2) — geste de frappe, en DEUX animations
+   distinctes appliquées à deux éléments imbriqués.
+
+   Entrée : la main arrive du bas-droite au premier temps joué, une seule fois.
+   `both` est indispensable — sans lui, l'élément retrouve son état de base dès
+   l'animation finie et la main resurgit au repos entre deux temps, ce qui se
+   lit comme une frappe fantôme. */
+@keyframes demo-main-entree {
+  0%   { transform: translate(32px, 27px); opacity: 0; }
+  100% { transform: translate(0, 0);       opacity: 1; }
+}
+
+/* Frappe : rejouée à chaque note. Le doigt descend, s'enfonce brièvement, puis
+   remonte à une position d'attente légèrement haute — d'où il repartira au temps
+   suivant. La position finale n'est PAS le point de contact : c'est ce qui rend
+   la frappe suivante lisible comme un nouveau geste. */
+@keyframes demo-main-frappe {
+  0%   { transform: translateY(-13px); }
+  26%  { transform: translateY(2px); }
+  46%  { transform: translateY(-1px); }
+  100% { transform: translateY(-9px); }
 }
 
 @keyframes demo-onde {

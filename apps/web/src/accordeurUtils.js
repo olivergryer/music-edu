@@ -224,6 +224,11 @@ export function centsCinqLimite(hz, tonikMidi, diapason = 442) {
 export const HZ_MIN = 60    // Si1 ≈ fondamentale la plus basse
 export const HZ_MAX = 2000  // couvre toutes tessituras instrumentales + voix
 
+// Normalisation d'échelle : le RMS de la frame la plus forte est ramené à cette
+// cible avant l'application du gate. Rend le gate PORTABLE entre appareils dont le
+// gain de capture diffère fortement (ex. iPad ~100× plus faible que l'iPhone).
+export const NORMALIZE_TARGET_RMS = 0.15
+
 /**
  * Analyse un AudioBuffer et renvoie une série temporelle de fréquences.
  * @param {AudioBuffer} audioBuffer
@@ -255,6 +260,8 @@ function filtrerIsolés(serie) {
 export function analyserBuffer(audioBuffer, opts = {}) {
   const clarityThreshold = opts.clarityThreshold ?? 0.85
   const rmsGate   = opts.rmsGate ?? 0.02
+  const normalize   = opts.normalize ?? true
+  const normTarget  = opts.normalizeTarget ?? NORMALIZE_TARGET_RMS
   const sampleRate  = audioBuffer.sampleRate
   const channelData = audioBuffer.getChannelData(0)
 
@@ -262,16 +269,27 @@ export function analyserBuffer(audioBuffer, opts = {}) {
   const hopSize   = 512
   const detector  = PitchDetector.forFloat32Array(frameSize)
 
+  // Passe préalable : facteur d'échelle basé sur la frame RMS la plus forte.
+  let rmsScale = 1
+  if (normalize) {
+    let rmsMax = 0
+    for (let i = 0; i + frameSize <= channelData.length; i += hopSize) {
+      const r = frameRMS(channelData.subarray(i, i + frameSize))
+      if (r > rmsMax) rmsMax = r
+    }
+    if (rmsMax > 0) rmsScale = normTarget / rmsMax
+  }
+
   const serie = []
 
   for (let i = 0; i + frameSize <= channelData.length; i += hopSize) {
     const frame         = channelData.subarray(i, i + frameSize)
-    const rms           = frameRMS(frame)
-    const emphasized    = preEmphasis(frame)
+    const rms           = frameRMS(frame) * rmsScale   // niveau normalisé
+    const emphasized    = preEmphasis(frame)           // pitch insensible à l'échelle
     const [hz, clarity] = detector.findPitch(emphasized, sampleRate)
     const tMs           = (i / sampleRate) * 1000
     const hzVal = (rms >= rmsGate && clarity >= clarityThreshold && hz >= HZ_MIN && hz <= HZ_MAX) ? hz : null
-    // rms conservé pour la détection de ré-attaque (notes répétées de même hauteur)
+    // rms (normalisé) conservé pour la détection de ré-attaque (notes répétées)
     serie.push({ tMs, hz: hzVal, rms })
   }
 

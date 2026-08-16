@@ -188,25 +188,39 @@ export default function DemoDecompte() {
             le point d'appui, relancés à chaque frappe (key = n° de note). */}
         {enJeu && (
           <span key={`onde-${etape.note}`} style={ondeConteneur}>
-            <span style={onde(0)} />
-            <span style={onde(120)} />
+            <span style={onde(CONTACT_DELAI_MS)} />
+            <span style={onde(CONTACT_DELAI_MS + 120)} />
           </span>
         )}
 
-        {/* Main en surimpression — arrive du bas-droite, se retire de même */}
+        {/* Main en surimpression. DEUX mouvements distincts, volontairement
+            séparés en deux éléments :
+              · l'extérieur ENTRE une fois quand le rythme démarre, et ne bouge
+                plus ensuite — pas de `key` qui change, donc pas de remontage ;
+              · l'intérieur rejoue la frappe à chaque note (`key` = n° de note).
+            Une animation unique par note faisait entrer et sortir la main quatre
+            fois ; pire, sans `both` elle revenait à son état de base entre deux
+            temps — la main réapparaissait au repos et on croyait voir une
+            seconde frappe. */}
         {enJeu && (
           <span
-            key={`main-${etape.note}`}
             style={{
               position: 'absolute',
               left: `calc(50% - ${CONTACT_PX_X}px)`,
               top: BANDE_CONTACT_Y - CONTACT_PX_Y,
-              transformOrigin: `${CONTACT_PX_X}px ${CONTACT_PX_Y}px`,
               opacity: 0.65, pointerEvents: 'none',
-              animation: 'demo-doigt-appui 0.55s ease-out',
+              animation: reducedMotion ? undefined : 'demo-main-entree 0.3s ease-out both',
             }}
           >
-            <MainSvg />
+            <span
+              key={`frappe-${etape.note}`}
+              style={{
+                display: 'block',
+                animation: reducedMotion ? undefined : 'demo-main-frappe 0.5s ease-out both',
+              }}
+            >
+              <MainSvg />
+            </span>
           </span>
         )}
       </div>
@@ -255,6 +269,10 @@ const ANGLE = -35
 
 // Échelle de rendu : à taille native la main écraserait un bandeau de ~270 px.
 const MAIN_SCALE = 0.8
+// Instant du contact dans l'animation `demo-main-frappe` (26 % de 0,5 s). L'onde
+// part de là, et non au déclenchement : sinon elle jaillit avant que le doigt
+// n'ait touché.
+const CONTACT_DELAI_MS = 130
 // Position de la pulpe une fois le SVG mis à l'échelle, en pixels CSS.
 const CONTACT_PX_X = CONTACT_X * MAIN_SCALE
 const CONTACT_PX_Y = CONTACT_Y * MAIN_SCALE

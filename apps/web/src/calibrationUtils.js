@@ -1,7 +1,7 @@
 // Outils de calibration interne des paramètres de détection/segmentation
 // (clarté, gate, silence, saut, durée min). Voir CalibrationPage.
 
-import { analyserBuffer, segmenter, noteNameToPC, NOTE_NAMES_FR, TRANSPOSITIONS } from './accordeurUtils.js'
+import { analyserBuffer, segmenter, noteNameToPC, NOTE_NAMES_FR, TRANSPOSITIONS, NORMALIZE_TARGET_RMS } from './accordeurUtils.js'
 
 // ─── Écrit → concert ──────────────────────────────────────────────────────────
 // Le micro détecte la hauteur CONCERT (Hz absolu). Les exercices sont écrits en
@@ -101,10 +101,15 @@ export function bufferLevel(audioBuffer, frameSize = 2048, hopSize = 512) {
     if (rms > rmsMax) rmsMax = rms
     rmsSum += rms; n++
   }
+  const rmsMean = n ? rmsSum / n : 0
+  // Facteur de normalisation appliqué par analyserBuffer (gate portable).
+  const norm = rmsMax > 0 ? NORMALIZE_TARGET_RMS / rmsMax : 1
   return {
-    peak:    +peak.toFixed(4),
-    rmsMax:  +rmsMax.toFixed(4),
-    rmsMean: +(n ? rmsSum / n : 0).toFixed(4),
+    peak:        +peak.toFixed(4),
+    rmsMax:      +rmsMax.toFixed(4),
+    rmsMean:     +rmsMean.toFixed(4),
+    norm:        +norm.toFixed(1),
+    rmsMeanNorm: +(rmsMean * norm).toFixed(4),   // niveau moyen après normalisation (vs gate)
   }
 }
 

@@ -536,9 +536,12 @@ function RecMeter({ level, gate }) {
       </div>
       <div className="flex justify-between mt-1" style={{ fontSize: 10 }}>
         <span className="font-mono" style={{ color: under ? '#f87171' : '#34d399' }}>
-          RMS {level.toFixed(4)} {under ? '· sous le gate' : '· OK'}
+          RMS brut {level.toFixed(4)}
         </span>
         <span className="text-app-muted font-mono">gate {gate}</span>
+      </div>
+      <div className="text-app-muted mt-0.5" style={{ fontSize: 9, lineHeight: 1.3 }}>
+        Niveau brut (avant normalisation). L'analyse recale le niveau : un signal faible reste exploitable.
       </div>
     </div>
   )
@@ -556,12 +559,17 @@ function DetectedNotesDebug({ sweep, variant, expectedNames }) {
   const lvl = sweep.level
   return (
     <div className="mt-3 pt-3" style={{ borderTop: '1px dashed var(--border-c)' }}>
-      {lvl && (
-        <div className="text-xs mb-1.5 font-mono" style={{ color: lvl.rmsMax < lvl.gate ? '#f87171' : 'var(--text-muted)' }}>
-          Niveau : pic {lvl.peak} · RMS max {lvl.rmsMax} · moy {lvl.rmsMean} · gate {lvl.gate}
-          {lvl.rmsMax < lvl.gate && ' ⚠ signal sous le gate (micro trop faible)'}
-        </div>
-      )}
+      {lvl && (() => {
+        const meanNorm = lvl.rmsMeanNorm ?? lvl.rmsMean   // rétro-compat anciennes sessions
+        const tooLow = meanNorm < lvl.gate
+        return (
+          <div className="text-xs mb-1.5 font-mono" style={{ color: tooLow ? '#f87171' : 'var(--text-muted)' }}>
+            Niveau brut : pic {lvl.peak} · RMS moy {lvl.rmsMean}
+            {lvl.norm != null && <> · normalisé ×{lvl.norm} → moy {meanNorm} (gate {lvl.gate})</>}
+            {tooLow && ' ⚠ trop faible même après normalisation'}
+          </div>
+        )
+      })()}
       <div className="text-xs text-app-muted mb-1">
         Attendu (concert) : <span className="text-app font-mono">{expected.join(' · ') || '—'}</span>
       </div>
