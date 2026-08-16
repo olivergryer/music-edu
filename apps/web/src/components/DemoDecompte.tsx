@@ -93,6 +93,9 @@ export default function DemoDecompte() {
 
   const etape = etapeAt(beat)
   const estDecompte = etape.type === 'decompte'
+  // `enJeu` : on est sur un temps du rythme — la zone de frappe s'allume et le
+  // doigt entre en scène. TS a besoin du prédicat pour accéder à `etape.note`.
+  const enJeu = etape.type === 'joue'
   const dernierTempsDecompte = estDecompte && etape.chiffre === 4
   // La portée se révèle au 3e temps, comme le réglage « Révélation » par défaut.
   const porteeVisible = beat >= 2
@@ -168,14 +171,48 @@ export default function DemoDecompte() {
         />
       </div>
 
-      {/* Doigt fantôme : n'apparaît que sur les temps joués */}
-      <div style={{ height: 22, marginTop: 2 }}>
-        {etape.type === 'joue' && (
-          <span style={{
-            fontSize: 13, fontWeight: 700, color: '#34d399',
-            opacity: flash ? 1 : 0.45, transition: 'opacity 0.1s',
-          }}>
-            👆 {RYTHME.demo.doigt}
+      {/* Zone de frappe miniature — réplique du bandeau « Tape n'importe où » de
+          l'écran de jeu : bleu éteint pendant le décompte, vif au départ.
+          Le doigt ne s'y pose qu'une fois le décompte terminé : son apparition
+          est en elle-même le signal du départ. */}
+      <div style={{
+        position: 'relative', height: 52, marginTop: 6,
+        borderRadius: 12, overflow: 'hidden',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        background: enJeu
+          ? 'linear-gradient(135deg,#4A6CF7,#8B5CF6)'
+          : 'linear-gradient(135deg,#3b4fd4,#2040b5)',
+        transition: 'background 0.2s',
+      }}>
+        <span style={{
+          fontSize: 11, fontWeight: 900, letterSpacing: 1,
+          color: enJeu ? '#fff' : 'rgba(74,108,247,0.45)',
+          transition: 'color 0.2s',
+        }}>
+          {RYTHME.jeu.zoneTap}
+        </span>
+
+        {/* Onde de contact : deux cercles concentriques qui se propagent depuis
+            le point d'appui, relancés à chaque frappe (key = n° de note). */}
+        {enJeu && (
+          <span key={`onde-${etape.note}`} style={ondeConteneur}>
+            <span style={onde(0)} />
+            <span style={onde(120)} />
+          </span>
+        )}
+
+        {/* Doigt en surimpression — opacité réduite pour laisser lire la zone */}
+        {enJeu && (
+          <span
+            key={`doigt-${etape.note}`}
+            style={{
+              position: 'absolute', left: '50%', top: DOIGT_OFFSET_Y,
+              transform: 'translateX(-50%)',
+              opacity: 0.42, pointerEvents: 'none',
+              animation: 'demo-doigt-appui 0.5s ease-out',
+            }}
+          >
+            <DoigtSvg />
           </span>
         )}
       </div>
@@ -205,7 +242,79 @@ export default function DemoDecompte() {
   )
 }
 
+// ── Doigt ────────────────────────────────────────────────────────────────────
+// Index tendu VERS LE BAS (poing au-dessus), vu de trois quarts : c'est la
+// posture réelle d'un tap sur écran. Le volume vient de dégradés superposés
+// (corps, ombre latérale, reflet) plutôt que d'un aplat — à 42 % d'opacité un
+// aplat deviendrait illisible, un dégradé garde sa forme.
+//
+// Repères géométriques (viewBox 40×46), utilisés pour caler l'onde :
+//   · centre horizontal du SVG : x = 20
+//   · pulpe de l'index (point de contact) : x = 15, y = 43
+const DOIGT_W = 40
+const DOIGT_H = 46
+const PULPE_X = 15   // décalage de la pulpe par rapport au centre : 20 - 15 = 5 px
+const PULPE_Y = 43
+
+function DoigtSvg() {
+  return (
+    <svg width={DOIGT_W} height={DOIGT_H} viewBox="0 0 40 46" fill="none" aria-hidden="true">
+      <defs>
+        <linearGradient id="demo-doigt-corps" x1="8" y1="6" x2="34" y2="44" gradientUnits="userSpaceOnUse">
+          <stop offset="0%"   stopColor="#ffffff" />
+          <stop offset="45%"  stopColor="#ece1d6" />
+          <stop offset="100%" stopColor="#b39a86" />
+        </linearGradient>
+        <linearGradient id="demo-doigt-ombre" x1="22" y1="10" x2="36" y2="42" gradientUnits="userSpaceOnUse">
+          <stop offset="0%"   stopColor="#8a6f5c" stopOpacity="0" />
+          <stop offset="100%" stopColor="#6b5344" stopOpacity="0.7" />
+        </linearGradient>
+        <radialGradient id="demo-doigt-reflet" cx="0.35" cy="0.3" r="0.55">
+          <stop offset="0%"   stopColor="#ffffff" stopOpacity="0.9" />
+          <stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
+        </radialGradient>
+      </defs>
+
+      {/* Poing replié, en arrière-plan */}
+      <rect x="13" y="4" width="24" height="27" rx="9" fill="url(#demo-doigt-corps)" />
+      <rect x="13" y="4" width="24" height="27" rx="9" fill="url(#demo-doigt-ombre)" />
+      <rect x="13" y="4" width="24" height="27" rx="9" stroke="#5c4636" strokeOpacity="0.45" strokeWidth="1.2" />
+      {/* Plis des phalanges */}
+      <path d="M24 13h11M24 20h12M25 27h10" stroke="#8a6f5c" strokeOpacity="0.35" strokeWidth="1.1" strokeLinecap="round" />
+
+      {/* Index tendu vers le bas — la pulpe touche l'écran */}
+      <rect x="9" y="13" width="12" height="30" rx="6" fill="url(#demo-doigt-corps)" />
+      <rect x="9" y="13" width="12" height="30" rx="6" fill="url(#demo-doigt-ombre)" />
+      <rect x="9" y="13" width="12" height="30" rx="6" stroke="#5c4636" strokeOpacity="0.5" strokeWidth="1.3" />
+      {/* Reflet sur la face éclairée de l'index — donne l'arrondi */}
+      <ellipse cx="13" cy="25" rx="3" ry="9" fill="url(#demo-doigt-reflet)" />
+      {/* Ongle, esquissé */}
+      <ellipse cx="15" cy="37" rx="3.6" ry="4.4" fill="#fff" opacity="0.3" />
+    </svg>
+  )
+}
+
 // ── Styles ───────────────────────────────────────────────────────────────────
+// Le SVG est remonté de 4 px pour que la pulpe presse au tiers bas du bandeau.
+const DOIGT_OFFSET_Y = -4
+
+// L'onde naît au point de contact de la pulpe, pas au centre du bandeau.
+const ondeConteneur: React.CSSProperties = {
+  position: 'absolute',
+  left: `calc(50% - ${DOIGT_W / 2 - PULPE_X}px)`,
+  top: PULPE_Y + DOIGT_OFFSET_Y,
+  width: 0, height: 0, pointerEvents: 'none',
+}
+
+function onde(delayMs: number): React.CSSProperties {
+  return {
+    position: 'absolute', left: 0, top: 0,
+    width: 66, height: 66, borderRadius: '50%',
+    border: '2px solid rgba(255,255,255,0.9)',
+    animation: `demo-onde 0.75s ease-out ${delayMs}ms both`,
+  }
+}
+
 const titreStyle: React.CSSProperties = {
   fontSize: 11, fontWeight: 800, letterSpacing: 0.4,
   textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 2,

@@ -356,6 +356,5 @@ export const RYTHME = {
     legendeStatique:
       'Le décompte affiche 1, 2, 3 puis 4. Tu joues la première note sur le temps qui suit immédiatement le 4.',
     rejouer: '▶ Revoir',
-    doigt: 'tap',
   },
 } as const
