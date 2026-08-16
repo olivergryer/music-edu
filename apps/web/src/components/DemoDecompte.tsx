@@ -19,7 +19,7 @@ const RythmStaff = RythmStaffRaw as unknown as React.ComponentType<Record<string
 
 const ACCENT = '#4A6CF7'
 
-const BPM = 66                     // plus lent que le jeu réel : lisibilité
+const BPM = 44                     // très lent : la démo sert à comprendre, pas à suivre
 const BEAT_MS = 60000 / BPM
 const PAUSE_MS = 1100              // respiration avant de reboucler
 const MAX_BOUCLES = 2              // puis on attend un appui sur « Revoir »
@@ -97,14 +97,15 @@ export default function DemoDecompte() {
   // doigt entre en scène. TS a besoin du prédicat pour accéder à `etape.note`.
   const enJeu = etape.type === 'joue'
   const dernierTempsDecompte = estDecompte && etape.chiffre === 4
-  // La portée se révèle au 3e temps, comme le réglage « Révélation » par défaut.
-  const porteeVisible = beat >= 2
+
+  // La portée est visible d'emblée : c'est le comportement PAR DÉFAUT du jeu
+  // (`revealBeat` vaut 1 → `setRevealed(true)` dès le lancement, RythmApp.jsx).
+  // La révélation tardive est une option de score ; la démo ne doit pas la
+  // montrer, l'élève a d'abord besoin de comprendre le cas normal.
 
   const libelle = estDecompte
-    ? (dernierTempsDecompte ? RYTHME.demo.etapeDernierTemps
-      : porteeVisible ? RYTHME.demo.etapeMemorise
-      : RYTHME.demo.etapeDecompte)
-    : etape.type === 'joue'
+    ? (dernierTempsDecompte ? RYTHME.demo.etapeDernierTemps : RYTHME.demo.etapeDecompte)
+    : enJeu
       ? RYTHME.demo.etapeDepart
       : ''
 
@@ -150,14 +151,13 @@ export default function DemoDecompte() {
         ) : null}
       </div>
 
-      {/* Portée : révélée au 3e temps, puis notes surlignées une à une */}
+      {/* Portée : visible du début à la fin, notes surlignées une à une */}
       <div style={{
         borderRadius: 12,
         border: `2px solid ${flash && enCours ? ACCENT : 'var(--border-c)'}`,
         background: 'var(--surface-2)',
         padding: '4px 2px 0',
-        opacity: porteeVisible ? 1 : 0.25,
-        transition: 'opacity 0.25s, border-color 0.08s',
+        transition: 'border-color 0.08s',
       }}>
         <RythmStaff
           figures={FIGURES}
@@ -184,14 +184,6 @@ export default function DemoDecompte() {
           : 'linear-gradient(135deg,#3b4fd4,#2040b5)',
         transition: 'background 0.2s',
       }}>
-        <span style={{
-          fontSize: 11, fontWeight: 900, letterSpacing: 1,
-          color: enJeu ? '#fff' : 'rgba(74,108,247,0.45)',
-          transition: 'color 0.2s',
-        }}>
-          {RYTHME.jeu.zoneTap}
-        </span>
-
         {/* Onde de contact : deux cercles concentriques qui se propagent depuis
             le point d'appui, relancés à chaque frappe (key = n° de note). */}
         {enJeu && (

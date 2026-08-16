@@ -350,7 +350,6 @@ export const RYTHME = {
   demo: {
     titre: 'Comment démarrer',
     etapeDecompte: 'Décompte — ne joue pas encore',
-    etapeMemorise: 'La portée apparaît : mémorise',
     etapeDernierTemps: 'Dernier temps du décompte',
     etapeDepart: 'C’est à toi !',
     legendeStatique:
