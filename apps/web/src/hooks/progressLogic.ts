@@ -47,6 +47,10 @@ export interface ApplySessionResult {
   newState: ProgressState
   newTrophies: string[]
   rankedUp: boolean
+  /** Cette session vient de valider la journée pour le streak. */
+  streakValidated: boolean
+  /** Nouveau rang atteint, uniquement si `rankedUp`. */
+  newRankId: string | null
   historyEntry: HistoryEntry
 }
 
@@ -228,6 +232,29 @@ export function updateStreak(streak: Streak, today: string): Streak {
   return { current: next, longest, lastDate: today }
 }
 
+// ─── Exercices Rythme isolés et validation de la journée ──────────────────────
+// Un exercice Rythme joué SEUL ne vaut pas une session complète : il en faut
+// RYTHME_INDIV_POUR_STREAK dans la même journée pour valider le streak. Toute
+// autre session (série Rythme, Théorie, Notes, Harmonie, Accordeur) le valide
+// immédiatement.
+export const RYTHME_INDIV_POUR_STREAK = 10
+
+/** Nombre d'exercices Rythme isolés déjà faits aujourd'hui (0 si le compteur date d'hier). */
+export function rythmeIndivDuJour(state: ProgressState, today: string): number {
+  return state.dailyRythmeIndiv.date === today ? state.dailyRythmeIndiv.count : 0
+}
+
+/**
+ * Reste à faire aujourd'hui pour valider la journée via des exercices Rythme
+ * isolés. Vaut 0 dès que la journée est validée — par ce biais ou par une autre
+ * activité, d'où le test sur `lastDate`.
+ */
+export function resteAvantStreak(state: ProgressState, today: string): number {
+  if (state.streak.lastDate === today) return 0
+  const faits = rythmeIndivDuJour(state, today)
+  return Math.max(0, RYTHME_INDIV_POUR_STREAK - faits)
+}
+
 // Série « vivante » pour l'affichage : `current` n'est remis à 1 qu'au PROCHAIN jeu.
 // Tant que l'utilisateur n'a pas rejoué, `current` reste périmé. Cette fonction
 // renvoie 0 dès qu'un jour a été sauté (lastDate ni aujourd'hui ni hier).
@@ -344,7 +371,9 @@ export function applySession(
     const sameDay = prev.dailyRythmeIndiv.date === today
     const count = sameDay ? prev.dailyRythmeIndiv.count + 1 : 1
     newDailyRythmeIndiv = { date: today, count }
-    countsForStreak = sameDay && prev.dailyRythmeIndiv.count < 10 && count >= 10
+    countsForStreak = sameDay
+      && prev.dailyRythmeIndiv.count < RYTHME_INDIV_POUR_STREAK
+      && count >= RYTHME_INDIV_POUR_STREAK
   }
 
   const newStreak = countsForStreak ? updateStreak(prev.streak, today) : prev.streak
@@ -415,10 +444,19 @@ export function applySession(
     medal,
   }
 
+  const rankedUp = rankAfter !== rankBefore
+
   return {
     newState,
     newTrophies: newTrophyIds,
-    rankedUp: rankAfter !== rankBefore,
+    rankedUp,
+    // `countsForStreak` était calculé puis oublié. Il ne suffit pas : il vaut
+    // `true` à CHAQUE session hors Rythme-isolé, y compris quand la journée est
+    // déjà validée depuis ce matin. Il faut donc vérifier que la bascule a bien
+    // lieu maintenant — sinon on célébrerait à chaque exercice de la journée.
+    streakValidated:
+      countsForStreak && prev.streak.lastDate !== today && newStreak.lastDate === today,
+    newRankId: rankedUp ? rankAfter : null,
     historyEntry,
   }
 }

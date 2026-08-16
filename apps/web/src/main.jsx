@@ -3,9 +3,8 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.jsx'
 
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/sw.js').catch(() => {})
-}
+// L'enregistrement du service worker vit dans index.html : il s'exécute sans
+// attendre l'analyse du bundle, et n'était dupliqué ici que par accident.
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>

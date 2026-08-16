@@ -10,7 +10,7 @@ import { scoreRhythm } from "./rythmScoringScore.ts";
 import { DEFAULT_PARAMS as RYTHM_SCORING_PARAMS } from "./rythmScoringParams.ts";
 import { deadzone as scoringDeadzone } from "./rythmScoringAnalyze.ts";
 import useSheetData from "./useSheetData";
-import useProgressFirebase, { TROPHIES as TROPHIES_IMPORT } from "./hooks/useProgressFirebase";
+import useProgressFirebase from "./hooks/useProgressFirebase";
 import { generateDistractorSet, deriveNiveau } from "./rythmDistractors";
 import { buildPalette, scoreActivity5, measureStatus, groupOf } from "./rythmActivity5";
 import { RYTHME } from "./content/rythme.ts";
@@ -333,15 +333,47 @@ function MetronomeViz({ flash }) {
   return null; // dot déplacé dans l'en-tête central
 }
 
-// ─── Écran fin de série ───────────────────────────────────────────────────────
-function SeriesEndScreen({ xpLog, medals, totalXp, dominantMedal, perfectSeries, addSession, onReplay, onBack }) {
-  const [result, setResult] = useState(null);
+// ─── Jauge « validation de la journée » ───────────────────────────────────────
+// Un exercice Rythme joué SEUL ne valide pas la journée : il en faut `seuil`
+// dans la même journée (progressLogic.RYTHME_INDIV_POUR_STREAK). La règle
+// existait sans être visible nulle part — l'élève enchaînait sans savoir où il
+// en était. Une série de 10 valide, elle, immédiatement.
+function JaugeStreakRythme({ faits, seuil }) {
+  const complet = faits >= seuil;
+  return (
+    <div className="w-full rounded-2xl mb-3" style={{ background:'var(--surface)', border:'1px solid var(--border-c)', padding:'11px 16px' }}>
+      <div className="flex justify-between items-center mb-1.5">
+        <span style={{ fontSize:11, fontWeight:700, color:'var(--text)' }}>
+          {complet ? RYTHME.streak.validee : RYTHME.streak.titre}
+        </span>
+        <span style={{ fontSize:11, fontWeight:800, color: complet ? '#34d399' : '#4A6CF7' }}>
+          {complet ? '🔥' : `${faits}/${seuil}`}
+        </span>
+      </div>
+      <div className="w-full h-[5px] rounded-full overflow-hidden" style={{ background:'var(--surface-2)' }}>
+        <div
+          className="h-full rounded-full"
+          style={{
+            width: `${Math.min(100, (faits / seuil) * 100)}%`,
+            background: complet ? '#34d399' : 'linear-gradient(90deg,#4A6CF7,#8B5CF6)',
+            transition: 'width 0.45s ease-out, background 0.3s',
+          }}
+        />
+      </div>
+      <div style={{ fontSize:10, color:'var(--text-muted)', marginTop:5 }}>
+        {complet ? RYTHME.streak.detailValidee : RYTHME.streak.detail(seuil - faits)}
+      </div>
+    </div>
+  );
+}
 
+// ─── Écran fin de série ───────────────────────────────────────────────────────
+// Trophées et montée de rang ne sont plus affichés ici : CelebrationLayer s'en
+// charge globalement, pour TOUS les modules. Les afficher aussi sur cet écran
+// ferait doublon.
+function SeriesEndScreen({ xpLog, medals, totalXp, dominantMedal, perfectSeries, addSession, onReplay, onBack }) {
   useEffect(() => {
-    let cancelled = false;
-    addSession({ module: "rythme", xpEarned: totalXp, medal: dominantMedal, meta: { perfectSeries } })
-      .then(r => { if (!cancelled) setResult(r); });
-    return () => { cancelled = true };
+    addSession({ module: "rythme", xpEarned: totalXp, medal: dominantMedal, meta: { perfectSeries } });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -377,28 +409,7 @@ function SeriesEndScreen({ xpLog, medals, totalXp, dominantMedal, perfectSeries,
           <span className="text-xl font-black" style={{ color: '#4A6CF7' }}>+{totalXp} ⭐</span>
         </div>
 
-        {/* Trophées débloqués */}
-        {result?.newTrophies?.length > 0 && (
-          <div className="rounded-2xl p-3.5 mb-4 border" style={{ background: 'rgba(74,108,247,0.08)', borderColor: '#4A6CF7' }}>
-            <div className="text-[11px] font-bold mb-2" style={{ color: '#4A6CF7' }}>
-              🏅 {result.newTrophies.length > 1 ? RYTHME.serie.tropheesDebloques : RYTHME.serie.tropheeDebloque}
-            </div>
-            {result.newTrophies.map(id => {
-              const t = TROPHIES_IMPORT.find(x => x.id === id);
-              return t ? (
-                <div key={id} className="text-sm text-app mb-1">{t.icon} {t.label}</div>
-              ) : null;
-            })}
-          </div>
-        )}
-
-        {/* Montée de rang XP */}
-        {result?.rankedUp && (
-          <div className="rounded-2xl p-3.5 mb-4 text-center border" style={{ background: 'rgba(74,108,247,0.08)', borderColor: '#4A6CF7' }}>
-            <div className="text-2xl mb-1">🎉</div>
-            <div className="text-sm font-bold" style={{ color: '#4A6CF7' }}>{RYTHME.serie.rangSuperieur}</div>
-          </div>
-        )}
+        {/* Trophées et montée de rang : voir CelebrationLayer (affichage global). */}
 
         <div className="flex gap-2.5 mt-2">
           <button onClick={onBack} className="flex-1 py-3.5 rounded-2xl cursor-pointer bg-surface-2 border border-app text-app-muted text-sm font-bold">
@@ -893,7 +904,7 @@ export default function RythmApp() {
     _resetToDefault();
   }, [_resetToDefault]);
 
-  const { addSession } = useProgressFirebase();
+  const { addSession, rythmeIndivDuJour, seuilRythmeIndiv } = useProgressFirebase();
 
   const handleTutorialDone = (selections) => {
     if (ENABLE_TUTORIAL === "once") {
@@ -2236,6 +2247,8 @@ export default function RythmApp() {
               </div>
               <span style={{ fontSize:18, color:'#4A6CF7' }}>⚙</span>
             </button>
+
+            <JaugeStreakRythme faits={rythmeIndivDuJour} seuil={seuilRythmeIndiv} />
 
             {/* CTA Commencer */}
             <button

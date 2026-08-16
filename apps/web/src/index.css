@@ -79,6 +79,14 @@ button:focus-visible, a:focus-visible {
 /* ── Surcharges canvas (toujours dark) ── */
 .canvas-dark { background: #0D1026; }
 
+/* Rebond des points de chargement. Volontairement identique au keyframe inline
+   d'index.html (qui, lui, doit exister avant même le chargement de cette
+   feuille) : EcranChargement.jsx s'en sert sans dépendre du HTML. */
+@keyframes boot-pulse {
+  0%, 100% { transform: translateY(0)     scale(0.85); opacity: 0.35; }
+  50%      { transform: translateY(-11px) scale(1);    opacity: 1; }
+}
+
 @keyframes pulse-hint {
   0%, 100% { opacity: 0.5; }
   50%       { opacity: 1; }
@@ -120,6 +128,19 @@ button:focus-visible, a:focus-visible {
   0%   { transform: translate(-50%, -50%) scale(0.25); opacity: 0.55; }
   70%  { opacity: 0.18; }
   100% { transform: translate(-50%, -50%) scale(1.9);  opacity: 0; }
+}
+
+/* Célébrations (streak, rang, trophée) — bandeau qui descend du haut avec un
+   léger rebond, puis se retire par le même chemin. */
+@keyframes celebration-entree {
+  0%   { transform: translateY(-70px) scale(0.9); opacity: 0; }
+  70%  { transform: translateY(6px)   scale(1.03); opacity: 1; }
+  100% { transform: translateY(0)     scale(1);    opacity: 1; }
+}
+
+@keyframes celebration-sortie {
+  0%   { transform: translateY(0)     scale(1);    opacity: 1; }
+  100% { transform: translateY(-56px) scale(0.94); opacity: 0; }
 }
 
 /* Mode Extrême — zoom in + fade */

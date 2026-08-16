@@ -36,10 +36,14 @@ const MIN_NOTE_MS_DEFAULT     = 100
 
 // Profils de réglages segmentation (défauts).
 // Override possible via localStorage 'acc_profiles_custom' (page calibration interne).
+// Défauts calibrés (méthode : centre de l'intersection des plages valides sur toutes
+// les sessions de calibration). Régénérer via `npm run calibrate:defaults`.
+// Base actuelle : 2 sessions clarinette (iPhone + MacBook, 16/08/2026).
+// ⚠ détaché : clarté + silence issus d'un fallback (intersection vide, cf. notes répétées).
 const _ACC_PROFILES_DEFAULTS = {
-  legato:  { clarityThreshold: 0.75, gateLevel: 0.015, silenceDurationMs: 80, noteJumpCents: 50, minNoteDurationMs: 120 },
-  detache: { clarityThreshold: 0.82, gateLevel: 0.02,  silenceDurationMs: 50, noteJumpCents: 30, minNoteDurationMs: 80  },
-  rapide:  { clarityThreshold: 0.85, gateLevel: 0.025, silenceDurationMs: 30, noteJumpCents: 25, minNoteDurationMs: 50  },
+  legato:  { clarityThreshold: 0.70, gateLevel: 0.015,  silenceDurationMs: 105, noteJumpCents: 25, minNoteDurationMs: 85, reattackDropRatio: 0 },
+  detache: { clarityThreshold: 0.75, gateLevel: 0.0175, silenceDurationMs: 105, noteJumpCents: 58, minNoteDurationMs: 65, reattackDropRatio: 0 },
+  rapide:  { clarityThreshold: 0.70, gateLevel: 0.0275, silenceDurationMs: 105, noteJumpCents: 25, minNoteDurationMs: 80, reattackDropRatio: 0 },
 }
 function _readProfilesOverride() {
   try {
@@ -554,6 +558,7 @@ export default function AccordeurPage() {
   const [clarityThreshold,  setClarityThreshold]  = useState(() => _initParam(_readInitialProfile(), 'clarityThreshold',  'acc_clarity',     0.82,                    parseFloat))
   const [gateLevel,         setGateLevel]         = useState(() => _initParam(_readInitialProfile(), 'gateLevel',         'acc_gate',        0.02,                    parseFloat))
   const [minNoteDurationMs, setMinNoteDurationMs] = useState(() => _initParam(_readInitialProfile(), 'minNoteDurationMs', 'acc_minDuration', MIN_NOTE_MS_DEFAULT,     parseInt))
+  const [reattackDropRatio, setReattackDropRatio] = useState(() => _initParam(_readInitialProfile(), 'reattackDropRatio', 'acc_reattack',    0,                       parseFloat))
   const gateLevelRef = useRef(gateLevel)
 
   const [modeLive,    setModeLive]   = useState(true)
@@ -660,7 +665,7 @@ export default function AccordeurPage() {
     serieRef.current = s
     const struct    = [...DEFAULT_STRUCTURES, ...structures].find(x => x.id === structureId)
     const tonikMidi = struct ? (noteNameToPC(struct.toniques[0]?.tonique ?? 'Do') + 60) : 60
-    const segs      = segmenter(s, diapason, { silenceDurationMs, noteJumpCents, minNoteDurationMs })
+    const segs      = segmenter(s, diapason, { silenceDurationMs, noteJumpCents, minNoteDurationMs, reattackDropRatio })
     const notesCalc = calculerEcarts(segs, referentiel, tonikMidi, diapason, userTemperament)
     const courbeB   = courbebrute(s, referentiel, tonikMidi, diapason, userTemperament)
     setNotes(notesCalc)
@@ -668,12 +673,12 @@ export default function AccordeurPage() {
     setScoreP(scorePedagogique(notesCalc, seuil))
     setScoreQ(scoreQualite(notesCalc))
     setDirty(false)
-  }, [clarityThreshold, gateLevel, referentiel, seuil, silenceDurationMs, noteJumpCents, minNoteDurationMs, diapason, structureId, structures, userTemperament])
+  }, [clarityThreshold, gateLevel, referentiel, seuil, silenceDurationMs, noteJumpCents, minNoteDurationMs, reattackDropRatio, diapason, structureId, structures, userTemperament])
 
   useEffect(() => {
     if (!audioBufferRef.current) return
     setDirty(true)
-  }, [clarityThreshold, gateLevel, referentiel, seuil, silenceDurationMs, noteJumpCents, minNoteDurationMs, diapason, structureId, structures, userTemperament])
+  }, [clarityThreshold, gateLevel, referentiel, seuil, silenceDurationMs, noteJumpCents, minNoteDurationMs, reattackDropRatio, diapason, structureId, structures, userTemperament])
 
   useEffect(() => {
     const struct = [...DEFAULT_STRUCTURES, ...structures].find(x => x.id === structureId)
@@ -721,9 +726,10 @@ export default function AccordeurPage() {
   useEffect(() => { localStorage.setItem('acc_clarity',     clarityThreshold) },  [clarityThreshold])
   useEffect(() => { localStorage.setItem('acc_gate',        gateLevel) },         [gateLevel])
   useEffect(() => { localStorage.setItem('acc_minDuration', minNoteDurationMs) }, [minNoteDurationMs])
+  useEffect(() => { localStorage.setItem('acc_reattack',    reattackDropRatio) }, [reattackDropRatio])
   useEffect(() => { localStorage.setItem('acc_profile',     profile) },           [profile])
 
-  // Application d'un profil prédéfini : applique les 5 valeurs et bascule le mode.
+  // Application d'un profil prédéfini : applique les valeurs et bascule le mode.
   // 'custom' : conserve les valeurs courantes, réactive les sliders.
   const applyProfile = useCallback((name) => {
     if (name === 'custom') { setProfile('custom'); return }
@@ -736,6 +742,7 @@ export default function AccordeurPage() {
     setSilenceDurationMs(p.silenceDurationMs)
     setNoteJumpCents(p.noteJumpCents)
     setMinNoteDurationMs(p.minNoteDurationMs)
+    setReattackDropRatio(p.reattackDropRatio ?? 0)
   }, [])
 
   // Setters utilisateur (sliders) : modifier manuellement bascule le profil sur 'custom'.
@@ -744,6 +751,7 @@ export default function AccordeurPage() {
   const setClarityManual    = useCallback((v) => { setClarityThreshold(v);  setProfile('custom') }, [])
   const setGateManual       = useCallback((v) => { setGateLevel(v); gateLevelRef.current = v; setProfile('custom') }, [])
   const setMinDurationManual = useCallback((v) => { setMinNoteDurationMs(v); setProfile('custom') }, [])
+  const setReattackManual   = useCallback((v) => { setReattackDropRatio(v); setProfile('custom') }, [])
 
   useEffect(() => {
     demarrerLive()
@@ -836,7 +844,7 @@ export default function AccordeurPage() {
     const serieCalc = analyserBuffer(audioBuffer, { clarityThreshold, rmsGate: gateLevel })
     const struct    = [...DEFAULT_STRUCTURES, ...structures].find(s => s.id === structureId)
     const tonikMidi = struct ? (noteNameToPC(struct.toniques[0]?.tonique ?? 'Do') + 60) : 60
-    const segments  = segmenter(serieCalc, diapason, { silenceDurationMs, noteJumpCents, minNoteDurationMs })
+    const segments  = segmenter(serieCalc, diapason, { silenceDurationMs, noteJumpCents, minNoteDurationMs, reattackDropRatio })
     const notesAv   = calculerEcarts(segments, referentiel, tonikMidi, diapason, userTemperament)
     const courbeB   = courbebrute(serieCalc, referentiel, tonikMidi, diapason, userTemperament)
 
@@ -849,7 +857,7 @@ export default function AccordeurPage() {
     setScoreQ(scoreQualite(notesAv))
     setDirty(false)
     setPhase('resultats')
-  }, [structures, structureId, referentiel, diapason, seuil, silenceDurationMs, noteJumpCents, minNoteDurationMs, clarityThreshold, gateLevel])
+  }, [structures, structureId, referentiel, diapason, seuil, silenceDurationMs, noteJumpCents, minNoteDurationMs, reattackDropRatio, clarityThreshold, gateLevel])
 
   const demarrerLive = useCallback(async () => {
     setErreur(null)
@@ -942,7 +950,7 @@ export default function AccordeurPage() {
       const struct    = [...DEFAULT_STRUCTURES, ...structures].find(s => s.id === structureId)
       const tonikMidi = struct ? (noteNameToPC(struct.toniques[0]?.tonique ?? 'Do') + 60) : 60
       const serieCalc = analyserBuffer(audioBuffer, { clarityThreshold, rmsGate: gateLevel })
-      const segments  = segmenter(serieCalc, diapason, { silenceDurationMs, noteJumpCents, minNoteDurationMs })
+      const segments  = segmenter(serieCalc, diapason, { silenceDurationMs, noteJumpCents, minNoteDurationMs, reattackDropRatio })
       const notesAv   = calculerEcarts(segments, referentiel, tonikMidi, diapason, userTemperament)
       const courbeB   = courbebrute(serieCalc, referentiel, tonikMidi, diapason, userTemperament)
 
@@ -958,7 +966,7 @@ export default function AccordeurPage() {
       setErreur('Erreur lecture fichier : ' + e.message)
       setPhase('pret')
     }
-  }, [structures, structureId, referentiel, diapason, seuil, silenceDurationMs, noteJumpCents, minNoteDurationMs, clarityThreshold, gateLevel])
+  }, [structures, structureId, referentiel, diapason, seuil, silenceDurationMs, noteJumpCents, minNoteDurationMs, reattackDropRatio, clarityThreshold, gateLevel])
 
   const sauvegarderResultats = useCallback(() => {
     const struct = structures.find(s => s.id === structureId)
@@ -1252,6 +1260,16 @@ export default function AccordeurPage() {
                             <span className="text-app font-bold min-w-12 text-right">{minNoteDurationMs} ms</span>
                           </div>
                           <div className="text-app-muted text-[10px] mt-0.5">Notes plus courtes ignorées</div>
+                        </label>
+                        <label className="text-xs text-app-muted block mt-3" style={lockedStyle}>
+                          Ré-attaque (notes répétées)
+                          <div className="flex items-center gap-2 mt-1">
+                            <input type="range" min="0" max="0.6" step="0.05" value={reattackDropRatio} disabled={locked}
+                              onChange={e => setReattackManual(Number(e.target.value))}
+                              className="flex-1" style={{ accentColor: '#FF8B3D' }} />
+                            <span className="text-app font-bold min-w-9">{reattackDropRatio.toFixed(2)}</span>
+                          </div>
+                          <div className="text-app-muted text-[10px] mt-0.5">0 = off · coupe sur creux d'amplitude (même hauteur)</div>
                         </label>
                       </>
                     )

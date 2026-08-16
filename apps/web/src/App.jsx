@@ -1,34 +1,47 @@
+import { lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { AuthProvider, useAuth } from './auth/AuthProvider'
 import { ThemeProvider, useTheme } from './ThemeContext'
 import HubPage from './HubPage'
-import RythmApp from './RythmApp'
-import TheoriePage from './TheoriePage'
-import AccordeurPage from './AccordeurPage'
-import GenerateurAccordPage from './GenerateurAccordPage'
-import NotesPage from './modules/notes/NotesPage'
-import HarmoniePage from './modules/harmonie/HarmoniePage'
-import DetectionPage from './modules/harmonie/DetectionPage'
-import DicteeBassePage from './modules/harmonie/DicteeBassePage'
-import IntervallesPage from './modules/harmonie/IntervallesPage'
-import ChoixBinairePage from './modules/harmonie/ChoixBinairePage'
-import ChiffrageFluxPage from './modules/harmonie/ChiffrageFluxPage'
-import CadencesPage from './modules/harmonie/CadencesPage'
-import BancPage from './modules/harmonie/BancPage'
-import ProfilPage from './ProfilPage'
-import LoginPage from './auth/LoginPage'
-import RegisterPage from './auth/RegisterPage'
-import DashboardEleve from './pages/DashboardEleve'
-import DashboardProf from './pages/DashboardProf'
-import DashboardProfEleve from './pages/DashboardProfEleve'
-import FeedbackPage from './pages/FeedbackPage'
-import QuestionsAdminPage from './QuestionsAdminPage'
-import CalibrationPage from './pages/CalibrationPage'
+import EcranChargement from './components/EcranChargement'
+import CelebrationLayer from './components/CelebrationLayer'
+import IndicateurSync from './components/IndicateurSync'
+import { CelebrationProvider } from './hooks/CelebrationContext'
 import { IS_DEV } from './isDev'
+
+// Le Hub reste dans le bundle d'entrée : c'est la première page vue, et elle
+// n'utilise aucune dépendance lourde. Tout le reste est chargé à la demande —
+// vexflow, tone, soundfont-player et pitchy pèsent l'essentiel des 2,5 Mo et ne
+// servent qu'aux modules d'exercice.
+const RythmApp             = lazy(() => import('./RythmApp'))
+const TheoriePage          = lazy(() => import('./TheoriePage'))
+const AccordeurPage        = lazy(() => import('./AccordeurPage'))
+const GenerateurAccordPage = lazy(() => import('./GenerateurAccordPage'))
+const NotesPage            = lazy(() => import('./modules/notes/NotesPage'))
+const HarmoniePage         = lazy(() => import('./modules/harmonie/HarmoniePage'))
+const DetectionPage        = lazy(() => import('./modules/harmonie/DetectionPage'))
+const DicteeBassePage      = lazy(() => import('./modules/harmonie/DicteeBassePage'))
+const IntervallesPage      = lazy(() => import('./modules/harmonie/IntervallesPage'))
+const ChoixBinairePage     = lazy(() => import('./modules/harmonie/ChoixBinairePage'))
+const ChiffrageFluxPage    = lazy(() => import('./modules/harmonie/ChiffrageFluxPage'))
+const CadencesPage         = lazy(() => import('./modules/harmonie/CadencesPage'))
+const BancPage             = lazy(() => import('./modules/harmonie/BancPage'))
+const ProfilPage           = lazy(() => import('./ProfilPage'))
+const LoginPage            = lazy(() => import('./auth/LoginPage'))
+const RegisterPage         = lazy(() => import('./auth/RegisterPage'))
+const ResetPasswordPage    = lazy(() => import('./auth/ResetPasswordPage'))
+const DashboardEleve       = lazy(() => import('./pages/DashboardEleve'))
+const DashboardProf        = lazy(() => import('./pages/DashboardProf'))
+const DashboardProfEleve   = lazy(() => import('./pages/DashboardProfEleve'))
+const FeedbackPage         = lazy(() => import('./pages/FeedbackPage'))
+const QuestionsAdminPage   = lazy(() => import('./QuestionsAdminPage'))
+const CalibrationPage      = lazy(() => import('./pages/CalibrationPage'))
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth()
-  if (loading) return null
+  // Rendait `null` : écran blanc, indistinguable d'un plantage — surtout hors
+  // ligne, où `loading` pouvait ne jamais se résoudre.
+  if (loading) return <EcranChargement />
   if (!user) return <Navigate to="/login" replace />
   return children
 }
@@ -62,6 +75,7 @@ function ThemeToggleFloating() {
 
 function AppRoutes() {
   return (
+    <Suspense fallback={<EcranChargement />}>
     <Routes>
       <Route path="/" element={<HubPage />} />
       <Route path="/rythme" element={<RythmApp />} />
@@ -90,8 +104,12 @@ function AppRoutes() {
       <Route path="/feedback" element={<FeedbackPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
+      {/* Atterrissage des liens d'action Firebase (réinitialisation de mot de
+          passe). Doit correspondre à l'URL d'action configurée dans la console. */}
+      <Route path="/reinitialiser" element={<ResetPasswordPage />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    </Suspense>
   )
 }
 
@@ -100,8 +118,14 @@ export default function App() {
     <ThemeProvider>
       <BrowserRouter>
         <AuthProvider>
-          <ThemeToggleFloating />
-          <AppRoutes />
+          {/* La file de célébrations enveloppe les routes : les modules y
+              poussent via useProgressFirebase, CelebrationLayer les consomme. */}
+          <CelebrationProvider>
+            <ThemeToggleFloating />
+            <CelebrationLayer />
+            <IndicateurSync />
+            <AppRoutes />
+          </CelebrationProvider>
         </AuthProvider>
       </BrowserRouter>
     </ThemeProvider>

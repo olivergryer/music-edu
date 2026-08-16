@@ -230,13 +230,13 @@ export const RYTHME = {
     extremeScore: 'Score ×2',
     // Info-bulles du toggle Flash / Métronome (4 états)
     flashMetro: {
-      off: 'Flash + Métro OFF',
+      off: 'Flash + Métronome OFF',
       flashSeul: 'Flash seulement',
-      metroSeul: 'Métro seulement',
-      both: 'Flash + Métro ON',
+      metroSeul: 'Métronome seulement',
+      both: 'Flash + Métronome ON',
     },
-    flashBordureOn: 'Désactiver flash bordure',
-    flashBordureOff: 'Activer flash bordure',
+    flashBordureOn: 'Désactiver la bordure qui brille',
+    flashBordureOff: 'Activer la bordure qui brille',
     sonTap: 'Son TAP',
     titreAide: 'Aide',
     titreReglages: 'Réglages',
@@ -269,7 +269,7 @@ export const RYTHME = {
     offsetBienCale: 'Bien calé',
     offsetRetard: (ms: number) => `Tu démarres en retard (~${ms} ms)`,
     offsetAvance: (ms: number) => `Tu démarres en avance (~${ms} ms)`,
-    regIrregulier: 'Ton tempo est en dents de scie',
+    regIrregulier: 'Ton tempo est irrégulier',
     regTresRegulier: 'Très régulier',
     regRegulier: 'Régulier',
     regAssezRegulier: 'Assez régulier',
@@ -290,7 +290,7 @@ export const RYTHME = {
 
   // ── Activité 3 ─────────────────────────────────────────────────────────────
   act3: {
-    question: 'Quelle portée ?',
+    question: 'Quelle portée correspond à ce que tu entends ?',
     resultat: 'Résultat — touche une mesure pour la réécouter',
     reecouterMesure: '▶ Réécouter la mesure',
     bonneReponse: '✓ Bonne réponse ! +100 pts',
@@ -314,7 +314,7 @@ export const RYTHME = {
     mesureComplete: '● Mesure complète',
     mesureTropLongue: '⚠ Mesure trop longue',
     mesureIncomplete: '○ Mesure incomplète',
-    cellulesDisponibles: 'Cellules disponibles',
+    cellulesDisponibles: 'Formules disponibles',
     valider: 'Valider',
     invalide: '✕ Exercice non valide',
     invalideDetailLongue: 'Mesure trop longue',
@@ -325,6 +325,17 @@ export const RYTHME = {
     aucuneCellule: '(aucune cellule posée)',
   },
 
+  // ── Jauge de validation de la journée (streak) ─────────────────────────────
+  streak: {
+    titre: 'Ta journée',
+    validee: 'Journée validée',
+    detail: (reste: number) =>
+      reste === 1
+        ? 'Encore 1 exercice pour valider ta journée.'
+        : `Encore ${reste} exercices pour valider ta journée.`,
+    detailValidee: 'Ta série continue. Une série de 10 la valide aussi d’un coup.',
+  },
+
   // ── Fin de série ───────────────────────────────────────────────────────────
   serie: {
     titre: 'Série terminée !',
@@ -332,9 +343,8 @@ export const RYTHME = {
     scoreTotal: (xp: number) => `Score total : +${xp} XP`,
     detail: 'Détail de la série',
     xpGagne: 'XP gagné',
-    tropheeDebloque: 'Trophée débloqué !',
-    tropheesDebloques: 'Trophées débloqués !',
-    rangSuperieur: 'Rang supérieur !',
+    // Trophées et montée de rang sont désormais annoncés par CelebrationLayer,
+    // globalement et pour tous les modules — plus de textes propres à Rythme.
     retour: '← Activités',
     rejouer: '🔄 Rejouer la série',
   },
@@ -342,8 +352,8 @@ export const RYTHME = {
   // ── Erreurs ────────────────────────────────────────────────────────────────
   erreurs: {
     figuresInsuffisantes:
-      'Pas assez de figures pour générer 3 réponses distinctes dans ce mode. Sélectionne davantage de figures.',
-    microRefuse: 'Microphone refusé',
+      'Pas assez de formules rythmiques pour générer 3 réponses distinctes dans ce mode. Sélectionne davantage de figures.',
+    microRefuse: 'Accès au microphone refusé',
   },
 
   // ── Démo animée du décompte (consigne act. 1 & 2) ──────────────────────────

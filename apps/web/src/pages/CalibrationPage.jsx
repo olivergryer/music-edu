@@ -7,7 +7,7 @@ import { IS_DEV } from '../isDev'
 import {
   EXERCISES, runSweepForExercise, deriveSuggestedProfiles,
   writeProfilesOverride, clearProfilesOverride, readProfilesOverride,
-  toConcertNames, PARAM_KEYS,
+  toConcertNames, CENTER_PARAMS, PARAM_KEYS,
 } from '../calibrationUtils'
 import { TRANSPOSITIONS } from '../accordeurUtils'
 import CalibrationStrip from '../components/CalibrationStrip'
@@ -24,6 +24,7 @@ const PARAM_LABEL = {
   silenceDurationMs: 'Silence (ms)',
   noteJumpCents:     'Saut note (¢)',
   minNoteDurationMs: 'Durée min (ms)',
+  reattackDropRatio: 'Ré-attaque (creux)',
 }
 
 const PARAM_FMT = {
@@ -32,6 +33,7 @@ const PARAM_FMT = {
   silenceDurationMs: v => String(v),
   noteJumpCents:     v => String(v),
   minNoteDurationMs: v => String(v),
+  reattackDropRatio: v => v.toFixed(2),
 }
 
 const ORANGE = '#FF8B3D'
@@ -76,6 +78,20 @@ function CalibrationPageInner() {
   const streamRef   = useRef(null)
   const chunksRef   = useRef([])
 
+  // ─── VU-mètre live pendant l'enregistrement (diagnostic gain micro) ─────────
+  const [recLevel, setRecLevel] = useState(0)   // RMS instantané
+  const recCtxRef      = useRef(null)
+  const recAnalyserRef = useRef(null)
+  const recRafRef      = useRef(0)
+
+  const stopRecMeter = useCallback(() => {
+    cancelAnimationFrame(recRafRef.current)
+    recAnalyserRef.current = null
+    try { recCtxRef.current?.close() } catch {}
+    recCtxRef.current = null
+    setRecLevel(0)
+  }, [])
+
   // ─── Sessions passées ──────────────────────────────────────────────────────
   const [pastSessions, setPastSessions] = useState([])
   const [pastLoading,  setPastLoading]  = useState(false)
@@ -115,6 +131,26 @@ function CalibrationPageInner() {
       recorder.start()
       recorderRef.current = recorder
       setRecordingEx(exId)
+
+      // Tap analyser sur le même flux pour le VU-mètre live (sans passer par la sortie).
+      const ctx      = new AudioContext()
+      const source   = ctx.createMediaStreamSource(stream)
+      const analyser = ctx.createAnalyser()
+      analyser.fftSize = 1024
+      source.connect(analyser)
+      recCtxRef.current      = ctx
+      recAnalyserRef.current = analyser
+      const buf = new Float32Array(analyser.fftSize)
+      const tick = () => {
+        const a = recAnalyserRef.current
+        if (!a) return
+        a.getFloatTimeDomainData(buf)
+        let s = 0
+        for (let i = 0; i < buf.length; i++) s += buf[i] * buf[i]
+        setRecLevel(Math.sqrt(s / buf.length))
+        recRafRef.current = requestAnimationFrame(tick)
+      }
+      recRafRef.current = requestAnimationFrame(tick)
     } catch (e) {
       alert('Micro inaccessible : ' + e.message)
     }
@@ -128,6 +164,7 @@ function CalibrationPageInner() {
       recorder.onstop = () => resolve(new Blob(chunksRef.current, { type: recorder.mimeType || 'audio/webm' }))
       recorder.stop()
     })
+    stopRecMeter()
     streamRef.current?.getTracks().forEach(t => t.stop())
     streamRef.current = null
     recorderRef.current = null
@@ -160,7 +197,7 @@ function CalibrationPageInner() {
     })
     setRecordingEx(null)
     setSuggested(null)
-  }, [recordingEx])
+  }, [recordingEx, stopRecMeter])
 
   // ─── Analyse (sweep) ──────────────────────────────────────────────────────
   const analyzeEx = useCallback(async (exId) => {
@@ -236,6 +273,7 @@ function CalibrationPageInner() {
   useEffect(() => () => {
     Object.values(exResults).forEach(r => { if (r?.blobUrl) try { URL.revokeObjectURL(r.blobUrl) } catch {} })
     streamRef.current?.getTracks().forEach(t => t.stop())
+    stopRecMeter()
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -388,6 +426,9 @@ function CalibrationPageInner() {
                     )}
                   </div>
 
+                  {/* VU-mètre live pendant l'enregistrement */}
+                  {isRecording && <RecMeter level={recLevel} gate={CENTER_PARAMS.gateLevel} />}
+
                   {/* Strips résultats */}
                   {r.status === 'analyzed' && r.sweepResult && (
                     <div className="mt-3 pt-3" style={{ borderTop: '1px solid var(--border-c)' }}>
@@ -476,6 +517,33 @@ function CalibrationPageInner() {
   )
 }
 
+const METER_MAX = 0.08   // pleine échelle du VU-mètre (gate ~0.02 → 25 %)
+
+// VU-mètre live : barre + repère du gate + valeur RMS instantanée.
+function RecMeter({ level, gate }) {
+  const pct     = Math.min((level / METER_MAX) * 100, 100)
+  const gatePct = Math.min((gate  / METER_MAX) * 100, 100)
+  const under   = level < gate
+  return (
+    <div className="mt-2">
+      <div className="relative w-full rounded-full overflow-hidden" style={{ height: 10, background: 'var(--surface-2)' }}>
+        <div style={{
+          width: `${pct}%`, height: '100%',
+          background: under ? '#f87171' : '#34d399', transition: 'width 0.05s',
+        }}/>
+        {/* Repère du gate */}
+        <div className="absolute top-0" style={{ left: `${gatePct}%`, width: 2, height: '100%', background: ORANGE }}/>
+      </div>
+      <div className="flex justify-between mt-1" style={{ fontSize: 10 }}>
+        <span className="font-mono" style={{ color: under ? '#f87171' : '#34d399' }}>
+          RMS {level.toFixed(4)} {under ? '· sous le gate' : '· OK'}
+        </span>
+        <span className="text-app-muted font-mono">gate {gate}</span>
+      </div>
+    </div>
+  )
+}
+
 // Compare notes détectées (paramètres centraux) vs attendu concert.
 function DetectedNotesDebug({ sweep, variant, expectedNames }) {
   const detected = sweep.detectedNotes || []
@@ -485,8 +553,15 @@ function DetectedNotesDebug({ sweep, variant, expectedNames }) {
     (variant === 'repete' || variant === 'progressif')
       ? d.nom === expected[0]
       : d.nom === expected[i]
+  const lvl = sweep.level
   return (
     <div className="mt-3 pt-3" style={{ borderTop: '1px dashed var(--border-c)' }}>
+      {lvl && (
+        <div className="text-xs mb-1.5 font-mono" style={{ color: lvl.rmsMax < lvl.gate ? '#f87171' : 'var(--text-muted)' }}>
+          Niveau : pic {lvl.peak} · RMS max {lvl.rmsMax} · moy {lvl.rmsMean} · gate {lvl.gate}
+          {lvl.rmsMax < lvl.gate && ' ⚠ signal sous le gate (micro trop faible)'}
+        </div>
+      )}
       <div className="text-xs text-app-muted mb-1">
         Attendu (concert) : <span className="text-app font-mono">{expected.join(' · ') || '—'}</span>
       </div>
@@ -556,6 +631,7 @@ function SuggestedProfilesPanel({ profiles, onApply }) {
               <div>silence : <strong className="text-app">{p.silenceDurationMs} ms</strong></div>
               <div>saut : <strong className="text-app">{p.noteJumpCents} ¢</strong></div>
               <div>durée min : <strong className="text-app">{p.minNoteDurationMs} ms</strong></div>
+              <div>ré-attaque : <strong className="text-app">{(p.reattackDropRatio ?? 0).toFixed(2)}</strong></div>
               {p.conflicts?.length > 0 && (
                 <div className="mt-1" style={{ color: '#f87171' }}>
                   conflits : {p.conflicts.join(', ')}

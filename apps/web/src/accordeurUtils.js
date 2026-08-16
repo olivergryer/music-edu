@@ -5,6 +5,11 @@ const SILENCE_CONFIDENCE_MIN = 0.85   // en-dessous = silence (YIN renvoie null)
 const SILENCE_DURATION_MS    = 50     // silence ≥ 80ms → nouvelle note
 const NOTE_JUMP_CENTS        = 30     // saut > 60¢ en < 50ms → changement de note
 const NOTE_JUMP_WINDOW_MS    = 50
+// Ré-attaque (notes répétées de même hauteur) : hystérésis sur l'enveloppe RMS,
+// relative au pic de la note courante. On « arme » quand rms tombe sous
+// pic×reattackDropRatio (ou lors d'un bref creux sous le gate), on coupe quand il
+// remonte au-dessus de pic×(reattackDropRatio+HYST). reattackDropRatio=0 → désactivé.
+const REATTACK_HYST          = 0.15
 
 // ─── Noms de notes (concert Do) ───────────────────────────────────────────────
 export const NOTE_NAMES_FR = ['Do', 'Réb', 'Ré', 'Mib', 'Mi', 'Fa', 'Fa#', 'Sol', 'Sol#', 'La', 'Sib', 'Si']
@@ -266,7 +271,8 @@ export function analyserBuffer(audioBuffer, opts = {}) {
     const [hz, clarity] = detector.findPitch(emphasized, sampleRate)
     const tMs           = (i / sampleRate) * 1000
     const hzVal = (rms >= rmsGate && clarity >= clarityThreshold && hz >= HZ_MIN && hz <= HZ_MAX) ? hz : null
-    serie.push({ tMs, hz: hzVal })
+    // rms conservé pour la détection de ré-attaque (notes répétées de même hauteur)
+    serie.push({ tMs, hz: hzVal, rms })
   }
 
   return filtrerIsolés(serie)
@@ -284,16 +290,25 @@ export function segmenter(serie, diapason = 442, opts = {}) {
   const silenceDurationMs  = opts.silenceDurationMs  ?? SILENCE_DURATION_MS
   const noteJumpCents      = opts.noteJumpCents      ?? NOTE_JUMP_CENTS
   const minNoteDurationMs  = opts.minNoteDurationMs  ?? 100
+  const reattackDropRatio  = opts.reattackDropRatio  ?? 0   // 0 = ré-attaque désactivée
+
+  const newSegment = (hz, tMs) => {
+    const midi = Math.round(hzToMidi(hz, diapason))
+    const { name: nom, octave } = midiToNoteName(midi)
+    return { nom, octave, debutMs: tMs, finMs: tMs, frames: [], peakRms: 0, armed: false }
+  }
 
   const segments = []
   let courant    = null
 
   for (let i = 0; i < serie.length; i++) {
-    const { tMs, hz } = serie[i]
+    const { tMs, hz, rms } = serie[i]
 
     if (!hz) {
       // ── Silence ──
       if (courant) {
+        // Un creux sous le gate (même trop bref pour couper) arme une ré-attaque.
+        if (reattackDropRatio > 0 && (tMs - courant.debutMs) >= minNoteDurationMs) courant.armed = true
         const silenceDebut = tMs
         let j = i + 1
         while (j < serie.length && !serie[j].hz) j++
@@ -309,10 +324,9 @@ export function segmenter(serie, diapason = 442, opts = {}) {
     }
 
     if (!courant) {
-      const midi   = Math.round(hzToMidi(hz, diapason))
-      const { name: nom, octave } = midiToNoteName(midi)
-      courant = { nom, octave, debutMs: tMs, finMs: tMs, frames: [] }
+      courant = newSegment(hz, tMs)
     } else {
+      let jumped = false
       const lastHz = courant.frames.at(-1)?.hz
       if (lastHz) {
         const lastTMs  = courant.frames.at(-1).tMs
@@ -322,16 +336,28 @@ export function segmenter(serie, diapason = 442, opts = {}) {
           if (saut > noteJumpCents) {
             courant.finMs = lastTMs
             segments.push(_finaliserSegment(courant, diapason))
-            const midi   = Math.round(hzToMidi(hz, diapason))
-            const { name: nom, octave } = midiToNoteName(midi)
-            courant = { nom, octave, debutMs: tMs, finMs: tMs, frames: [] }
+            courant = newSegment(hz, tMs)
+            jumped = true
           }
+        }
+      }
+      // ── Ré-attaque (même hauteur) : hystérésis sur l'enveloppe RMS ──
+      if (!jumped && reattackDropRatio > 0 && courant.peakRms > 0) {
+        const low  = courant.peakRms * reattackDropRatio
+        const high = courant.peakRms * Math.min(reattackDropRatio + REATTACK_HYST, 0.95)
+        if (!courant.armed) {
+          if (rms < low && (tMs - courant.debutMs) >= minNoteDurationMs) courant.armed = true
+        } else if (rms > high) {
+          // Remontée après creux → nouvelle attaque : coupe (fin = frame précédente)
+          segments.push(_finaliserSegment(courant, diapason))
+          courant = newSegment(hz, tMs)
         }
       }
     }
 
     courant.frames.push({ tMs, hz })
     courant.finMs = tMs
+    if (rms > courant.peakRms) courant.peakRms = rms
   }
 
   if (courant && courant.frames.length >= 3) {

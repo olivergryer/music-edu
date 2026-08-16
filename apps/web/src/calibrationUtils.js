@@ -1,7 +1,7 @@
 // Outils de calibration interne des paramètres de détection/segmentation
 // (clarté, gate, silence, saut, durée min). Voir CalibrationPage.
 
-import { analyserBuffer, segmenter, noteNameToPC, NOTE_NAMES_FR, TRANSPOSITIONS } from './accordeurUtils'
+import { analyserBuffer, segmenter, noteNameToPC, NOTE_NAMES_FR, TRANSPOSITIONS } from './accordeurUtils.js'
 
 // ─── Écrit → concert ──────────────────────────────────────────────────────────
 // Le micro détecte la hauteur CONCERT (Hz absolu). Les exercices sont écrits en
@@ -82,6 +82,32 @@ export const EXERCISES = [
   },
 ]
 
+// ─── Niveau du signal enregistré (diagnostic gain micro) ──────────────────────
+// Renvoie le pic absolu + le RMS max/moyen par frame (mêmes frames que l'analyse).
+// Sert à voir si le signal passe au-dessus du gate — utile pour diagnostiquer les
+// appareils au micro faible (ex. iPad AGC désactivé → signal sous le gate).
+export function bufferLevel(audioBuffer, frameSize = 2048, hopSize = 512) {
+  const data = audioBuffer.getChannelData(0)
+  let peak = 0, rmsMax = 0, rmsSum = 0, n = 0
+  for (let i = 0; i + frameSize <= data.length; i += hopSize) {
+    let s = 0
+    for (let k = 0; k < frameSize; k++) {
+      const v = data[i + k]
+      s += v * v
+      const a = v < 0 ? -v : v
+      if (a > peak) peak = a
+    }
+    const rms = Math.sqrt(s / frameSize)
+    if (rms > rmsMax) rmsMax = rms
+    rmsSum += rms; n++
+  }
+  return {
+    peak:    +peak.toFixed(4),
+    rmsMax:  +rmsMax.toFixed(4),
+    rmsMean: +(n ? rmsSum / n : 0).toFixed(4),
+  }
+}
+
 // ─── Métrique binaire pass/fail ───────────────────────────────────────────────
 export function exerciseValid(detectedNames, expectedNames, variant) {
   if (detectedNames.length !== expectedNames.length) return false
@@ -100,6 +126,7 @@ export const CENTER_PARAMS = {
   silenceDurationMs: 50,
   noteJumpCents:     30,
   minNoteDurationMs: 80,
+  reattackDropRatio: 0,     // 0 = ré-attaque désactivée (neutre par défaut)
 }
 
 // ─── Ranges de sweep par paramètre ────────────────────────────────────────────
@@ -117,9 +144,10 @@ export const SWEEP_RANGES = {
   silenceDurationMs: range(10, 200, 10),         // 20
   noteJumpCents:     range(15, 100, 5),          // 18
   minNoteDurationMs: range(20, 200, 10),         // 19
+  reattackDropRatio: range(0, 0.6, 0.05),        // 13 (0 = désactivé)
 }
 
-export const PARAM_KEYS = ['clarityThreshold', 'gateLevel', 'silenceDurationMs', 'noteJumpCents', 'minNoteDurationMs']
+export const PARAM_KEYS = ['clarityThreshold', 'gateLevel', 'silenceDurationMs', 'noteJumpCents', 'minNoteDurationMs', 'reattackDropRatio']
 
 // ─── Sweep d'un paramètre sur un buffer ───────────────────────────────────────
 // Renvoie [{ value, pass }]
@@ -136,6 +164,7 @@ function sweepOneParam(audioBuffer, paramKey, expectedNames, variant, diapason =
       silenceDurationMs: params.silenceDurationMs,
       noteJumpCents:     params.noteJumpCents,
       minNoteDurationMs: params.minNoteDurationMs,
+      reattackDropRatio: params.reattackDropRatio,
     })
     const detectedNames = segs.map(s => s.nom)
     results.push({ value: v, pass: exerciseValid(detectedNames, expectedNames, variant) })
@@ -183,10 +212,13 @@ export function runSweepForExercise(audioBuffer, exercise, diapason = 442, trans
     silenceDurationMs: CENTER_PARAMS.silenceDurationMs,
     noteJumpCents:     CENTER_PARAMS.noteJumpCents,
     minNoteDurationMs: CENTER_PARAMS.minNoteDurationMs,
+    reattackDropRatio: CENTER_PARAMS.reattackDropRatio,
   })
   return {
     id: exercise.id,
     detectedCountFinal: centerSegs.length,
+    // Niveau du signal (pic + RMS) vs gate central — diagnostic gain micro.
+    level: { ...bufferLevel(audioBuffer), gate: CENTER_PARAMS.gateLevel },
     // Notes réellement détectées avec les paramètres centraux (debug UI).
     detectedNotes: centerSegs.map(s => ({
       nom: s.nom,
@@ -201,7 +233,7 @@ export function runSweepForExercise(audioBuffer, exercise, diapason = 442, trans
 }
 
 // ─── Mapping exercice → profil ─────────────────────────────────────────────────
-const PROFILE_EXERCISES = {
+export const PROFILE_EXERCISES = {
   legato:  ['gamme_lie_noire_60', 'gamme_lie_croche', 'gamme_lie_double', 'legato_aller_retour'],
   detache: ['gamme_detache_long', 'repete_noire_10', 'duree_croissante'],
   rapide:  ['gamme_detache_court', 'gamme_lie_double'],
@@ -239,6 +271,62 @@ export function deriveSuggestedProfiles(exerciseResults) {
       }
     }
     out[profile] = { ...params, conflicts }
+  }
+  return out
+}
+
+// ─── Arrondi « propre » par paramètre (valeurs de défaut lisibles) ────────────
+export const PARAM_ROUND = {
+  clarityThreshold:  v => +v.toFixed(3),
+  gateLevel:         v => +v.toFixed(4),
+  silenceDurationMs: v => Math.round(v),
+  noteJumpCents:     v => Math.round(v),
+  minNoteDurationMs: v => Math.round(v),
+  reattackDropRatio: v => +v.toFixed(2),
+}
+
+// ─── Agrégation multi-sessions → profils par défaut « safes » ─────────────────
+// Méthode (à ré-appliquer à chaque ajout de sessions/instruments) :
+//   pour chaque profil et chaque paramètre, on rassemble les plages acceptables
+//   de TOUS les exercices du groupe sur TOUTES les sessions, on les INTERSECTE,
+//   et on se place au CENTRE de l'intersection (point de marge maximale).
+//   - intersection vide → conflit signalé, fallback = mid de la plage la plus large
+//   - aucune plage       → conflit signalé, fallback = valeur centrale
+// `sessions` : [{ exercises: [{ id, acceptableRanges }] }] (format Firestore).
+export function aggregateProfilesFromSessions(sessions, profileExercises = PROFILE_EXERCISES) {
+  const out = {}
+  for (const [profile, exIds] of Object.entries(profileExercises)) {
+    const params = {}
+    const conflicts = []
+    const details = {}
+    for (const key of PARAM_KEYS) {
+      const ranges = []
+      for (const s of sessions) {
+        for (const ex of (s.exercises || [])) {
+          if (!exIds.includes(ex.id)) continue
+          const r = ex.acceptableRanges?.[key]
+          if (r) ranges.push(r)
+        }
+      }
+      if (ranges.length === 0) {
+        params[key] = CENTER_PARAMS[key]
+        conflicts.push(key)
+        details[key] = { n: 0, inter: null, source: 'fallback-center' }
+        continue
+      }
+      const interMin = Math.max(...ranges.map(r => r.min))
+      const interMax = Math.min(...ranges.map(r => r.max))
+      if (interMin <= interMax) {
+        params[key] = PARAM_ROUND[key]((interMin + interMax) / 2)
+        details[key] = { n: ranges.length, inter: { min: interMin, max: interMax }, source: 'intersection' }
+      } else {
+        const widest = ranges.reduce((a, b) => ((b.max - b.min) > (a.max - a.min) ? b : a))
+        params[key] = PARAM_ROUND[key](widest.mid)
+        conflicts.push(key)
+        details[key] = { n: ranges.length, inter: null, source: 'fallback-widest' }
+      }
+    }
+    out[profile] = { ...params, conflicts, details }
   }
   return out
 }
