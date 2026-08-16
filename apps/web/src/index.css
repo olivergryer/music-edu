@@ -103,15 +103,17 @@ button:focus-visible, a:focus-visible {
 .scroll-x-hint::-webkit-scrollbar-thumb:hover { background: #ff7a1f; }
 
 /* Démo du décompte (Rythme, act. 1 & 2) — geste de frappe.
-   Le doigt descend depuis le haut de la zone, écrase légèrement sa pulpe au
-   contact, puis remonte : c'est le mouvement, pas l'icône, qui rend le tap
-   lisible. L'onde part du point de contact au moment de l'écrasement. */
+   La main entre par le bas-droite, vient poser la pulpe, l'écrase légèrement au
+   contact, puis se retire du même côté : c'est le mouvement, pas l'icône, qui
+   rend le tap lisible. Le `scale` s'applique autour du point de contact
+   (transform-origin posé côté composant), donc la pulpe reste plaquée pendant
+   l'écrasement. L'onde part de ce même point. */
 @keyframes demo-doigt-appui {
-  0%   { transform: translateX(-50%) translateY(-16px) scale(0.92); opacity: 0; }
-  22%  { transform: translateX(-50%) translateY(2px)   scale(1);    opacity: 1; }
-  34%  { transform: translateX(-50%) translateY(5px)   scale(0.97); opacity: 1; }
-  60%  { transform: translateX(-50%) translateY(0)     scale(1);    opacity: 1; }
-  100% { transform: translateX(-50%) translateY(-10px) scale(0.96); opacity: 0; }
+  0%   { transform: translate(26px, 22px) scale(0.94); opacity: 0; }
+  20%  { transform: translate(0, 0)       scale(1);    opacity: 1; }
+  30%  { transform: translate(0, 2px)     scale(0.98); opacity: 1; }
+  55%  { transform: translate(0, 0)       scale(1);    opacity: 1; }
+  100% { transform: translate(20px, 17px) scale(0.96); opacity: 0; }
 }
 
 @keyframes demo-onde {

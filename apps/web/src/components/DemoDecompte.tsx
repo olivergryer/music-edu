@@ -19,7 +19,7 @@ const RythmStaff = RythmStaffRaw as unknown as React.ComponentType<Record<string
 
 const ACCENT = '#4A6CF7'
 
-const BPM = 44                     // très lent : la démo sert à comprendre, pas à suivre
+const BPM = 52                     // lent : la démo sert à comprendre, pas à suivre
 const BEAT_MS = 60000 / BPM
 const PAUSE_MS = 1100              // respiration avant de reboucler
 const MAX_BOUCLES = 2              // puis on attend un appui sur « Revoir »
@@ -171,12 +171,12 @@ export default function DemoDecompte() {
         />
       </div>
 
-      {/* Zone de frappe miniature — réplique du bandeau « Tape n'importe où » de
-          l'écran de jeu : bleu éteint pendant le décompte, vif au départ.
-          Le doigt ne s'y pose qu'une fois le décompte terminé : son apparition
-          est en elle-même le signal du départ. */}
+      {/* Zone de frappe miniature — réplique du bandeau de l'écran de jeu :
+          bleu éteint pendant le décompte, vif au départ. La main ne s'y pose
+          qu'une fois le décompte terminé : son apparition est en elle-même le
+          signal du départ. */}
       <div style={{
-        position: 'relative', height: 52, marginTop: 6,
+        position: 'relative', height: BANDE_H, marginTop: 6,
         borderRadius: 12, overflow: 'hidden',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         background: enJeu
@@ -193,18 +193,20 @@ export default function DemoDecompte() {
           </span>
         )}
 
-        {/* Doigt en surimpression — opacité réduite pour laisser lire la zone */}
+        {/* Main en surimpression — arrive du bas-droite, se retire de même */}
         {enJeu && (
           <span
-            key={`doigt-${etape.note}`}
+            key={`main-${etape.note}`}
             style={{
-              position: 'absolute', left: '50%', top: DOIGT_OFFSET_Y,
-              transform: 'translateX(-50%)',
-              opacity: 0.42, pointerEvents: 'none',
-              animation: 'demo-doigt-appui 0.5s ease-out',
+              position: 'absolute',
+              left: `calc(50% - ${CONTACT_PX_X}px)`,
+              top: BANDE_CONTACT_Y - CONTACT_PX_Y,
+              transformOrigin: `${CONTACT_PX_X}px ${CONTACT_PX_Y}px`,
+              opacity: 0.65, pointerEvents: 'none',
+              animation: 'demo-doigt-appui 0.55s ease-out',
             }}
           >
-            <DoigtSvg />
+            <MainSvg />
           </span>
         )}
       </div>
@@ -234,67 +236,111 @@ export default function DemoDecompte() {
   )
 }
 
-// ── Doigt ────────────────────────────────────────────────────────────────────
-// Index tendu VERS LE BAS (poing au-dessus), vu de trois quarts : c'est la
-// posture réelle d'un tap sur écran. Le volume vient de dégradés superposés
-// (corps, ombre latérale, reflet) plutôt que d'un aplat — à 42 % d'opacité un
-// aplat deviendrait illisible, un dégradé garde sa forme.
+// ── Main ─────────────────────────────────────────────────────────────────────
+// Main en perspective, arrivant du bas-droite à 35° — la posture réelle d'un
+// droitier sur tablette posée. La main est dessinée à la verticale dans son
+// espace local (index vers le haut), puis pivotée de −35° autour de la pulpe :
+// le point de contact reste ainsi fixe quel que soit l'angle, ce qui permet de
+// caler l'onde dessus sans recalcul.
 //
-// Repères géométriques (viewBox 40×46), utilisés pour caler l'onde :
-//   · centre horizontal du SVG : x = 20
-//   · pulpe de l'index (point de contact) : x = 15, y = 43
-const DOIGT_W = 40
-const DOIGT_H = 46
-const PULPE_X = 15   // décalage de la pulpe par rapport au centre : 20 - 15 = 5 px
-const PULPE_Y = 43
+// Teintes lavande de la charte plutôt qu'une carnation : la démo s'adresse à
+// tous les élèves, et le violet se détache mieux du bandeau bleu.
+//
+// Repères (viewBox 120×100) : pulpe de l'index = (30, 8).
+const MAIN_W = 120
+const MAIN_H = 100
+const CONTACT_X = 30
+const CONTACT_Y = 8
+const ANGLE = -35
 
-function DoigtSvg() {
+// Échelle de rendu : à taille native la main écraserait un bandeau de ~270 px.
+const MAIN_SCALE = 0.8
+// Position de la pulpe une fois le SVG mis à l'échelle, en pixels CSS.
+const CONTACT_PX_X = CONTACT_X * MAIN_SCALE
+const CONTACT_PX_Y = CONTACT_Y * MAIN_SCALE
+
+function MainSvg() {
   return (
-    <svg width={DOIGT_W} height={DOIGT_H} viewBox="0 0 40 46" fill="none" aria-hidden="true">
+    <svg
+      width={MAIN_W * MAIN_SCALE}
+      height={MAIN_H * MAIN_SCALE}
+      viewBox="0 0 120 100"
+      fill="none"
+      aria-hidden="true"
+    >
       <defs>
-        <linearGradient id="demo-doigt-corps" x1="8" y1="6" x2="34" y2="44" gradientUnits="userSpaceOnUse">
-          <stop offset="0%"   stopColor="#ffffff" />
-          <stop offset="45%"  stopColor="#ece1d6" />
-          <stop offset="100%" stopColor="#b39a86" />
+        {/* Lumière venant du bord gauche de l'index : après la rotation de
+            −35°, le haut-gauche de la main est éclairé, le bas-droite dans
+            l'ombre — cohérent avec un éclairage haut-gauche. */}
+        <linearGradient id="demo-main-corps" x1="16" y1="14" x2="62" y2="70" gradientUnits="userSpaceOnUse">
+          <stop offset="0%"   stopColor="#faf5ff" />
+          <stop offset="34%"  stopColor="#ddd6fe" />
+          <stop offset="72%"  stopColor="#c084fc" />
+          <stop offset="100%" stopColor="#9061e8" />
         </linearGradient>
-        <linearGradient id="demo-doigt-ombre" x1="22" y1="10" x2="36" y2="42" gradientUnits="userSpaceOnUse">
-          <stop offset="0%"   stopColor="#8a6f5c" stopOpacity="0" />
-          <stop offset="100%" stopColor="#6b5344" stopOpacity="0.7" />
+        <linearGradient id="demo-main-ombre" x1="34" y1="24" x2="78" y2="92" gradientUnits="userSpaceOnUse">
+          <stop offset="0%"   stopColor="#5b21b6" stopOpacity="0" />
+          <stop offset="100%" stopColor="#4c1d95" stopOpacity="0.72" />
         </linearGradient>
-        <radialGradient id="demo-doigt-reflet" cx="0.35" cy="0.3" r="0.55">
-          <stop offset="0%"   stopColor="#ffffff" stopOpacity="0.9" />
+        <linearGradient id="demo-main-reflet" x1="22" y1="12" x2="34" y2="44" gradientUnits="userSpaceOnUse">
+          <stop offset="0%"   stopColor="#ffffff" stopOpacity="0.92" />
           <stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
-        </radialGradient>
+        </linearGradient>
       </defs>
 
-      {/* Poing replié, en arrière-plan */}
-      <rect x="13" y="4" width="24" height="27" rx="9" fill="url(#demo-doigt-corps)" />
-      <rect x="13" y="4" width="24" height="27" rx="9" fill="url(#demo-doigt-ombre)" />
-      <rect x="13" y="4" width="24" height="27" rx="9" stroke="#5c4636" strokeOpacity="0.45" strokeWidth="1.2" />
-      {/* Plis des phalanges */}
-      <path d="M24 13h11M24 20h12M25 27h10" stroke="#8a6f5c" strokeOpacity="0.35" strokeWidth="1.1" strokeLinecap="round" />
+      {/* Ombre de contact projetée sur le bandeau — non pivotée : elle reste
+          plaquée au sol, c'est elle qui « pose » la main dans l'espace. */}
+      <ellipse cx={CONTACT_X + 3} cy={CONTACT_Y + 3} rx="15" ry="4.5" fill="#1e1b4b" opacity="0.38" />
 
-      {/* Index tendu vers le bas — la pulpe touche l'écran */}
-      <rect x="9" y="13" width="12" height="30" rx="6" fill="url(#demo-doigt-corps)" />
-      <rect x="9" y="13" width="12" height="30" rx="6" fill="url(#demo-doigt-ombre)" />
-      <rect x="9" y="13" width="12" height="30" rx="6" stroke="#5c4636" strokeOpacity="0.5" strokeWidth="1.3" />
-      {/* Reflet sur la face éclairée de l'index — donne l'arrondi */}
-      <ellipse cx="13" cy="25" rx="3" ry="9" fill="url(#demo-doigt-reflet)" />
-      {/* Ongle, esquissé */}
-      <ellipse cx="15" cy="37" rx="3.6" ry="4.4" fill="#fff" opacity="0.3" />
+      <g transform={`rotate(${ANGLE} ${CONTACT_X} ${CONTACT_Y})`}>
+        {/* Paume / doigts repliés — masse principale, en arrière-plan */}
+        <rect x="17" y="37" width="54" height="62" rx="20" fill="url(#demo-main-corps)" />
+        <rect x="17" y="37" width="54" height="62" rx="20" fill="url(#demo-main-ombre)" />
+        <rect x="17" y="37" width="54" height="62" rx="20" stroke="#4c1d95" strokeOpacity="0.42" strokeWidth="1.4" />
+
+        {/* Pouce, décalé vers l'extérieur et incliné */}
+        <g transform="rotate(20 12 66)">
+          <rect x="2" y="48" width="17" height="35" rx="8.5" fill="url(#demo-main-corps)" />
+          <rect x="2" y="48" width="17" height="35" rx="8.5" fill="url(#demo-main-ombre)" />
+          <rect x="2" y="48" width="17" height="35" rx="8.5" stroke="#4c1d95" strokeOpacity="0.4" strokeWidth="1.3" />
+        </g>
+
+        {/* Plis des doigts repliés sur la paume — lisibles seulement en biais,
+            ce qui renforce la perspective. */}
+        <path
+          d="M31 54h29M33 66h29M36 78h25"
+          stroke="#4c1d95" strokeOpacity="0.3" strokeWidth="1.3" strokeLinecap="round"
+        />
+
+        {/* Index tendu — au premier plan, il vient toucher l'écran */}
+        <rect x="22" y="8" width="16" height="42" rx="8" fill="url(#demo-main-corps)" />
+        <rect x="22" y="8" width="16" height="42" rx="8" fill="url(#demo-main-ombre)" />
+        <rect x="22" y="8" width="16" height="42" rx="8" stroke="#4c1d95" strokeOpacity="0.5" strokeWidth="1.4" />
+
+        {/* Reflet longitudinal sur la face éclairée — donne le cylindre */}
+        <ellipse cx="26.5" cy="24" rx="2.8" ry="12" fill="url(#demo-main-reflet)" />
+
+        {/* Pli de la phalange + ongle esquissé */}
+        <path d="M24 38h12" stroke="#4c1d95" strokeOpacity="0.32" strokeWidth="1.2" strokeLinecap="round" />
+        <ellipse cx="30" cy="17" rx="4" ry="5" fill="#ffffff" opacity="0.32" />
+      </g>
     </svg>
   )
 }
 
 // ── Styles ───────────────────────────────────────────────────────────────────
-// Le SVG est remonté de 4 px pour que la pulpe presse au tiers bas du bandeau.
-const DOIGT_OFFSET_Y = -4
+// Bandeau volontairement haut : la main arrive en biais par le bas-droite, il
+// lui faut de la place sous le point de contact pour que l'index ET une partie
+// de la paume restent visibles avant d'être coupés par le bord.
+const BANDE_H = 74
+const BANDE_CONTACT_Y = 20
 
-// L'onde naît au point de contact de la pulpe, pas au centre du bandeau.
+// L'onde naît au point de contact de la pulpe. La main étant positionnée à
+// `calc(50% - CONTACT_X)`, la pulpe tombe exactement sur le centre du bandeau.
 const ondeConteneur: React.CSSProperties = {
   position: 'absolute',
-  left: `calc(50% - ${DOIGT_W / 2 - PULPE_X}px)`,
-  top: PULPE_Y + DOIGT_OFFSET_Y,
+  left: '50%',
+  top: BANDE_CONTACT_Y,
   width: 0, height: 0, pointerEvents: 'none',
 }
 
