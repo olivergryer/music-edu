@@ -3,7 +3,7 @@
 // durées, groupe binaire/ternaire, nombre d'attaques, et une grille TIMELINE
 // uniforme (cellules attack/hold/rest) pour comparer deux rythmes case par case.
 
-export type Fig = { dur: string; rest?: boolean; triplet?: boolean };
+export type Fig = { dur: string; rest?: boolean; triplet?: boolean; duplet?: boolean };
 export type Cell = "A" | "H" | "R"; // attack · hold (prolongation) · rest (silence)
 
 // Durées en noires (suffixe "d" = pointé, "r" = silence).
@@ -18,7 +18,9 @@ export function figDur(fig: Fig): number {
   const raw = fig.dur.replace(/r$/, "");
   const base = raw.endsWith("d") ? raw.slice(0, -1) : raw;
   const dur = DUR_Q[raw] ?? DUR_Q[base] ?? 1;
-  return fig.triplet ? dur * (2 / 3) : dur;
+  if (fig.triplet) return dur * (2 / 3);
+  if (fig.duplet) return dur * (3 / 2); // duolet ternaire : 2 croches dans l'espace de 3 (0,75 noire)
+  return dur;
 }
 
 export function groupOf(timeSig: string): "binary" | "ternary" {

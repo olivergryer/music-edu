@@ -140,7 +140,9 @@ function buildBeams(figures, vexNotes, timeSig) {
 
     const dur = fig.triplet
       ? (DUR_Q[base] ?? 0.5) * (2 / 3)
-      : (DUR_Q[raw.replace(/r$/, "")] ?? DUR_Q[base] ?? 1);
+      : fig.duplet
+        ? (DUR_Q[base] ?? 0.5) * (3 / 2)
+        : (DUR_Q[raw.replace(/r$/, "")] ?? DUR_Q[base] ?? 1);
 
     const startBeat = Math.floor(pos / beatSize + 1e-6);
     const endBeat   = Math.floor((pos + dur - 1e-6) / beatSize);
@@ -288,21 +290,28 @@ export default function RythmStaff({
         } catch { /* liaison non dessinable : on garde la portée */ }
       });
 
-      // ── Triolets ──────────────────────────────────────────────────────────────
+      // ── Groupes irréguliers : triolets (binaire) et duolets (ternaire) ─────────
+      // Triolet : 3 (ou n) dans l'espace de 2 → chiffre « 3 ». Duolet : 2 dans l'espace de
+      // 3 → chiffre « 2 ». Chiffre affiché = num_notes (ratioed:false), au-dessus de la ligature
+      // (ou entre crochets si valeur non ligaturable).
       let i = 0;
       while (i < figs.length) {
-        if (figs[i].triplet) {
+        const kind = figs[i].triplet ? "triplet" : figs[i].duplet ? "duplet" : null;
+        if (kind) {
           const start  = i;
           const tNotes = [];
-          while (i < figs.length && figs[i].triplet) {
+          while (i < figs.length && (kind === "triplet" ? figs[i].triplet : figs[i].duplet)) {
             tNotes.push(vexNotes[i++]);
           }
           if (tNotes.length >= 2) {
             const base0    = figs[start].dur.replace(/d$/, "").replace(/r$/, "");
             const isBeamed = BEAMABLE.has(base0);
+            const notesOccupied = kind === "triplet"
+              ? (tNotes.length === 3 ? 2 : tNotes.length)
+              : 3; // duolet : 2 (num_notes) dans l'espace de 3
             const tuplet   = new Tuplet(tNotes, {
               num_notes:      tNotes.length,
-              notes_occupied: tNotes.length === 3 ? 2 : tNotes.length,
+              notes_occupied: notesOccupied,
               ratioed:        false,
               bracketed:      !isBeamed,
               beat_value:     parseInt(ts.split("/")[1] ?? "4"),

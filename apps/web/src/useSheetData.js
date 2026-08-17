@@ -37,6 +37,10 @@ function parseCSVRow(line) {
 function parseFigs(str) {
   return str.split(",").map(s => {
     s = s.trim();
+    // Duolet ternaire : `eb` = croche de duolet (2 dans l'espace de 3). `ebr` = silence.
+    if (s === "eb" || s === "ebr") {
+      return { dur: "8", duplet: true, ...(s === "ebr" && { rest: true }) };
+    }
     const triplet = s.endsWith("t");
     const raw = triplet ? s.slice(0, -1) : s;
     const rest = raw.endsWith("r");

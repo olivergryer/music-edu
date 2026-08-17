@@ -150,7 +150,9 @@ function figDur(fig) {
   const raw  = fig.dur.replace(/r$/, "");
   const base = raw.endsWith("d") ? raw.slice(0,-1) : raw;
   const dur  = DUR_Q[raw] ?? DUR_Q[base] ?? 1;
-  return fig.triplet ? dur * (2/3) : dur;
+  if (fig.triplet) return dur * (2/3);
+  if (fig.duplet)  return dur * (3/2); // duolet ternaire : 2 croches dans l'espace de 3 → 0,75 noire
+  return dur;
 }
 
 function toTimestamps(figs, bpm, timeSig) {
