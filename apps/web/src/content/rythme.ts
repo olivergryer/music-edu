@@ -242,6 +242,7 @@ export const RYTHME = {
     rejouer: '↻ Rejouer',
     rejouerBoucle: '∞ En boucle',
     stop: '■ Stop',
+    boucleConsigne: 'Reproduis le rythme en boucle à ton rythme. Le son exemple tourne en continu.',
     tropTard: 'trop tard',
     tropTot: 'trop tôt',
     compenses: 'compensés',

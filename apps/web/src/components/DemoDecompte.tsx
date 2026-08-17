@@ -196,13 +196,14 @@ export default function DemoDecompte() {
         {/* Main en surimpression. DEUX mouvements distincts sur deux éléments :
               · l'extérieur ENTRE une fois quand le rythme démarre — aucune `key`
                 ne change dessus, donc React ne le remonte jamais ;
-              · l'intérieur boucle la frappe, avec une durée EXACTEMENT égale à
-                un temps et le contact posé à 0 % des keyframes.
-            C'est ce verrouillage de phase qui règle la désynchronisation : tant
-            que la frappe était relancée à chaque note, le contact tombait au
-            pourcentage où il était placé dans l'animation (26 %, soit 130 ms
-            trop tard). Ici l'animation démarre une seule fois, à la première
-            note, et chaque itération retombe d'elle-même sur le temps. */}
+              · l'intérieur rejoue la frappe À CHAQUE NOTE, avec une durée égale
+                à un temps et le contact posé à 0 % des keyframes.
+            Deux raisons de re-clencher plutôt que de laisser boucler : le
+            contact se recale sur chaque temps au lieu de conserver à jamais le
+            décalage du montage initial, et surtout il partage exactement le
+            même instant de déclenchement que l'onde, qui est elle aussi remontée
+            à chaque note. La transition est invisible puisque la dernière image
+            de l'animation et la première sont toutes deux le contact. */}
         {enJeu && (
           <span
             style={{
@@ -214,11 +215,12 @@ export default function DemoDecompte() {
             }}
           >
             <span
+              key={`frappe-${etape.note}`}
               style={{
                 display: 'block',
                 animation: reducedMotion
                   ? undefined
-                  : `demo-main-frappe ${BEAT_MS}ms linear infinite`,
+                  : `demo-main-frappe ${BEAT_MS}ms both`,
               }}
             >
               <MainSvg />
@@ -264,11 +266,15 @@ export default function DemoDecompte() {
 // autour de la pulpe : le point de contact reste fixe quel que soit l'angle, ce
 // qui permet de caler l'onde dessus sans recalcul.
 //
-// Repères (viewBox 120×110) : pulpe de l'index = (34, 6).
+// Repères : le point de contact est la POINTE RÉELLE du doigt, sommet de l'arc
+// qui ferme l'index — et non le centre de cet arc, qui se trouve 8 unités plus
+// bas à l'intérieur du doigt. Prendre le centre décalait la pointe au-dessus du
+// cercle de l'onde. Le tracé démarre en (26, 20) avec un arc de rayon 8, donc
+// la pointe est en (34, 12).
 const MAIN_W = 120
-const MAIN_H = 110
+const MAIN_H = 140
 const CONTACT_X = 34
-const CONTACT_Y = 6
+const CONTACT_Y = 12
 const ANGLE = -25
 const MAIN_COULEUR = '#ffffff'
 
@@ -283,7 +289,7 @@ function MainSvg() {
     <svg
       width={MAIN_W * MAIN_SCALE}
       height={MAIN_H * MAIN_SCALE}
-      viewBox="0 0 120 110"
+      viewBox="0 0 120 140"
       fill="none"
       aria-hidden="true"
     >
@@ -291,9 +297,11 @@ function MainSvg() {
         {/* Silhouette d'un seul tenant : index tendu vers le haut, puis les
             trois doigts repliés et le pouce, tracés comme des bosses arrondies
             sur le contour de la main — c'est le profil qui rend la posture
-            lisible, pas le détail interne. */}
+            lisible, pas le détail interne.
+            Seul le `M` est absolu : décaler le tracé revient à ne changer que
+            lui, tout le reste étant en coordonnées relatives. */}
         <path
-          d="M26 6
+          d="M26 20
              a8 8 0 0 1 16 0
              v46
              h6
@@ -320,11 +328,13 @@ function MainSvg() {
 }
 
 // ── Styles ───────────────────────────────────────────────────────────────────
-// Bandeau volontairement haut : la main arrive en biais par le bas-droite, il
-// lui faut de la place sous le point de contact pour que l'index ET une partie
-// de la paume restent visibles avant d'être coupés par le bord.
+// Bandeau volontairement haut : la main arrive en biais, il lui faut de la place
+// sous le point de contact pour que l'index ET une partie de la paume restent
+// visibles avant d'être coupés par le bord.
 const BANDE_H = 74
-const BANDE_CONTACT_Y = 20
+// Le contact a lieu au CENTRE du bandeau — c'est aussi le centre de l'onde, les
+// deux partagent cette constante et ne peuvent donc plus diverger.
+const BANDE_CONTACT_Y = BANDE_H / 2
 
 // L'onde naît au point de contact de la pulpe. La main étant positionnée à
 // `calc(50% - CONTACT_X)`, la pulpe tombe exactement sur le centre du bandeau.

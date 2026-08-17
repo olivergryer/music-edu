@@ -122,16 +122,21 @@ button:focus-visible, a:focus-visible {
   100% { opacity: 1; }
 }
 
-/* Frappe : jouée EN BOUCLE, avec une durée réglée sur la valeur d'un temps
-   (côté composant). Le contact est posé à 0 % — donc à chaque itération il
-   retombe exactement sur le temps, sans dépendre du moment où React re-rend.
-   Placer le contact au milieu des keyframes décalait la frappe d'autant. */
+/* Frappe : relancée à chaque note, durée réglée sur la valeur d'un temps (côté
+   composant). Le contact est à 0 % ET à 100 %, à `translateY(0)` — soit très
+   exactement le point d'ancrage de la main, donc le centre de l'onde.
+
+   Le découpage n'est pas décoratif. Sans maintien au contact et en `linear`,
+   l'œil prenait le sommet de la course pour le moment de la frappe : les
+   extrêmes attirent le regard, et rien ne signalait l'impact. D'où le palier
+   initial, qui donne au contact une durée visible, et le `ease-in` sur la
+   descente, qui fait accélérer le doigt jusqu'à l'impact. */
 @keyframes demo-main-frappe {
-  0%   { transform: translateY(3px); }    /* contact : le doigt s'enfonce */
-  10%  { transform: translateY(-1px); }   /* rebond */
-  45%  { transform: translateY(-15px); }  /* levée, point haut */
-  80%  { transform: translateY(-8px); }   /* redescente */
-  100% { transform: translateY(3px); }    /* contact suivant */
+  0%   { transform: translateY(0);     animation-timing-function: ease-out; }
+  7%   { transform: translateY(0);     animation-timing-function: ease-out; } /* maintien au contact */
+  16%  { transform: translateY(-5px);  animation-timing-function: ease-out; }
+  50%  { transform: translateY(-17px); animation-timing-function: ease-in;  } /* sommet de la levée */
+  100% { transform: translateY(0); }                                          /* impact suivant */
 }
 
 @keyframes demo-onde {

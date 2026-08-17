@@ -1220,10 +1220,10 @@ export default function RythmApp() {
     };
   }, [inputMode, resumeAudio, ensureMicAlive]);
 
-  // ── Lecture en boucle (act 1/2 résultats) ──────────────────────────────────
-  const [looping, setLooping] = useState(false);
-  const loopingRef = useRef(false);
-  const loopTidRef = useRef(null);
+  // ── Entraînement en boucle (act 1/2, phase "practice") ─────────────────────
+  const loopingRef = useRef(false);   // pilote le tick audio en boucle
+  const loopTidRef = useRef(null);    // timer de relance de la boucle
+  const resultsScoredRef = useRef(false); // garde-fou : ne scorer/compter qu'une fois par exercice
 
   // ── Helpers ────────────────────────────────────────────────────────────────
   const clearTids = () => { tidsRef.current.forEach(clearTimeout); tidsRef.current = []; };
@@ -1314,10 +1314,9 @@ export default function RythmApp() {
     }
   }, [rhythmBeep, rhythmSustain, beep]);
 
-  // Arrête la lecture en boucle (act 1/2) : coupe le timer de relance + l'audio en cours.
+  // Arrête la lecture en boucle : coupe le timer de relance + l'audio en cours.
   const stopLoop = useCallback(() => {
     loopingRef.current = false;
-    setLooping(false);
     if (loopTidRef.current) { clearTimeout(loopTidRef.current); loopTidRef.current = null; }
     audioTidsRef.current.forEach(clearTimeout); audioTidsRef.current = [];
     setBeatFlash(false);
@@ -1329,7 +1328,6 @@ export default function RythmApp() {
     if (!pat || !sessionBpm) return;
     const { totalMs } = toTimestamps(pat.figs, sessionBpm, pat.timeSig);
     loopingRef.current = true;
-    setLooping(true);
     const tick = () => {
       if (!loopingRef.current) return;
       playPatternAudio(pat, sessionBpm, 0, true, false, false, true);
@@ -1337,6 +1335,29 @@ export default function RythmApp() {
     };
     tick();
   }, [sessionBpm, playPatternAudio]);
+
+  // Entraînement en boucle (act 1/2) : quitte les résultats pour une phase "practice"
+  // où l'élève réentend la cellule en boucle et peut la reproduire dans la zone de frappe
+  // (aucun score, aucun enregistrement). Stop → retour aux résultats intacts.
+  const startPractice = useCallback((pat) => {
+    if (!pat) return;
+    setExpandedBadge(null);
+    setRevealed(true);
+    setPhase("practice");
+    startLoop(pat);
+  }, [startLoop]);
+
+  const stopPractice = useCallback(() => {
+    stopLoop();
+    setPhase("results");
+  }, [stopLoop]);
+
+  // Frappe pendant l'entraînement : simple retour sonore/visuel, sans scoring ni enregistrement.
+  const practiceTap = useCallback(() => {
+    tapBeep();
+    setTapFlash(true);
+    setTimeout(() => setTapFlash(false), 80);
+  }, [tapBeep]);
 
   const randomPattern = useCallback(() => {
     const pool = formulaCatalog.filter(f => selectedFormulas.has(f.id));
@@ -1361,9 +1382,10 @@ export default function RythmApp() {
   // ── Démarrage ─────────────────────────────────────────────────────────────
   // reusePattern : pattern explicite à rejouer (Rejouer) — évite tout stale de closure.
   const startGame = useCallback((reusePattern = null) => {
-    // Coupe une éventuelle lecture en boucle (Rejouer / Suivant / série).
-    loopingRef.current = false; setLooping(false);
+    // Coupe un éventuel entraînement en boucle (Rejouer / Suivant / série).
+    loopingRef.current = false;
     if (loopTidRef.current) { clearTimeout(loopTidRef.current); loopTidRef.current = null; }
+    resultsScoredRef.current = false; // nouvel exercice → autorise un scoring
     clearTids();
     audioTidsRef.current.forEach(clearTimeout); audioTidsRef.current = [];
     cancelAnimationFrame(rafRef.current);
@@ -1647,6 +1669,10 @@ export default function RythmApp() {
   useEffect(() => {
     if (phase !== "results" || !pattern) return;
     if (activity !== 1 && activity !== 2) return; // scoring tap : act 1 & 2 seulement
+    // Garde-fou : un exercice n'est scoré/compté qu'une fois. Le retour depuis l'entraînement
+    // en boucle ("practice" → "results") ne doit PAS re-créditer l'XP ni recalculer.
+    if (resultsScoredRef.current) return;
+    resultsScoredRef.current = true;
     const beatMs = 60000 / sessionBpm;
     const { timestamps } = toTimestamps(pattern.figs, sessionBpm, pattern.timeSig);
     const playable = pattern.figs
@@ -2379,6 +2405,10 @@ export default function RythmApp() {
            (phase === 'listening' && activity === 2)) &&
           inputMode === 'tap';
         if (isTapPhase) handleTap(e);
+        else if (phase === 'practice' && inputMode === 'tap' && (activity === 1 || activity === 2)) {
+          e.preventDefault();
+          practiceTap();
+        }
         else if (phase === 'results') {
           pointerDownPosRef.current = { x: e.clientX, y: e.clientY };
         }
@@ -2400,7 +2430,7 @@ export default function RythmApp() {
       >
         <button
           onClick={() => {
-            loopingRef.current = false; setLooping(false);
+            loopingRef.current = false;
             if (loopTidRef.current) { clearTimeout(loopTidRef.current); loopTidRef.current = null; }
             clearTids();
             audioTidsRef.current.forEach(clearTimeout);
@@ -2579,8 +2609,8 @@ export default function RythmApp() {
                   style={{
                     background: 'var(--surface)',
                     border: (flashBorderOn && (
-                      phase === "results"
-                        ? beatFlash  // relecture (Réécouter / Solution) : beatFlash pilote partout
+                      (phase === "results" || phase === "practice")
+                        ? beatFlash  // relecture / boucle : beatFlash pilote partout
                         : (activity === 1 ? metroDotFlash : beatFlash)
                     )) ? '2px solid #4A6CF7' : '2px solid var(--border-c)',
                     padding: '10px 6px 6px',
@@ -2756,12 +2786,10 @@ export default function RythmApp() {
                     <button
                       onPointerDown={e => e.stopPropagation()}
                       onPointerUp={e => e.stopPropagation()}
-                      onClick={() => { if (looping) stopLoop(); else { stopLoop(); startLoop(pattern); } }}
+                      onClick={() => startPractice(pattern)}
                       className="rounded-xl border-none px-3 py-1.5 text-[11px] font-bold cursor-pointer"
-                      style={looping
-                        ? { background: 'rgba(248,113,113,0.16)', color: '#f87171' }
-                        : { background: 'rgba(192,132,252,0.14)', color: '#c084fc' }}
-                    >{looping ? RYTHME.resultats12.stop : RYTHME.resultats12.rejouerBoucle}</button>
+                      style={{ background: 'rgba(192,132,252,0.14)', color: '#c084fc' }}
+                    >{RYTHME.resultats12.rejouerBoucle}</button>
                   </div>
                   {tapAnalysis?.fit && tapAnalysis?.targetBeatMs && (
                     <div className="text-[10px] text-app-muted mt-1.5">
@@ -2806,12 +2834,10 @@ export default function RythmApp() {
                   <button
                     onPointerDown={e => e.stopPropagation()}
                     onPointerUp={e => e.stopPropagation()}
-                    onClick={() => { if (looping) stopLoop(); else { stopLoop(); startLoop(pattern); } }}
+                    onClick={() => startPractice(pattern)}
                     className="rounded-xl border-none px-3 py-1.5 text-[11px] font-bold cursor-pointer"
-                    style={looping
-                      ? { background: 'rgba(248,113,113,0.16)', color: '#f87171' }
-                      : { background: 'rgba(192,132,252,0.14)', color: '#c084fc' }}
-                  >{looping ? RYTHME.resultats12.stop : RYTHME.resultats12.rejouerBoucle}</button>
+                    style={{ background: 'rgba(192,132,252,0.14)', color: '#c084fc' }}
+                  >{RYTHME.resultats12.rejouerBoucle}</button>
                 </div>
               </div>
             )}
@@ -3325,7 +3351,7 @@ export default function RythmApp() {
         )}
 
         {/* Entrée pendant le jeu */}
-        {(phase === "playing" || (phase === "countdown" && (activity === 1 || activity === 2)) || (phase === "listening" && activity === 2)) && inputMode==="tap" && (activity === 1 || activity === 2) && (
+        {(phase === "practice" || phase === "playing" || (phase === "countdown" && (activity === 1 || activity === 2)) || (phase === "listening" && activity === 2)) && inputMode==="tap" && (activity === 1 || activity === 2) && (
           <div
             className="relative w-full rounded-2xl text-[15px] font-black tracking-[2px] flex items-center justify-center"
             style={{
@@ -3359,7 +3385,7 @@ export default function RythmApp() {
           </div>
         )}
 
-        {(phase === "playing" || (phase === "countdown" && (activity === 1 || activity === 2)) || (phase === "listening" && activity === 2)) && inputMode==="mic" && (activity === 1 || activity === 2) && (
+        {(phase === "practice" || phase === "playing" || (phase === "countdown" && (activity === 1 || activity === 2)) || (phase === "listening" && activity === 2)) && inputMode==="mic" && (activity === 1 || activity === 2) && (
           <div
             className="w-full rounded-2xl overflow-hidden flex flex-col items-center justify-center gap-2.5"
             style={{
@@ -3384,6 +3410,20 @@ export default function RythmApp() {
             <div className="w-4/5 relative h-1">
               <div className="absolute top-0 w-0.5 h-1 rounded-sm" style={{ left: `${Math.min(1/3, 1) * 100}%`, background: '#4A6CF7' }}/>
             </div>
+          </div>
+        )}
+        {phase === 'practice' && (
+          <div className="w-full flex flex-col items-center gap-2 mt-3">
+            <p className="text-[11px] text-app-muted text-center px-4 leading-snug" style={{ maxWidth: 340 }}>
+              {RYTHME.resultats12.boucleConsigne}
+            </p>
+            <button
+              onPointerDown={e => e.stopPropagation()}
+              onPointerUp={e => e.stopPropagation()}
+              onClick={stopPractice}
+              className="border-none rounded-2xl cursor-pointer text-white text-base font-bold"
+              style={{ padding: '14px 40px', background: 'linear-gradient(135deg,#f87171,#dc2626)', boxShadow: '0 8px 32px rgba(220,38,38,0.35)' }}
+            >{RYTHME.resultats12.stop}</button>
           </div>
         )}
         {phase === 'results' && (
