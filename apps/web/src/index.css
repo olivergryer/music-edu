@@ -113,24 +113,25 @@ button:focus-visible, a:focus-visible {
 /* Démo du décompte (Rythme, act. 1 & 2) — geste de frappe, en DEUX animations
    distinctes appliquées à deux éléments imbriqués.
 
-   Entrée : la main arrive du bas-droite au premier temps joué, une seule fois.
-   `both` est indispensable — sans lui, l'élément retrouve son état de base dès
-   l'animation finie et la main resurgit au repos entre deux temps, ce qui se
-   lit comme une frappe fantôme. */
+   Entrée : simple fondu, une seule fois, au premier temps joué. Volontairement
+   SANS déplacement : toute translation à cet instant décalerait la première
+   frappe, or c'est précisément celle qu'on cherche à caler. L'inclinaison de la
+   main suffit à suggérer d'où elle vient. */
 @keyframes demo-main-entree {
-  0%   { transform: translate(32px, 27px); opacity: 0; }
-  100% { transform: translate(0, 0);       opacity: 1; }
+  0%   { opacity: 0; }
+  100% { opacity: 1; }
 }
 
-/* Frappe : rejouée à chaque note. Le doigt descend, s'enfonce brièvement, puis
-   remonte à une position d'attente légèrement haute — d'où il repartira au temps
-   suivant. La position finale n'est PAS le point de contact : c'est ce qui rend
-   la frappe suivante lisible comme un nouveau geste. */
+/* Frappe : jouée EN BOUCLE, avec une durée réglée sur la valeur d'un temps
+   (côté composant). Le contact est posé à 0 % — donc à chaque itération il
+   retombe exactement sur le temps, sans dépendre du moment où React re-rend.
+   Placer le contact au milieu des keyframes décalait la frappe d'autant. */
 @keyframes demo-main-frappe {
-  0%   { transform: translateY(-13px); }
-  26%  { transform: translateY(2px); }
-  46%  { transform: translateY(-1px); }
-  100% { transform: translateY(-9px); }
+  0%   { transform: translateY(3px); }    /* contact : le doigt s'enfonce */
+  10%  { transform: translateY(-1px); }   /* rebond */
+  45%  { transform: translateY(-15px); }  /* levée, point haut */
+  80%  { transform: translateY(-8px); }   /* redescente */
+  100% { transform: translateY(3px); }    /* contact suivant */
 }
 
 @keyframes demo-onde {

@@ -19,7 +19,9 @@ export default function ConsigneOverlay({
   title,
   icon,
   lines = [],
-  demo,              // ReactNode — démonstration animée, insérée entre les lignes et les contrôles
+  demo,              // ReactNode — démonstration animée, placée juste sous le titre
+  consignesRepliees = false, // replie `lines` dans un encart fermé par défaut
+  detailsLabel = "Consignes détaillées",
   controls = [],     // [{ icon: ReactNode, name, desc }] — boutons de l'exercice à détailler
   warning,           // { tone: "sound" | "mic", text } | undefined
   startLabel = "Commencer",
@@ -52,13 +54,40 @@ export default function ConsigneOverlay({
         {icon && <div style={{ fontSize: 38, lineHeight: 1, marginBottom: 6 }}>{icon}</div>}
         <div style={{ fontSize: 18, fontWeight: 900, color: "var(--text)", marginBottom: 12 }}>{title}</div>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 16, textAlign: "left" }}>
-          {lines.map((l, i) => (
-            <div key={i} style={{ fontSize: 13, lineHeight: 1.45, color: "var(--text-muted)" }}>{l}</div>
-          ))}
-        </div>
+        {/* La démonstration passe AVANT le texte : on montre, puis on explique.
+            C'est le mouvement qui lève la confusion sur le départ, pas la prose. */}
+        {demo && <div style={{ marginBottom: 14 }}>{demo}</div>}
 
-        {demo && <div style={{ marginBottom: 16 }}>{demo}</div>}
+        {lines.length > 0 && (
+          consignesRepliees ? (
+            // Repli optionnel — activé seulement là où une démo porte déjà
+            // l'essentiel. Replier partout masquerait par défaut des consignes
+            // que Notes et Harmonie affichent aujourd'hui en clair.
+            <details style={{ marginBottom: 14, textAlign: "left" }}>
+              <summary
+                style={{
+                  cursor: "pointer", listStyle: "none",
+                  fontSize: 13, fontWeight: 700, color: "#4A6CF7",
+                  padding: "9px 12px", borderRadius: 12, minHeight: 24,
+                  background: "var(--surface-2)", border: "1px solid var(--border-c)",
+                }}
+              >
+                {detailsLabel}
+              </summary>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8, padding: "12px 4px 0" }}>
+                {lines.map((l, i) => (
+                  <div key={i} style={{ fontSize: 13, lineHeight: 1.45, color: "var(--text-muted)" }}>{l}</div>
+                ))}
+              </div>
+            </details>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 16, textAlign: "left" }}>
+              {lines.map((l, i) => (
+                <div key={i} style={{ fontSize: 13, lineHeight: 1.45, color: "var(--text-muted)" }}>{l}</div>
+              ))}
+            </div>
+          )
+        )}
 
         {controls.length > 0 && (
           <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 16, textAlign: "left" }}>

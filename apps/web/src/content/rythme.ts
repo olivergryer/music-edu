@@ -28,7 +28,7 @@ export const RYTHME = {
         'Un rythme s’affiche sur la portée.',
         'Le décompte affiche 1, 2, 3, 4. Tu joues la première note sur le temps qui suit le 4.',
         'Reproduis le rythme en tapant (ou au micro) en suivant le tempo.',
-        'Tape ou chante des valeurs courtes : touche l’écran puis relève le doigt aussitôt.',
+        //'Tape ou chante des valeurs courtes : touche l’écran puis relève le doigt aussitôt.',
       ],
     },
     2: {
@@ -39,7 +39,7 @@ export const RYTHME = {
         'Écoute le rythme : la portée reste cachée.',
         'Le décompte affiche 1, 2, 3, 4. Tu joues la première note sur le temps qui suit le 4.',
         'Reproduis ensuite le rythme en tapant au bon moment.',
-        'Tape ou chante des valeurs courtes : touche l’écran puis relève le doigt aussitôt.',
+        //'Tape ou chante des valeurs courtes : touche l’écran puis relève le doigt aussitôt.',
       ],
     },
     3: {
@@ -57,15 +57,15 @@ export const RYTHME = {
       resume: 'Observe la portée et identifie parmi 4 lectures audio celle qui correspond.',
       consigne: [
         'Observe la portée affichée.',
-        'Touche chaque proposition A/B/C/D pour les écouter une par une, puis choisis celle qui correspond.',
+        'Appuie sur chaque proposition A/B/C/D pour les écouter une par une, puis choisis celle qui correspond.',
       ],
     },
     5: {
       label: 'Reconstituer',
       court: 'Reconstitue le rythme entendu en posant des cellules',
-      resume: 'Écoute le rythme, puis reconstitue-le en posant des cellules rythmiques sur la portée. Score partiel selon la justesse.',
+      resume: 'Écoute le rythme, puis reconstitue-le en cliquant sur les cellules rythmiques. Score partiel selon la justesse.',
       consigne: [
-        'Écoute le rythme, puis reconstitue-le en posant les cellules sur la portée.',
+        'Écoute le rythme, puis reconstitue-le en cliquant sur les cellules rythmiques.',
         'Valide pour voir ton score.',
       ],
     },
@@ -87,21 +87,13 @@ export const RYTHME = {
     },
   },
 
-  avertissements: {
-    son: 'Monte le volume et désactive le mode silencieux de ton appareil — le son est nécessaire.',
+  // ── Popup de consigne ──────────────────────────────────────────────────────
+  consigne: {
+    detaillees: 'Consignes détaillées',
   },
 
-  // ── Popup « Ne pas déranger » au premier lancement ─────────────────────────
-  dnd: {
-    titre: 'Avant de jouer',
-    corpsAvant: 'Pense à désactiver le mode ',
-    modeDnd: 'Ne pas déranger',
-    corpsOu: ' ou ',
-    modeSilencieux: 'Silencieux',
-    corpsApres: ' et monte le volume avant de commencer à jouer pour bien entendre les exercices.',
-    nePlusAfficher: 'Ne plus afficher',
-    valider: 'J’ai compris',
-  },
+  // L'avertissement « mode silencieux » a quitté ce catalogue : il est partagé
+  // par tous les modules à son et vit dans content/commun.ts.
 
   // ── Tutoriel d'accueil (3 diapositives) ────────────────────────────────────
   tutoriel: {
@@ -144,17 +136,17 @@ export const RYTHME = {
       {
         cle: 'saisie',
         titre: 'Saisie',
-        corps: 'TAP : touche l’écran au rythme. Micro : chante, frappe ou joue à l’instrument — la détection sonore valide chaque attaque.',
+        corps: 'TAP : touche l’écran selon le rythme en suivant le tempo. Micro : chante, frappe ou joue à l’instrument — la détection sonore valide chaque attaque.',
       },
       {
         cle: 'tempo',
         titre: 'Tempo',
-        corps: 'Fixe (BPM choisi) ou variable (BPM tiré au hasard dans une plage min–max à chaque exercice).',
+        corps: 'Fixe (tempo choisi) ou variable (tempo tiré au hasard à chaque exercice dans un intervalle que tu choisis).',
       },
       {
         cle: 'niveau',
         titre: 'Niveau',
-        corps: 'Sélectionne les formules rythmiques par cycle scolaire (C1/1 → C3). Pilote la difficulté des rythmes et des distracteurs (act. 3, 4, 5).',
+        corps: 'Sélectionne un groupe de formules rythmiques par niveau (C1/1 → C3). Chaque établissement a ses propres critères, tu peux choisir les formules spécifiques que tu souhaites travailler',
       },
       {
         cle: 'extreme',
@@ -163,7 +155,7 @@ export const RYTHME = {
       },
       {
         cle: 'revelation',
-        titre: 'Révélation',
+        titre: 'Vitesse de déchiffrage',
         corps: 'Activité 1 uniquement : la portée n’apparaît qu’au temps 1, 2, 3 ou 4 du rythme. Plus tardif = bonus de score (+10 %, +20 %, +50 %).',
       },
       {
@@ -178,11 +170,11 @@ export const RYTHME = {
   reglages: {
     titre: 'Réglages',
     accordeon: {
-      saisie: '① Saisie',
+      saisie: '① Tap ou micro',
       tempo: '② Tempo',
-      niveau: '③ Niveau · Formules',
-      mode: '④ Mode de jeu',
-      reveal: '⑤ Révélation',
+      niveau: '③ Niveau · Formules rythmiques',
+      mode: '④ Exercice seul ou série de 10',
+      reveal: '⑤ Vitesse de déchiffrage',
     },
     saisieLabel: 'Mode de saisie (activités 1 & 2)',
     tap: 'TAP',
@@ -248,6 +240,8 @@ export const RYTHME = {
     reecouter: '▶ Réécouter',
     solution: '▶ Solution',
     rejouer: '↻ Rejouer',
+    rejouerBoucle: '∞ En boucle',
+    stop: '■ Stop',
     tropTard: 'trop tard',
     tropTot: 'trop tôt',
     compenses: 'compensés',

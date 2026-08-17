@@ -6,6 +6,7 @@ import HubPage from './HubPage'
 import EcranChargement from './components/EcranChargement'
 import CelebrationLayer from './components/CelebrationLayer'
 import IndicateurSync from './components/IndicateurSync'
+import AvertissementSon from './components/AvertissementSon'
 import { CelebrationProvider } from './hooks/CelebrationContext'
 import { IS_DEV } from './isDev'
 
@@ -124,6 +125,7 @@ export default function App() {
             <ThemeToggleFloating />
             <CelebrationLayer />
             <IndicateurSync />
+            <AvertissementSon />
             <AppRoutes />
           </CelebrationProvider>
         </AuthProvider>

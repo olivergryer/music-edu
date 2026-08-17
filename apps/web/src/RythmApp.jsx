@@ -510,7 +510,8 @@ const CONSIGNES_RYTHME = {
   4: RYTHME.activites[4].consigne,
   5: RYTHME.activites[5].consigne,
 };
-const RYTHME_SOUND_WARNING = { tone: "sound", text: RYTHME.avertissements.son };
+// L'avertissement sonore ne vit plus dans la consigne : il est porté par
+// AvertissementSon, partagé par tous les modules à son (voir App.jsx).
 
 // Icônes des sections de la popup d'explications des réglages — appariées aux
 // textes de `RYTHME.reglagesExpl.sections` par la clé `cle`.
@@ -755,8 +756,6 @@ export default function RythmApp() {
     if (ENABLE_TUTORIAL === true) return true;
     return !localStorage.getItem(`rythm-tuto-${TUTORIAL_VERSION}`);
   });
-  const [showDndNotice,   setShowDndNotice]   = useState(() => !localStorage.getItem("rythm-dnd-notice-v1")); // pop-alerte volume/silencieux (à chaque arrivée sauf « ne plus afficher »)
-  const [dndDontShow,     setDndDontShow]     = useState(false); // case « Ne plus afficher »
   const [showHelp,         setShowHelp]         = useState(false);
   const [showConsigne,     setShowConsigne]     = useState(false); // overlay consigne d'arrivée (home + revue depuis "?")
   const [consigneReviewing,setConsigneReviewing]= useState(false); // true = consigne ouverte pour relecture (depuis "?")
@@ -804,7 +803,9 @@ export default function RythmApp() {
   const [metroDotFlash,setMetroDotFlash]= useState(false);
   const [flashOffsetMs,   setFlashOffsetMs]   = useState(() => loadSettings().flashOffsetMs ?? -20);
   const [tapAnalysis,     setTapAnalysis]     = useState(null);
-  const [rhythmSoundOn, setRhythmSoundOn] = useState(true);
+  // Défaut OFF : en activité 1 le rythme est écrit sur la portée, l'entendre en
+  // plus revient à donner la réponse. L'élève peut le rallumer en un tap.
+  const [rhythmSoundOn, setRhythmSoundOn] = useState(false);
   const [tapSoundOn,    setTapSoundOn]    = useState(true);
   // Presets sons : 0=standard, 1=doux, 2=grave/aigu selon type
   const [metroSoundPreset, setMetroSoundPreset] = useState(0);
@@ -1219,6 +1220,11 @@ export default function RythmApp() {
     };
   }, [inputMode, resumeAudio, ensureMicAlive]);
 
+  // ── Lecture en boucle (act 1/2 résultats) ──────────────────────────────────
+  const [looping, setLooping] = useState(false);
+  const loopingRef = useRef(false);
+  const loopTidRef = useRef(null);
+
   // ── Helpers ────────────────────────────────────────────────────────────────
   const clearTids = () => { tidsRef.current.forEach(clearTimeout); tidsRef.current = []; };
   const tid       = (fn, ms) => { const id = setTimeout(fn, ms); tidsRef.current.push(id); return id; };
@@ -1280,7 +1286,7 @@ export default function RythmApp() {
   };
 
   // sustain=true : lecture tenue (chaque note résonne ~sa durée) — act 3/4.
-  const playPatternAudio = useCallback((pat, bpmVal, delayMs = 0, forced = false, sustain = false, softBeats = false) => {
+  const playPatternAudio = useCallback((pat, bpmVal, delayMs = 0, forced = false, sustain = false, softBeats = false, metro = false) => {
     audioTidsRef.current.forEach(clearTimeout);
     audioTidsRef.current = [];
     const { timestamps, totalMs } = toTimestamps(pat.figs, bpmVal, pat.timeSig);
@@ -1302,10 +1308,35 @@ export default function RythmApp() {
         setBeatStrong(k === 0);
         setBeatFlash(true);
         setTimeout(() => setBeatFlash(false), k === 0 ? 160 : 110);
+        if (metro && metroSoundRef.current) beep(k === 0);
       }, delayMs + k * beatMs);
       audioTidsRef.current.push(id);
     }
-  }, [rhythmBeep, rhythmSustain]);
+  }, [rhythmBeep, rhythmSustain, beep]);
+
+  // Arrête la lecture en boucle (act 1/2) : coupe le timer de relance + l'audio en cours.
+  const stopLoop = useCallback(() => {
+    loopingRef.current = false;
+    setLooping(false);
+    if (loopTidRef.current) { clearTimeout(loopTidRef.current); loopTidRef.current = null; }
+    audioTidsRef.current.forEach(clearTimeout); audioTidsRef.current = [];
+    setBeatFlash(false);
+  }, []);
+
+  // Lecture en boucle sans couture de la cellule : son exemple FORCÉ, flash/métro selon réglages.
+  // La relance s'enchaîne à totalMs (4e temps → 1er temps) tant que loopingRef est vrai.
+  const startLoop = useCallback((pat) => {
+    if (!pat || !sessionBpm) return;
+    const { totalMs } = toTimestamps(pat.figs, sessionBpm, pat.timeSig);
+    loopingRef.current = true;
+    setLooping(true);
+    const tick = () => {
+      if (!loopingRef.current) return;
+      playPatternAudio(pat, sessionBpm, 0, true, false, false, true);
+      loopTidRef.current = setTimeout(tick, totalMs);
+    };
+    tick();
+  }, [sessionBpm, playPatternAudio]);
 
   const randomPattern = useCallback(() => {
     const pool = formulaCatalog.filter(f => selectedFormulas.has(f.id));
@@ -1330,6 +1361,9 @@ export default function RythmApp() {
   // ── Démarrage ─────────────────────────────────────────────────────────────
   // reusePattern : pattern explicite à rejouer (Rejouer) — évite tout stale de closure.
   const startGame = useCallback((reusePattern = null) => {
+    // Coupe une éventuelle lecture en boucle (Rejouer / Suivant / série).
+    loopingRef.current = false; setLooping(false);
+    if (loopTidRef.current) { clearTimeout(loopTidRef.current); loopTidRef.current = null; }
     clearTids();
     audioTidsRef.current.forEach(clearTimeout); audioTidsRef.current = [];
     cancelAnimationFrame(rafRef.current);
@@ -2071,8 +2105,9 @@ export default function RythmApp() {
         ...((activity === 1 || activity === 2) ? [CONSIGNE_CONTROLS.flash] : []),
         ...((inputMode === "tap" && (activity === 1 || activity === 2)) ? [CONSIGNE_CONTROLS.tapSound] : []),
       ]}
-      warning={RYTHME_SOUND_WARNING}
       demo={(activity === 1 || activity === 2) ? <DemoDecompte /> : undefined}
+      consignesRepliees
+      detailsLabel={RYTHME.consigne.detaillees}
       startLabel={consigneReviewing ? RYTHME.aide.fermer : (seriesMode ? RYTHME.accueil.commencerSerie : RYTHME.accueil.commencer)}
       onStart={consigneReviewing ? closeConsigneReview : startFromConsigne}
       onClose={consigneReviewing ? closeConsigneReview : () => setShowConsigne(false)}
@@ -2124,59 +2159,9 @@ export default function RythmApp() {
   if (currentPage === "home") {
     return (
       <>
-        {showDndNotice && (
-          <div
-            role="dialog"
-            aria-modal="true"
-            style={{
-              position: 'fixed', inset: 0, zIndex: 100,
-              background: 'rgba(3,7,18,0.82)', backdropFilter: 'blur(4px)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20,
-            }}
-          >
-            <div style={{
-              maxWidth: 380, width: '100%', background: 'var(--surface)',
-              border: '1px solid var(--border-c)', borderRadius: 20, padding: '28px 24px',
-              textAlign: 'center', boxShadow: '0 12px 40px rgba(0,0,0,0.45)',
-            }}>
-              <div style={{
-                width: 48, height: 48, margin: '0 auto 16px', borderRadius: '50%',
-                background: 'rgba(192,132,252,0.14)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              }}>
-                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#c084fc" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" fill="#c084fc" />
-                  <path d="M15.54 8.46a5 5 0 0 1 0 7.07M19.07 4.93a10 10 0 0 1 0 14.14" />
-                </svg>
-              </div>
-              <div style={{ fontSize: 17, fontWeight: 800, color: 'var(--text)', marginBottom: 10 }}>
-                {RYTHME.dnd.titre}
-              </div>
-              <div style={{ fontSize: 14, lineHeight: 1.5, color: 'var(--text-muted)', marginBottom: 18 }}>
-                {RYTHME.dnd.corpsAvant}
-                <strong style={{ color: 'var(--text)' }}>{RYTHME.dnd.modeDnd}</strong>
-                {RYTHME.dnd.corpsOu}
-                <strong style={{ color: 'var(--text)' }}>{RYTHME.dnd.modeSilencieux}</strong>
-                {RYTHME.dnd.corpsApres}
-              </div>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center', marginBottom: 18, cursor: 'pointer', fontSize: 13, color: 'var(--text-muted)' }}>
-                <input
-                  type="checkbox"
-                  checked={dndDontShow}
-                  onChange={e => setDndDontShow(e.target.checked)}
-                  style={{ width: 17, height: 17, accentColor: '#4A6CF7', cursor: 'pointer' }}
-                />
-                {RYTHME.dnd.nePlusAfficher}
-              </label>
-              <button
-                onClick={() => { if (dndDontShow) localStorage.setItem("rythm-dnd-notice-v1", "1"); setShowDndNotice(false); }}
-                className="w-full border-none rounded-2xl text-sm font-bold cursor-pointer text-white"
-                style={{ padding: '13px 0', background: 'linear-gradient(135deg,#4A6CF7,#8B5CF6)' }}
-              >
-                {RYTHME.dnd.valider}
-              </button>
-            </div>
-          </div>
-        )}
+        {/* La popup « mode silencieux » vivait ici, propre à Rythme. Elle est
+            désormais portée par AvertissementSon, monté dans App et partagé par
+            tous les modules à son (Théorie, Notes, Harmonie, Accordeur). */}
         {showTutorial && <TutorialOverlay onDone={handleTutorialDone} niveauOrder={niveauOrder} activity={activity} inputMode={inputMode} />}
         {HelpOverlay}
         {SettingsModal}
@@ -2415,6 +2400,8 @@ export default function RythmApp() {
       >
         <button
           onClick={() => {
+            loopingRef.current = false; setLooping(false);
+            if (loopTidRef.current) { clearTimeout(loopTidRef.current); loopTidRef.current = null; }
             clearTids();
             audioTidsRef.current.forEach(clearTimeout);
             audioTidsRef.current = [];
@@ -2749,13 +2736,13 @@ export default function RythmApp() {
                   <div className="flex gap-2 justify-center mt-3 flex-wrap">
                     <button
                       onPointerDown={e => e.stopPropagation()}
-                      onClick={replayTaps}
+                      onClick={() => { stopLoop(); replayTaps(); }}
                       className="rounded-xl border-none px-3 py-1.5 text-[11px] font-bold cursor-pointer"
                       style={{ background: 'rgba(74,108,247,0.12)', color: '#4A6CF7' }}
                     >{RYTHME.resultats12.reecouter}</button>
                     <button
                       onPointerDown={e => e.stopPropagation()}
-                      onClick={() => playPatternAudio(pattern, sessionBpm, 0, true)}
+                      onClick={() => { stopLoop(); playPatternAudio(pattern, sessionBpm, 0, true); }}
                       className="rounded-xl border-none px-3 py-1.5 text-[11px] font-bold cursor-pointer"
                       style={{ background: 'rgba(52,211,153,0.12)', color: '#34d399' }}
                     >{RYTHME.resultats12.solution}</button>
@@ -2766,6 +2753,15 @@ export default function RythmApp() {
                       className="rounded-xl border-none px-3 py-1.5 text-[11px] font-bold cursor-pointer"
                       style={{ background: 'rgba(251,191,36,0.12)', color: '#fbbf24' }}
                     >{RYTHME.resultats12.rejouer}</button>
+                    <button
+                      onPointerDown={e => e.stopPropagation()}
+                      onPointerUp={e => e.stopPropagation()}
+                      onClick={() => { if (looping) stopLoop(); else { stopLoop(); startLoop(pattern); } }}
+                      className="rounded-xl border-none px-3 py-1.5 text-[11px] font-bold cursor-pointer"
+                      style={looping
+                        ? { background: 'rgba(248,113,113,0.16)', color: '#f87171' }
+                        : { background: 'rgba(192,132,252,0.14)', color: '#c084fc' }}
+                    >{looping ? RYTHME.resultats12.stop : RYTHME.resultats12.rejouerBoucle}</button>
                   </div>
                   {tapAnalysis?.fit && tapAnalysis?.targetBeatMs && (
                     <div className="text-[10px] text-app-muted mt-1.5">
@@ -2796,7 +2792,7 @@ export default function RythmApp() {
                 <div className="flex gap-2 justify-center flex-wrap">
                   <button
                     onPointerDown={e => e.stopPropagation()}
-                    onClick={() => playPatternAudio(pattern, sessionBpm, 0, true)}
+                    onClick={() => { stopLoop(); playPatternAudio(pattern, sessionBpm, 0, true); }}
                     className="rounded-xl border-none px-3 py-1.5 text-[11px] font-bold cursor-pointer"
                     style={{ background: 'rgba(52,211,153,0.12)', color: '#34d399' }}
                   >{RYTHME.resultats12.solution}</button>
@@ -2807,6 +2803,15 @@ export default function RythmApp() {
                     className="rounded-xl border-none px-3 py-1.5 text-[11px] font-bold cursor-pointer"
                     style={{ background: 'rgba(251,191,36,0.12)', color: '#fbbf24' }}
                   >{RYTHME.resultats12.rejouer}</button>
+                  <button
+                    onPointerDown={e => e.stopPropagation()}
+                    onPointerUp={e => e.stopPropagation()}
+                    onClick={() => { if (looping) stopLoop(); else { stopLoop(); startLoop(pattern); } }}
+                    className="rounded-xl border-none px-3 py-1.5 text-[11px] font-bold cursor-pointer"
+                    style={looping
+                      ? { background: 'rgba(248,113,113,0.16)', color: '#f87171' }
+                      : { background: 'rgba(192,132,252,0.14)', color: '#c084fc' }}
+                  >{looping ? RYTHME.resultats12.stop : RYTHME.resultats12.rejouerBoucle}</button>
                 </div>
               </div>
             )}

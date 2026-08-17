@@ -188,35 +188,37 @@ export default function DemoDecompte() {
             le point d'appui, relancés à chaque frappe (key = n° de note). */}
         {enJeu && (
           <span key={`onde-${etape.note}`} style={ondeConteneur}>
-            <span style={onde(CONTACT_DELAI_MS)} />
-            <span style={onde(CONTACT_DELAI_MS + 120)} />
+            <span style={onde(0)} />
+            <span style={onde(120)} />
           </span>
         )}
 
-        {/* Main en surimpression. DEUX mouvements distincts, volontairement
-            séparés en deux éléments :
-              · l'extérieur ENTRE une fois quand le rythme démarre, et ne bouge
-                plus ensuite — pas de `key` qui change, donc pas de remontage ;
-              · l'intérieur rejoue la frappe à chaque note (`key` = n° de note).
-            Une animation unique par note faisait entrer et sortir la main quatre
-            fois ; pire, sans `both` elle revenait à son état de base entre deux
-            temps — la main réapparaissait au repos et on croyait voir une
-            seconde frappe. */}
+        {/* Main en surimpression. DEUX mouvements distincts sur deux éléments :
+              · l'extérieur ENTRE une fois quand le rythme démarre — aucune `key`
+                ne change dessus, donc React ne le remonte jamais ;
+              · l'intérieur boucle la frappe, avec une durée EXACTEMENT égale à
+                un temps et le contact posé à 0 % des keyframes.
+            C'est ce verrouillage de phase qui règle la désynchronisation : tant
+            que la frappe était relancée à chaque note, le contact tombait au
+            pourcentage où il était placé dans l'animation (26 %, soit 130 ms
+            trop tard). Ici l'animation démarre une seule fois, à la première
+            note, et chaque itération retombe d'elle-même sur le temps. */}
         {enJeu && (
           <span
             style={{
               position: 'absolute',
               left: `calc(50% - ${CONTACT_PX_X}px)`,
               top: BANDE_CONTACT_Y - CONTACT_PX_Y,
-              opacity: 0.65, pointerEvents: 'none',
-              animation: reducedMotion ? undefined : 'demo-main-entree 0.3s ease-out both',
+              opacity: 0.9, pointerEvents: 'none',
+              animation: reducedMotion ? undefined : 'demo-main-entree 0.18s ease-out both',
             }}
           >
             <span
-              key={`frappe-${etape.note}`}
               style={{
                 display: 'block',
-                animation: reducedMotion ? undefined : 'demo-main-frappe 0.5s ease-out both',
+                animation: reducedMotion
+                  ? undefined
+                  : `demo-main-frappe ${BEAT_MS}ms linear infinite`,
               }}
             >
               <MainSvg />
@@ -251,28 +253,27 @@ export default function DemoDecompte() {
 }
 
 // ── Main ─────────────────────────────────────────────────────────────────────
-// Main en perspective, arrivant du bas-droite à 35° — la posture réelle d'un
-// droitier sur tablette posée. La main est dessinée à la verticale dans son
-// espace local (index vers le haut), puis pivotée de −35° autour de la pulpe :
-// le point de contact reste ainsi fixe quel que soit l'angle, ce qui permet de
-// caler l'onde dessus sans recalcul.
+// Silhouette plate, dans la convention « appuie ici » des systèmes de design
+// (Material et consorts) : une seule couleur, formes arrondies, index tendu,
+// ni dégradé ni contour. Ce parti pris n'est pas décoratif — à petite taille et
+// en surimpression sur un fond coloré, un rendu volumétrique se délite, alors
+// qu'une silhouette reste lisible. Le dessin est original, aucun actif sous
+// licence n'est repris.
 //
-// Teintes lavande de la charte plutôt qu'une carnation : la démo s'adresse à
-// tous les élèves, et le violet se détache mieux du bandeau bleu.
+// La main est dessinée verticalement (index vers le haut) puis pivotée de −25°
+// autour de la pulpe : le point de contact reste fixe quel que soit l'angle, ce
+// qui permet de caler l'onde dessus sans recalcul.
 //
-// Repères (viewBox 120×100) : pulpe de l'index = (30, 8).
+// Repères (viewBox 120×110) : pulpe de l'index = (34, 6).
 const MAIN_W = 120
-const MAIN_H = 100
-const CONTACT_X = 30
-const CONTACT_Y = 8
-const ANGLE = -35
+const MAIN_H = 110
+const CONTACT_X = 34
+const CONTACT_Y = 6
+const ANGLE = -25
+const MAIN_COULEUR = '#ffffff'
 
 // Échelle de rendu : à taille native la main écraserait un bandeau de ~270 px.
-const MAIN_SCALE = 0.8
-// Instant du contact dans l'animation `demo-main-frappe` (26 % de 0,5 s). L'onde
-// part de là, et non au déclenchement : sinon elle jaillit avant que le doigt
-// n'ait touché.
-const CONTACT_DELAI_MS = 130
+const MAIN_SCALE = 0.72
 // Position de la pulpe une fois le SVG mis à l'échelle, en pixels CSS.
 const CONTACT_PX_X = CONTACT_X * MAIN_SCALE
 const CONTACT_PX_Y = CONTACT_Y * MAIN_SCALE
@@ -282,65 +283,37 @@ function MainSvg() {
     <svg
       width={MAIN_W * MAIN_SCALE}
       height={MAIN_H * MAIN_SCALE}
-      viewBox="0 0 120 100"
+      viewBox="0 0 120 110"
       fill="none"
       aria-hidden="true"
     >
-      <defs>
-        {/* Lumière venant du bord gauche de l'index : après la rotation de
-            −35°, le haut-gauche de la main est éclairé, le bas-droite dans
-            l'ombre — cohérent avec un éclairage haut-gauche. */}
-        <linearGradient id="demo-main-corps" x1="16" y1="14" x2="62" y2="70" gradientUnits="userSpaceOnUse">
-          <stop offset="0%"   stopColor="#faf5ff" />
-          <stop offset="34%"  stopColor="#ddd6fe" />
-          <stop offset="72%"  stopColor="#c084fc" />
-          <stop offset="100%" stopColor="#9061e8" />
-        </linearGradient>
-        <linearGradient id="demo-main-ombre" x1="34" y1="24" x2="78" y2="92" gradientUnits="userSpaceOnUse">
-          <stop offset="0%"   stopColor="#5b21b6" stopOpacity="0" />
-          <stop offset="100%" stopColor="#4c1d95" stopOpacity="0.72" />
-        </linearGradient>
-        <linearGradient id="demo-main-reflet" x1="22" y1="12" x2="34" y2="44" gradientUnits="userSpaceOnUse">
-          <stop offset="0%"   stopColor="#ffffff" stopOpacity="0.92" />
-          <stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
-        </linearGradient>
-      </defs>
-
-      {/* Ombre de contact projetée sur le bandeau — non pivotée : elle reste
-          plaquée au sol, c'est elle qui « pose » la main dans l'espace. */}
-      <ellipse cx={CONTACT_X + 3} cy={CONTACT_Y + 3} rx="15" ry="4.5" fill="#1e1b4b" opacity="0.38" />
-
-      <g transform={`rotate(${ANGLE} ${CONTACT_X} ${CONTACT_Y})`}>
-        {/* Paume / doigts repliés — masse principale, en arrière-plan */}
-        <rect x="17" y="37" width="54" height="62" rx="20" fill="url(#demo-main-corps)" />
-        <rect x="17" y="37" width="54" height="62" rx="20" fill="url(#demo-main-ombre)" />
-        <rect x="17" y="37" width="54" height="62" rx="20" stroke="#4c1d95" strokeOpacity="0.42" strokeWidth="1.4" />
-
-        {/* Pouce, décalé vers l'extérieur et incliné */}
-        <g transform="rotate(20 12 66)">
-          <rect x="2" y="48" width="17" height="35" rx="8.5" fill="url(#demo-main-corps)" />
-          <rect x="2" y="48" width="17" height="35" rx="8.5" fill="url(#demo-main-ombre)" />
-          <rect x="2" y="48" width="17" height="35" rx="8.5" stroke="#4c1d95" strokeOpacity="0.4" strokeWidth="1.3" />
-        </g>
-
-        {/* Plis des doigts repliés sur la paume — lisibles seulement en biais,
-            ce qui renforce la perspective. */}
+      <g transform={`rotate(${ANGLE} ${CONTACT_X} ${CONTACT_Y})`} fill={MAIN_COULEUR}>
+        {/* Silhouette d'un seul tenant : index tendu vers le haut, puis les
+            trois doigts repliés et le pouce, tracés comme des bosses arrondies
+            sur le contour de la main — c'est le profil qui rend la posture
+            lisible, pas le détail interne. */}
         <path
-          d="M31 54h29M33 66h29M36 78h25"
-          stroke="#4c1d95" strokeOpacity="0.3" strokeWidth="1.3" strokeLinecap="round"
+          d="M26 6
+             a8 8 0 0 1 16 0
+             v46
+             h6
+             a10 10 0 0 1 10 -10
+             a10 10 0 0 1 10 10
+             v2
+             a9 9 0 0 1 9 -9
+             a9 9 0 0 1 9 9
+             v4
+             a8.5 8.5 0 0 1 8.5 -8.5
+             a8.5 8.5 0 0 1 8.5 8.5
+             v22
+             a30 30 0 0 1 -30 30
+             h-20
+             a26 26 0 0 1 -20 -9
+             l-20 -24
+             a8 8 0 0 1 12 -10
+             l6 7
+             z"
         />
-
-        {/* Index tendu — au premier plan, il vient toucher l'écran */}
-        <rect x="22" y="8" width="16" height="42" rx="8" fill="url(#demo-main-corps)" />
-        <rect x="22" y="8" width="16" height="42" rx="8" fill="url(#demo-main-ombre)" />
-        <rect x="22" y="8" width="16" height="42" rx="8" stroke="#4c1d95" strokeOpacity="0.5" strokeWidth="1.4" />
-
-        {/* Reflet longitudinal sur la face éclairée — donne le cylindre */}
-        <ellipse cx="26.5" cy="24" rx="2.8" ry="12" fill="url(#demo-main-reflet)" />
-
-        {/* Pli de la phalange + ongle esquissé */}
-        <path d="M24 38h12" stroke="#4c1d95" strokeOpacity="0.32" strokeWidth="1.2" strokeLinecap="round" />
-        <ellipse cx="30" cy="17" rx="4" ry="5" fill="#ffffff" opacity="0.32" />
       </g>
     </svg>
   )
