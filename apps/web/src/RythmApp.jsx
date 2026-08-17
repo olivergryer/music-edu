@@ -791,7 +791,6 @@ export default function RythmApp() {
   const [scores,       setScores]       = useState([]);
   const [totalPts,     setTotalPts]     = useState(0);
   const [earnedPts,    setEarnedPts]    = useState(0);
-  const [progress,     setProgress]     = useState(0);
   const [tapFlash,     setTapFlash]     = useState(false);
   const [beatFlash,    setBeatFlash]    = useState(false);
   // flashMetroState : 0=OFF, 1=FLASH only, 2=SOUND only, 3=BOTH
@@ -1412,7 +1411,7 @@ export default function RythmApp() {
       });
       setPattern(pat); setSessionBpm(bpm);
       setAct5Palette(palette); setAct5Placed([]); setAct5Invalid(false);
-      setScores([]); setEarnedPts(0); setProgress(0); setActiveIdx(-1);
+      setScores([]); setEarnedPts(0); setActiveIdx(-1);
       setSelectedIdx(null); setRevealed(false);
       setPhase("building");
       // Décompte beats 3 & 4 (flash bordure) puis lecture tenue (flash sur chaque temps)
@@ -1438,7 +1437,7 @@ export default function RythmApp() {
       setPattern(pat); setSessionBpm(bpm);
       setChoices(shuffled); setCorrectIdx(corrIdx);
       setSelectedIdx(null); setPendingIdx(null); setAct4CountN(null);
-      setScores([]); setEarnedPts(0); setProgress(0); setActiveIdx(-1);
+      setScores([]); setEarnedPts(0); setActiveIdx(-1);
       setRevealed(activity === 4);
       if (activity === 3) {
         // Décompte 3,4 puis lecture audio (tenue)
@@ -1469,7 +1468,7 @@ export default function RythmApp() {
     if (activity === 2) {
       setPattern(pat); setSessionBpm(bpm);
       setTapTimes([]); tapTimesRef.current = [];
-      setScores([]); setActiveIdx(-1); setProgress(0);
+      setScores([]); setActiveIdx(-1);
       setRevealed(false);
       // Décompte réduit : beats 3 et 4 uniquement
       setPhase("countdown"); setCountdownN(3);
@@ -1514,15 +1513,8 @@ export default function RythmApp() {
             if (metroSoundRef.current) beep(false);
           }, k * beatMs);
         });
-        const tick = () => {
-          const el = performance.now() - startRef.current;
-          setProgress(Math.min(el / totalMs, 1));
-          if (el < totalMs) rafRef.current = requestAnimationFrame(tick);
-        };
-        rafRef.current = requestAnimationFrame(tick);
         tid(() => {
           cancelAnimationFrame(rafRef.current);
-          setProgress(1);
           setRevealed(true);
           setPhase("results");
         }, totalMs + beatMs * 0.6);
@@ -1533,7 +1525,7 @@ export default function RythmApp() {
     // ── Activité 1 : countdown + tap simultané ────────────────────────────
     setPattern(pat); setSessionBpm(bpm);
     setTapTimes([]); tapTimesRef.current = [];
-    setScores([]); setActiveIdx(-1); setProgress(0);
+    setScores([]); setActiveIdx(-1);
     setRevealed(revealBeat === 1);
     setPhase("countdown"); setCountdownN(1);
     pulseCountdown(true, pat.timeSig, beatMs, 1, extremeMode);
@@ -1581,16 +1573,9 @@ export default function RythmApp() {
         }, ts);
       });
 
-      const tick = () => {
-        const el = performance.now() - startRef.current;
-        setProgress(Math.min(el / totalMs, 1));
-        if (el < totalMs) rafRef.current = requestAnimationFrame(tick);
-      };
-      rafRef.current = requestAnimationFrame(tick);
-
       tid(() => {
         cancelAnimationFrame(rafRef.current);
-        setProgress(1); setActiveIdx(-1);
+        setActiveIdx(-1);
         setPhase("results");
       }, totalMs + beatMs * 0.6);
     }, 4 * beatMs);
@@ -1605,7 +1590,7 @@ export default function RythmApp() {
     setRetryMode(true);
     recordedPatternRef.current = null;
     setTapTimes([]); tapTimesRef.current = [];
-    setScores([]); setActiveIdx(-1); setProgress(0);
+    setScores([]); setActiveIdx(-1);
     setEarnedPts(0);
     startGame(pattern);
   }, [pattern, startGame]);
@@ -1906,7 +1891,7 @@ export default function RythmApp() {
     }
     setSeriesIdx(0); setSeriesXpLog([]); setSeriesMedals([]); setSeriesResult(null);
     setCurrentPage("game"); setPhase("idle"); setPattern(null);
-    setScores([]); setEarnedPts(0); setProgress(0); setActiveIdx(-1);
+    setScores([]); setEarnedPts(0); setActiveIdx(-1);
     setRevealed(false); setChoices([]); setSelectedIdx(null); setPendingIdx(null);
     setBeatFlash(false); setMetroDotFlash(false); setCountdownN(1);
     startGame();
@@ -2308,7 +2293,7 @@ export default function RythmApp() {
           setPattern(null);
           setScores([]);
           setEarnedPts(0);
-          setProgress(0);
+         
           setActiveIdx(-1);
           setRevealed(false);
           setChoices([]);
@@ -2719,19 +2704,17 @@ export default function RythmApp() {
                 </div>
               )}
 
-              {/* Barre de progression — hauteur réservée pour éviter les sauts */}
-              <div className="mt-2 h-[22px]">
+              {/* La barre de progression a été retirée : son avancée était
+                  linéaire sur la durée totale, sans rapport avec la position des
+                  temps sur la portée. Placée juste dessous, elle proposait un
+                  repère temporel FAUX au moment précis où l'élève cherche le
+                  bon. Le compteur de frappes reste, lui n'induit pas en erreur.
+                  Hauteur réservée pour éviter un saut de mise en page. */}
+              <div className="mt-2 h-5.5">
                 {isPlaying && (
-                  <>
-                    <div className="w-full h-[3px] bg-surface-2 rounded-full overflow-hidden">
-                      <div className="h-full rounded-full transition-[width] duration-100 ease-linear"
-                        style={{ width: `${progress*100}%`, background: 'linear-gradient(90deg,#4A6CF7,#8B5CF6)' }}
-                      />
-                    </div>
-                    <div className="text-right text-[10px] text-app-muted mt-0.5">
-                      {tapTimes.length} / {playableCount} {RYTHME.jeu.taps}
-                    </div>
-                  </>
+                  <div className="text-right text-[10px] text-app-muted">
+                    {tapTimes.length} / {playableCount} {RYTHME.jeu.taps}
+                  </div>
                 )}
               </div>
             </div>

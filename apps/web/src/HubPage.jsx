@@ -90,7 +90,12 @@ export default function HubPage() {
 
   useEffect(() => {
     if (pwa.shouldShowInAppWarning()) setShowInApp(true)
-    else if (pwa.shouldShowHub()) setShowPwaTuto(true)
+    else if (pwa.shouldShowHub()) {
+      // Marqué à l'AFFICHAGE, pas à la fermeture : l'overlay se referme aussi
+      // en cliquant à côté, chemin qui ne passe par aucun bouton.
+      pwa.markHubShown()
+      setShowPwaTuto(true)
+    }
   }, [pwa])
 
   return (

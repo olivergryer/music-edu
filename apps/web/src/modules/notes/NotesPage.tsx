@@ -17,7 +17,7 @@ import ConsigneOverlayRaw, { consigneSeen } from '../../ConsigneOverlay'
 const ConsigneOverlay = ConsigneOverlayRaw as unknown as React.ComponentType<Record<string, unknown>>
 
 import NotesStaff, { type CellResult } from './NotesStaff.tsx'
-import RadialWheel, { NOTE_LABELS } from './RadialWheel.tsx'
+import RadialWheel, { NOTE_LABELS, type WheelMode } from './RadialWheel.tsx'
 import { profileForClef, CLEF_LABELS, type ReadingProfile } from './profiles.ts'
 import { beginnerInstruments, getInstrument, instrumentClefs } from './instruments.ts'
 import { buildPool, resolveAmbitusStep } from './pool.ts'
@@ -25,14 +25,14 @@ import { selectNextItem, generateLine, DEFAULT_LINE_WEIGHTS } from './selection.
 import { classifyAttempt, updateMastery } from './mastery.ts'
 import { computeSessionSummary } from './summary.ts'
 import { flagsToBitmask } from './encode.ts'
-import { noteNameOf, degreeOfName, octaveOf } from './diatonic.ts'
+import { noteNameOf, degreeOfName, degreeOf, octaveOf, diatonic } from './diatonic.ts'
 import { mulberry32, type Rng } from './rng.ts'
 import {
   aggregatePerNote, mergePerNote, mergeContext, contextKey, noteMasteryLevel,
   type PerNoteMap, type PerContextMap, type MasteryLevel,
 } from './progressStats.ts'
 import {
-  DEFAULT_CONFIG,
+  DEFAULT_CONFIG, NOTE_NAMES,
   type Attempt, type Clef, type Mastery, type NoteItem, type NoteName,
   type NotesSessionConfig, type NotesSummary, type Phase,
 } from './types.ts'
@@ -59,6 +59,36 @@ const PHASE_DESC: Record<Phase, string> = {
 function ambitusStepFor(profile: ReadingProfile, phase: Phase): number {
   const last = profile.ambitusSequence.length - 1
   return phase === 'P0' ? 0 : phase === 'P1' ? Math.min(1, last) : last
+}
+
+// ── Instrument « Personnalisé » (runtime, non listé dans INSTRUMENTS) ──────────
+const CUSTOM_ID = 'custom'
+const ALL_CLEFS: Clef[] = ['treble', 'bass', 'alto', 'tenor']
+
+interface CustomCfg { clefs: Clef[]; low: number; high: number }
+
+function loadCustom(): CustomCfg {
+  try {
+    const raw = JSON.parse(localStorage.getItem('notes_custom') || '')
+    if (raw && Array.isArray(raw.clefs) && raw.clefs.length && typeof raw.low === 'number' && typeof raw.high === 'number') {
+      return { clefs: raw.clefs.filter((c: Clef) => ALL_CLEFS.includes(c)), low: raw.low, high: raw.high }
+    }
+  } catch { /* défaut ci-dessous */ }
+  return { clefs: ['treble'], low: diatonic(2, 0), high: diatonic(4, 0) } // do2..do4
+}
+
+// Profil de lecture synthétisé depuis la tessiture perso (spec : repères auto +
+// plage complète). P0 = grave/médium/aigu ; P1/P2 = toute la plage.
+function customProfile(clef: Clef, low: number, high: number): ReadingProfile {
+  const lo = Math.min(low, high), hi = Math.max(low, high)
+  const mid = Math.round((lo + hi) / 2)
+  const landmarks = [...new Set([lo, mid, hi])]
+  return { id: 'custom', clef, landmarks, ambitusSequence: [{ low: lo, high: hi }] }
+}
+
+function availableClefsFor(instrumentId: string, custom: CustomCfg): Clef[] {
+  if (instrumentId === CUSTOM_ID) return custom.clefs.length ? custom.clefs : ['treble']
+  return instrumentClefs(getInstrument(instrumentId) ?? beginnerInstruments()[0])
 }
 
 const MASTERY_COLOR: Record<MasteryLevel, string> = {
@@ -108,14 +138,15 @@ export default function NotesPage() {
     const v = LS.get('notes_phase', 'P0')
     return (['P0', 'P1', 'P2'] as string[]).includes(v) ? (v as Phase) : 'P0'
   })
+  const [customCfg, setCustomCfg] = useState<CustomCfg>(loadCustom)
   const [clef, setClef] = useState<Clef>(() => {
-    const inst = getInstrument(LS.get('notes_instrument', '')) ?? beginnerInstruments()[0]
-    const clefs = instrumentClefs(inst)
+    const clefs = availableClefsFor(LS.get('notes_instrument', ''), loadCustom())
     const v = LS.get('notes_clef', '') as Clef
     return clefs.includes(v) ? v : clefs[0]
   })
   const [coloriser, setColoriser] = useState(() => LS.get('notes_couleur', '0') === '1')
   const [sonOn, setSonOn] = useState(() => LS.get('notes_son', '1') === '1')
+  const [wheelMode, setWheelMode] = useState<WheelMode>(() => (LS.get('notes_wheelmode', 'drag') === 'fixed' ? 'fixed' : 'drag'))
   const [hoverName, setHoverName] = useState<NoteName | null>(null)
 
   useEffect(() => { LS.set('notes_instrument', instrumentId) }, [instrumentId])
@@ -123,15 +154,16 @@ export default function NotesPage() {
   useEffect(() => { LS.set('notes_clef', clef) }, [clef])
   useEffect(() => { LS.set('notes_couleur', coloriser ? '1' : '0') }, [coloriser])
   useEffect(() => { LS.set('notes_son', sonOn ? '1' : '0') }, [sonOn])
+  useEffect(() => { LS.set('notes_wheelmode', wheelMode) }, [wheelMode])
+  useEffect(() => { LS.set('notes_custom', JSON.stringify(customCfg)) }, [customCfg])
 
-  // Réaligne la clef quand l'instrument change (si la clef courante n'est plus dispo).
+  // Réaligne la clef si la clef courante n'est plus disponible (changement
+  // d'instrument, ou modification des clefs du profil personnalisé).
   useEffect(() => {
-    const inst = getInstrument(instrumentId)
-    if (!inst) return
-    const clefs = instrumentClefs(inst)
+    const clefs = availableClefsFor(instrumentId, customCfg)
     if (!clefs.includes(clef)) setClef(clefs[0])
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [instrumentId])
+  }, [instrumentId, customCfg])
 
   // État de jeu
   const [sequence, setSequence] = useState<NoteItem[]>([])
@@ -194,8 +226,10 @@ export default function NotesPage() {
 
   // ── Démarrage d'une session ────────────────────────────────────────────────────
   function start() {
-    const inst = getInstrument(instrumentId)!
-    const profile = profileForClef(inst.primaryProfile, clef) // clef sélectionnée
+    const inst = getInstrument(instrumentId)
+    const profile = instrumentId === CUSTOM_ID
+      ? customProfile(clef, customCfg.low, customCfg.high)
+      : profileForClef(inst!.primaryProfile, clef) // clef sélectionnée
     const lastStep = profile.ambitusSequence.length - 1
     const step = phase === 'P0' ? 0 : phase === 'P1' ? Math.min(1, lastStep) : lastStep
     const pool = buildPool(profile, phase, step)
@@ -363,7 +397,7 @@ export default function NotesPage() {
   // ── Rendu ──────────────────────────────────────────────────────────────────────
   const target = phase === 'P2' ? TARGET_LINES * LINE_LEN : TARGET_ISOLATED
   const payload = (mp.progress.payload ?? {}) as { perNote?: PerNoteMap; perContext?: PerContextMap }
-  const availableClefs = instrumentClefs(getInstrument(instrumentId) ?? beginnerInstruments()[0])
+  const availableClefs = availableClefsFor(instrumentId, customCfg)
 
   return (
     <div className="bg-app min-h-dvh flex flex-col" style={{ maxWidth: 540, margin: '0 auto', width: '100%' }}>
@@ -398,9 +432,11 @@ export default function NotesPage() {
         <SetupScreen
           instrumentId={instrumentId} setInstrumentId={setInstrumentId}
           clef={clef} setClef={setClef} availableClefs={availableClefs}
+          customCfg={customCfg} setCustomCfg={setCustomCfg}
           phase={phase} setPhase={setPhase}
           coloriser={coloriser} setColoriser={setColoriser}
           sonOn={sonOn} setSonOn={setSonOn}
+          wheelMode={wheelMode} setWheelMode={setWheelMode}
           perNote={payload.perNote ?? {}} perContext={payload.perContext ?? {}}
           onStart={start}
         />
@@ -437,6 +473,7 @@ export default function NotesPage() {
           {/* Roue plein écran, au-dessus (sans cadre), toujours accessible. */}
           <div style={{ position: 'absolute', inset: 0, zIndex: 2 }}>
             <RadialWheel
+              mode={wheelMode}
               etayage={configRef.current?.etayage ?? 'visible'}
               onSelect={handleAnswer}
               onHover={setHoverName}
@@ -459,20 +496,26 @@ export default function NotesPage() {
 }
 
 // ── Écran de configuration ────────────────────────────────────────────────────
-function SetupScreen({ instrumentId, setInstrumentId, clef, setClef, availableClefs, phase, setPhase, coloriser, setColoriser, sonOn, setSonOn, perNote, perContext, onStart }: {
+function SetupScreen({ instrumentId, setInstrumentId, clef, setClef, availableClefs, customCfg, setCustomCfg, phase, setPhase, coloriser, setColoriser, sonOn, setSonOn, wheelMode, setWheelMode, perNote, perContext, onStart }: {
   instrumentId: string; setInstrumentId: (v: string) => void
   clef: Clef; setClef: (c: Clef) => void; availableClefs: Clef[]
+  customCfg: CustomCfg; setCustomCfg: (c: CustomCfg) => void
   phase: Phase; setPhase: (p: Phase) => void
   coloriser: boolean; setColoriser: (v: boolean) => void
   sonOn: boolean; setSonOn: (v: boolean) => void
+  wheelMode: WheelMode; setWheelMode: (m: WheelMode) => void
   perNote: PerNoteMap; perContext: PerContextMap
   onStart: () => void
 }) {
   const label = "text-xs font-bold text-app-muted uppercase tracking-widest"
   const card: React.CSSProperties = { background: 'var(--surface)', border: '1px solid var(--border-c)', borderRadius: 16, padding: 16 }
 
+  const isCustom = instrumentId === CUSTOM_ID
   const inst = getInstrument(instrumentId)
-  const profile = inst ? profileForClef(inst.primaryProfile, clef) : null
+  const instLabel = isCustom ? 'Personnalisé' : (inst?.label ?? '')
+  const profile = isCustom
+    ? customProfile(clef, customCfg.low, customCfg.high)
+    : (inst ? profileForClef(inst.primaryProfile, clef) : null)
   const heatItems = profile ? buildPool(profile, phase, ambitusStepFor(profile, phase)) : []
 
   return (
@@ -482,8 +525,40 @@ function SetupScreen({ instrumentId, setInstrumentId, clef, setClef, availableCl
         <select value={instrumentId} onChange={e => setInstrumentId(e.target.value)}
           style={{ width: '100%', minHeight: 44, borderRadius: 10, padding: '0 12px', background: 'var(--surface-2)', color: 'var(--text)', border: '1px solid var(--border-c)' }}>
           {beginnerInstruments().map(i => <option key={i.id} value={i.id}>{i.label}</option>)}
+          <option value={CUSTOM_ID}>Personnalisé…</option>
         </select>
       </div>
+
+      {/* Config personnalisée : clefs à travailler + tessiture (plage partagée). */}
+      {isCustom && (
+        <div style={card}>
+          <div className={label} style={{ marginBottom: 8 }}>Clefs à travailler</div>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14 }}>
+            {ALL_CLEFS.map(c => {
+              const on = customCfg.clefs.includes(c)
+              return (
+                <button key={c} onClick={() => {
+                  const next = on ? customCfg.clefs.filter(x => x !== c) : [...customCfg.clefs, c]
+                  if (next.length) setCustomCfg({ ...customCfg, clefs: next }) // au moins 1 clef
+                }}
+                  style={{
+                    flex: '1 1 auto', minWidth: 64, minHeight: 44, borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: 'pointer',
+                    border: `1.5px solid ${on ? '#c084fc' : 'var(--border-c)'}`,
+                    background: on ? 'rgba(192,132,252,0.15)' : 'var(--surface-2)',
+                    color: on ? '#c084fc' : 'var(--text)',
+                  }}>
+                  {CLEF_LABELS[c]}
+                </button>
+              )
+            })}
+          </div>
+          <div className={label} style={{ marginBottom: 8 }}>Tessiture</div>
+          <div style={{ display: 'flex', gap: 10 }}>
+            <BoundPicker label="Note grave" value={customCfg.low} onChange={v => setCustomCfg({ ...customCfg, low: v })} />
+            <BoundPicker label="Note aiguë" value={customCfg.high} onChange={v => setCustomCfg({ ...customCfg, high: v })} />
+          </div>
+        </div>
+      )}
 
       {/* Sélecteur de clef (clefs de l'instrument, ordre pédagogique). */}
       <div style={card}>
@@ -520,6 +595,29 @@ function SetupScreen({ instrumentId, setInstrumentId, clef, setClef, availableCl
         </div>
       </div>
 
+      {/* Mode de saisie de la roue. */}
+      <div style={card}>
+        <div className={label} style={{ marginBottom: 8 }}>Roue de saisie</div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          {([['drag', 'Glisser'], ['fixed', 'Fixe']] as [WheelMode, string][]).map(([m, lbl]) => (
+            <button key={m} onClick={() => setWheelMode(m)}
+              style={{
+                flex: 1, minHeight: 44, borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: 'pointer',
+                border: `1.5px solid ${wheelMode === m ? '#c084fc' : 'var(--border-c)'}`,
+                background: wheelMode === m ? 'rgba(192,132,252,0.15)' : 'var(--surface-2)',
+                color: wheelMode === m ? '#c084fc' : 'var(--text)',
+              }}>
+              {lbl}
+            </button>
+          ))}
+        </div>
+        <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 8 }}>
+          {wheelMode === 'drag'
+            ? 'Pose le doigt n’importe où et glisse vers le nom.'
+            : 'Cadran fixe, noms toujours visibles : clic simple sur le bon nom.'}
+        </div>
+      </div>
+
       <div style={{ ...card, display: 'flex', gap: 10 }}>
         <ToggleChip on={sonOn} onClick={() => setSonOn(!sonOn)} label="Son de confirmation" />
         <ToggleChip on={coloriser} onClick={() => setColoriser(!coloriser)} label="Couleur des notes" />
@@ -527,7 +625,7 @@ function SetupScreen({ instrumentId, setInstrumentId, clef, setClef, availableCl
 
       {/* Progression détaillée : par (instrument × clef × phase) + heatmap par note. */}
       <div style={card}>
-        <div className={label} style={{ marginBottom: 10 }}>Ta progression — {inst?.label} · {CLEF_LABELS[clef]}</div>
+        <div className={label} style={{ marginBottom: 10 }}>Ta progression — {instLabel} · {CLEF_LABELS[clef]}</div>
         <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
           {(['P0', 'P1', 'P2'] as Phase[]).map(p => {
             const ctx = perContext[contextKey(instrumentId, clef, p)]
@@ -548,6 +646,25 @@ function SetupScreen({ instrumentId, setInstrumentId, clef, setClef, availableCl
         style={{ width: '100%', padding: '14px 0', borderRadius: 14, border: 'none', color: '#fff', fontSize: 15, fontWeight: 800, cursor: 'pointer', background: 'linear-gradient(135deg,#7c3aed,#c084fc)' }}>
         Commencer
       </button>
+    </div>
+  )
+}
+
+// Sélecteur d'une borne de tessiture : nom de note + octave → DiatonicIndex.
+function BoundPicker({ label, value, onChange }: { label: string; value: number; onChange: (v: number) => void }) {
+  const deg = degreeOf(value), oct = octaveOf(value)
+  const sel: React.CSSProperties = { minHeight: 40, borderRadius: 8, padding: '0 8px', background: 'var(--surface-2)', color: 'var(--text)', border: '1px solid var(--border-c)' }
+  return (
+    <div style={{ flex: 1 }}>
+      <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 4 }}>{label}</div>
+      <div style={{ display: 'flex', gap: 6 }}>
+        <select value={deg} onChange={e => onChange(diatonic(oct, Number(e.target.value)))} style={{ ...sel, flex: 1 }}>
+          {NOTE_NAMES.map((n, i) => <option key={n} value={i}>{NOTE_LABELS[n]}</option>)}
+        </select>
+        <select value={oct} onChange={e => onChange(diatonic(Number(e.target.value), deg))} style={sel}>
+          {[1, 2, 3, 4, 5, 6].map(o => <option key={o} value={o}>{o}</option>)}
+        </select>
+      </div>
     </div>
   )
 }

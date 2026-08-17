@@ -1,14 +1,16 @@
-// ─── Roue radiale relative (spec §5) ──────────────────────────────────────────
+// ─── Roue radiale de saisie (spec §5) ─────────────────────────────────────────
 //
-// Menu radial *relatif* SANS cadre : on pose le doigt N'IMPORTE OÙ (couche
-// transparente plein écran) → la roue apparaît. L'ANGLE de sélection est calculé
-// entre le POINT DE CONTACT et le point de drag (jamais depuis le centre d'affichage).
-// Si le contact est trop près d'un bord, le CENTRE D'AFFICHAGE de la roue est décalé
-// pour la montrer entièrement — sans changer le calcul d'angle. Toujours accessible
-// (aucun délai/blocage). `onHover` remonte le nom courant pour l'afficher au-dessus
-// de la portée. Haptique Android capability-gated.
+// Deux modes (togglés par l'utilisateur, persistés) :
+//   • 'drag' : menu radial *relatif* sans cadre — on pose le doigt N'IMPORTE OÙ,
+//     la roue apparaît, sélection par ANGLE (contact→drag), validation au pointerup.
+//     Angle TOUJOURS calculé depuis le point de contact, jamais depuis le centre
+//     d'affichage (qui peut être décalé pour tenir à l'écran près des bords).
+//   • 'fixed' : cadran FIXE affiché en permanence, noms toujours visibles, CLIC
+//     SIMPLE sur le secteur du bon nom. Aide maximale (ignore l'étayage de phase).
+//
+// Haptique Android capability-gated. `onHover` remonte le nom courant (mode drag).
 
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { NOTE_NAMES, type Etayage, type NoteName } from './types.ts'
 import { noteNameFromVector, sectorCenterAngle, DEFAULT_DEAD_RADIUS_PX, SECTOR_DEG } from './wheelGeometry.ts'
 
@@ -16,10 +18,13 @@ export const NOTE_LABELS: Record<NoteName, string> = {
   do: 'Do', re: 'Ré', mi: 'Mi', fa: 'Fa', sol: 'Sol', la: 'La', si: 'Si',
 }
 
+export type WheelMode = 'drag' | 'fixed'
+
 const ACCENT = '#c084fc'
 const ACCENT_DEEP = '#7c3aed'
 
 interface Props {
+  mode?: WheelMode
   etayage: Etayage
   onSelect: (name: NoteName | null) => void
   onHover?: (name: NoteName | null) => void
@@ -31,7 +36,7 @@ interface Props {
 const CAN_VIBRATE = typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function'
 
 export default function RadialWheel({
-  etayage, onSelect, onHover, onGestureStart,
+  mode = 'drag', etayage, onSelect, onHover, onGestureStart,
   radiusPx = 118, deadRadiusPx = DEFAULT_DEAD_RADIUS_PX,
 }: Props) {
   const bandRef = useRef<HTMLDivElement>(null)
@@ -40,6 +45,18 @@ export default function RadialWheel({
   const [origin, setOrigin] = useState<{ x: number; y: number } | null>(null)
   const [displayCenter, setDisplayCenter] = useState<{ x: number; y: number } | null>(null)
   const [activeSector, setActiveSector] = useState<number | null>(null)
+  const [bandSize, setBandSize] = useState({ w: 0, h: 0 })
+
+  // Mesure de la zone (centre du cadran fixe).
+  useEffect(() => {
+    const el = bandRef.current
+    if (!el) return
+    const update = () => setBandSize({ w: el.clientWidth, h: el.clientHeight })
+    update()
+    const ro = new ResizeObserver(update)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
 
   const labelOpacity = etayage === 'visible' ? 1 : etayage === 'estompe' ? 0.35 : 0
 
@@ -48,12 +65,53 @@ export default function RadialWheel({
     return { x: e.clientX - rect.left, y: e.clientY - rect.top }
   }
 
-  // Décale le centre d'AFFICHAGE pour que la roue tienne entièrement à l'écran.
+  // ── Mode FIXE : cadran permanent, clic simple ────────────────────────────────
+  const fixedCenter = {
+    x: bandSize.w / 2,
+    y: Math.min(Math.max(bandSize.h * 0.58, radiusPx + 8), Math.max(radiusPx + 8, bandSize.h - radiusPx - 8)),
+  }
+  const fixedSectorAt = (p: { x: number; y: number }): number | null => {
+    const dx = p.x - fixedCenter.x, dy = p.y - fixedCenter.y
+    if (Math.hypot(dx, dy) > radiusPx) return null            // tap hors du cadran
+    const name = noteNameFromVector(dx, dy, deadRadiusPx)     // null en zone morte
+    return name == null ? null : NOTE_NAMES.indexOf(name)
+  }
+
+  if (mode === 'fixed') {
+    const onDown = (e: React.PointerEvent) => {
+      onGestureStart?.()
+      setActiveSector(fixedSectorAt(localXY(e)))
+      bandRef.current?.setPointerCapture(e.pointerId)
+    }
+    const onMove = (e: React.PointerEvent) => {
+      if (e.buttons === 0 && e.pointerType === 'mouse') return
+      setActiveSector(fixedSectorAt(localXY(e)))
+    }
+    const onUp = (e: React.PointerEvent) => {
+      const sector = fixedSectorAt(localXY(e))
+      setActiveSector(null)
+      if (sector != null) {
+        if (CAN_VIBRATE) navigator.vibrate(5)
+        onSelect(NOTE_NAMES[sector])
+      }
+    }
+    return (
+      <div ref={bandRef} onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp}
+        onPointerCancel={() => setActiveSector(null)}
+        style={{ position: 'absolute', inset: 0, touchAction: 'none', userSelect: 'none', background: 'transparent', cursor: 'pointer' }}>
+        {bandSize.h > 0 && (
+          <Wheel cx={fixedCenter.x} cy={fixedCenter.y} r={radiusPx} deadR={deadRadiusPx}
+            active={activeSector} labelOpacity={1} />
+        )}
+      </div>
+    )
+  }
+
+  // ── Mode DRAG : menu radial relatif ──────────────────────────────────────────
   const clampCenter = (p: { x: number; y: number }) => {
-    const rect = bandRef.current!.getBoundingClientRect()
     const m = radiusPx + 12
-    const maxX = Math.max(m, rect.width - m)
-    const maxY = Math.max(m, rect.height - m)
+    const maxX = Math.max(m, bandSize.w - m)
+    const maxY = Math.max(m, bandSize.h - m)
     return { x: Math.min(Math.max(p.x, m), maxX), y: Math.min(Math.max(p.y, m), maxY) }
   }
 
@@ -71,7 +129,6 @@ export default function RadialWheel({
   const onPointerMove = (e: React.PointerEvent) => {
     if (!originRef.current) return
     const p = localXY(e)
-    // Angle TOUJOURS depuis le point de contact (origin), pas le centre d'affichage.
     const name = noteNameFromVector(p.x - originRef.current.x, p.y - originRef.current.y, deadRadiusPx)
     const sector = name == null ? null : NOTE_NAMES.indexOf(name)
     if (sector !== lastSectorRef.current) {

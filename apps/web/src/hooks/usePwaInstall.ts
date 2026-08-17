@@ -11,6 +11,7 @@ interface BeforeInstallPromptEvent extends Event {
 }
 
 const KEY_HUB_OFF   = 'pwa-tuto-hub-off'
+const KEY_HUB_LAST  = 'pwa-tuto-hub-last'
 const KEY_DASH_OFF  = 'pwa-tuto-dash-off'
 const KEY_DASH_LAST = 'pwa-tuto-dash-last'
 const KEY_INAPP_OFF = 'pwa-inapp-off'
@@ -88,11 +89,17 @@ export function usePwaInstall() {
   const dismissDashboardForever = useCallback(() => writeFlag(KEY_DASH_OFF, '1'), [])
   const dismissInAppForever = useCallback(() => writeFlag(KEY_INAPP_OFF, '1'), [])
   const markDashboardShown = useCallback(() => writeFlag(KEY_DASH_LAST, localDateStr()), [])
+  const markHubShown = useCallback(() => writeFlag(KEY_HUB_LAST, localDateStr()), [])
 
   const shouldShowHub = useCallback((): boolean => {
     if (isStandalone) return false
     if (inAppBrowser !== null) return false
     if (readFlag(KEY_HUB_OFF) === '1') return false
+    // Limite journalière, comme pour le dashboard. Elle manquait ici : sans
+    // elle, la proposition d'installation revenait à CHAQUE passage sur le Hub
+    // tant que « Ne plus afficher » n'était pas coché — soit à chaque retour
+    // depuis un module.
+    if (readFlag(KEY_HUB_LAST) === localDateStr()) return false
     return true
   }, [isStandalone, inAppBrowser])
 
@@ -122,6 +129,7 @@ export function usePwaInstall() {
     dismissDashboardForever,
     dismissInAppForever,
     markDashboardShown,
+    markHubShown,
     shouldShowHub,
     shouldShowDashboard,
     shouldShowInAppWarning,
