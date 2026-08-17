@@ -10,21 +10,20 @@
 
 import { useEffect, useState } from 'react'
 
+const DUREE_MS = 3000
+
 export default function IndicateurSync() {
-  const [horsLigne, setHorsLigne] = useState(
-    typeof navigator !== 'undefined' && navigator.onLine === false,
+  // `null` = rien à afficher. Le bandeau n'est jamais permanent : il informe
+  // d'un changement d'état puis s'efface. Un bandeau qui resterait affiché toute
+  // une session hors ligne deviendrait du bruit, alors même que l'appli
+  // fonctionne normalement dans ce mode.
+  const [etat, setEtat] = useState<'horsLigne' | 'reconnecte' | null>(
+    typeof navigator !== 'undefined' && navigator.onLine === false ? 'horsLigne' : null,
   )
-  // Affiché brièvement au retour du réseau, pour confirmer la synchronisation.
-  const [reconnecte, setReconnecte] = useState(false)
 
   useEffect(() => {
-    const online = () => {
-      setHorsLigne(false)
-      setReconnecte(true)
-      setTimeout(() => setReconnecte(false), 2800)
-    }
-    const offline = () => { setHorsLigne(true); setReconnecte(false) }
-
+    const online = () => setEtat('reconnecte')
+    const offline = () => setEtat('horsLigne')
     window.addEventListener('online', online)
     window.addEventListener('offline', offline)
     return () => {
@@ -33,8 +32,16 @@ export default function IndicateurSync() {
     }
   }, [])
 
-  if (!horsLigne && !reconnecte) return null
+  // Effacement automatique, quel que soit l'état affiché.
+  useEffect(() => {
+    if (!etat) return
+    const t = setTimeout(() => setEtat(null), DUREE_MS)
+    return () => clearTimeout(t)
+  }, [etat])
 
+  if (!etat) return null
+
+  const horsLigne = etat === 'horsLigne'
   const couleur = horsLigne ? '#fbbf24' : '#34d399'
   const texte = horsLigne
     ? 'Hors ligne — ta progression sera synchronisée au retour du réseau'

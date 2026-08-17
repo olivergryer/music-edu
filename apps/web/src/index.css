@@ -126,17 +126,19 @@ button:focus-visible, a:focus-visible {
    composant). Le contact est à 0 % ET à 100 %, à `translateY(0)` — soit très
    exactement le point d'ancrage de la main, donc le centre de l'onde.
 
-   Le découpage n'est pas décoratif. Sans maintien au contact et en `linear`,
-   l'œil prenait le sommet de la course pour le moment de la frappe : les
-   extrêmes attirent le regard, et rien ne signalait l'impact. D'où le palier
-   initial, qui donne au contact une durée visible, et le `ease-in` sur la
-   descente, qui fait accélérer le doigt jusqu'à l'impact. */
+   Le découpage n'est pas décoratif, et c'est la deuxième fois qu'il est repris.
+   Une montée et une descente symétriques faisaient lire le SOMMET comme le
+   moment de la frappe : c'était le seul instant où le mouvement s'inversait
+   nettement, donc le seul que l'œil retenait. La correction consiste à inverser
+   les rôles — le sommet devient une ATTENTE immobile, donc un non-événement, et
+   la chute devient brève et accélérée, donc le seul événement du cycle. C'est
+   ainsi que frappe un musicien : la main reste en l'air, puis tombe d'un coup. */
 @keyframes demo-main-frappe {
-  0%   { transform: translateY(0);     animation-timing-function: ease-out; }
-  7%   { transform: translateY(0);     animation-timing-function: ease-out; } /* maintien au contact */
-  16%  { transform: translateY(-5px);  animation-timing-function: ease-out; }
-  50%  { transform: translateY(-17px); animation-timing-function: ease-in;  } /* sommet de la levée */
-  100% { transform: translateY(0); }                                          /* impact suivant */
+  0%   { transform: translateY(0);     animation-timing-function: ease-out; } /* impact */
+  9%   { transform: translateY(-6px);  animation-timing-function: ease-out; } /* rebond */
+  32%  { transform: translateY(-19px); animation-timing-function: linear;  } /* sommet atteint */
+  80%  { transform: translateY(-19px); animation-timing-function: ease-in; } /* attente en l'air */
+  100% { transform: translateY(0); }                                         /* chute → impact */
 }
 
 @keyframes demo-onde {

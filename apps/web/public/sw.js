@@ -12,12 +12,18 @@
 //     le contenu ne change jamais à URL constante : les servir depuis le cache
 //     est à la fois plus sûr hors ligne et plus rapide en ligne.
 
-const VERSION = 'v3';
+const VERSION = 'v4';
 const HTML_CACHE = `tessitura-html-${VERSION}`;
 const ASSET_CACHE = `tessitura-assets-${VERSION}`;
 const SAMPLES_CACHE = 'audio-samples-v2'; // volumineux et stables : non versionnés
+const FONT_CACHE = 'tessitura-fonts-v1';  // idem : les polices ne changent jamais
 
-const CACHES_ACTIFS = [HTML_CACHE, ASSET_CACHE, SAMPLES_CACHE];
+const CACHES_ACTIFS = [HTML_CACHE, ASSET_CACHE, SAMPLES_CACHE, FONT_CACHE];
+
+// Hôtes tiers dont les réponses DOIVENT être mises en cache pour que l'appli
+// tienne hors ligne. Google Fonts est chargé en render-blocking dans index.html :
+// sans cache, chaque démarrage sans réseau attend son échec.
+const HOTES_POLICES = ['fonts.googleapis.com', 'fonts.gstatic.com'];
 
 // Page de repli pour toute navigation hors ligne. Le rewrite Vercel renvoie
 // index.html sur toutes les routes, donc « / » suffit à démarrer l'appli.
@@ -53,6 +59,35 @@ self.addEventListener('activate', (event) => {
       ))
       .then(() => self.clients.claim()),
   );
+});
+
+// ─── Précache complet des chunks ─────────────────────────────────────────────
+// Déclenché par la page à CHAQUE visite (voir index.html), et non à l'install :
+// le fichier sw.js ne changeant pas d'un déploiement à l'autre, `install` ne se
+// rejouerait pas et les chunks d'un nouveau build ne seraient jamais précachés.
+// Piloté par la page, le rattrapage a lieu dès la première visite en ligne
+// suivant un déploiement.
+async function precacherTout() {
+  try {
+    const res = await fetch('/sw-manifest.json', { cache: 'no-cache' });
+    if (!res.ok) return;
+    const fichiers = await res.json();
+    const cache = await caches.open(ASSET_CACHE);
+    const dejaEnCache = new Set(
+      (await cache.keys()).map((r) => new URL(r.url).pathname),
+    );
+    const manquants = fichiers.filter((f) => !dejaEnCache.has(f));
+    // Un par un plutôt qu'un `addAll` : celui-ci échoue en bloc si une seule
+    // requête rate, ce qui laisserait le cache incomplet sans le signaler.
+    await Promise.all(manquants.map((f) => cache.add(f).catch(() => {})));
+  } catch (err) {
+    // Hors ligne au moment du rattrapage : sans effet, on retentera à la
+    // prochaine visite.
+  }
+}
+
+self.addEventListener('message', (event) => {
+  if (event.data?.type === 'PRECACHE') event.waitUntil(precacherTout());
 });
 
 // Cache d'abord, réseau en secours — pour les ressources immuables.
@@ -118,8 +153,15 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Le reste du cross-origin (Firebase, Google Fonts) et les écritures passent
-  // en direct : Firestore gère lui-même son hors-ligne via IndexedDB.
+  // Polices Google : cache d'abord. Elles ne changent jamais à URL constante,
+  // et sans elles le rendu hors ligne retombe sur les polices système.
+  if (HOTES_POLICES.includes(url.hostname)) {
+    event.respondWith(cacheDAbord(request, FONT_CACHE));
+    return;
+  }
+
+  // Le reste du cross-origin (Firebase surtout) et les écritures passent en
+  // direct : Firestore gère lui-même son hors-ligne via IndexedDB.
   if (request.method !== 'GET' || url.origin !== location.origin) return;
 
   if (request.mode === 'navigate') {

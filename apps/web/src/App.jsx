@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from './auth/AuthProvider'
 import { ThemeProvider, useTheme } from './ThemeContext'
 import HubPage from './HubPage'
 import EcranChargement from './components/EcranChargement'
+import LimiteChargement from './components/LimiteChargement'
 import CelebrationLayer from './components/CelebrationLayer'
 import IndicateurSync from './components/IndicateurSync'
 import AvertissementSon from './components/AvertissementSon'
@@ -76,6 +77,7 @@ function ThemeToggleFloating() {
 
 function AppRoutes() {
   return (
+    <LimiteChargement>
     <Suspense fallback={<EcranChargement />}>
     <Routes>
       <Route path="/" element={<HubPage />} />
@@ -111,6 +113,7 @@ function AppRoutes() {
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
     </Suspense>
+    </LimiteChargement>
   )
 }
 

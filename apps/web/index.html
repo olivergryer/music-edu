@@ -68,7 +68,16 @@
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js');
+          navigator.serviceWorker.register('/sw.js').then(() => {
+            // Demande au service worker de précacher TOUS les chunks du build.
+            // À chaque visite : sw.js ne changeant pas d'un déploiement à
+            // l'autre, son `install` ne se rejouerait pas et les nouveaux
+            // chunks ne seraient jamais mis en cache. Sans ça, un module jamais
+            // ouvert en ligne échoue en mode avion.
+            navigator.serviceWorker.ready.then((reg) => {
+              reg.active && reg.active.postMessage({ type: 'PRECACHE' });
+            });
+          }).catch(() => {});
         });
       }
     </script>
