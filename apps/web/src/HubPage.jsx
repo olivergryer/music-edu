@@ -6,6 +6,7 @@ import { useAuth } from './auth/AuthProvider'
 import { useTheme } from './ThemeContext'
 import PwaInstallTutorial from './components/PwaInstallTutorial'
 import PwaInAppBrowserOverlay from './components/PwaInAppBrowserOverlay'
+import BandeauTest from './components/BandeauTest'
 import banniereDark from './assets/banniere_dark.svg'
 import banniereLight from './assets/banniere_light.svg'
 import { SHOW_TEST_BADGE } from './featureFlags'
@@ -19,8 +20,14 @@ function ModuleCard({ label, desc, active, color, testPhase, devBadge }) {
   return (
     <div
       className="bg-surface rounded-2xl p-6 border border-app transition-all duration-200 hover:shadow-lg group h-full relative"
-      style={{ opacity: active ? 1 : 0.4, cursor: active ? 'pointer' : 'default' }}
+      style={{
+        opacity: active ? 1 : 0.4,
+        cursor: active ? 'pointer' : 'default',
+        overflow: 'hidden', // rogne le bandeau diagonal sur les coins arrondis
+      }}
     >
+      {/* Orange quel que soit l'accent du module : c'est un statut, pas une décoration. */}
+      {testPhase && <BandeauTest />}
       {devBadge && (
         <div
           style={{
@@ -39,26 +46,6 @@ function ModuleCard({ label, desc, active, color, testPhase, devBadge }) {
           }}
         >
           Dev
-        </div>
-      )}
-      {testPhase && (
-        <div
-          style={{
-            position: 'absolute',
-            top: 10,
-            right: 10,
-            background: 'rgba(255,139,61,0.14)',
-            color: '#FF8B3D',
-            border: '1px solid rgba(255,139,61,0.45)',
-            borderRadius: 999,
-            padding: '2px 8px',
-            fontSize: 10,
-            fontWeight: 700,
-            letterSpacing: 0.3,
-            textTransform: 'uppercase',
-          }}
-        >
-          En test
         </div>
       )}
       <div
@@ -115,7 +102,9 @@ export default function HubPage() {
 
         <div className="grid gap-4 items-stretch" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))' }}>
           {MODULE_CARDS.map(m => {
-            const testPhase = SHOW_TEST_BADGE && m.id === 'accordeur'
+            // Le bandeau « En test » n'apparaît qu'en production : inutile de
+            // l'avoir sous les yeux en local et sur la preview dev.
+            const testPhase = SHOW_TEST_BADGE && Boolean(m.enTest)
             // Un module `devOnly` est ouvert en local et sur la preview Vercel,
             // « Bientôt » en production — pour le tester sans l'exposer aux élèves.
             const enDev = Boolean(m.devOnly) && !m.active && IS_DEV
@@ -128,12 +117,21 @@ export default function HubPage() {
           })}
         </div>
 
-        {SHOW_TEST_BADGE && (
-          <div
-            className="mt-4 text-xs text-app-muted text-center"
-            style={{ opacity: 0.75 }}
-          >
-            Module Accordeur en phase de test — retours bienvenus via la page Retours.
+        {/* Précisions de contenu — visibles partout, contrairement au bandeau :
+            elles annoncent ce qui manque encore, pas une phase de test. */}
+        {MODULE_CARDS.some(m => m.noteHub) && (
+          <div className="mt-4 flex flex-col gap-1.5">
+            {MODULE_CARDS.filter(m => m.noteHub).map(m => (
+              <div
+                key={m.id}
+                className="text-xs text-app-muted text-center leading-relaxed"
+                style={{ opacity: 0.75 }}
+              >
+                <span style={{ color: m.color, fontWeight: 700 }}>{m.label}</span>
+                {' — '}
+                {m.noteHub}
+              </div>
+            ))}
           </div>
         )}
 

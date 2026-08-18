@@ -1,5 +1,6 @@
-// Affiche bannière HUB + filigrane Accordeur uniquement en prod (branche main).
-// Hidden en local + Vercel preview (dev) pour ne pas distraire pendant le dev.
+// Affiche le bandeau diagonal « En test » (cartes du Hub des modules `enTest`)
+// uniquement en prod (branche main). Masqué en local + preview Vercel (dev)
+// pour ne pas distraire pendant le développement.
 export const SHOW_TEST_BADGE: boolean = (() => {
   if (typeof window === 'undefined') return false
   const h = window.location.hostname
