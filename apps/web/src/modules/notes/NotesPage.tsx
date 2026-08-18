@@ -29,7 +29,7 @@ import { noteNameOf, degreeOfName, degreeOf, octaveOf, diatonic } from './diaton
 import { isStringInstrument, stringPool } from './strings.ts'
 import { IS_DEV } from '../../isDev'
 import { mulberry32, type Rng } from './rng.ts'
-import { sortieAudible } from '../../lib/sortieAudible'
+import { busMaitre } from '../../lib/busMaitre'
 import {
   aggregatePerNote, mergePerNote, mergeContext, contextKey, noteMasteryLevel,
   type PerNoteMap, type PerContextMap, type MasteryLevel,
@@ -247,7 +247,7 @@ export default function NotesPage() {
       const t0 = ac.currentTime + when
       const o = ac.createOscillator(), g = ac.createGain()
       o.type = 'sine'; o.frequency.value = freq
-      o.connect(g); g.connect(sortieAudible(ac))
+      o.connect(g); g.connect(busMaitre(ac))
       g.gain.setValueAtTime(0.0001, t0)
       g.gain.exponentialRampToValueAtTime(0.2, t0 + 0.01)
       g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur)

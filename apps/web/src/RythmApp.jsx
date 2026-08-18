@@ -15,7 +15,7 @@ import { generateDistractorSet, deriveNiveau } from "./rythmDistractors";
 import { buildPalette, scoreActivity5, measureStatus, groupOf } from "./rythmActivity5";
 import { RYTHME } from "./content/rythme.ts";
 import DemoDecompte from "./components/DemoDecompte.tsx";
-import { sortieAudible } from "./lib/sortieAudible";
+import { busMaitre } from "./lib/busMaitre";
 
 // ─── Figures de base ──────────────────────────────────────────────────────────
 const q  = { dur:"q"  };
@@ -991,7 +991,7 @@ export default function RythmApp() {
         [600, 400],    // grave
       ][metroSoundPreset];
       const o  = ac.createOscillator(), g = ac.createGain();
-      o.connect(g); g.connect(sortieAudible(ac));
+      o.connect(g); g.connect(busMaitre(ac));
       o.frequency.value = strong ? freqStrong : freqWeak;
       g.gain.setValueAtTime(0.25, ac.currentTime);
       g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.07);
@@ -1011,7 +1011,7 @@ export default function RythmApp() {
         [800, 1100],   // aigu : plus de contraste
       ][subdivisionSoundPreset];
       const o  = ac.createOscillator(), g = ac.createGain();
-      o.connect(g); g.connect(sortieAudible(ac));
+      o.connect(g); g.connect(busMaitre(ac));
       o.frequency.value = onBeat ? freqOn : freqOff;
       g.gain.setValueAtTime(onBeat ? 0.28 : 0.16, ac.currentTime);
       g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.06);
@@ -1026,7 +1026,7 @@ export default function RythmApp() {
       const ac = getCtx();
       const o  = ac.createOscillator(), g = ac.createGain();
       o.type = 'triangle';
-      o.connect(g); g.connect(sortieAudible(ac));
+      o.connect(g); g.connect(busMaitre(ac));
       o.frequency.value = strong ? 440 : 330;
       g.gain.setValueAtTime(0.3 * volMult, ac.currentTime);
       g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.14);
@@ -1042,7 +1042,7 @@ export default function RythmApp() {
       const ac = getCtx();
       const o  = ac.createOscillator(), g = ac.createGain();
       o.type = 'triangle';
-      o.connect(g); g.connect(sortieAudible(ac));
+      o.connect(g); g.connect(busMaitre(ac));
       o.frequency.value = 330;
       const t   = ac.currentTime;
       const dur = Math.max(0.1, durMs / 1000);
@@ -1087,13 +1087,13 @@ export default function RythmApp() {
         src.buffer = buf;
         const g = ac.createGain();
         g.gain.setValueAtTime(gain, ac.currentTime);
-        src.connect(g); g.connect(sortieAudible(ac));
+        src.connect(g); g.connect(busMaitre(ac));
         src.start(ac.currentTime);
       } else {
         // Presets 1 & 2 : sinusoïde avec decay
         const o = ac.createOscillator(), g = ac.createGain();
         o.type = 'sine';
-        o.connect(g); g.connect(sortieAudible(ac));
+        o.connect(g); g.connect(busMaitre(ac));
         o.frequency.value = freq;
         g.gain.setValueAtTime(gain, ac.currentTime);
         g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + durMs / 1000);

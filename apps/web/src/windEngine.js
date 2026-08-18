@@ -2,8 +2,9 @@ import * as Tone from 'tone'
 import { midiToHz, JUST_RATIOS_CENTS } from './accordeurUtils'
 
 // ─── Sortie audible (bypass mode silencieux iOS) ─────────────────────────────
-// Extrait dans `lib/sortieAudible.js` pour servir à tous les modules ; réexporté
-// ici sous ses anciens noms, les appelants Accordeur ne changent pas.
+// Extrait dans `lib/sortieAudible.js` ; réexporté ici sous ses anciens noms, les
+// appelants Accordeur ne changent pas. Réservé aux sons TENUS — voir l'en-tête de
+// `sortieAudible.js` : sur des sons courts et répétés, il hache et désynchronise.
 import { sortieAudible as audibleOutput, fermerContexteAudible } from './lib/sortieAudible'
 
 export { fermerContexteAudible as closeAudibleContext }

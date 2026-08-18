@@ -4,25 +4,30 @@
 // via `MediaStreamDestination` → `HTMLAudioElement` le fait passer pour de la
 // lecture média ordinaire : audible même en silencieux, comme une balise <audio>.
 //
-// Ce code vivait dans `windEngine.js` (Accordeur). Il est extrait ici pour servir
-// à tous les modules — `windEngine` le réexporte pour ne rien casser.
+// Ce code vivait dans `windEngine.js` ; extrait ici, `windEngine` le réexporte.
+// SEUL l'Accordeur l'utilise — et c'est délibéré, voir ci-dessous.
 //
-// ATTENTION, DEUX LIMITES CONNUES :
+// ─── NE PAS RÉUTILISER POUR LES SONS COURTS ──────────────────────────────────
 //
-// 1. LATENCE. Le passage par un MediaStream ajoute un tampon de sortie. C'est sans
-//    conséquence pour un accordeur, mais le module Rythme mesure des frappes au
-//    millième : si le métronome décroche du flash, c'est ce chemin qu'il faut
-//    couper en premier (`SORTIE_AUDIBLE_ACTIVE = false`, un seul point à toucher).
-// 2. VOLUME ANDROID. Sur Android, Web Audio sort DÉJÀ sur le flux média : ce
-//    routage n'y change pas le volume maximal. Il corrige le silencieux iOS, pas
-//    un haut-parleur physiquement faible.
+// Essayé le 2026-08-18 sur Rythme, Notes et Harmonie pour gagner du volume :
+// ÉCHEC NET, rollback immédiat. Sons répétés, hachés, désynchronisés. Le chemin
+// MediaStream → HTMLAudioElement impose son propre tampon de sortie : il convient
+// à un son tenu qu'on déclenche une fois (accordeur, générateur d'accords), pas à
+// une rafale de clics de 40 à 150 ms rejoués au tempo.
+//
+// Et ça ne réglait de toute façon pas le problème visé : sur Android, Web Audio
+// sort DÉJÀ sur le flux média, le volume maximal est le même par les deux chemins.
+// Ce routage corrige le switch silence d'iOS, rien d'autre. Contre un
+// haut-parleur faible, les vrais leviers sont l'amplitude (crêtes à 0,25–0,30
+// aujourd'hui) et le timbre (un triangle à 330 Hz est hors de portée d'un petit
+// transducteur, qui ne donne vraiment que vers 1 kHz).
 //
 // Map (pas WeakMap) pour pouvoir disposer explicitement : sinon l'HTMLAudioElement
 // reste vivant et continue de diffuser le buffer décodé après la fermeture du
 // contexte.
 
-// Interrupteur unique : repasse à `false` pour rebrancher tout le monde en direct
-// sur `ctx.destination`, sans toucher aux appelants.
+// Interrupteur de secours : `false` rebranche l'Accordeur en direct sur
+// `ctx.destination` — au prix du silencieux iOS.
 export const SORTIE_AUDIBLE_ACTIVE = true
 
 const _sinks = new Map()
