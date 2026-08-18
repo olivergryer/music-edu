@@ -3,13 +3,14 @@ import { Link } from 'react-router-dom'
 import { ThemeToggleInline } from './ThemeContext'
 import useSwipe from './hooks/useSwipe'
 import IntervalleStaff from './IntervalleStaff.jsx'
+import RythmStaff from './RythmStaff.jsx'
 import TourGuide from './TourGuide'
 import ConsigneOverlay, { consigneSeen } from './ConsigneOverlay'
 import useProgressFirebase from './hooks/useProgressFirebase'
 import { IS_DEV } from './isDev'
 
 const CATEGORIES = [
-  { id: 'vocabulaire_musical',    label: 'Vocabulaire musical',    includes: ['vocabulaire_italien', 'vocabulaire_technique', 'notation_partition'] },
+  { id: 'vocabulaire_musical',    label: 'Vocabulaire musical',    includes: ['vocabulaire_italien', 'vocabulaire_technique', 'vocabulaire_allemand', 'notation_partition'] },
   { id: 'tonalites_alterations',  label: 'Tonalités & altérations', includes: ['tonalites_alterations'] },
   { id: 'intervalles',            label: 'Intervalles',            includes: ['intervalles'] },
   { id: 'rythme_mesure',          label: 'Rythme & mesure',        includes: ['rythme_mesure'] },
@@ -75,7 +76,7 @@ function getTimeLimit(q) {
 
 function getChoices(q) {
   if (q.type === 'vrai_faux') return ['Vrai', 'Faux']
-  if (q.type === 'qcm' || q.type === 'qcm_image_question' || q.type === 'vexflow_intervalle') {
+  if (q.type === 'qcm' || q.type === 'qcm_image_question' || q.type === 'vexflow_intervalle' || q.type === 'vexflow_rythme') {
     return shuffleArray([q.reponse_correcte, q.reponse_fausse_1, q.reponse_fausse_2, q.reponse_fausse_3].filter(Boolean))
   }
   if (q.type === 'image_qcm') return [q.image_choix_1, q.image_choix_2, q.image_choix_3, q.image_choix_4].filter(Boolean)
@@ -123,7 +124,7 @@ function buildTemplateCSV(questions) {
     '# COLONNES (ne pas renommer la ligne d\'en-tête ci-dessous) :',
     '#   id                 identifiant unique (ex: Q001). Même id qu\'une question livrée = remplace celle-ci.',
     '#   niveau             C1/1 C1/2 C1/3 C1/4 C2/1 C2/2 C2/3 C2/4 C3',
-    '#   categorie          vocabulaire_italien vocabulaire_technique notation_partition tonalites_alterations',
+    '#   categorie          vocabulaire_italien vocabulaire_technique vocabulaire_allemand notation_partition tonalites_alterations',
     '#                      intervalles rythme_mesure harmonie_accords cadences formes_musicales histoire_styles compositeurs',
     '#   type               qcm | vrai_faux | texte',
     '#   question           énoncé affiché',
@@ -687,7 +688,21 @@ function QuizScreen({ session, mode, onAnswer, onNext }) {
         {q.type === 'qcm_image_question' && <QuestionImage src={q.image_question} />}
         <div className="text-base font-bold text-app mb-5 leading-relaxed">{q.question}</div>
 
-        {(q.type === 'qcm' || q.type === 'vrai_faux' || q.type === 'image_qcm' || q.type === 'qcm_image_question' || q.type === 'vexflow_intervalle') && (
+        {/* Le motif rythmique se lit AVANT les propositions, contrairement aux intervalles */}
+        {q.type === 'vexflow_rythme' && q.rythme_figures && (
+          <div className="mb-4">
+            <RythmStaff
+              figures={q.rythme_figures}
+              timeSig={q.rythme_timesig ?? '4/4'}
+              width={460}
+              height={120}
+              showClef={false}
+              compact
+            />
+          </div>
+        )}
+
+        {(q.type === 'qcm' || q.type === 'vrai_faux' || q.type === 'image_qcm' || q.type === 'qcm_image_question' || q.type === 'vexflow_intervalle' || q.type === 'vexflow_rythme') && (
           <ChoiceQuestion q={q} choices={choices} selected={selected} onSelect={c => { setSelected(c); submitAnswer(c) }} revealed={revealed} />
         )}
         {q.type === 'vexflow_intervalle' && q.vexflow_notes && <IntervalleStaff notes={q.vexflow_notes} />}

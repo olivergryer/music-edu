@@ -226,39 +226,11 @@
     "explication": "Do majeur est la seule tonalité majeure sans altération à l'armure."
   },
   {
-    "id": "TA002", "niveau": "C1/1", "categorie": "tonalites_alterations", "type": "qcm",
-    "question": "Quelle tonalité majeure a 1 dièse à l'armure ?",
-    "reponse_correcte": "Sol majeur",
-    "reponse_fausse_1": "Fa majeur", "reponse_fausse_2": "Ré majeur", "reponse_fausse_3": "La majeur",
-    "explication": "Sol majeur a 1 dièse (Fa#). Rappel : chaque quinte ascendante ajoute un dièse."
-  },
-  {
-    "id": "TA003", "niveau": "C1/1", "categorie": "tonalites_alterations", "type": "qcm",
-    "question": "Quelle tonalité majeure a 1 bémol à l'armure ?",
-    "reponse_correcte": "Fa majeur",
-    "reponse_fausse_1": "Sol majeur", "reponse_fausse_2": "Ré majeur", "reponse_fausse_3": "Sib majeur",
-    "explication": "Fa majeur a 1 bémol (Sib). Chaque quinte descendante ajoute un bémol."
-  },
-  {
     "id": "TA004", "niveau": "C1/2", "categorie": "tonalites_alterations", "type": "qcm",
     "question": "Quelle est la tonalité relative mineure de Do majeur ?",
     "reponse_correcte": "La mineur",
     "reponse_fausse_1": "Ré mineur", "reponse_fausse_2": "Mi mineur", "reponse_fausse_3": "Sol mineur",
     "explication": "La tonalité relative mineure est une tierce mineure en dessous de la tonique. Do − tierce mineure = La."
-  },
-  {
-    "id": "TA005", "niveau": "C1/2", "categorie": "tonalites_alterations", "type": "qcm",
-    "question": "Quelle tonalité majeure a 2 dièses à l'armure ?",
-    "reponse_correcte": "Ré majeur",
-    "reponse_fausse_1": "Sol majeur", "reponse_fausse_2": "La majeur", "reponse_fausse_3": "Mi majeur",
-    "explication": "Ré majeur a 2 dièses : Fa# et Do#."
-  },
-  {
-    "id": "TA006", "niveau": "C1/2", "categorie": "tonalites_alterations", "type": "qcm",
-    "question": "Quelle tonalité majeure a 2 bémols à l'armure ?",
-    "reponse_correcte": "Sib majeur",
-    "reponse_fausse_1": "Fa majeur", "reponse_fausse_2": "Mib majeur", "reponse_fausse_3": "Lab majeur",
-    "explication": "Sib majeur a 2 bémols : Sib et Mib."
   },
   {
     "id": "TA007", "niveau": "C1/3", "categorie": "tonalites_alterations", "type": "texte",
@@ -1334,7 +1306,7 @@
   {
     "id": "RY001", "niveau": "C2/2", "categorie": "rythme_mesure", "type": "vexflow_rythme",
     "question": "Ce motif de deux valeurs pointées suivies d'une noire découpe la mesure en 3 + 3 + 2 croches. Comment s'appelle cette cellule ?",
-    "rythme_figures": ["qd", "qd", "q"],
+    "rythme_figures": [{"dur":"qd"}, {"dur":"qd"}, {"dur":"q"}],
     "rythme_timesig": "4/4",
     "reponse_correcte": "Le tresillo",
     "reponse_fausse_1": "La habanera", "reponse_fausse_2": "Le contretemps", "reponse_fausse_3": "L'hémiole",
@@ -1343,7 +1315,7 @@
   {
     "id": "RY002", "niveau": "C2/3", "categorie": "rythme_mesure", "type": "vexflow_rythme",
     "question": "À quel motif d'accompagnement correspond ce rythme, emblématique du tango et de la musique cubaine du 19e siècle ?",
-    "rythme_figures": ["8d", "16", "8", "8"],
+    "rythme_figures": [{"dur":"8d"}, {"dur":"16"}, {"dur":"8"}, {"dur":"8"}],
     "rythme_timesig": "2/4",
     "reponse_correcte": "La habanera",
     "reponse_fausse_1": "Le tresillo", "reponse_fausse_2": "La samba", "reponse_fausse_3": "La bossa nova",
@@ -1352,7 +1324,7 @@
   {
     "id": "RY003", "niveau": "C2/2", "categorie": "rythme_mesure", "type": "vexflow_rythme",
     "question": "Quel procédé rythmique est illustré ici, où chaque note tombe systématiquement entre les temps ?",
-    "rythme_figures": ["8r", "8", "8r", "8", "8r", "8", "8r", "8"],
+    "rythme_figures": [{"dur":"8r","rest":true}, {"dur":"8"}, {"dur":"8r","rest":true}, {"dur":"8"}, {"dur":"8r","rest":true}, {"dur":"8"}, {"dur":"8r","rest":true}, {"dur":"8"}],
     "rythme_timesig": "4/4",
     "reponse_correcte": "Le contretemps",
     "reponse_fausse_1": "La syncope", "reponse_fausse_2": "La polyrythmie", "reponse_fausse_3": "L'anacrouse",
@@ -1361,7 +1333,7 @@
   {
     "id": "RY004", "niveau": "C2/3", "categorie": "rythme_mesure", "type": "vexflow_rythme",
     "question": "Quel procédé rythmique est illustré ici, où une note commence sur un temps faible et se prolonge sur le temps fort suivant ?",
-    "rythme_figures": ["8", "q", "q", "q", "8"],
+    "rythme_figures": [{"dur":"8"}, {"dur":"q"}, {"dur":"q"}, {"dur":"q"}, {"dur":"8"}],
     "rythme_timesig": "4/4",
     "reponse_correcte": "La syncope",
     "reponse_fausse_1": "Le contretemps", "reponse_fausse_2": "L'hémiole", "reponse_fausse_3": "Le triolet",
@@ -1370,7 +1342,7 @@
   {
     "id": "RY005", "niveau": "C2/4", "categorie": "rythme_mesure", "type": "vexflow_rythme",
     "question": "Ce motif de 12 croches réparties en 2+2+1+2+2+2+1 est un patron de cloche fondamental. De quelle aire musicale provient-il ?",
-    "rythme_figures": ["q", "q", "8", "q", "q", "q", "8"],
+    "rythme_figures": [{"dur":"q"}, {"dur":"q"}, {"dur":"8"}, {"dur":"q"}, {"dur":"q"}, {"dur":"q"}, {"dur":"8"}],
     "rythme_timesig": "12/8",
     "reponse_correcte": "Les musiques d'Afrique de l'Ouest",
     "reponse_fausse_1": "Les musiques des Balkans", "reponse_fausse_2": "Les musiques d'Inde du Nord", "reponse_fausse_3": "Les musiques du Maghreb",
@@ -1379,10 +1351,426 @@
   {
     "id": "RY006", "niveau": "C3", "categorie": "rythme_mesure", "type": "vexflow_rythme",
     "question": "Cette mesure à 3/4 est occupée par deux valeurs égales au lieu de trois temps. Quel procédé est à l'œuvre ?",
-    "rythme_figures": ["qd", "qd"],
+    "rythme_figures": [{"dur":"qd"}, {"dur":"qd"}],
     "rythme_timesig": "3/4",
     "reponse_correcte": "L'hémiole",
     "reponse_fausse_1": "Le triolet", "reponse_fausse_2": "La syncope", "reponse_fausse_3": "La valeur ajoutée",
     "explication": "Deux noires pointées dans une mesure à 3 temps : le 3/4 est réentendu comme un 6/8. Ce rapport 3:2 est l'hémiole, omniprésente chez Haendel et Brahms."
+  },
+
+  {
+    "id": "CA009", "niveau": "C2/3", "categorie": "cadences", "type": "qcm",
+    "question": "Dans une cadence parfaite ornée d'un quatre-six cadentiel, quel accord précède la dominante ?",
+    "reponse_correcte": "L'accord de tonique au 2e renversement (I 6/4)",
+    "reponse_fausse_1": "L'accord de sous-dominante au 1er renversement", "reponse_fausse_2": "L'accord de septième de dominante", "reponse_fausse_3": "L'accord du 2e degré à l'état fondamental",
+    "explication": "Le quatre-six cadentiel (I 6/4 → V → I) n'est pas un vrai accord de tonique : c'est un double retard de la dominante, qui doit se résoudre sur elle."
+  },
+  {
+    "id": "CA010", "niveau": "C2/3", "categorie": "cadences", "type": "qcm",
+    "question": "Qu'appelle-t-on la préparation d'une dissonance ?",
+    "reponse_correcte": "La note dissonante est entendue comme consonance dans l'accord précédent, à la même voix",
+    "reponse_fausse_1": "La dissonance est annoncée par un silence", "reponse_fausse_2": "La dissonance est doublée à l'octave", "reponse_fausse_3": "La dissonance est jouée plus doucement",
+    "explication": "Le cycle classique de la dissonance est : préparation (consonante) → percussion (dissonante) → résolution (descendante, par degré conjoint)."
+  },
+  {
+    "id": "CA011", "niveau": "C2/3", "categorie": "cadences", "type": "qcm",
+    "question": "Qu'est-ce qu'une cadence évitée ?",
+    "reponse_correcte": "Une cadence dont la résolution attendue est esquivée pour prolonger le discours",
+    "reponse_fausse_1": "Une cadence jouée en dehors du ton principal", "reponse_fausse_2": "Une cadence dont on omet la dominante", "reponse_fausse_3": "Une cadence interrompue par un silence",
+    "explication": "La dominante ne rejoint pas la tonique attendue : elle bifurque, souvent vers le VI (cadence rompue) ou un renversement, relançant la phrase."
+  },
+  {
+    "id": "CA012", "niveau": "C2/4", "categorie": "cadences", "type": "qcm",
+    "question": "Qu'est-ce qu'un retard 4-3 sur l'accord de dominante ?",
+    "reponse_correcte": "La quarte au-dessus de la basse retarde la tierce de l'accord et s'y résout en descendant",
+    "reponse_fausse_1": "La quarte monte vers la quinte de l'accord", "reponse_fausse_2": "La tierce est retardée d'une mesure entière", "reponse_fausse_3": "Le quatrième degré remplace le troisième dans la gamme",
+    "explication": "Le retard 4-3 est l'ornement le plus courant de la cadence : préparé à la voix supérieure, il descend d'un degré sur la tierce (la sensible)."
+  },
+  {
+    "id": "CA013", "niveau": "C3", "categorie": "cadences", "type": "qcm",
+    "question": "Qu'est-ce qu'une cadence picarde ?",
+    "reponse_correcte": "Un morceau en mineur qui se conclut sur un accord de tonique majeur",
+    "reponse_fausse_1": "Une cadence plagale ornée d'une septième", "reponse_fausse_2": "Une cadence qui module vers le ton de la sous-dominante", "reponse_fausse_3": "Une cadence dont la basse reste immobile",
+    "explication": "La tierce de l'accord final est haussée : le morceau en mineur s'achève sur un accord majeur. Procédé systématique chez Bach dans les chorals en mineur."
+  },
+  {
+    "id": "HA011", "niveau": "C2/3", "categorie": "harmonie_accords", "type": "qcm",
+    "question": "Qu'est-ce que la sixte napolitaine ?",
+    "reponse_correcte": "L'accord du 2e degré abaissé, employé au 1er renversement",
+    "reponse_fausse_1": "L'accord du 6e degré abaissé à l'état fondamental", "reponse_fausse_2": "Un accord de sixte ajoutée sur la sous-dominante", "reponse_fausse_3": "Le 2e degré avec une sixte augmentée",
+    "explication": "En do mineur : ré♭ – fa – la♭, écrit au 1er renversement (fa à la basse) — d'où le nom de « sixte ». Le second degré est abaissé d'un demi-ton."
+  },
+  {
+    "id": "HA012", "niveau": "C2/3", "categorie": "harmonie_accords", "type": "qcm",
+    "question": "Vers quel accord la sixte napolitaine se dirige-t-elle habituellement ?",
+    "reponse_correcte": "Vers la dominante, directement ou via le quatre-six cadentiel",
+    "reponse_fausse_1": "Vers la tonique à l'état fondamental", "reponse_fausse_2": "Vers le 6e degré", "reponse_fausse_3": "Vers la sous-dominante",
+    "explication": "La napolitaine est un accord de fonction sous-dominante : elle prépare la dominante, souvent en passant par le I 6/4 cadentiel."
+  },
+  {
+    "id": "HA013", "niveau": "C2/3", "categorie": "harmonie_accords", "type": "qcm",
+    "question": "Dans quel mode la sixte napolitaine est-elle le plus fréquemment employée ?",
+    "reponse_correcte": "En mineur",
+    "reponse_fausse_1": "En majeur", "reponse_fausse_2": "Dans les modes anciens uniquement", "reponse_fausse_3": "Indifféremment, sans préférence",
+    "explication": "Elle est native du mineur, où l'abaissement du 2e degré renforce la couleur sombre. Son emploi en majeur est un emprunt expressif plus rare."
+  },
+  {
+    "id": "HA014", "niveau": "C3", "categorie": "harmonie_accords", "type": "qcm",
+    "question": "Quel intervalle caractéristique donne son nom à la famille des accords de sixte augmentée ?",
+    "reponse_correcte": "Une sixte augmentée entre le 6e degré abaissé à la basse et le 4e degré haussé",
+    "reponse_fausse_1": "Une sixte majeure entre la basse et la sensible", "reponse_fausse_2": "Une sixte mineure doublée à l'octave", "reponse_fausse_3": "Une septième diminuée renversée",
+    "explication": "Les deux notes extrêmes de la sixte augmentée s'écartent en mouvement contraire vers l'octave de la dominante — d'où sa force d'attraction."
+  },
+  {
+    "id": "HA015", "niveau": "C3", "categorie": "harmonie_accords", "type": "qcm",
+    "question": "De combien de sons différents est formée la sixte augmentée dite « italienne » ?",
+    "reponse_correcte": "Trois sons",
+    "reponse_fausse_1": "Quatre sons", "reponse_fausse_2": "Cinq sons", "reponse_fausse_3": "Deux sons",
+    "explication": "L'italienne est la plus dépouillée : basse (6e degré abaissé), tierce majeure et sixte augmentée. La tierce y est généralement doublée."
+  },
+  {
+    "id": "HA016", "niveau": "C3", "categorie": "harmonie_accords", "type": "qcm",
+    "question": "Qu'ajoute la sixte augmentée dite « française » à la sixte augmentée italienne ?",
+    "reponse_correcte": "Une quarte augmentée au-dessus de la basse",
+    "reponse_fausse_1": "Une quinte juste au-dessus de la basse", "reponse_fausse_2": "Une septième mineure", "reponse_fausse_3": "Une neuvième mineure",
+    "explication": "La française ajoute le 2e degré, formant une quarte augmentée sur la basse. Sa sonorité, plus acide, comporte deux tritons superposés."
+  },
+  {
+    "id": "HA017", "niveau": "C3", "categorie": "harmonie_accords", "type": "qcm",
+    "question": "Quelle particularité rend la sixte augmentée dite « allemande » ambiguë à l'oreille ?",
+    "reponse_correcte": "Elle sonne exactement comme un accord de septième de dominante",
+    "reponse_fausse_1": "Elle sonne comme un accord de septième diminuée", "reponse_fausse_2": "Elle sonne comme un accord parfait majeur", "reponse_fausse_3": "Elle n'a pas de fondamentale identifiable",
+    "explication": "L'allemande ajoute la quinte juste : l'ensemble est enharmoniquement identique à une 7e de dominante. Cette ambiguïté en fait un pivot de modulation privilégié."
+  },
+  {
+    "id": "HA018", "niveau": "C2/4", "categorie": "harmonie_accords", "type": "qcm",
+    "question": "Qu'appelle-t-on un ton voisin ?",
+    "reponse_correcte": "Un ton dont l'armure ne diffère que d'une seule altération",
+    "reponse_fausse_1": "Un ton dont la tonique est à un demi-ton", "reponse_fausse_2": "Un ton de même tonique mais de mode différent", "reponse_fausse_3": "Un ton situé une quinte plus haut uniquement",
+    "explication": "Do majeur a pour tons voisins sol, fa, la mineur, mi mineur et ré mineur : leurs armures ne s'écartent que d'une altération."
+  },
+  {
+    "id": "HA019", "niveau": "C2/4", "categorie": "harmonie_accords", "type": "qcm",
+    "question": "Qu'est-ce que le ton homonyme d'une tonalité ?",
+    "reponse_correcte": "Le ton de même tonique mais de mode opposé, comme do majeur et do mineur",
+    "reponse_fausse_1": "Le ton de même armure mais de mode opposé", "reponse_fausse_2": "Le ton situé une tierce mineure en dessous", "reponse_fausse_3": "Le ton portant le même nom une octave plus haut",
+    "explication": "Ne pas confondre : l'homonyme partage la tonique (do majeur / do mineur, 3 altérations d'écart), le relatif partage l'armure (do majeur / la mineur)."
+  },
+  {
+    "id": "HA020", "niveau": "C2/4", "categorie": "harmonie_accords", "type": "qcm",
+    "question": "Qu'est-ce qu'un accord pivot dans une modulation ?",
+    "reponse_correcte": "Un accord commun aux deux tonalités, réinterprété avec un nouveau degré",
+    "reponse_fausse_1": "Un accord dissonant qui interrompt le discours", "reponse_fausse_2": "L'accord de dominante du ton d'arrivée", "reponse_fausse_3": "Un accord répété en pédale pendant la transition",
+    "explication": "L'accord est entendu d'abord dans l'ancien ton, puis réentendu comme un degré du nouveau, qui enchaîne alors sur sa cadence. C'est la modulation diatonique."
+  },
+  {
+    "id": "HA021", "niveau": "C3", "categorie": "harmonie_accords", "type": "qcm",
+    "question": "Pourquoi l'accord de septième diminuée est-il un pivot de modulation privilégié ?",
+    "reponse_correcte": "Ses quatre sons sont à intervalles égaux : chacun peut devenir sensible d'un ton différent",
+    "reponse_fausse_1": "Il ne contient aucune dissonance", "reponse_fausse_2": "Il appartient à toutes les tonalités majeures", "reponse_fausse_3": "Il peut se résoudre sans mouvement de basse",
+    "explication": "Empilement de tierces mineures : ses renversements sonnent identiques. Une réécriture enharmonique permet de rejoindre quatre tonalités éloignées."
+  },
+  {
+    "id": "HA022", "niveau": "C3", "categorie": "harmonie_accords", "type": "qcm",
+    "question": "Qu'est-ce qu'une modulation enharmonique ?",
+    "reponse_correcte": "Une modulation obtenue en réécrivant un accord avec d'autres noms de notes, de même son",
+    "reponse_fausse_1": "Une modulation vers un ton voisin par accord pivot", "reponse_fausse_2": "Une modulation qui revient immédiatement au ton initial", "reponse_fausse_3": "Une modulation opérée uniquement par la mélodie",
+    "explication": "Le son ne change pas, l'écriture si : une sixte augmentée allemande relue en 7e de dominante, ou une 7e diminuée renversée, ouvrent des tons très éloignés."
+  },
+  {
+    "id": "HA023", "niveau": "C2/4", "categorie": "harmonie_accords", "type": "qcm",
+    "question": "Qu'est-ce qu'une marche harmonique ?",
+    "reponse_correcte": "La répétition d'un motif harmonique transposé à intervalles réguliers",
+    "reponse_fausse_1": "Une succession d'accords sur un rythme de marche", "reponse_fausse_2": "Un enchaînement d'accords tous à l'état fondamental", "reponse_fausse_3": "Le retour cyclique de la cadence parfaite",
+    "explication": "Le modèle est reproduit un degré plus bas ou plus haut à chaque fois. Une marche modulante traverse plusieurs tonalités sans s'y installer."
+  },
+  {
+    "id": "HA024", "niveau": "C2/3", "categorie": "harmonie_accords", "type": "qcm",
+    "question": "Qu'est-ce qu'une dominante secondaire ?",
+    "reponse_correcte": "Un accord de dominante construit sur un degré autre que la tonique, pour le mettre en valeur",
+    "reponse_fausse_1": "La dominante de la dominante uniquement", "reponse_fausse_2": "Une dominante jouée plus doucement", "reponse_fausse_3": "Un accord de dominante sans fondamentale",
+    "explication": "Notée V/V, V/IV, V/VI… Elle emprunte une altération au ton visé sans vraiment moduler : c'est un emprunt passager."
+  },
+  {
+    "id": "HA025", "niveau": "C3", "categorie": "harmonie_accords", "type": "qcm",
+    "question": "Qu'est-ce qu'une pédale harmonique ?",
+    "reponse_correcte": "Une note tenue, souvent à la basse, pendant que les harmonies changent au-dessus",
+    "reponse_fausse_1": "L'usage de la pédale forte du piano pendant une cadence", "reponse_fausse_2": "Un accord répété sans changement pendant plusieurs mesures", "reponse_fausse_3": "La basse qui double la mélodie à l'octave",
+    "explication": "Les pédales de tonique et de dominante sont les plus courantes. Les accords supérieurs peuvent y devenir très dissonants sans perdre leur ancrage."
+  },
+
+  {
+    "id": "FM009", "niveau": "C1/4", "categorie": "formes_musicales", "type": "qcm",
+    "question": "Quelles sont les quatre familles d'instruments de l'orchestre symphonique ?",
+    "reponse_correcte": "Cordes, bois, cuivres, percussions",
+    "reponse_fausse_1": "Cordes, vents, claviers, percussions", "reponse_fausse_2": "Bois, cuivres, percussions, voix", "reponse_fausse_3": "Cordes frottées, cordes pincées, vents, percussions",
+    "explication": "Les cordes forment le socle numérique de l'orchestre. Les bois et les cuivres se distinguent par le mode d'émission du son, pas par le matériau."
+  },
+  {
+    "id": "FM010", "niveau": "C1/4", "categorie": "formes_musicales", "type": "qcm",
+    "question": "De quels instruments est composé un quatuor à cordes ?",
+    "reponse_correcte": "Deux violons, un alto et un violoncelle",
+    "reponse_fausse_1": "Deux violons, un violoncelle et une contrebasse", "reponse_fausse_2": "Un violon, un alto, un violoncelle et une contrebasse", "reponse_fausse_3": "Quatre violons de tailles différentes",
+    "explication": "C'est la formation reine de la musique de chambre depuis Haydn : quatre voix indépendantes du soprano à la basse."
+  },
+  {
+    "id": "FM011", "niveau": "C1/4", "categorie": "formes_musicales", "type": "qcm",
+    "question": "Qu'est-ce que la musique de chambre ?",
+    "reponse_correcte": "De la musique pour petit ensemble, avec un musicien par partie et sans chef",
+    "reponse_fausse_1": "De la musique jouée uniquement en intérieur", "reponse_fausse_2": "De la musique douce destinée à accompagner le repos", "reponse_fausse_3": "De la musique pour orchestre réduit avec chef",
+    "explication": "Chaque musicien y porte seul sa partie : duos, trios, quatuors, quintettes. L'écoute mutuelle y remplace la direction."
+  },
+  {
+    "id": "FM012", "niveau": "C1/4", "categorie": "formes_musicales", "type": "qcm",
+    "question": "Qu'est-ce qu'un opéra ?",
+    "reponse_correcte": "Une œuvre théâtrale entièrement chantée avec orchestre, mise en scène et décors",
+    "reponse_fausse_1": "Un concert de chant accompagné au piano", "reponse_fausse_2": "Une œuvre religieuse chantée sans mise en scène", "reponse_fausse_3": "Une pièce de théâtre avec quelques chansons",
+    "explication": "L'opéra réunit musique, texte, théâtre et scénographie. L'oratorio, lui, raconte aussi une histoire mais sans mise en scène ni décors."
+  },
+  {
+    "id": "FM013", "niveau": "C1/4", "categorie": "formes_musicales", "type": "qcm",
+    "question": "Quelle est la différence entre un soliste et un accompagnateur dans un récital ?",
+    "reponse_correcte": "Le soliste porte la partie principale, l'accompagnateur soutient et met en valeur",
+    "reponse_fausse_1": "Le soliste joue seul, l'accompagnateur ne joue jamais en même temps", "reponse_fausse_2": "Le soliste improvise, l'accompagnateur lit une partition", "reponse_fausse_3": "Le soliste dirige, l'accompagnateur suit la battue",
+    "explication": "Les deux rôles sont musicalement solidaires : l'accompagnateur adapte en permanence son plan sonore et son tempo à la ligne du soliste."
+  },
+  {
+    "id": "FM014", "niveau": "C1/4", "categorie": "formes_musicales", "type": "qcm",
+    "question": "Qu'est-ce qu'un concerto ?",
+    "reponse_correcte": "Une œuvre où un instrument soliste dialogue avec l'orchestre",
+    "reponse_fausse_1": "Une œuvre pour orchestre seul en quatre mouvements", "reponse_fausse_2": "Un concert donné par plusieurs orchestres", "reponse_fausse_3": "Une œuvre pour chœur et orchestre",
+    "explication": "Le concerto classique comporte trois mouvements (vif – lent – vif) et laisse au soliste une cadenza virtuose avant la conclusion."
+  },
+  {
+    "id": "FM015", "niveau": "C1/4", "categorie": "formes_musicales", "type": "qcm",
+    "question": "Qu'est-ce qu'un chœur a cappella ?",
+    "reponse_correcte": "Un chœur qui chante sans aucun accompagnement instrumental",
+    "reponse_fausse_1": "Un chœur qui chante dans une chapelle", "reponse_fausse_2": "Un chœur qui chante à l'unisson", "reponse_fausse_3": "Un chœur accompagné uniquement à l'orgue",
+    "explication": "L'expression vient de la musique « à la chapelle », où la polyphonie vocale se suffisait à elle-même."
+  },
+  {
+    "id": "HS011", "niveau": "C1/4", "categorie": "histoire_styles", "type": "qcm",
+    "question": "Quelles sont, dans l'ordre chronologique, les grandes périodes de la musique occidentale savante ?",
+    "reponse_correcte": "Moyen Âge, Renaissance, Baroque, Classicisme, Romantisme, période moderne",
+    "reponse_fausse_1": "Renaissance, Moyen Âge, Classicisme, Baroque, Romantisme, période moderne", "reponse_fausse_2": "Baroque, Classicisme, Moyen Âge, Renaissance, Romantisme, période moderne", "reponse_fausse_3": "Moyen Âge, Baroque, Renaissance, Romantisme, Classicisme, période moderne",
+    "explication": "Repères : Renaissance jusqu'à 1600, Baroque 1600-1750, Classicisme 1750-1820, Romantisme 1820-1900, puis le 20e siècle."
+  },
+
+  {
+    "id": "CO011", "niveau": "C2/3", "categorie": "compositeurs", "type": "qcm",
+    "question": "Quelle compositrice et abbesse du 12e siècle a laissé un vaste corpus de chants liturgiques et le drame Ordo Virtutum ?",
+    "reponse_correcte": "Hildegarde de Bingen",
+    "reponse_fausse_1": "Aliénor d'Aquitaine", "reponse_fausse_2": "Christine de Pizan", "reponse_fausse_3": "Béatrice de Die",
+    "explication": "Hildegarde de Bingen (1098-1179) est l'une des rares figures du Moyen Âge dont on conserve à la fois la musique et le nom, avec plus de 70 pièces monodiques."
+  },
+  {
+    "id": "CO012", "niveau": "C2/3", "categorie": "compositeurs", "type": "qcm",
+    "question": "Quel compositeur italien, auteur de L'Orfeo (1607), est considéré comme la charnière entre Renaissance et Baroque ?",
+    "reponse_correcte": "Claudio Monteverdi",
+    "reponse_fausse_1": "Giovanni Pierluigi da Palestrina", "reponse_fausse_2": "Antonio Vivaldi", "reponse_fausse_3": "Girolamo Frescobaldi",
+    "explication": "Monteverdi (1567-1643) théorise le passage de la « prima prattica » polyphonique à la « seconda prattica », où le texte commande l'harmonie."
+  },
+  {
+    "id": "CO013", "niveau": "C2/3", "categorie": "compositeurs", "type": "qcm",
+    "question": "Quelle compositrice vénitienne du 17e siècle a publié huit recueils de cantates et de madrigaux profanes, cas presque unique pour une femme de son temps ?",
+    "reponse_correcte": "Barbara Strozzi",
+    "reponse_fausse_1": "Francesca Caccini", "reponse_fausse_2": "Isabella Leonarda", "reponse_fausse_3": "Maddalena Casulana",
+    "explication": "Barbara Strozzi (1619-1677) a fait publier plus de musique de son vivant que la plupart de ses contemporains masculins, sans jamais occuper de poste officiel."
+  },
+  {
+    "id": "CO014", "niveau": "C2/3", "categorie": "compositeurs", "type": "qcm",
+    "question": "Quelle compositrice française du Grand Siècle, claveciniste prodige protégée de Louis XIV, a écrit l'opéra Céphale et Procris ?",
+    "reponse_correcte": "Élisabeth Jacquet de La Guerre",
+    "reponse_fausse_1": "Marie-Antoinette de Habsbourg", "reponse_fausse_2": "Antonia Bembo", "reponse_fausse_3": "Jacquette de Montaigne",
+    "explication": "Élisabeth Jacquet de La Guerre (1665-1729) est la première femme à avoir fait représenter un opéra à l'Académie royale de musique, en 1694."
+  },
+  {
+    "id": "CO015", "niveau": "C2/3", "categorie": "compositeurs", "type": "qcm",
+    "question": "Quel compositeur autrichien, surnommé « le père de la symphonie et du quatuor à cordes », a écrit plus de cent symphonies ?",
+    "reponse_correcte": "Joseph Haydn",
+    "reponse_fausse_1": "Wolfgang Amadeus Mozart", "reponse_fausse_2": "Christoph Willibald Gluck", "reponse_fausse_3": "Carl Philipp Emanuel Bach",
+    "explication": "Haydn (1732-1809) fixe la forme classique de la symphonie en quatre mouvements et du quatuor à cordes, dont il écrit 68."
+  },
+  {
+    "id": "CO016", "niveau": "C2/3", "categorie": "compositeurs", "type": "qcm",
+    "question": "Quel compositeur romantique viennois est célèbre pour plus de 600 lieder, dont La Truite et Le Roi des aulnes ?",
+    "reponse_correcte": "Franz Schubert",
+    "reponse_fausse_1": "Robert Schumann", "reponse_fausse_2": "Hugo Wolf", "reponse_fausse_3": "Felix Mendelssohn",
+    "explication": "Schubert (1797-1828) porte le lied — poème allemand mis en musique pour voix et piano — au rang de genre majeur."
+  },
+  {
+    "id": "CO017", "niveau": "C2/3", "categorie": "compositeurs", "type": "qcm",
+    "question": "Quelle compositrice et pianiste allemande, épouse de Robert Schumann, fut l'une des plus grandes virtuoses du 19e siècle et créa son propre Concerto pour piano à 16 ans ?",
+    "reponse_correcte": "Clara Schumann",
+    "reponse_fausse_1": "Fanny Mendelssohn", "reponse_fausse_2": "Alma Mahler", "reponse_fausse_3": "Cosima Wagner",
+    "explication": "Clara Schumann (1819-1896) a mené une carrière de concertiste sur plus de soixante ans, tout en composant et en éditant l'œuvre de Robert."
+  },
+  {
+    "id": "CO018", "niveau": "C2/3", "categorie": "compositeurs", "type": "qcm",
+    "question": "Quelle compositrice allemande, sœur aînée de Felix Mendelssohn, a laissé plus de 400 œuvres dont le cycle pour piano Das Jahr ?",
+    "reponse_correcte": "Fanny Mendelssohn (Fanny Hensel)",
+    "reponse_fausse_1": "Clara Schumann", "reponse_fausse_2": "Louise Farrenc", "reponse_fausse_3": "Josephine Lang",
+    "explication": "Fanny Mendelssohn (1805-1847) a longtemps publié sous le nom de son frère. Das Jahr (1841) est un cycle de douze pièces, une par mois de l'année."
+  },
+  {
+    "id": "CO019", "niveau": "C2/4", "categorie": "compositeurs", "type": "qcm",
+    "question": "Quelle compositrice française, seule femme professeure de piano au Conservatoire de Paris au 19e siècle, a écrit trois symphonies et un Nonetto remarqué ?",
+    "reponse_correcte": "Louise Farrenc",
+    "reponse_fausse_1": "Cécile Chaminade", "reponse_fausse_2": "Augusta Holmès", "reponse_fausse_3": "Pauline Viardot",
+    "explication": "Louise Farrenc (1804-1875) obtint, après le succès de son Nonetto, l'égalité de salaire avec ses collègues masculins du Conservatoire."
+  },
+  {
+    "id": "CO020", "niveau": "C2/4", "categorie": "compositeurs", "type": "qcm",
+    "question": "Quel compositeur français du 19e siècle, auteur de la Symphonie fantastique, a révolutionné l'orchestration ?",
+    "reponse_correcte": "Hector Berlioz",
+    "reponse_fausse_1": "Camille Saint-Saëns", "reponse_fausse_2": "César Franck", "reponse_fausse_3": "Charles Gounod",
+    "explication": "Berlioz (1803-1869) invente l'idée fixe, thème récurrent qui traverse toute la symphonie, et signe un traité d'orchestration qui fait référence."
+  },
+  {
+    "id": "CO021", "niveau": "C2/4", "categorie": "compositeurs", "type": "qcm",
+    "question": "Quelle compositrice britannique, autrice de l'opéra The Wreckers, composa aussi The March of the Women, hymne du mouvement suffragiste ?",
+    "reponse_correcte": "Ethel Smyth",
+    "reponse_fausse_1": "Rebecca Clarke", "reponse_fausse_2": "Elizabeth Maconchy", "reponse_fausse_3": "Amy Beach",
+    "explication": "Ethel Smyth (1858-1944), militante suffragiste emprisonnée en 1912, dirigea l'hymne depuis sa cellule avec une brosse à dents."
+  },
+  {
+    "id": "CO022", "niveau": "C2/4", "categorie": "compositeurs", "type": "qcm",
+    "question": "Quelle compositrice américaine fut la première à voir une de ses symphonies, dite « Gaelic », créée par un grand orchestre américain en 1896 ?",
+    "reponse_correcte": "Amy Beach",
+    "reponse_fausse_1": "Florence Price", "reponse_fausse_2": "Ruth Crawford Seeger", "reponse_fausse_3": "Ethel Smyth",
+    "explication": "Amy Beach (1867-1944), pianiste et compositrice autodidacte en composition, fut créée par l'Orchestre symphonique de Boston."
+  },
+  {
+    "id": "CO023", "niveau": "C2/4", "categorie": "compositeurs", "type": "qcm",
+    "question": "Quelle compositrice afro-américaine vit sa Symphonie n° 1 créée par l'Orchestre symphonique de Chicago en 1933 ?",
+    "reponse_correcte": "Florence Price",
+    "reponse_fausse_1": "Amy Beach", "reponse_fausse_2": "Margaret Bonds", "reponse_fausse_3": "Undine Smith Moore",
+    "explication": "Florence Price (1887-1953) fut la première compositrice afro-américaine jouée par un grand orchestre américain. Son langage mêle romantisme et spirituals."
+  },
+  {
+    "id": "CO024", "niveau": "C2/4", "categorie": "compositeurs", "type": "qcm",
+    "question": "Quelle compositrice française fut la première femme à obtenir le Premier Grand Prix de Rome, en 1913, avec la cantate Faust et Hélène ?",
+    "reponse_correcte": "Lili Boulanger",
+    "reponse_fausse_1": "Nadia Boulanger", "reponse_fausse_2": "Germaine Tailleferre", "reponse_fausse_3": "Marguerite Canal",
+    "explication": "Lili Boulanger (1893-1918) l'obtint à 19 ans. Sa sœur Nadia devint la pédagogue la plus influente du 20e siècle."
+  },
+  {
+    "id": "CO025", "niveau": "C2/4", "categorie": "compositeurs", "type": "qcm",
+    "question": "Quelle compositrice fut la seule femme membre du Groupe des Six ?",
+    "reponse_correcte": "Germaine Tailleferre",
+    "reponse_fausse_1": "Lili Boulanger", "reponse_fausse_2": "Cécile Chaminade", "reponse_fausse_3": "Marcelle de Manziarly",
+    "explication": "Le Groupe des Six réunissait Tailleferre, Milhaud, Poulenc, Honegger, Auric et Durey autour d'un idéal de clarté, contre le wagnérisme."
+  },
+  {
+    "id": "CO026", "niveau": "C2/4", "categorie": "compositeurs", "type": "qcm",
+    "question": "Quel compositeur français, auteur du Boléro et de Daphnis et Chloé, est réputé pour son orchestration d'une précision d'horloger ?",
+    "reponse_correcte": "Maurice Ravel",
+    "reponse_fausse_1": "Claude Debussy", "reponse_fausse_2": "Gabriel Fauré", "reponse_fausse_3": "Paul Dukas",
+    "explication": "Ravel (1875-1937) a également orchestré les Tableaux d'une exposition de Moussorgski, version aujourd'hui plus jouée que l'original pour piano."
+  },
+  {
+    "id": "CO027", "niveau": "C3", "categorie": "compositeurs", "type": "qcm",
+    "question": "Quelle compositrice polonaise, également violoniste virtuose, est reconnue pour ses sept quatuors à cordes et ses concertos ?",
+    "reponse_correcte": "Grażyna Bacewicz",
+    "reponse_fausse_1": "Sofia Goubaïdoulina", "reponse_fausse_2": "Galina Oustvolskaïa", "reponse_fausse_3": "Elizabeth Maconchy",
+    "explication": "Grażyna Bacewicz (1909-1969) est l'une des figures majeures de la musique polonaise du 20e siècle, entre néoclassicisme et écriture plus expérimentale."
+  },
+  {
+    "id": "CO028", "niveau": "C3", "categorie": "compositeurs", "type": "qcm",
+    "question": "Quelle compositrice russe, auteure du concerto pour violon Offertorium écrit pour Gidon Kremer, place la dimension spirituelle au cœur de son œuvre ?",
+    "reponse_correcte": "Sofia Goubaïdoulina",
+    "reponse_fausse_1": "Galina Oustvolskaïa", "reponse_fausse_2": "Grażyna Bacewicz", "reponse_fausse_3": "Elena Firsova",
+    "explication": "Sofia Goubaïdoulina (1931-2025) fut longtemps marginalisée en URSS. Offertorium (1980) est construit sur le thème royal de L'Offrande musicale de Bach."
+  },
+  {
+    "id": "CO029", "niveau": "C3", "categorie": "compositeurs", "type": "qcm",
+    "question": "Quelle compositrice finlandaise, figure du spectralisme, est l'auteure de l'opéra L'Amour de loin ?",
+    "reponse_correcte": "Kaija Saariaho",
+    "reponse_fausse_1": "Unsuk Chin", "reponse_fausse_2": "Betsy Jolas", "reponse_fausse_3": "Éliane Radigue",
+    "explication": "Kaija Saariaho (1952-2023) travaille le timbre comme matériau premier. L'Amour de loin (2000) est l'un des opéras contemporains les plus joués."
+  },
+  {
+    "id": "CO030", "niveau": "C3", "categorie": "compositeurs", "type": "qcm",
+    "question": "Quel compositeur français, ornithologue et organiste, a fondé son langage sur les modes à transpositions limitées et les chants d'oiseaux ?",
+    "reponse_correcte": "Olivier Messiaen",
+    "reponse_fausse_1": "Pierre Boulez", "reponse_fausse_2": "Henri Dutilleux", "reponse_fausse_3": "André Jolivet",
+    "explication": "Messiaen (1908-1992) a composé le Quatuor pour la fin du Temps en captivité en 1941, et formé toute une génération au Conservatoire de Paris."
+  },
+  {
+    "id": "CO031", "niveau": "C3", "categorie": "compositeurs", "type": "qcm",
+    "question": "Quel compositeur hongrois est l'auteur d'Atmosphères et de Lux Aeterna, œuvres fondées sur la micropolyphonie ?",
+    "reponse_correcte": "György Ligeti",
+    "reponse_fausse_1": "Béla Bartók", "reponse_fausse_2": "Zoltán Kodály", "reponse_fausse_3": "Witold Lutosławski",
+    "explication": "Ligeti (1923-2006) superpose des dizaines de voix en canon serré : l'oreille ne perçoit plus les lignes mais une masse sonore mouvante."
+  },
+  {
+    "id": "CO032", "niveau": "C3", "categorie": "compositeurs", "type": "qcm",
+    "question": "Quel compositeur hongrois a fondé l'ethnomusicologie moderne en collectant des milliers de chants paysans avec un phonographe ?",
+    "reponse_correcte": "Béla Bartók",
+    "reponse_fausse_1": "György Ligeti", "reponse_fausse_2": "Leoš Janáček", "reponse_fausse_3": "Manuel de Falla",
+    "explication": "Bartók (1881-1945), avec Kodály, a collecté les musiques de Hongrie, Roumanie, Slovaquie et Turquie, nourrissant directement son propre langage."
+  },
+  {
+    "id": "CO033", "niveau": "C3", "categorie": "compositeurs", "type": "qcm",
+    "question": "Quelle compositrice sud-coréenne, élève de Ligeti, est l'auteure de l'opéra Alice in Wonderland et d'un Concerto pour violon primé ?",
+    "reponse_correcte": "Unsuk Chin",
+    "reponse_fausse_1": "Kaija Saariaho", "reponse_fausse_2": "Younghi Pagh-Paan", "reponse_fausse_3": "Toshio Hosokawa",
+    "explication": "Unsuk Chin (née en 1961) développe une écriture virtuose et colorée, héritière de la micropolyphonie de son maître."
+  },
+  {
+    "id": "CO034", "niveau": "C3", "categorie": "compositeurs", "type": "qcm",
+    "question": "Quel compositeur américain est l'une des figures fondatrices de la musique répétitive, avec Music for 18 Musicians ?",
+    "reponse_correcte": "Steve Reich",
+    "reponse_fausse_1": "John Cage", "reponse_fausse_2": "Morton Feldman", "reponse_fausse_3": "Elliott Carter",
+    "explication": "Reich (né en 1936) fonde son écriture sur le déphasage progressif de motifs identiques, technique inspirée de ses études des musiques d'Afrique de l'Ouest."
+  },
+  {
+    "id": "HS012", "niveau": "C2/3", "categorie": "histoire_styles", "type": "qcm",
+    "question": "Quelle période musicale s'étend approximativement de 1400 à 1600 ?",
+    "reponse_correcte": "La Renaissance",
+    "reponse_fausse_1": "Le Moyen Âge", "reponse_fausse_2": "Le Baroque", "reponse_fausse_3": "L'Ars nova",
+    "explication": "La Renaissance voit s'épanouir la polyphonie vocale a cappella, avec Josquin des Prés puis Palestrina et Roland de Lassus."
+  },
+  {
+    "id": "HS013", "niveau": "C2/3", "categorie": "histoire_styles", "type": "qcm",
+    "question": "Qu'est-ce que le chant grégorien ?",
+    "reponse_correcte": "Un chant liturgique monodique, en latin, sans accompagnement",
+    "reponse_fausse_1": "Un chant polyphonique à quatre voix de la Renaissance", "reponse_fausse_2": "Un chant profane accompagné à l'orgue", "reponse_fausse_3": "Un chant populaire médiéval en langue vulgaire",
+    "explication": "Monodique (une seule ligne mélodique), il constitue le socle de la musique occidentale et la base sur laquelle se sont construites les premières polyphonies."
+  },
+  {
+    "id": "HS014", "niveau": "C2/4", "categorie": "histoire_styles", "type": "qcm",
+    "question": "Qu'est-ce que le nationalisme musical du 19e siècle ?",
+    "reponse_correcte": "Un courant où les compositeurs puisent dans le folklore et l'histoire de leur pays",
+    "reponse_fausse_1": "L'obligation de composer dans la langue de son pays", "reponse_fausse_2": "Le refus de jouer la musique des compositeurs étrangers", "reponse_fausse_3": "La création d'un orchestre national dans chaque pays",
+    "explication": "Le Groupe des Cinq en Russie, Smetana et Dvořák en Bohême, Grieg en Norvège, Albéniz en Espagne : affirmer une identité face à l'hégémonie germano-italienne."
+  },
+  {
+    "id": "HS015", "niveau": "C2/4", "categorie": "histoire_styles", "type": "qcm",
+    "question": "Qu'est-ce que le vérisme dans l'opéra italien ?",
+    "reponse_correcte": "Un courant qui met en scène des personnages du peuple et des drames de la vie quotidienne",
+    "reponse_fausse_1": "Un courant qui exige des décors historiquement exacts", "reponse_fausse_2": "Un courant qui supprime les récitatifs au profit du parlé", "reponse_fausse_3": "Un courant qui n'utilise que des livrets tirés de faits divers réels",
+    "explication": "Cavalleria rusticana de Mascagni et Paillasse de Leoncavallo en sont les manifestes. Puccini en reprend la charge émotionnelle."
+  },
+  {
+    "id": "HS016", "niveau": "C3", "categorie": "histoire_styles", "type": "qcm",
+    "question": "Qu'est-ce que la musique spectrale ?",
+    "reponse_correcte": "Une écriture fondée sur l'analyse du spectre acoustique des sons",
+    "reponse_fausse_1": "Une musique composée pour être jouée dans le noir", "reponse_fausse_2": "Une musique fondée sur des séries de douze sons", "reponse_fausse_3": "Une musique entièrement produite par ordinateur",
+    "explication": "Grisey et Murail partent du contenu harmonique réel d'un son instrumental pour en déduire accords et formes. Le timbre devient le matériau premier."
+  },
+  {
+    "id": "HS017", "niveau": "C3", "categorie": "histoire_styles", "type": "qcm",
+    "question": "Qu'est-ce que la musique concrète, développée par Pierre Schaeffer à partir de 1948 ?",
+    "reponse_correcte": "Une musique composée à partir de sons enregistrés et manipulés, sans partition préalable",
+    "reponse_fausse_1": "Une musique jouée uniquement sur des instruments acoustiques", "reponse_fausse_2": "Une musique dont la partition est très précisément notée", "reponse_fausse_3": "Une musique générée uniquement par des synthétiseurs",
+    "explication": "Schaeffer part du son enregistré — bruits, objets, voix — qu'il coupe, boucle et transforme. La composition se fait au studio, pas sur le papier."
+  },
+  {
+    "id": "HS018", "niveau": "C3", "categorie": "histoire_styles", "type": "qcm",
+    "question": "Qu'est-ce que le sérialisme intégral, développé après 1945 ?",
+    "reponse_correcte": "L'extension du principe sériel aux durées, aux intensités et aux modes de jeu, pas seulement aux hauteurs",
+    "reponse_fausse_1": "L'obligation d'utiliser des séries de plus de douze sons", "reponse_fausse_2": "La composition d'œuvres en séries de plusieurs volumes", "reponse_fausse_3": "L'usage exclusif de séries dans la musique de film",
+    "explication": "Boulez, Stockhausen et Nono poussent la logique de Webern à son terme : chaque paramètre du son est organisé sériellement."
   }
 ]

@@ -493,6 +493,29 @@ function generateIntervalleVexQuestions() {
   return qs
 }
 
+// Les 168 combinaisons VexFlow écrasaient le module (près de la moitié du pool total).
+// On en retient un sous-ensemble ÉQUILIBRÉ et DÉTERMINISTE : pour chaque intervalle et chaque
+// direction, on garde au plus VEX_PER_COMBO notes de départ, en parcourant les lettres avec un
+// pas de 3 (c → f → b → e → a …) pour éviter de toujours retomber sur do/ré/mi.
+const VEX_PER_COMBO = 2
+
+function sampleIntervalleVex(all) {
+  const buckets = new Map()
+  for (const q of all) {
+    const key = `${q.reponse_correcte}|${q.question}`
+    if (!buckets.has(key)) buckets.set(key, [])
+    buckets.get(key).push(q)
+  }
+  const kept = []
+  for (const group of buckets.values()) {
+    for (let i = 0; i < Math.min(VEX_PER_COMBO, group.length); i++) {
+      kept.push(group[(i * 3) % group.length])
+    }
+  }
+  // Garde-fou : un décalage de 3 peut retomber sur le même élément si le groupe est petit
+  return kept.filter((q, i) => kept.findIndex(x => x.id === q.id) === i)
+}
+
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 const baseFile = path.join(ROOT, 'public/data/questions-base.json')
@@ -504,7 +527,7 @@ const generated = [
   ...generateMinorAltQuestions(),
   ...generateArmureQuestions(),
   ...generateIntervalleTextQuestions(),
-  ...generateIntervalleVexQuestions(),
+  ...sampleIntervalleVex(generateIntervalleVexQuestions()),
 ]
 
 // Dédoublonnage par id : base prime sur generated
