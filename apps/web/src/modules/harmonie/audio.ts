@@ -13,6 +13,8 @@
 import Soundfont from 'soundfont-player'
 import type { Player } from 'soundfont-player'
 
+import { sortieAudible } from '../../lib/sortieAudible'
+
 // `soundfont-player` déclare son union de noms GM sans l'exporter : on la dérive
 // de la signature plutôt que de caster une chaîne libre — une faute de frappe
 // reste ainsi une erreur de compilation.
@@ -60,7 +62,12 @@ export async function chargerInstrument(nom: NomInstrument): Promise<Player> {
   const enVol = enCours.get(nom)
   if (enVol) return enVol
 
-  const promesse = Soundfont.instrument(obtenirContexte(), INSTRUMENTS_BANC[nom].gm)
+  // `destination` : sortie audible partagée — sans elle, soundfont-player branche
+  // en dur sur `ctx.destination`, muet sous le switch silence d'iOS.
+  const contexteJeu = obtenirContexte()
+  const promesse = Soundfont.instrument(contexteJeu, INSTRUMENTS_BANC[nom].gm, {
+    destination: sortieAudible(contexteJeu),
+  })
     .then((joueur) => {
       charges.set(nom, joueur)
       enCours.delete(nom)

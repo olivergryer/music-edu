@@ -2,7 +2,13 @@ import { useEffect, useState, useCallback } from 'react'
 import { localDateStr } from './progressLogic'
 
 export type Platform = 'ios' | 'android' | 'desktop' | 'unknown'
-export type Browser = 'chrome' | 'safari' | 'firefox' | 'edge' | 'samsung' | 'opera' | 'brave' | 'other'
+export type Browser = 'chrome' | 'safari' | 'firefox' | 'edge' | 'samsung' | 'opera' | 'brave' | 'qwant' | 'other'
+
+// Navigateurs dont « ajouter à l'écran d'accueil » ne produit PAS une vraie PWA :
+// le raccourci rouvre dans le navigateur, barres comprises. Rien à corriger côté
+// site — `display: standalone` est déjà dans le manifeste. On prévient, et on
+// oriente vers un navigateur capable.
+const INSTALL_DEGRADEE: Browser[] = ['qwant']
 export type InAppBrowser = 'instagram' | 'messenger' | 'facebook' | 'tiktok' | null
 
 interface BeforeInstallPromptEvent extends Event {
@@ -28,6 +34,9 @@ function detectBrowser(): Browser {
   if (typeof navigator === 'undefined') return 'other'
   const ua = navigator.userAgent
   // Ordre important : Edge/Opera/Brave/Samsung contiennent souvent "Chrome" dans leur UA.
+  // Qwant EN PREMIER : son UA porte aussi le jeton du moteur sur lequel il est bâti
+  // (Firefox sur Android, Chrome ailleurs) — testé après, il serait invisible.
+  if (/Qwant/i.test(ua)) return 'qwant'
   if (/Edg\//i.test(ua)) return 'edge'
   if (/OPR\/|Opera/i.test(ua)) return 'opera'
   if (/SamsungBrowser/i.test(ua)) return 'samsung'
@@ -123,6 +132,9 @@ export function usePwaInstall() {
     browser,
     inAppBrowser,
     isStandalone,
+    // Vrai quand le navigateur sait poser un raccourci mais pas installer une
+    // vraie PWA : le tutoriel ajoute alors un avertissement et oriente ailleurs.
+    installDegradee: INSTALL_DEGRADEE.includes(browser),
     canTriggerInstall: installPrompt !== null,
     triggerInstall,
     dismissHubForever,

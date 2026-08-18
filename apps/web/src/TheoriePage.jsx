@@ -130,7 +130,7 @@ function buildTemplateCSV(questions) {
     '#   reponse_correcte   bonne réponse (vrai_faux : Vrai ou Faux)',
     '#   reponse_fausse_1/2/3  distracteurs — qcm uniquement, laisser vide sinon',
     '#   reponses_acceptees variantes acceptées (type texte), séparées par | — ex: do|ut',
-    '#   temps_limite       secondes, vide = défaut (20s, texte 30s)',
+    '#   temps_limite       secondes, vide = défaut (20s, texte 30s). Ignoré au cycle 1 : pas de chrono.',
     '#   explication        affichée après la réponse (optionnel)',
     '#',
     '# Un qcm a besoin de 4 choix : 1 correcte + 3 fausses.',
@@ -263,11 +263,18 @@ function loadStoredOnlyCurrent() {
   try { return localStorage.getItem(THEORIE_ONLY_CURRENT_KEY) === '1' } catch { return false }
 }
 
+// Entraînement + case cochée → le niveau sélectionné seul.
+// Sinon (case décochée, ou Code de la route musicale) → tous les niveaux jusqu'au sélectionné.
 function allowedLevelsFor(mode, level, onlyCurrent) {
   const idx = LEVELS.indexOf(level)
   if (idx < 0) return [level]
   if (mode !== 'examen' && onlyCurrent) return [level]
-  return LEVELS.slice(Math.max(0, idx - 2), idx + 1)
+  return LEVELS.slice(0, idx + 1)
+}
+
+// Pas de temporisation sur tout le cycle 1 : le chrono démarre au cycle 2.
+function isCycle1(level) {
+  return typeof level === 'string' && level.startsWith('C1')
 }
 const TUTO_TOTAL = 4
 const T_ACC = '#8B5CF6'
@@ -510,8 +517,9 @@ function SetupScreen({ questions, onStart, onLoadCSV, csvCount, templateQuestion
         </div>
         <div className="text-[11px] text-app-muted mt-2">
           {onlyCurrent
-            ? 'Niveau sélectionné seulement (Entraînement). En Code de la route musicale : 3 niveaux inclus (sélectionné + 2 en dessous).'
-            : 'Inclut 3 niveaux : sélectionné + 2 en dessous.'}
+            ? 'Niveau sélectionné seulement (Entraînement). En Code de la route musicale : tous les niveaux jusqu\'au sélectionné.'
+            : 'Inclut tous les niveaux jusqu\'au niveau sélectionné.'}
+          {isCycle1(level) && <span className="block mt-1" style={{ color: '#8B5CF6' }}>Cycle 1 : pas de chrono, tu réponds à ton rythme.</span>}
         </div>
         <label className="flex items-center gap-2 mt-3 cursor-pointer text-[11px] font-bold text-app-muted">
           <input
@@ -604,7 +612,7 @@ function SetupScreen({ questions, onStart, onLoadCSV, csvCount, templateQuestion
 
 // ── Quiz ───────────────────────────────────────────────────────────────────────
 function QuizScreen({ session, mode, onAnswer, onNext }) {
-  const { pool, currentIdx, answers } = session
+  const { pool, currentIdx, answers, noTimer } = session
   const q = pool[currentIdx]
   const limit = getTimeLimit(q)
   const [choices] = useState(() => getChoices(q))
@@ -633,14 +641,14 @@ function QuizScreen({ session, mode, onAnswer, onNext }) {
   }, [currentIdx, limit])
 
   useEffect(() => {
-    if (revealed) return
+    if (revealed || noTimer) return
     clearInterval(timerRef.current)
     timerRef.current = setInterval(() => {
       if (revealedRef.current) { clearInterval(timerRef.current); return }
       setTimeLeft(prev => { if (prev <= 1) { clearInterval(timerRef.current); setTimedOut(true); return 0 } return prev - 1 })
     }, 1000)
     return () => clearInterval(timerRef.current)
-  }, [currentIdx, revealed])
+  }, [currentIdx, revealed, noTimer])
 
   const isCorrect = revealed && answers[answers.length - 1]?.correct
   const showFeedback = revealed && mode === 'entrainement'
@@ -660,13 +668,15 @@ function QuizScreen({ session, mode, onAnswer, onNext }) {
 
   return (
     <div onPointerDown={handlePointerDown} onPointerUp={handlePointerUp}>
-      <div className="flex justify-between items-center mb-2">
+      <div className={`flex justify-between items-center ${noTimer ? 'mb-4' : 'mb-2'}`}>
         <span className="text-xs text-app-muted">Question {currentIdx + 1} / {pool.length}</span>
-        <span className="text-xs font-bold" style={{ color: timedOut ? '#f87171' : timeLeft <= 3 ? '#fbbf24' : 'var(--text-muted)' }}>
-          {timedOut ? 'Hors délai' : `${timeLeft}s`}
-        </span>
+        {!noTimer && (
+          <span className="text-xs font-bold" style={{ color: timedOut ? '#f87171' : timeLeft <= 3 ? '#fbbf24' : 'var(--text-muted)' }}>
+            {timedOut ? 'Hors délai' : `${timeLeft}s`}
+          </span>
+        )}
       </div>
-      <TimerBar limit={limit} timedOut={timedOut} revealed={revealed} />
+      {!noTimer && <TimerBar limit={limit} timedOut={timedOut} revealed={revealed} />}
 
       {timedOut && !revealed && (
         <div className="text-xs text-red-400 text-center mb-2.5">Temps écoulé — réponds quand même pour 0,5 pt</div>
@@ -845,7 +855,7 @@ export default function TheoriePage() {
     const pool = buildPool(mergedQuestions, m, level, categories, onlyCurrent)
     if (pool.length === 0) { alert('Aucune question ne correspond à cette sélection. Élargis le niveau ou les catégories.'); return }
     setMode(m)
-    setSession({ pool, currentIdx: 0, answers: [] })
+    setSession({ pool, currentIdx: 0, answers: [], noTimer: isCycle1(level) })
     // Consigne d'arrivée (1ʳᵉ fois / non masquée) avant de lancer le quiz
     if (consigneSeen('theorie')) setScreen('quiz')
     else setShowConsigne(true)
@@ -859,15 +869,15 @@ export default function TheoriePage() {
     const pool = buildPool(mergedQuestions, m, level, cats, loadStoredOnlyCurrent())
     if (pool.length === 0) { setMode(m); setScreen('setup'); return }
     setMode(m)
-    setSession({ pool, currentIdx: 0, answers: [] })
+    setSession({ pool, currentIdx: 0, answers: [], noTimer: isCycle1(level) })
     setScreen('quiz')
   }
 
   const THEORIE_TOUR_STEPS = [
-    { tourId:'niveau-select', title:'Niveau',          desc:'Choisis le niveau maximum des questions incluses, du débutant (C1/1) au niveau avancé (C3).' },
+    { tourId:'niveau-select', title:'Niveau',          desc:'Toutes les questions jusqu\'à ce niveau sont incluses, du débutant (C1/1) au niveau avancé (C3). Coche « Niveau actuel seulement » pour t\'entraîner sur ce seul niveau.' },
     { tourId:'cats-select',   title:'Catégories',      desc:'Concentre-toi sur un thème précis ou laisse vide pour inclure toutes les catégories.' },
     { tourId:'mode-cards',    title:'Lancer',          desc:'Entraînement pour un feedback immédiat après chaque réponse. Code de la route musicale pour simuler une vraie évaluation avec seuil 35/40.' },
-    { tourId:'quiz-question', title:'Question',        desc:'20 secondes par question. Répondre dans les temps donne 1 pt, hors délai 0,5 pt.' },
+    { tourId:'quiz-question', title:'Question',        desc:'Au cycle 1, pas de chrono : prends ton temps. À partir du cycle 2, 20 secondes par question — répondre dans les temps donne 1 pt, hors délai 0,5 pt.' },
   ]
 
   function handleAnswer(result) { setSession(prev => ({ ...prev, answers: [...prev.answers, result] })) }
@@ -937,7 +947,9 @@ export default function TheoriePage() {
               mode === 'examen'
                 ? "40 questions, seuil de réussite 35/40."
                 : "Feedback immédiat après chaque réponse.",
-              "20 secondes par question : à temps = 1 pt, hors délai = 0,5 pt.",
+              session?.noTimer
+                ? "Pas de chrono à ce niveau : prends le temps de réfléchir."
+                : "20 secondes par question : à temps = 1 pt, hors délai = 0,5 pt.",
             ]}
             startLabel="Commencer le quiz"
             onStart={() => { setShowConsigne(false); setScreen('quiz') }}

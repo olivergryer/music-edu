@@ -178,10 +178,45 @@ function altDistr3(series, idx, otherSeries, correct) {
   return candidates.filter(c => c !== correct).slice(0, 3)
 }
 
-// Renvoie 3 noms de tonalités pour distracteur
-function keyNameDistr3(allNotes, correctNote) {
-  // Pick first 4 that aren't correct, trying to vary count
-  return allNotes.filter(n => n !== correctNote).slice(0, 3)
+// Vocabulaire unifié : les deux termes sont enseignés ensemble
+const A_LA_CLEF = "à l'armure / à la clef"
+
+function idSafe(note) { return note.replace('#', 's') }
+
+// « 3 dièses » / « 2 bémols » — null si armure vide
+function altCountLabel(count, kind) {
+  if (count === 0) return null
+  return kind === 'd' ? `${count} dièse${count > 1 ? 's' : ''}` : `${count} bémol${count > 1 ? 's' : ''}`
+}
+
+function whichKeyQuestion(count, kind, modeAdj) {
+  const fem = modeAdj === 'majeur' ? 'majeure' : 'mineure'
+  const label = altCountLabel(count, kind)
+  return label === null
+    ? `Quelle tonalité ${fem} n'a aucune altération ${A_LA_CLEF} ?`
+    : `Quelle tonalité ${fem} a ${label} ${A_LA_CLEF} ?`
+}
+
+function armureExplication(note, modeAdj, k) {
+  if (k.alts.length === 0) return `En ${note} ${modeAdj}, l'armure est vide : aucune altération à la clef.`
+  const kind = k.alts[0].includes('#') ? 'dièse' : 'bémol'
+  return `En ${note} ${modeAdj}, l'armure comporte ${k.count} ${kind}${k.count > 1 ? 's' : ''} : ${formatAlts(k.alts)}.`
+}
+
+// Renvoie 3 tonalités distractrices : armures voisines du même mode, libellées avec le mode
+function keyDistr3ByCount(series, idx, otherSeries, modeAdj) {
+  const correct = `${series[idx].note} ${modeAdj}`
+  const out = []
+  for (let d = 1; out.length < 3 && d < series.length; d++) {
+    if (idx - d >= 0) out.push(`${series[idx - d].note} ${modeAdj}`)
+    if (out.length < 3 && idx + d < series.length) out.push(`${series[idx + d].note} ${modeAdj}`)
+  }
+  for (const k of otherSeries) {
+    if (out.length >= 3) break
+    const label = `${k.note} ${modeAdj}`
+    if (!out.includes(label)) out.push(label)
+  }
+  return out.filter(l => l !== correct).slice(0, 3)
 }
 
 // Distracteurs d'intervalles : voisins dans INTERVAL_NAMES (questions texte)
@@ -243,41 +278,70 @@ function generateMajorAltQuestions() {
 
   qs.push(...allSharp, ...allFlat)
 
-  // "Quelle tonalité majeure a N dièses à l'armure ?"
+  // "Quelle tonalité majeure a N dièses à l'armure / à la clef ?"
   for (const k of MAJOR_SHARP) {
-    const label = k.count === 0 ? "0 altération" : `${k.count} dièse${k.count > 1 ? 's' : ''}`
-    const allMajNotes = [...MAJOR_SHARP, ...MAJOR_FLAT].map(x => x.note)
-    const wrong = keyNameDistr3(allMajNotes, k.note)
+    const wrong = keyDistr3ByCount(MAJOR_SHARP, MAJOR_SHARP.indexOf(k), MAJOR_FLAT, 'majeur')
     qs.push({
       id: `TGM_${k.count}d_which`,
       niveau: altCountToLevel(k.count),
       categorie: 'tonalites_alterations',
       type: 'qcm',
-      question: `Quelle tonalité majeure a ${label} à l'armure ?`,
-      reponse_correcte: k.note,
-      reponse_fausse_1: wrong[0] ?? 'Sol',
-      reponse_fausse_2: wrong[1] ?? 'Ré',
-      reponse_fausse_3: wrong[2] ?? 'Fa',
+      question: whichKeyQuestion(k.count, 'd', 'majeur'),
+      reponse_correcte: `${k.note} majeur`,
+      reponse_fausse_1: wrong[0],
+      reponse_fausse_2: wrong[1],
+      reponse_fausse_3: wrong[2],
+      explication: armureExplication(k.note, 'majeur', k),
     })
   }
 
   for (const k of MAJOR_FLAT) {
-    const label = `${k.count} bémol${k.count > 1 ? 's' : ''}`
-    const allMajNotes = [...MAJOR_FLAT, ...MAJOR_SHARP].map(x => x.note)
-    const wrong = keyNameDistr3(allMajNotes, k.note)
+    const wrong = keyDistr3ByCount(MAJOR_FLAT, MAJOR_FLAT.indexOf(k), MAJOR_SHARP, 'majeur')
     qs.push({
       id: `TGM_${k.count}b_which`,
       niveau: altCountToLevel(k.count),
       categorie: 'tonalites_alterations',
       type: 'qcm',
-      question: `Quelle tonalité majeure a ${label} à l'armure ?`,
-      reponse_correcte: k.note,
-      reponse_fausse_1: wrong[0] ?? 'Sib',
-      reponse_fausse_2: wrong[1] ?? 'Mib',
-      reponse_fausse_3: wrong[2] ?? 'Sol',
+      question: whichKeyQuestion(k.count, 'b', 'majeur'),
+      reponse_correcte: `${k.note} majeur`,
+      reponse_fausse_1: wrong[0],
+      reponse_fausse_2: wrong[1],
+      reponse_fausse_3: wrong[2],
+      explication: armureExplication(k.note, 'majeur', k),
     })
   }
 
+  return qs
+}
+
+// « Que trouve-t-on à l'armure / à la clef en X majeur/mineur ? »
+const ARMURE_SERIES = [
+  { list: MAJOR_SHARP, other: MAJOR_FLAT,  modeAdj: 'majeur', tag: 'Md' },
+  { list: MAJOR_FLAT,  other: MAJOR_SHARP, modeAdj: 'majeur', tag: 'Mb' },
+  { list: MINOR_SHARP, other: MINOR_FLAT,  modeAdj: 'mineur', tag: 'md' },
+  { list: MINOR_FLAT,  other: MINOR_SHARP, modeAdj: 'mineur', tag: 'mb' },
+]
+
+function generateArmureQuestions() {
+  const qs = []
+  for (const s of ARMURE_SERIES) {
+    for (const k of s.list) {
+      const correct = formatAlts(k.alts)
+      qs.push({
+        id: `TCL_${s.tag}_${idSafe(k.note)}`,
+        niveau: altCountToLevel(k.count),
+        categorie: 'tonalites_alterations',
+        type: 'qcm',
+        question: `Que trouve-t-on ${A_LA_CLEF} en ${k.note} ${s.modeAdj} ?`,
+        reponse_correcte: correct,
+        ...Object.fromEntries(
+          altDistr3(s.list, s.list.indexOf(k), s.other, correct)
+            .map((v, i) => [`reponse_fausse_${i + 1}`, v])
+        ),
+        explication: armureExplication(k.note, s.modeAdj, k),
+      })
+    }
+  }
   return qs
 }
 
@@ -317,41 +381,36 @@ function generateMinorAltQuestions() {
     })
   }
 
-  // "Quelle tonalité mineure a N dièses/bémols à l'armure ?"
-  const allMinorSharpNotes = MINOR_SHARP.map(k => k.note)
-  const allMinorFlatNotes  = MINOR_FLAT.map(k => k.note)
-
+  // "Quelle tonalité mineure a N dièses/bémols à l'armure / à la clef ?"
   for (const k of MINOR_SHARP) {
-    const label = k.count === 0 ? "0 altération" : `${k.count} dièse${k.count > 1 ? 's' : ''}`
-    const pool  = [...allMinorSharpNotes, ...allMinorFlatNotes]
-    const wrong = keyNameDistr3(pool, k.note)
+    const wrong = keyDistr3ByCount(MINOR_SHARP, MINOR_SHARP.indexOf(k), MINOR_FLAT, 'mineur')
     qs.push({
       id: `TGm_${k.count}d_which`,
       niveau: altCountToLevel(k.count),
       categorie: 'tonalites_alterations',
       type: 'qcm',
-      question: `Quelle tonalité mineure a ${label} à l'armure ?`,
-      reponse_correcte: k.note,
-      reponse_fausse_1: wrong[0] ?? 'Mi',
-      reponse_fausse_2: wrong[1] ?? 'Si',
-      reponse_fausse_3: wrong[2] ?? 'Ré',
+      question: whichKeyQuestion(k.count, 'd', 'mineur'),
+      reponse_correcte: `${k.note} mineur`,
+      reponse_fausse_1: wrong[0],
+      reponse_fausse_2: wrong[1],
+      reponse_fausse_3: wrong[2],
+      explication: armureExplication(k.note, 'mineur', k),
     })
   }
 
   for (const k of MINOR_FLAT) {
-    const label = `${k.count} bémol${k.count > 1 ? 's' : ''}`
-    const pool  = [...allMinorFlatNotes, ...allMinorSharpNotes]
-    const wrong = keyNameDistr3(pool, k.note)
+    const wrong = keyDistr3ByCount(MINOR_FLAT, MINOR_FLAT.indexOf(k), MINOR_SHARP, 'mineur')
     qs.push({
       id: `TGm_${k.count}b_which`,
       niveau: altCountToLevel(k.count),
       categorie: 'tonalites_alterations',
       type: 'qcm',
-      question: `Quelle tonalité mineure a ${label} à l'armure ?`,
-      reponse_correcte: k.note,
-      reponse_fausse_1: wrong[0] ?? 'Sol',
-      reponse_fausse_2: wrong[1] ?? 'Do',
-      reponse_fausse_3: wrong[2] ?? 'La',
+      question: whichKeyQuestion(k.count, 'b', 'mineur'),
+      reponse_correcte: `${k.note} mineur`,
+      reponse_fausse_1: wrong[0],
+      reponse_fausse_2: wrong[1],
+      reponse_fausse_3: wrong[2],
+      explication: armureExplication(k.note, 'mineur', k),
     })
   }
 
@@ -443,6 +502,7 @@ const base     = JSON.parse(fs.readFileSync(baseFile, 'utf8'))
 const generated = [
   ...generateMajorAltQuestions(),
   ...generateMinorAltQuestions(),
+  ...generateArmureQuestions(),
   ...generateIntervalleTextQuestions(),
   ...generateIntervalleVexQuestions(),
 ]

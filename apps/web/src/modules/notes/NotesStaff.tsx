@@ -15,6 +15,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Renderer, Stave, StaveNote, Voice, Formatter } from 'vexflow'
 import { useTheme } from '../../ThemeContext'
 import { toVexKey } from './diatonic.ts'
+import { stringColorOf } from './strings.ts'
 import type { Clef, NoteItem } from './types.ts'
 
 export type CellResult = 'correct' | 'wrong' | null
@@ -44,6 +45,8 @@ interface Props {
   cursorIndex: number
   results: CellResult[]
   coloriser?: boolean
+  /** Instrument à cordes : colore chaque tête selon sa corde (prioritaire sur `coloriser`). */
+  stringColorId?: string
   height?: number
   notePx?: number
 }
@@ -56,8 +59,11 @@ interface Geom {
 }
 
 export default function NotesStaff({
-  items, clef, cursorIndex, results, coloriser = false, height = 200, notePx = 84,
+  items, clef, cursorIndex, results, coloriser = false, stringColorId, height = 260, notePx = 84,
 }: Props) {
+  // Portée verticalement CENTRÉE : ménage de la place au-dessus ET en dessous pour
+  // les lignes supplémentaires (ex. Do2 en clef de sol ≈ 4 lignes sous la portée).
+  const staveY = Math.round(height / 2 - 20)
   const viewportRef = useRef<HTMLDivElement>(null)
   const innerRef = useRef<HTMLDivElement>(null)
   const geomRef = useRef<Geom>({ heads: [], centersX: [], cursorEl: null, cursorY: 0 })
@@ -89,7 +95,7 @@ export default function NotesStaff({
       renderer.resize(contentW, height)
       const ctx = renderer.getContext()
 
-      const stave = new Stave(10, 36, contentW - 20)
+      const stave = new Stave(10, staveY, contentW - 20)
       stave.addClef(clef)
       stave.setContext(ctx).draw()
 
@@ -138,7 +144,7 @@ export default function NotesStaff({
       svg.appendChild(cursorEl)
 
       geomRef.current = { heads, centersX, cursorEl, cursorY }
-      applyColors(geomRef.current, results, coloriser, items, C.head)
+      applyColors(geomRef.current, results, coloriser, stringColorId, items, C.head)
       applyCursor(geomRef.current, cursorIndex)
       applyScroll(innerRef.current, geomRef.current, cursorIndex, viewportW, contentW)
     } catch (err) {
@@ -147,12 +153,12 @@ export default function NotesStaff({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [idsKey, clef, dark, contentW, height])
 
-  // ── Couleurs des têtes (résultats / hauteur) — pas de re-render VexFlow ─────────
+  // ── Couleurs des têtes (résultats / hauteur / corde) — pas de re-render VexFlow ─
   useEffect(() => {
-    applyColors(geomRef.current, results, coloriser, items, palette(dark).head)
+    applyColors(geomRef.current, results, coloriser, stringColorId, items, palette(dark).head)
     applyCursor(geomRef.current, cursorIndex)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [results, cursorIndex, coloriser, dark])
+  }, [results, cursorIndex, coloriser, stringColorId, dark])
 
   // ── Défilement : note courante au centre horizontal (empan stable) ─────────────
   useEffect(() => {
@@ -167,13 +173,14 @@ export default function NotesStaff({
   )
 }
 
-function applyColors(geom: Geom, results: CellResult[], coloriser: boolean, items: NoteItem[], headColor: string) {
+function applyColors(geom: Geom, results: CellResult[], coloriser: boolean, stringColorId: string | undefined, items: NoteItem[], headColor: string) {
   geom.heads.forEach((head, i) => {
     const r = results[i]
+    const idx = items[i]?.diatonicIndex ?? 0
+    const stringColor = stringColorId ? stringColorOf(idx, stringColorId) : undefined
     const color = r === 'correct' ? OK
       : r === 'wrong' ? ERR
-      : coloriser ? PITCH_COLORS[((items[i]?.diatonicIndex % 7) + 7) % 7]
-      : headColor
+      : stringColor ?? (coloriser ? PITCH_COLORS[((idx % 7) + 7) % 7] : headColor)
     head.setAttribute('fill', color)
   })
 }

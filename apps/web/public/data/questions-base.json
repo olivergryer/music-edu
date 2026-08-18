@@ -763,5 +763,626 @@
     "reponse_correcte": "Vivaldi",
     "reponses_acceptees": "Antonio Vivaldi|vivaldi|antonio vivaldi",
     "explication": "Les Quatre Saisons d'Antonio Vivaldi (1725) sont parmi les œuvres baroques les plus célèbres."
+  },
+
+  {
+    "id": "VT011", "niveau": "C1/4", "categorie": "vocabulaire_technique", "type": "qcm",
+    "question": "Comment appelle-t-on la personne qui dirige un orchestre ou un chœur ?",
+    "reponse_correcte": "Le chef ou la cheffe d'orchestre",
+    "reponse_fausse_1": "Le soliste", "reponse_fausse_2": "Le régisseur", "reponse_fausse_3": "Le compositeur",
+    "explication": "Le chef ou la cheffe d'orchestre donne le tempo, les départs et les nuances à l'ensemble des musiciens."
+  },
+  {
+    "id": "VT012", "niveau": "C1/4", "categorie": "vocabulaire_technique", "type": "qcm",
+    "question": "Comment appelle-t-on le fait de montrer les temps de la mesure avec les bras pour guider un ensemble ?",
+    "reponse_correcte": "La battue",
+    "reponse_fausse_1": "La pulsation", "reponse_fausse_2": "La levée", "reponse_fausse_3": "Le phrasé",
+    "explication": "La battue est le tracé des temps dans l'espace : chaque métrique (2, 3, 4 temps) a son schéma de battue."
+  },
+  {
+    "id": "VT013", "niveau": "C1/4", "categorie": "vocabulaire_technique", "type": "qcm",
+    "question": "Comment appelle-t-on le battement régulier qui sert de repère temporel commun à tout un ensemble ?",
+    "reponse_correcte": "La pulsation",
+    "reponse_fausse_1": "Le rythme", "reponse_fausse_2": "La mesure", "reponse_fausse_3": "L'accent",
+    "explication": "La pulsation est régulière et sous-jacente, comme un battement de cœur. Le rythme, lui, varie par-dessus elle."
+  },
+  {
+    "id": "VT014", "niveau": "C1/4", "categorie": "vocabulaire_technique", "type": "qcm",
+    "question": "Comment appelle-t-on le geste préparatoire du chef, juste avant le premier temps, qui donne le départ ?",
+    "reponse_correcte": "Le levé (ou levée)",
+    "reponse_fausse_1": "Le frappé", "reponse_fausse_2": "Le point d'orgue", "reponse_fausse_3": "Le contretemps",
+    "explication": "Le levé précède le frappé (le temps fort) : il indique le tempo et la respiration, permettant à tous de partir ensemble."
+  },
+  {
+    "id": "VT015", "niveau": "C1/4", "categorie": "vocabulaire_technique", "type": "qcm",
+    "question": "Dans un orchestre symphonique, quel instrument donne le La avant le concert ?",
+    "reponse_correcte": "Le hautbois",
+    "reponse_fausse_1": "Le premier violon", "reponse_fausse_2": "La flûte traversière", "reponse_fausse_3": "Le piano",
+    "explication": "Le hautbois donne le La (440 Hz) car sa justesse est stable et son timbre perce l'orchestre. Le premier violon le relaie ensuite aux cordes."
+  },
+  {
+    "id": "VT016", "niveau": "C1/4", "categorie": "vocabulaire_technique", "type": "qcm",
+    "question": "Comment appelle-t-on un groupe d'instrumentistes qui jouent la même partie dans l'orchestre ?",
+    "reponse_correcte": "Un pupitre",
+    "reponse_fausse_1": "Une portée", "reponse_fausse_2": "Un tutti", "reponse_fausse_3": "Une octave",
+    "explication": "On parle du pupitre des altos, du pupitre des cors… Le chef de pupitre est le musicien qui le dirige."
+  },
+  {
+    "id": "VT017", "niveau": "C1/4", "categorie": "vocabulaire_technique", "type": "qcm",
+    "question": "Comment appelle-t-on le fait de jouer une partition à vue, sans l'avoir travaillée au préalable ?",
+    "reponse_correcte": "Le déchiffrage",
+    "reponse_fausse_1": "La transposition", "reponse_fausse_2": "L'improvisation", "reponse_fausse_3": "L'interprétation",
+    "explication": "Déchiffrer, c'est lire et jouer immédiatement une partition inconnue — une compétence clé en pratique collective."
+  },
+  {
+    "id": "VT018", "niveau": "C1/4", "categorie": "vocabulaire_technique", "type": "qcm",
+    "question": "Dans un ensemble, comment appelle-t-on la précision avec laquelle tous les musiciens jouent exactement au même moment ?",
+    "reponse_correcte": "La mise en place",
+    "reponse_fausse_1": "La justesse", "reponse_fausse_2": "L'équilibre", "reponse_fausse_3": "Le tempo",
+    "explication": "La mise en place concerne le placement rythmique. La justesse concerne les hauteurs, l'équilibre concerne les volumes respectifs."
+  },
+  {
+    "id": "VT019", "niveau": "C1/4", "categorie": "vocabulaire_technique", "type": "qcm",
+    "question": "Dans un chœur à quatre voix mixtes, quelles sont les quatre voix, de la plus aiguë à la plus grave ?",
+    "reponse_correcte": "Soprano, alto, ténor, basse",
+    "reponse_fausse_1": "Soprano, ténor, alto, basse", "reponse_fausse_2": "Alto, soprano, basse, ténor", "reponse_fausse_3": "Ténor, soprano, basse, alto",
+    "explication": "SATB : soprano et alto sont les voix de femmes ou d'enfants, ténor et basse les voix d'hommes."
+  },
+  {
+    "id": "VT020", "niveau": "C1/4", "categorie": "vocabulaire_technique", "type": "qcm",
+    "question": "Que fait un musicien à qui le chef demande de jouer « en soutien » derrière un solo ?",
+    "reponse_correcte": "Il joue plus doucement pour laisser passer le soliste",
+    "reponse_fausse_1": "Il joue plus fort pour renforcer le soliste", "reponse_fausse_2": "Il double la mélodie du soliste", "reponse_fausse_3": "Il s'arrête de jouer",
+    "explication": "L'équilibre sonore est une responsabilité collective : l'accompagnement se place toujours sous le plan sonore du soliste."
+  },
+
+  {
+    "id": "VI013", "niveau": "C2/3", "categorie": "vocabulaire_italien", "type": "qcm",
+    "question": "Que signifie « Largo » ?",
+    "reponse_correcte": "Large, très lent",
+    "reponse_fausse_1": "Léger et rapide", "reponse_fausse_2": "Modérément vif", "reponse_fausse_3": "En s'élargissant progressivement",
+    "explication": "Largo est l'un des tempos les plus lents, avec une idée d'ampleur et de solennité."
+  },
+  {
+    "id": "VI014", "niveau": "C2/3", "categorie": "vocabulaire_italien", "type": "qcm",
+    "question": "Que signifie « Grave » comme indication de tempo ?",
+    "reponse_correcte": "Très lent et solennel",
+    "reponse_fausse_1": "Dans le grave de l'instrument", "reponse_fausse_2": "Avec gravité de son, très fort", "reponse_fausse_3": "Modéré et sérieux",
+    "explication": "Attention au faux ami : « Grave » indique ici un tempo très lent et solennel, pas un registre."
+  },
+  {
+    "id": "VI015", "niveau": "C2/3", "categorie": "vocabulaire_italien", "type": "qcm",
+    "question": "Que signifie « Lento » ?",
+    "reponse_correcte": "Lent",
+    "reponse_fausse_1": "Léger", "reponse_fausse_2": "Lié", "reponse_fausse_3": "Lointain",
+    "explication": "Lento se situe entre Largo et Adagio dans l'échelle des tempos lents."
+  },
+  {
+    "id": "VI016", "niveau": "C2/3", "categorie": "vocabulaire_italien", "type": "qcm",
+    "question": "Que signifie « Moderato » ?",
+    "reponse_correcte": "Modéré, à vitesse moyenne",
+    "reponse_fausse_1": "Très lent", "reponse_fausse_2": "Avec modestie, en retrait", "reponse_fausse_3": "En diminuant le son",
+    "explication": "Moderato se situe entre Andante et Allegro. Il se combine souvent : « Allegro moderato » = vif mais sans excès."
+  },
+  {
+    "id": "VI017", "niveau": "C2/3", "categorie": "vocabulaire_italien", "type": "qcm",
+    "question": "Que signifie « Allegretto » ?",
+    "reponse_correcte": "Un peu moins vif qu'Allegro",
+    "reponse_fausse_1": "Un peu plus vif qu'Allegro", "reponse_fausse_2": "Très gai, presque Presto", "reponse_fausse_3": "Allègrement, avec des accents marqués",
+    "explication": "Le suffixe -etto est un diminutif : Allegretto tempère l'Allegro, comme Larghetto tempère le Largo."
+  },
+  {
+    "id": "VI018", "niveau": "C2/3", "categorie": "vocabulaire_italien", "type": "qcm",
+    "question": "Que signifie « Vivace » ?",
+    "reponse_correcte": "Vif, plein de vivacité",
+    "reponse_fausse_1": "Très lent", "reponse_fausse_2": "En vibrant", "reponse_fausse_3": "Avec des nuances contrastées",
+    "explication": "Vivace est plus rapide qu'Allegro et souvent associé à un caractère pétillant."
+  },
+  {
+    "id": "VI019", "niveau": "C2/3", "categorie": "vocabulaire_italien", "type": "qcm",
+    "question": "Que signifie « Prestissimo » ?",
+    "reponse_correcte": "Extrêmement rapide, aussi vite que possible",
+    "reponse_fausse_1": "Un peu moins vite que Presto", "reponse_fausse_2": "En pressant progressivement", "reponse_fausse_3": "Très fort et très rapide",
+    "explication": "Le suffixe -issimo est un superlatif : Prestissimo est le tempo le plus rapide de l'échelle italienne."
+  },
+  {
+    "id": "VI020", "niveau": "C2/3", "categorie": "vocabulaire_italien", "type": "qcm",
+    "question": "Que signifie « Accelerando » (accel.) ?",
+    "reponse_correcte": "En accélérant progressivement",
+    "reponse_fausse_1": "Subitement plus rapide", "reponse_fausse_2": "En augmentant le son", "reponse_fausse_3": "Avec des accents",
+    "explication": "Accelerando est progressif. Un changement soudain de tempo s'écrit plutôt « Più mosso » ou « Subito »."
+  },
+  {
+    "id": "VI021", "niveau": "C2/3", "categorie": "vocabulaire_italien", "type": "qcm",
+    "question": "Que signifie « A tempo » ?",
+    "reponse_correcte": "Revenir au tempo initial",
+    "reponse_fausse_1": "Ralentir jusqu'à l'arrêt", "reponse_fausse_2": "En mesure, sans rubato", "reponse_fausse_3": "Accélérer légèrement",
+    "explication": "« A tempo » annule un ralenti ou une accélération et rétablit le tempo d'origine."
+  },
+  {
+    "id": "VI022", "niveau": "C2/3", "categorie": "vocabulaire_italien", "type": "qcm",
+    "question": "Que signifie « Più mosso » ?",
+    "reponse_correcte": "Plus mouvementé, plus rapide",
+    "reponse_fausse_1": "Moins mouvementé, plus lent", "reponse_fausse_2": "Plus fort", "reponse_fausse_3": "Plus expressif",
+    "explication": "« Più » = plus, « mosso » = mouvementé. Son contraire est « Meno mosso »."
+  },
+  {
+    "id": "VI023", "niveau": "C2/3", "categorie": "vocabulaire_italien", "type": "qcm",
+    "question": "Que signifie « Meno mosso » ?",
+    "reponse_correcte": "Moins mouvementé, plus lent",
+    "reponse_fausse_1": "Plus mouvementé, plus rapide", "reponse_fausse_2": "Moins fort", "reponse_fausse_3": "Avec moins d'expression",
+    "explication": "« Meno » = moins. C'est un changement de tempo immédiat, contrairement au Rallentando qui est progressif."
+  },
+  {
+    "id": "VI024", "niveau": "C2/3", "categorie": "vocabulaire_italien", "type": "qcm",
+    "question": "Que signifie « Stringendo » ?",
+    "reponse_correcte": "En pressant, en serrant le mouvement",
+    "reponse_fausse_1": "En élargissant le mouvement", "reponse_fausse_2": "En détachant les notes", "reponse_fausse_3": "En serrant le son, plus doux",
+    "explication": "Stringendo accélère en créant une tension, souvent associé à un crescendo."
+  },
+  {
+    "id": "VI025", "niveau": "C2/3", "categorie": "vocabulaire_italien", "type": "qcm",
+    "question": "Que signifie « Allargando » ?",
+    "reponse_correcte": "En élargissant : ralentir en amplifiant le son",
+    "reponse_fausse_1": "En accélérant et en durcissant", "reponse_fausse_2": "En s'éteignant progressivement", "reponse_fausse_3": "En jouant plus largement détaché",
+    "explication": "Allargando combine ralenti et crescendo — typique des fins de mouvement grandioses."
+  },
+  {
+    "id": "VI026", "niveau": "C2/3", "categorie": "vocabulaire_italien", "type": "qcm",
+    "question": "Que signifie « Rubato » (tempo rubato) ?",
+    "reponse_correcte": "Avec souplesse : temps « dérobé » ici et rendu là",
+    "reponse_fausse_1": "Strictement en mesure", "reponse_fausse_2": "En robustesse, avec force", "reponse_fausse_3": "En ralentissant jusqu'à la fin",
+    "explication": "Rubato signifie littéralement « volé » : on prend du temps sur une note et on le restitue ensuite, sans altérer la pulsation globale."
+  },
+  {
+    "id": "VI027", "niveau": "C2/3", "categorie": "vocabulaire_italien", "type": "qcm",
+    "question": "Que signifie « Larghetto » ?",
+    "reponse_correcte": "Un peu moins lent que Largo",
+    "reponse_fausse_1": "Un peu plus lent que Largo", "reponse_fausse_2": "Large et très fort", "reponse_fausse_3": "En élargissant progressivement",
+    "explication": "Comme Allegretto par rapport à Allegro, le diminutif -etto tempère le caractère : Larghetto est moins lent que Largo."
+  },
+
+  {
+    "id": "VI030", "niveau": "C2/4", "categorie": "vocabulaire_italien", "type": "qcm",
+    "question": "Que signifie « Con anima » ?",
+    "reponse_correcte": "Avec âme, avec élan",
+    "reponse_fausse_1": "Avec animation, plus vite", "reponse_fausse_2": "Sans expression, neutre", "reponse_fausse_3": "Avec des animaux, en imitant la nature",
+    "explication": "Faux ami fréquent : « anima » = l'âme, pas l'animation. L'indication vise l'engagement expressif, pas la vitesse."
+  },
+  {
+    "id": "VI031", "niveau": "C2/4", "categorie": "vocabulaire_italien", "type": "qcm",
+    "question": "Que signifie « Lusingando » ?",
+    "reponse_correcte": "En caressant, d'un ton flatteur",
+    "reponse_fausse_1": "En pressant le mouvement", "reponse_fausse_2": "En s'éteignant peu à peu", "reponse_fausse_3": "Avec éclat et brillance",
+    "explication": "De « lusingare » (flatter, cajoler) : un jeu enjôleur, insinuant, tout en douceur."
+  },
+  {
+    "id": "VI032", "niveau": "C2/4", "categorie": "vocabulaire_italien", "type": "qcm",
+    "question": "Que signifie « A piacere » ?",
+    "reponse_correcte": "À volonté, librement, au gré de l'interprète",
+    "reponse_fausse_1": "Avec plaisir, joyeusement", "reponse_fausse_2": "En place, strictement en mesure", "reponse_fausse_3": "Doucement, avec plaisir du son",
+    "explication": "A piacere libère l'interprète de la stricte mesure, comme « ad libitum » ou « senza tempo »."
+  },
+  {
+    "id": "VI033", "niveau": "C2/4", "categorie": "vocabulaire_italien", "type": "qcm",
+    "question": "Qu'est-ce qu'une « Cadenza » dans un concerto ?",
+    "reponse_correcte": "Un passage virtuose et libre confié au soliste seul",
+    "reponse_fausse_1": "La cadence harmonique finale du mouvement", "reponse_fausse_2": "Le tutti d'orchestre qui ouvre le concerto", "reponse_fausse_3": "Le tempo de la section finale",
+    "explication": "Attention au faux ami avec « cadence » harmonique. La cadenza est un solo brillant, souvent improvisé, avant la conclusion du mouvement."
+  },
+  {
+    "id": "VI034", "niveau": "C2/4", "categorie": "vocabulaire_italien", "type": "qcm",
+    "question": "Que signifie « Con brio » ?",
+    "reponse_correcte": "Avec éclat, avec verve",
+    "reponse_fausse_1": "Avec brièveté, en raccourcissant", "reponse_fausse_2": "Avec brillance de son, très fort", "reponse_fausse_3": "En brossant le son, effleuré",
+    "explication": "« Brio » = fougue, entrain. Beethoven l'emploie souvent : « Allegro con brio »."
+  },
+  {
+    "id": "VI035", "niveau": "C2/4", "categorie": "vocabulaire_italien", "type": "qcm",
+    "question": "Que signifie « Cantabile » ?",
+    "reponse_correcte": "Chantant, comme une voix",
+    "reponse_fausse_1": "En chantant à voix haute", "reponse_fausse_2": "Avec un texte chanté", "reponse_fausse_3": "Rapide et léger",
+    "explication": "Cantabile demande un phrasé lié et une conduite mélodique proche de la voix humaine."
+  },
+  {
+    "id": "VI036", "niveau": "C2/4", "categorie": "vocabulaire_italien", "type": "qcm",
+    "question": "Que signifie « Morendo » ?",
+    "reponse_correcte": "En mourant : le son s'éteint et ralentit",
+    "reponse_fausse_1": "Avec gravité, funèbre", "reponse_fausse_2": "En mordant le son, très accentué", "reponse_fausse_3": "En augmentant jusqu'au maximum",
+    "explication": "Morendo combine diminuendo et rallentando jusqu'à l'extinction du son."
+  },
+  {
+    "id": "VI037", "niveau": "C2/4", "categorie": "vocabulaire_italien", "type": "qcm",
+    "question": "Que signifie « Sotto voce » ?",
+    "reponse_correcte": "À mi-voix, avec un son retenu et discret",
+    "reponse_fausse_1": "Sous la voix : accompagner plus grave que le chant", "reponse_fausse_2": "Très fort, en couvrant les autres", "reponse_fausse_3": "Sans voix, uniquement instrumental",
+    "explication": "Littéralement « sous la voix » : un son voilé, confidentiel, presque murmuré."
+  },
+  {
+    "id": "VI038", "niveau": "C2/4", "categorie": "vocabulaire_italien", "type": "qcm",
+    "question": "Que signifie « Marcato » ?",
+    "reponse_correcte": "Marqué, chaque note bien détachée et appuyée",
+    "reponse_fausse_1": "En marchant, tempo de marche", "reponse_fausse_2": "Très lié, sans interruption", "reponse_fausse_3": "En marquant seulement les temps forts",
+    "explication": "Marcato s'écrit souvent avec des accents (>) ou l'abréviation « marc. »."
+  },
+  {
+    "id": "VI039", "niveau": "C2/4", "categorie": "vocabulaire_italien", "type": "qcm",
+    "question": "Que signifie « Giocoso » ?",
+    "reponse_correcte": "Joyeux, enjoué, badin",
+    "reponse_fausse_1": "Sérieux et recueilli", "reponse_fausse_2": "Rapide et virtuose", "reponse_fausse_3": "En jouant tous ensemble",
+    "explication": "De « gioco » (le jeu). Mozart sous-titre Don Giovanni « dramma giocoso »."
+  },
+  {
+    "id": "VI040", "niveau": "C2/4", "categorie": "vocabulaire_italien", "type": "qcm",
+    "question": "Que signifie « Appassionato » ?",
+    "reponse_correcte": "Passionné, avec ardeur",
+    "reponse_fausse_1": "En s'apaisant progressivement", "reponse_fausse_2": "Avec patience, sans hâte", "reponse_fausse_3": "Très fort et martelé",
+    "explication": "Beethoven emploie le terme pour sa sonate dite « Appassionata » (op. 57)."
+  },
+  {
+    "id": "VI041", "niveau": "C2/4", "categorie": "vocabulaire_italien", "type": "qcm",
+    "question": "Que signifie « Sostenuto » ?",
+    "reponse_correcte": "Soutenu : le son est tenu dans toute sa valeur",
+    "reponse_fausse_1": "En s'arrêtant sur chaque note", "reponse_fausse_2": "Très détaché, piqué", "reponse_fausse_3": "En soutenant le volume au maximum",
+    "explication": "Sostenuto implique souvent un léger élargissement du tempo et une grande plénitude de son."
+  },
+  {
+    "id": "VI042", "niveau": "C2/4", "categorie": "vocabulaire_italien", "type": "qcm",
+    "question": "Que signifie « Agitato » ?",
+    "reponse_correcte": "Agité, fébrile, inquiet",
+    "reponse_fausse_1": "Calme et posé", "reponse_fausse_2": "En agitant l'archet, tremblé", "reponse_fausse_3": "Très rapide mais régulier",
+    "explication": "Agitato décrit un caractère de trouble ou d'urgence, souvent avec un tempo instable."
+  },
+  {
+    "id": "VI043", "niveau": "C2/4", "categorie": "vocabulaire_italien", "type": "qcm",
+    "question": "Que signifie « Risoluto » ?",
+    "reponse_correcte": "Résolu, décidé, avec fermeté",
+    "reponse_fausse_1": "En résolvant la dissonance", "reponse_fausse_2": "Résonnant, avec beaucoup de pédale", "reponse_fausse_3": "En se relâchant peu à peu",
+    "explication": "Risoluto appelle un jeu affirmé, sans hésitation, souvent avec des attaques nettes."
+  },
+  {
+    "id": "VI044", "niveau": "C2/4", "categorie": "vocabulaire_italien", "type": "qcm",
+    "question": "Que signifie « Scherzando » ?",
+    "reponse_correcte": "En plaisantant, avec espièglerie",
+    "reponse_fausse_1": "En hésitant, timidement", "reponse_fausse_2": "Sérieusement, avec gravité", "reponse_fausse_3": "En glissant d'une note à l'autre",
+    "explication": "De « scherzo » (la plaisanterie) : un jeu léger, malicieux, souvent staccato."
+  },
+  {
+    "id": "VI045", "niveau": "C2/4", "categorie": "vocabulaire_italien", "type": "qcm",
+    "question": "Que signifie « Perdendosi » ?",
+    "reponse_correcte": "En se perdant : le son s'efface jusqu'à disparaître",
+    "reponse_fausse_1": "En perdant le tempo volontairement", "reponse_fausse_2": "Avec un caractère désespéré", "reponse_fausse_3": "En surgissant brusquement",
+    "explication": "Perdendosi est proche de Morendo : diminuendo et souvent rallentando jusqu'à l'évanouissement du son."
+  },
+  {
+    "id": "VI046", "niveau": "C2/4", "categorie": "vocabulaire_italien", "type": "qcm",
+    "question": "Que signifie « Con fuoco » ?",
+    "reponse_correcte": "Avec feu, avec fougue",
+    "reponse_fausse_1": "Avec le foyer sonore au centre", "reponse_fausse_2": "En s'éteignant comme une flamme", "reponse_fausse_3": "Avec précaution, fragilement",
+    "explication": "« Fuoco » = le feu. L'indication demande énergie et intensité, souvent avec un tempo soutenu."
+  },
+  {
+    "id": "VI047", "niveau": "C2/4", "categorie": "vocabulaire_italien", "type": "qcm",
+    "question": "Que signifie « Leggiero » ?",
+    "reponse_correcte": "Léger, avec un toucher délié",
+    "reponse_fausse_1": "Lié, sans interruption", "reponse_fausse_2": "Lentement, sans hâte", "reponse_fausse_3": "Lointain, comme un écho",
+    "explication": "Leggiero appelle un son sans poids, souvent rapide et peu appuyé — l'inverse de Pesante."
+  },
+
+  {
+    "id": "VA001", "niveau": "C3", "categorie": "vocabulaire_allemand", "type": "qcm",
+    "question": "Que signifie l'indication allemande « Langsam » ?",
+    "reponse_correcte": "Lent",
+    "reponse_fausse_1": "Rapide", "reponse_fausse_2": "Long, tenu", "reponse_fausse_3": "Large et solennel",
+    "explication": "Langsam est l'équivalent allemand de Lento/Adagio. Mahler ouvre sa 1re Symphonie par « Langsam, schleppend »."
+  },
+  {
+    "id": "VA002", "niveau": "C3", "categorie": "vocabulaire_allemand", "type": "qcm",
+    "question": "Que signifie l'indication allemande « Schnell » ?",
+    "reponse_correcte": "Rapide",
+    "reponse_fausse_1": "Lent", "reponse_fausse_2": "Doux", "reponse_fausse_3": "Brillant",
+    "explication": "Schnell correspond à Presto. « Sehr schnell » = très rapide."
+  },
+  {
+    "id": "VA003", "niveau": "C3", "categorie": "vocabulaire_allemand", "type": "qcm",
+    "question": "Que signifie l'indication allemande « Mäßig » (Mässig) ?",
+    "reponse_correcte": "Modéré",
+    "reponse_fausse_1": "Massif, puissant", "reponse_fausse_2": "Mesuré, strictement en place", "reponse_fausse_3": "Majestueux",
+    "explication": "Mäßig est l'équivalent de Moderato. Ne pas le confondre avec « massif » : la racine est « Maß », la mesure."
+  },
+  {
+    "id": "VA004", "niveau": "C3", "categorie": "vocabulaire_allemand", "type": "qcm",
+    "question": "Que signifie l'indication allemande « Lebhaft » ?",
+    "reponse_correcte": "Vif, animé",
+    "reponse_fausse_1": "Lourd, pesant", "reponse_fausse_2": "Aimable, gracieux", "reponse_fausse_3": "Léger, effleuré",
+    "explication": "Lebhaft (de « Leben », la vie) correspond à Vivace. Schumann l'emploie très souvent."
+  },
+  {
+    "id": "VA005", "niveau": "C3", "categorie": "vocabulaire_allemand", "type": "qcm",
+    "question": "Que signifie l'indication allemande « Ruhig » ?",
+    "reponse_correcte": "Calme, paisible",
+    "reponse_fausse_1": "Rugueux, âpre", "reponse_fausse_2": "Rythmé, marqué", "reponse_fausse_3": "En reculant, plus lent",
+    "explication": "Ruhig indique un caractère serein. Wagner écrit « Sehr ruhig » dans les passages contemplatifs."
+  },
+  {
+    "id": "VA006", "niveau": "C3", "categorie": "vocabulaire_allemand", "type": "qcm",
+    "question": "Que signifie l'indication allemande « Zart » ?",
+    "reponse_correcte": "Tendre, délicat",
+    "reponse_fausse_1": "Dur, âpre", "reponse_fausse_2": "Clair, lumineux", "reponse_fausse_3": "Dispersé, détaché",
+    "explication": "Zart demande une grande délicatesse de toucher et de son, proche de « dolce »."
+  },
+  {
+    "id": "VA007", "niveau": "C3", "categorie": "vocabulaire_allemand", "type": "qcm",
+    "question": "Que signifie l'indication allemande « Innig » ?",
+    "reponse_correcte": "Intime, fervent, avec recueillement",
+    "reponse_fausse_1": "Intense, très fort", "reponse_fausse_2": "Intérieur, à peine audible", "reponse_fausse_3": "Ingénu, naïf",
+    "explication": "Innig est une nuance expressive typiquement romantique allemande, chère à Schumann et Brahms."
+  },
+  {
+    "id": "VA008", "niveau": "C3", "categorie": "vocabulaire_allemand", "type": "qcm",
+    "question": "Que signifie l'indication allemande « Feierlich » ?",
+    "reponse_correcte": "Solennel, cérémonieux",
+    "reponse_fausse_1": "Joyeux, festif", "reponse_fausse_2": "Ardent, enflammé", "reponse_fausse_3": "Libre, sans mesure",
+    "explication": "Feierlich (de « Feier », la cérémonie) qualifie les passages rituels — Wagner l'emploie dans Parsifal."
+  },
+  {
+    "id": "VA009", "niveau": "C3", "categorie": "vocabulaire_allemand", "type": "qcm",
+    "question": "Que signifie l'indication allemande « Bewegt » ?",
+    "reponse_correcte": "Animé, mouvementé",
+    "reponse_fausse_1": "Immobile, statique", "reponse_fausse_2": "Ému, avec des larmes", "reponse_fausse_3": "Balancé, en berceuse",
+    "explication": "Bewegt (de « bewegen », mouvoir) correspond à « con moto ». Mahler écrit « Kräftig bewegt » : vigoureusement animé."
+  },
+  {
+    "id": "VA010", "niveau": "C3", "categorie": "vocabulaire_allemand", "type": "qcm",
+    "question": "Que signifie l'indication allemande « Sehr » ?",
+    "reponse_correcte": "Très",
+    "reponse_fausse_1": "Sans", "reponse_fausse_2": "Toujours", "reponse_fausse_3": "Peu à peu",
+    "explication": "Sehr est un intensificateur : « Sehr langsam » = très lent, « Sehr zart » = très délicat."
+  },
+  {
+    "id": "VA011", "niveau": "C3", "categorie": "vocabulaire_allemand", "type": "qcm",
+    "question": "Que signifie l'indication allemande « Nicht schleppend », fréquente chez Mahler ?",
+    "reponse_correcte": "Sans traîner",
+    "reponse_fausse_1": "Sans ralentir brusquement", "reponse_fausse_2": "Pas trop fort", "reponse_fausse_3": "Sans sourdine",
+    "explication": "« Nicht » = ne pas, « schleppend » = traînant. Mahler multiplie ces indications négatives très précises."
+  },
+  {
+    "id": "VA012", "niveau": "C3", "categorie": "vocabulaire_allemand", "type": "qcm",
+    "question": "Que signifie l'indication allemande « Mit Ausdruck » ?",
+    "reponse_correcte": "Avec expression",
+    "reponse_fausse_1": "Avec force, appuyé", "reponse_fausse_2": "Avec la sourdine", "reponse_fausse_3": "Avec le pouce",
+    "explication": "« Mit » = avec. On trouve aussi « Mit Dämpfer » (avec sourdine) et « Ohne Dämpfer » (sans sourdine)."
+  },
+  {
+    "id": "VA013", "niveau": "C3", "categorie": "vocabulaire_allemand", "type": "qcm",
+    "question": "Que signifie l'indication allemande « Breit » ?",
+    "reponse_correcte": "Large",
+    "reponse_fausse_1": "Bref, court", "reponse_fausse_2": "Brillant", "reponse_fausse_3": "Brisé, arpégé",
+    "explication": "Breit est l'équivalent de Largo. Faux ami dangereux avec « bref » : c'est exactement l'inverse."
+  },
+  {
+    "id": "VA014", "niveau": "C3", "categorie": "vocabulaire_allemand", "type": "qcm",
+    "question": "Que signifie l'indication allemande « Mit Dämpfer » ?",
+    "reponse_correcte": "Avec sourdine",
+    "reponse_fausse_1": "Avec la pédale", "reponse_fausse_2": "En étouffant les cordes à la main", "reponse_fausse_3": "Avec amplification",
+    "explication": "Équivalent de l'italien « con sordina ». Son contraire est « Ohne Dämpfer » (sans sourdine)."
+  },
+  {
+    "id": "VA015", "niveau": "C3", "categorie": "vocabulaire_allemand", "type": "qcm",
+    "question": "Que signifie l'indication allemande « Zurückhaltend » ?",
+    "reponse_correcte": "En retenant, en ralentissant",
+    "reponse_fausse_1": "En repartant au tempo initial", "reponse_fausse_2": "En reculant du pupitre", "reponse_fausse_3": "En répétant la section",
+    "explication": "Équivalent de « ritenuto ». Son contraire fréquent chez Mahler est « Vorwärts » (en avant, plus vite)."
+  },
+
+  {
+    "id": "RM011", "niveau": "C1/3", "categorie": "rythme_mesure", "type": "qcm",
+    "question": "Qu'est-ce qu'une anacrouse ?",
+    "reponse_correcte": "Une ou plusieurs notes qui précèdent le premier temps fort",
+    "reponse_fausse_1": "Un silence placé au début de la mesure", "reponse_fausse_2": "Un accent sur le dernier temps", "reponse_fausse_3": "Une mesure incomplète à la fin du morceau",
+    "explication": "L'anacrouse (ou levée) est un élan mélodique avant la première barre de mesure : la Marseillaise commence par une anacrouse."
+  },
+  {
+    "id": "RM012", "niveau": "C1/4", "categorie": "rythme_mesure", "type": "qcm",
+    "question": "Dans une mesure à 3/4, quel temps est le temps fort ?",
+    "reponse_correcte": "Le 1er temps",
+    "reponse_fausse_1": "Le 2e temps", "reponse_fausse_2": "Le 3e temps", "reponse_fausse_3": "Les 1er et 3e temps",
+    "explication": "Le premier temps de toute mesure est le temps fort. En 3/4, les 2e et 3e temps sont faibles."
+  },
+  {
+    "id": "RM013", "niveau": "C1/4", "categorie": "rythme_mesure", "type": "qcm",
+    "question": "Qu'est-ce qu'un contretemps ?",
+    "reponse_correcte": "Une note jouée sur un temps faible ou une partie faible, précédée d'un silence sur le temps",
+    "reponse_fausse_1": "Une note tenue par-dessus la barre de mesure", "reponse_fausse_2": "Un changement de mesure en cours de morceau", "reponse_fausse_3": "Un ralentissement soudain du tempo",
+    "explication": "Le contretemps a un silence sur le temps. La syncope, elle, prolonge une note du temps faible sur le temps fort."
+  },
+  {
+    "id": "RM014", "niveau": "C2/2", "categorie": "rythme_mesure", "type": "qcm",
+    "question": "Comment distingue-t-on une mesure simple d'une mesure composée ?",
+    "reponse_correcte": "Dans une mesure composée, chaque temps se divise en trois",
+    "reponse_fausse_1": "Une mesure composée a toujours plus de quatre temps", "reponse_fausse_2": "Une mesure composée change de métrique à chaque mesure", "reponse_fausse_3": "Une mesure composée n'a pas de temps fort",
+    "explication": "Mesure simple : le temps se divise en 2 (4/4, 3/4). Mesure composée : le temps se divise en 3 (6/8, 9/8, 12/8), et le temps vaut une note pointée."
+  },
+  {
+    "id": "RM015", "niveau": "C2/2", "categorie": "rythme_mesure", "type": "qcm",
+    "question": "En 12/8, combien y a-t-il de temps par mesure et que vaut chaque temps ?",
+    "reponse_correcte": "4 temps, chacun valant une noire pointée",
+    "reponse_fausse_1": "12 temps, chacun valant une croche", "reponse_fausse_2": "3 temps, chacun valant une blanche pointée", "reponse_fausse_3": "6 temps, chacun valant une croche pointée",
+    "explication": "12 croches groupées par 3 donnent 4 temps de noire pointée. Le 12/8 est la mesure composée correspondant au 4/4."
+  },
+  {
+    "id": "RM016", "niveau": "C2/3", "categorie": "rythme_mesure", "type": "qcm",
+    "question": "Qu'est-ce qu'une hémiole ?",
+    "reponse_correcte": "Une superposition ou substitution de 3 valeurs là où on en attend 2 (rapport 3:2)",
+    "reponse_fausse_1": "Un triolet joué à contretemps", "reponse_fausse_2": "Une mesure à 6 temps subdivisée en 2", "reponse_fausse_3": "Un motif répété une octave plus haut",
+    "explication": "Rapport 3:2 : deux mesures à 3/4 réentendues comme trois mesures à 2/4. Très fréquent chez Haendel, Brahms et dans la musique latino-américaine."
+  },
+  {
+    "id": "RM017", "niveau": "C2/4", "categorie": "rythme_mesure", "type": "qcm",
+    "question": "Qu'est-ce qu'une mesure asymétrique (ou aksak) ?",
+    "reponse_correcte": "Une mesure dont les temps sont de durées inégales, comme 7/8 en 3+2+2",
+    "reponse_fausse_1": "Une mesure dont le nombre de temps change à chaque fois", "reponse_fausse_2": "Une mesure sans barre de mesure", "reponse_fausse_3": "Une mesure jouée sans pulsation régulière",
+    "explication": "« Aksak » signifie « boiteux » en turc. Les musiques des Balkans en font un usage systématique : 5/8, 7/8, 9/8 (2+2+2+3), 11/8."
+  },
+  {
+    "id": "RM018", "niveau": "C2/4", "categorie": "rythme_mesure", "type": "qcm",
+    "question": "Qu'est-ce qu'une polyrythmie ?",
+    "reponse_correcte": "La superposition simultanée de deux divisions rythmiques différentes",
+    "reponse_fausse_1": "L'enchaînement de plusieurs rythmes différents à la suite", "reponse_fausse_2": "Un rythme joué par plusieurs instruments à l'unisson", "reponse_fausse_3": "Un rythme qui change de tempo en permanence",
+    "explication": "Exemple typique : 3 contre 2, ou 4 contre 3. Les musiques d'Afrique de l'Ouest en font un principe structurel."
+  },
+  {
+    "id": "RM019", "niveau": "C3", "categorie": "rythme_mesure", "type": "qcm",
+    "question": "Qu'est-ce qu'un rythme non rétrogradable, au sens de Messiaen ?",
+    "reponse_correcte": "Un rythme identique qu'on le lise dans un sens ou dans l'autre",
+    "reponse_fausse_1": "Un rythme qu'on ne peut pas répéter", "reponse_fausse_2": "Un rythme sans pulsation identifiable", "reponse_fausse_3": "Un rythme dont les valeurs vont toujours en s'allongeant",
+    "explication": "Palindrome rythmique : la rétrogradation donne le même résultat. Messiaen en fait l'un de ses langages, avec les modes à transpositions limitées."
+  },
+  {
+    "id": "RM020", "niveau": "C3", "categorie": "rythme_mesure", "type": "qcm",
+    "question": "Qu'est-ce que la « valeur ajoutée » chez Messiaen ?",
+    "reponse_correcte": "Une brève valeur ajoutée à un rythme régulier, qui en rompt la symétrie",
+    "reponse_fausse_1": "Une note ajoutée à un accord pour l'enrichir", "reponse_fausse_2": "Un temps ajouté à la fin de chaque phrase", "reponse_fausse_3": "Un contrepoint ajouté au-dessus du thème",
+    "explication": "Une double croche ou un point ajouté suffit à déséquilibrer la carrure et à créer cette souplesse rythmique caractéristique."
+  },
+
+  {
+    "id": "RG001", "niveau": "C3", "categorie": "rythme_mesure", "type": "qcm",
+    "question": "Dans la métrique grecque, quel pied correspond au schéma bref – long ?",
+    "reponse_correcte": "L'iambe",
+    "reponse_fausse_1": "Le trochée", "reponse_fausse_2": "Le spondée", "reponse_fausse_3": "L'anapeste",
+    "explication": "L'iambe (ᴗ —) est un pied ascendant : l'élan porte vers la valeur longue. En valeurs : croche – noire."
+  },
+  {
+    "id": "RG002", "niveau": "C3", "categorie": "rythme_mesure", "type": "qcm",
+    "question": "Dans la métrique grecque, quel pied correspond au schéma long – bref ?",
+    "reponse_correcte": "Le trochée",
+    "reponse_fausse_1": "L'iambe", "reponse_fausse_2": "Le dactyle", "reponse_fausse_3": "Le crétique",
+    "explication": "Le trochée (— ᴗ) est un pied descendant, l'exact inverse de l'iambe. En valeurs : noire – croche."
+  },
+  {
+    "id": "RG003", "niveau": "C3", "categorie": "rythme_mesure", "type": "qcm",
+    "question": "Quel est le schéma rythmique du dactyle ?",
+    "reponse_correcte": "Long – bref – bref",
+    "reponse_fausse_1": "Bref – bref – long", "reponse_fausse_2": "Bref – long – bref", "reponse_fausse_3": "Long – bref – long",
+    "explication": "Le dactyle (— ᴗ ᴗ) doit son nom au doigt : une phalange longue suivie de deux courtes. En valeurs : noire – croche – croche."
+  },
+  {
+    "id": "RG004", "niveau": "C3", "categorie": "rythme_mesure", "type": "qcm",
+    "question": "Quel est le schéma rythmique de l'anapeste ?",
+    "reponse_correcte": "Bref – bref – long",
+    "reponse_fausse_1": "Long – bref – bref", "reponse_fausse_2": "Bref – long – bref", "reponse_fausse_3": "Long – long – bref",
+    "explication": "L'anapeste (ᴗ ᴗ —) est le dactyle renversé : deux brèves qui prennent leur élan vers une longue."
+  },
+  {
+    "id": "RG005", "niveau": "C3", "categorie": "rythme_mesure", "type": "qcm",
+    "question": "Dans la métrique grecque, quel pied est formé de deux valeurs longues ?",
+    "reponse_correcte": "Le spondée",
+    "reponse_fausse_1": "Le pyrrhique", "reponse_fausse_2": "Le molosse", "reponse_fausse_3": "Le bacchée",
+    "explication": "Le spondée (— —) tire son nom des libations rituelles, exécutées sur un rythme lent et grave."
+  },
+  {
+    "id": "RG006", "niveau": "C3", "categorie": "rythme_mesure", "type": "qcm",
+    "question": "Dans la métrique grecque, quel pied est formé de deux valeurs brèves ?",
+    "reponse_correcte": "Le pyrrhique",
+    "reponse_fausse_1": "Le spondée", "reponse_fausse_2": "Le tribraque", "reponse_fausse_3": "L'iambe",
+    "explication": "Le pyrrhique (ᴗ ᴗ) est le pied le plus léger à deux éléments. Le tribraque, lui, en compte trois brèves."
+  },
+  {
+    "id": "RG007", "niveau": "C3", "categorie": "rythme_mesure", "type": "qcm",
+    "question": "Quel est le schéma rythmique de l'amphibraque ?",
+    "reponse_correcte": "Bref – long – bref",
+    "reponse_fausse_1": "Long – bref – long", "reponse_fausse_2": "Long – bref – bref", "reponse_fausse_3": "Bref – bref – long",
+    "explication": "L'amphibraque (ᴗ — ᴗ) encadre une longue par deux brèves : « amphi » = des deux côtés, « brachys » = bref."
+  },
+  {
+    "id": "RG008", "niveau": "C3", "categorie": "rythme_mesure", "type": "qcm",
+    "question": "Quel est le schéma rythmique du crétique (ou amphimacre) ?",
+    "reponse_correcte": "Long – bref – long",
+    "reponse_fausse_1": "Bref – long – bref", "reponse_fausse_2": "Long – long – bref", "reponse_fausse_3": "Bref – bref – long",
+    "explication": "Le crétique (— ᴗ —) encadre une brève par deux longues : « amphi » = des deux côtés, « makros » = long."
+  },
+  {
+    "id": "RG009", "niveau": "C3", "categorie": "rythme_mesure", "type": "qcm",
+    "question": "Dans la métrique grecque, quel pied est formé de trois valeurs brèves ?",
+    "reponse_correcte": "Le tribraque",
+    "reponse_fausse_1": "Le molosse", "reponse_fausse_2": "Le pyrrhique", "reponse_fausse_3": "Le dactyle",
+    "explication": "Le tribraque (ᴗ ᴗ ᴗ) est l'exact opposé du molosse, formé lui de trois longues."
+  },
+  {
+    "id": "RG010", "niveau": "C3", "categorie": "rythme_mesure", "type": "qcm",
+    "question": "Dans la métrique grecque, quel pied est formé de trois valeurs longues ?",
+    "reponse_correcte": "Le molosse",
+    "reponse_fausse_1": "Le tribraque", "reponse_fausse_2": "Le spondée", "reponse_fausse_3": "L'antibacchée",
+    "explication": "Le molosse (— — —) est le pied le plus lourd : trois longues consécutives."
+  },
+  {
+    "id": "RG011", "niveau": "C3", "categorie": "rythme_mesure", "type": "qcm",
+    "question": "Quel est le schéma rythmique du bacchée ?",
+    "reponse_correcte": "Bref – long – long",
+    "reponse_fausse_1": "Long – long – bref", "reponse_fausse_2": "Long – bref – long", "reponse_fausse_3": "Bref – bref – long",
+    "explication": "Le bacchée (ᴗ — —) tire son nom des chants dédiés à Bacchus. Son renversement, long – long – bref, est l'antibacchée."
+  },
+  {
+    "id": "RG012", "niveau": "C3", "categorie": "rythme_mesure", "type": "qcm",
+    "question": "Si la valeur brève vaut une croche, comment note-t-on un iambe en valeurs musicales ?",
+    "reponse_correcte": "Croche – noire",
+    "reponse_fausse_1": "Noire – croche", "reponse_fausse_2": "Croche – croche pointée", "reponse_fausse_3": "Noire – blanche",
+    "explication": "Dans la métrique antique, la longue vaut deux brèves. Une brève-croche donne donc une longue-noire : l'iambe s'écrit croche – noire."
+  },
+
+  {
+    "id": "RY001", "niveau": "C2/2", "categorie": "rythme_mesure", "type": "vexflow_rythme",
+    "question": "Ce motif de deux valeurs pointées suivies d'une noire découpe la mesure en 3 + 3 + 2 croches. Comment s'appelle cette cellule ?",
+    "rythme_figures": ["qd", "qd", "q"],
+    "rythme_timesig": "4/4",
+    "reponse_correcte": "Le tresillo",
+    "reponse_fausse_1": "La habanera", "reponse_fausse_2": "Le contretemps", "reponse_fausse_3": "L'hémiole",
+    "explication": "Le tresillo (3+3+2) est la cellule fondatrice des musiques afro-cubaines et caribéennes : on la retrouve dans la salsa, la cumbia et le reggaeton."
+  },
+  {
+    "id": "RY002", "niveau": "C2/3", "categorie": "rythme_mesure", "type": "vexflow_rythme",
+    "question": "À quel motif d'accompagnement correspond ce rythme, emblématique du tango et de la musique cubaine du 19e siècle ?",
+    "rythme_figures": ["8d", "16", "8", "8"],
+    "rythme_timesig": "2/4",
+    "reponse_correcte": "La habanera",
+    "reponse_fausse_1": "Le tresillo", "reponse_fausse_2": "La samba", "reponse_fausse_3": "La bossa nova",
+    "explication": "Croche pointée – double – croche – croche : la habanera. Bizet l'utilise dans Carmen, et elle est à l'origine du tango argentin."
+  },
+  {
+    "id": "RY003", "niveau": "C2/2", "categorie": "rythme_mesure", "type": "vexflow_rythme",
+    "question": "Quel procédé rythmique est illustré ici, où chaque note tombe systématiquement entre les temps ?",
+    "rythme_figures": ["8r", "8", "8r", "8", "8r", "8", "8r", "8"],
+    "rythme_timesig": "4/4",
+    "reponse_correcte": "Le contretemps",
+    "reponse_fausse_1": "La syncope", "reponse_fausse_2": "La polyrythmie", "reponse_fausse_3": "L'anacrouse",
+    "explication": "Silence sur le temps, note sur le demi-temps : c'est le contretemps. C'est le principe du « skank » de la guitare reggae et ska."
+  },
+  {
+    "id": "RY004", "niveau": "C2/3", "categorie": "rythme_mesure", "type": "vexflow_rythme",
+    "question": "Quel procédé rythmique est illustré ici, où une note commence sur un temps faible et se prolonge sur le temps fort suivant ?",
+    "rythme_figures": ["8", "q", "q", "q", "8"],
+    "rythme_timesig": "4/4",
+    "reponse_correcte": "La syncope",
+    "reponse_fausse_1": "Le contretemps", "reponse_fausse_2": "L'hémiole", "reponse_fausse_3": "Le triolet",
+    "explication": "La syncope prolonge une note attaquée sur une partie faible par-dessus le temps fort. Contrairement au contretemps, il n'y a pas de silence sur le temps."
+  },
+  {
+    "id": "RY005", "niveau": "C2/4", "categorie": "rythme_mesure", "type": "vexflow_rythme",
+    "question": "Ce motif de 12 croches réparties en 2+2+1+2+2+2+1 est un patron de cloche fondamental. De quelle aire musicale provient-il ?",
+    "rythme_figures": ["q", "q", "8", "q", "q", "q", "8"],
+    "rythme_timesig": "12/8",
+    "reponse_correcte": "Les musiques d'Afrique de l'Ouest",
+    "reponse_fausse_1": "Les musiques des Balkans", "reponse_fausse_2": "Les musiques d'Inde du Nord", "reponse_fausse_3": "Les musiques du Maghreb",
+    "explication": "C'est la « cloche standard » à 7 frappes, jouée à la gankogui chez les Ewe du Ghana et du Togo. Elle sert de repère temporel à tout l'ensemble de percussions."
+  },
+  {
+    "id": "RY006", "niveau": "C3", "categorie": "rythme_mesure", "type": "vexflow_rythme",
+    "question": "Cette mesure à 3/4 est occupée par deux valeurs égales au lieu de trois temps. Quel procédé est à l'œuvre ?",
+    "rythme_figures": ["qd", "qd"],
+    "rythme_timesig": "3/4",
+    "reponse_correcte": "L'hémiole",
+    "reponse_fausse_1": "Le triolet", "reponse_fausse_2": "La syncope", "reponse_fausse_3": "La valeur ajoutée",
+    "explication": "Deux noires pointées dans une mesure à 3 temps : le 3/4 est réentendu comme un 6/8. Ce rapport 3:2 est l'hémiole, omniprésente chez Haendel et Brahms."
   }
 ]

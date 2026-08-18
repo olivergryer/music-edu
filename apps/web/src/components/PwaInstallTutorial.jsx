@@ -101,7 +101,35 @@ function InstallButton({ onClick }) {
 }
 
 function InstallInstructions({ pwa }) {
-  const { platform, browser, canTriggerInstall, triggerInstall } = pwa
+  const { platform, browser, canTriggerInstall, triggerInstall, installDegradee } = pwa
+
+  // ─── Navigateur incapable d'installer une vraie PWA (Qwant) ────────────────
+  // Placé AVANT le bouton natif : même si `beforeinstallprompt` se déclenchait,
+  // le raccourci obtenu garderait les barres. Autant le dire tout de suite.
+  if (installDegradee) {
+    return (
+      <div style={{ marginBottom: 4 }}>
+        <div style={{
+          background: 'rgba(255,139,61,0.1)', border: '1px solid #FF8B3D40',
+          borderRadius: 12, padding: '12px 14px', marginBottom: 14,
+          fontSize: 13, color: 'var(--text)', textAlign: 'left', lineHeight: 1.45,
+        }}>
+          Qwant ne pose qu’un <b>raccourci</b> : Tessitura s’ouvrira avec les barres du
+          navigateur en haut et en bas. Pour une vraie installation en plein écran,
+          ouvre <b>tessitura-music.vercel.app</b> dans <b>Chrome</b>, puis reviens ici.
+        </div>
+        <div style={{ textAlign: 'left', display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <Step n={1} text="Dans Chrome, appuie sur le menu ⋮ en haut à droite." icon="⋮" />
+          <Step n={2} text="Choisis « Installer l’application » ou « Ajouter à l’écran d’accueil »." icon="📥" />
+          <Step n={3} text="Confirme avec « Installer »." icon="✓" />
+        </div>
+        <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 10, lineHeight: 1.4 }}>
+          Tu peux continuer à utiliser Tessitura dans Qwant : tout fonctionne, seul le
+          plein écran manque.
+        </p>
+      </div>
+    )
+  }
 
   // ─── Bouton natif quand dispo (Chrome/Edge/Brave avec beforeinstallprompt) ──
   if (canTriggerInstall) {

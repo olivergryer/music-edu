@@ -15,6 +15,7 @@ import { generateDistractorSet, deriveNiveau } from "./rythmDistractors";
 import { buildPalette, scoreActivity5, measureStatus, groupOf } from "./rythmActivity5";
 import { RYTHME } from "./content/rythme.ts";
 import DemoDecompte from "./components/DemoDecompte.tsx";
+import { sortieAudible } from "./lib/sortieAudible";
 
 // ─── Figures de base ──────────────────────────────────────────────────────────
 const q  = { dur:"q"  };
@@ -990,7 +991,7 @@ export default function RythmApp() {
         [600, 400],    // grave
       ][metroSoundPreset];
       const o  = ac.createOscillator(), g = ac.createGain();
-      o.connect(g); g.connect(ac.destination);
+      o.connect(g); g.connect(sortieAudible(ac));
       o.frequency.value = strong ? freqStrong : freqWeak;
       g.gain.setValueAtTime(0.25, ac.currentTime);
       g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.07);
@@ -1010,7 +1011,7 @@ export default function RythmApp() {
         [800, 1100],   // aigu : plus de contraste
       ][subdivisionSoundPreset];
       const o  = ac.createOscillator(), g = ac.createGain();
-      o.connect(g); g.connect(ac.destination);
+      o.connect(g); g.connect(sortieAudible(ac));
       o.frequency.value = onBeat ? freqOn : freqOff;
       g.gain.setValueAtTime(onBeat ? 0.28 : 0.16, ac.currentTime);
       g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.06);
@@ -1025,7 +1026,7 @@ export default function RythmApp() {
       const ac = getCtx();
       const o  = ac.createOscillator(), g = ac.createGain();
       o.type = 'triangle';
-      o.connect(g); g.connect(ac.destination);
+      o.connect(g); g.connect(sortieAudible(ac));
       o.frequency.value = strong ? 440 : 330;
       g.gain.setValueAtTime(0.3 * volMult, ac.currentTime);
       g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.14);
@@ -1041,7 +1042,7 @@ export default function RythmApp() {
       const ac = getCtx();
       const o  = ac.createOscillator(), g = ac.createGain();
       o.type = 'triangle';
-      o.connect(g); g.connect(ac.destination);
+      o.connect(g); g.connect(sortieAudible(ac));
       o.frequency.value = 330;
       const t   = ac.currentTime;
       const dur = Math.max(0.1, durMs / 1000);
@@ -1086,13 +1087,13 @@ export default function RythmApp() {
         src.buffer = buf;
         const g = ac.createGain();
         g.gain.setValueAtTime(gain, ac.currentTime);
-        src.connect(g); g.connect(ac.destination);
+        src.connect(g); g.connect(sortieAudible(ac));
         src.start(ac.currentTime);
       } else {
         // Presets 1 & 2 : sinusoïde avec decay
         const o = ac.createOscillator(), g = ac.createGain();
         o.type = 'sine';
-        o.connect(g); g.connect(ac.destination);
+        o.connect(g); g.connect(sortieAudible(ac));
         o.frequency.value = freq;
         g.gain.setValueAtTime(gain, ac.currentTime);
         g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + durMs / 1000);
@@ -1473,7 +1474,7 @@ export default function RythmApp() {
       // Décompte réduit : beats 3 et 4 uniquement
       setPhase("countdown"); setCountdownN(3);
       pulseCountdown(false, pat.timeSig, beatMs, 3);
-      playStartRef.current = performance.now() + 2 * beatMs + totalMs + 3 * beatMs;
+      playStartRef.current = performance.now() + 2 * beatMs + totalMs + 4 * beatMs;
 
       tid(() => { setCountdownN(4); pulseCountdown(false, pat.timeSig, beatMs, 4); }, beatMs);
 
@@ -1495,10 +1496,13 @@ export default function RythmApp() {
         });
       }, 2 * beatMs);
 
-      // Après modèle : 1 beat muet, puis 3 & 4 sonores
+      // Après modèle : 1 temps de pause muet, puis décompte 2-3-4 (conserve la carrure à 4 temps).
+      // Le « 2 » est un temps plain comme 3 & 4 → beatNum 3 passé à pulseCountdown pour éviter
+      // toute décomposition ternaire du lead-in (le chiffre affiché reste « 2 » via setCountdownN).
       tid(() => { setPhase("countdown"); setCountdownN(null); setBeatFlash(false); }, 2 * beatMs + totalMs);
-      tid(() => { setCountdownN(3); pulseCountdown(false, pat.timeSig, beatMs, 3); }, 2 * beatMs + totalMs + beatMs);
-      tid(() => { setCountdownN(4); pulseCountdown(false, pat.timeSig, beatMs, 4); }, 2 * beatMs + totalMs + 2 * beatMs);
+      tid(() => { setCountdownN(2); pulseCountdown(false, pat.timeSig, beatMs, 3); }, 2 * beatMs + totalMs + beatMs);
+      tid(() => { setCountdownN(3); pulseCountdown(false, pat.timeSig, beatMs, 3); }, 2 * beatMs + totalMs + 2 * beatMs);
+      tid(() => { setCountdownN(4); pulseCountdown(false, pat.timeSig, beatMs, 4); }, 2 * beatMs + totalMs + 3 * beatMs);
 
       // Reproduction
       tid(() => {
@@ -1518,7 +1522,7 @@ export default function RythmApp() {
           setRevealed(true);
           setPhase("results");
         }, totalMs + beatMs * 0.6);
-      }, 2 * beatMs + totalMs + 3 * beatMs);
+      }, 2 * beatMs + totalMs + 4 * beatMs);
       return;
     }
 

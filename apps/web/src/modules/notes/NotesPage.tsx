@@ -26,7 +26,10 @@ import { classifyAttempt, updateMastery } from './mastery.ts'
 import { computeSessionSummary } from './summary.ts'
 import { flagsToBitmask } from './encode.ts'
 import { noteNameOf, degreeOfName, degreeOf, octaveOf, diatonic } from './diatonic.ts'
+import { isStringInstrument, stringPool } from './strings.ts'
+import { IS_DEV } from '../../isDev'
 import { mulberry32, type Rng } from './rng.ts'
+import { sortieAudible } from '../../lib/sortieAudible'
 import {
   aggregatePerNote, mergePerNote, mergeContext, contextKey, noteMasteryLevel,
   type PerNoteMap, type PerContextMap, type MasteryLevel,
@@ -61,26 +64,57 @@ function ambitusStepFor(profile: ReadingProfile, phase: Phase): number {
   return phase === 'P0' ? 0 : phase === 'P1' ? Math.min(1, last) : last
 }
 
+// Cordes sélectionnables uniquement en Dev (local + preview).
+function stringEnabled(id: string): boolean {
+  return IS_DEV && isStringInstrument(id)
+}
+
+// Niveaux de la progression cordes (Repères → Extension +1/+2/+3 → Fluidité).
+const STRING_LEVELS: { phase: Phase; step: number; label: string; desc: string }[] = [
+  { phase: 'P0', step: 0, label: 'Cordes à vide', desc: 'Les 4 cordes à vide, colorées par corde.' },
+  { phase: 'P1', step: 1, label: 'Cordes + 1 doigt', desc: 'Cordes à vide + 1er doigt.' },
+  { phase: 'P1', step: 2, label: 'Cordes + 2 doigts', desc: 'Jusqu’au 2e doigt.' },
+  { phase: 'P1', step: 3, label: 'Cordes + 3 doigts', desc: 'Jusqu’au 3e doigt.' },
+  { phase: 'P2', step: 3, label: 'Fluidité', desc: 'Lignes au curseur.' },
+]
+
 // ── Instrument « Personnalisé » (runtime, non listé dans INSTRUMENTS) ──────────
 const CUSTOM_ID = 'custom'
 const ALL_CLEFS: Clef[] = ['treble', 'bass', 'alto', 'tenor']
 
-interface CustomCfg { clefs: Clef[]; low: number; high: number }
+type ClefRange = { low: number; high: number }
+
+// Plages par défaut (index diatonique, octave FR : do3 = do central).
+// Calibration fournie : Sol G2→C5, Fa C1→E3, Ut3 C2→E4, Ut4 Fa1→C4.
+const DEFAULT_CLEF_RANGES: Record<Clef, ClefRange> = {
+  treble: { low: diatonic(2, 4), high: diatonic(5, 0) }, // sol2 → do5
+  bass:   { low: diatonic(1, 0), high: diatonic(3, 2) }, // do1 → mi3
+  alto:   { low: diatonic(2, 0), high: diatonic(4, 2) }, // do2 → mi4
+  tenor:  { low: diatonic(1, 3), high: diatonic(4, 0) }, // fa1 → do4
+}
+
+interface CustomCfg { clefs: Clef[]; ranges: Record<Clef, ClefRange> }
 
 function loadCustom(): CustomCfg {
   try {
     const raw = JSON.parse(localStorage.getItem('notes_custom') || '')
-    if (raw && Array.isArray(raw.clefs) && raw.clefs.length && typeof raw.low === 'number' && typeof raw.high === 'number') {
-      return { clefs: raw.clefs.filter((c: Clef) => ALL_CLEFS.includes(c)), low: raw.low, high: raw.high }
+    if (raw && Array.isArray(raw.clefs)) {
+      const clefs = raw.clefs.filter((c: Clef) => ALL_CLEFS.includes(c))
+      const ranges: Record<Clef, ClefRange> = { ...DEFAULT_CLEF_RANGES }
+      if (raw.ranges) for (const c of ALL_CLEFS) {
+        const r = raw.ranges[c]
+        if (r && typeof r.low === 'number' && typeof r.high === 'number') ranges[c] = { low: r.low, high: r.high }
+      }
+      if (clefs.length) return { clefs, ranges }
     }
   } catch { /* défaut ci-dessous */ }
-  return { clefs: ['treble'], low: diatonic(2, 0), high: diatonic(4, 0) } // do2..do4
+  return { clefs: ['treble'], ranges: { ...DEFAULT_CLEF_RANGES } }
 }
 
-// Profil de lecture synthétisé depuis la tessiture perso (spec : repères auto +
+// Profil de lecture synthétisé depuis une plage perso (spec : repères auto +
 // plage complète). P0 = grave/médium/aigu ; P1/P2 = toute la plage.
-function customProfile(clef: Clef, low: number, high: number): ReadingProfile {
-  const lo = Math.min(low, high), hi = Math.max(low, high)
+function customProfile(clef: Clef, range: ClefRange): ReadingProfile {
+  const lo = Math.min(range.low, range.high), hi = Math.max(range.low, range.high)
   const mid = Math.round((lo + hi) / 2)
   const landmarks = [...new Set([lo, mid, hi])]
   return { id: 'custom', clef, landmarks, ambitusSequence: [{ low: lo, high: hi }] }
@@ -93,6 +127,13 @@ function availableClefsFor(instrumentId: string, custom: CustomCfg): Clef[] {
 
 const MASTERY_COLOR: Record<MasteryLevel, string> = {
   strong: '#34d399', mid: '#fbbf24', weak: '#f87171', unknown: 'var(--surface-2)',
+}
+
+// Fréquence réelle d'une note écrite (diatonique, sans altération = Do majeur).
+const SEMITONE_OF_DEGREE = [0, 2, 4, 5, 7, 9, 11] // do,re,mi,fa,sol,la,si
+function freqOfDiatonic(idx: number): number {
+  const midi = 12 * (octaveOf(idx) + 2) + SEMITONE_OF_DEGREE[degreeOf(idx)] // do3(21) → 60
+  return 440 * Math.pow(2, (midi - 69) / 12)
 }
 
 function noteChipLabel(idx: number): string {
@@ -130,40 +171,29 @@ export default function NotesPage() {
   const [screen, setScreen] = useState<'setup' | 'play' | 'summary'>('setup')
 
   // Réglages de session — persistés entre sessions (instrument / niveau / son / couleur).
-  const [instrumentId, setInstrumentId] = useState(() => {
+  // « Personnalisé » (+ cordes en Dev) sélectionnable ; les autres restent grisés.
+  const [instrumentId, setInstrumentId] = useState<string>(() => {
     const v = LS.get('notes_instrument', '')
-    return getInstrument(v)?.beginnerFriendly ? v : beginnerInstruments()[0].id
+    return v === CUSTOM_ID || stringEnabled(v) ? v : CUSTOM_ID
   })
+  useEffect(() => { LS.set('notes_instrument', instrumentId) }, [instrumentId])
   const [phase, setPhase] = useState<Phase>(() => {
     const v = LS.get('notes_phase', 'P0')
     return (['P0', 'P1', 'P2'] as string[]).includes(v) ? (v as Phase) : 'P0'
   })
   const [customCfg, setCustomCfg] = useState<CustomCfg>(loadCustom)
-  const [clef, setClef] = useState<Clef>(() => {
-    const clefs = availableClefsFor(LS.get('notes_instrument', ''), loadCustom())
-    const v = LS.get('notes_clef', '') as Clef
-    return clefs.includes(v) ? v : clefs[0]
-  })
   const [coloriser, setColoriser] = useState(() => LS.get('notes_couleur', '0') === '1')
   const [sonOn, setSonOn] = useState(() => LS.get('notes_son', '1') === '1')
-  const [wheelMode, setWheelMode] = useState<WheelMode>(() => (LS.get('notes_wheelmode', 'drag') === 'fixed' ? 'fixed' : 'drag'))
+  const [wheelMode, setWheelMode] = useState<WheelMode>(() => (LS.get('notes_wheelmode', 'fixed') === 'drag' ? 'drag' : 'fixed'))
+  const [stringStep, setStringStep] = useState<number>(1) // sous-phase Extension cordes (1..3)
+  const [sessionClef, setSessionClef] = useState<Clef>('treble') // clef tirée au sort pour la session
   const [hoverName, setHoverName] = useState<NoteName | null>(null)
 
-  useEffect(() => { LS.set('notes_instrument', instrumentId) }, [instrumentId])
   useEffect(() => { LS.set('notes_phase', phase) }, [phase])
-  useEffect(() => { LS.set('notes_clef', clef) }, [clef])
   useEffect(() => { LS.set('notes_couleur', coloriser ? '1' : '0') }, [coloriser])
   useEffect(() => { LS.set('notes_son', sonOn ? '1' : '0') }, [sonOn])
   useEffect(() => { LS.set('notes_wheelmode', wheelMode) }, [wheelMode])
   useEffect(() => { LS.set('notes_custom', JSON.stringify(customCfg)) }, [customCfg])
-
-  // Réaligne la clef si la clef courante n'est plus disponible (changement
-  // d'instrument, ou modification des clefs du profil personnalisé).
-  useEffect(() => {
-    const clefs = availableClefsFor(instrumentId, customCfg)
-    if (!clefs.includes(clef)) setClef(clefs[0])
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [instrumentId, customCfg])
 
   // État de jeu
   const [sequence, setSequence] = useState<NoteItem[]>([])
@@ -208,37 +238,59 @@ export default function NotesPage() {
   }, [screen, phase])
 
   // Son de CONFIRMATION — jamais avant la réponse (§2). Court, désactivable.
-  function beep(freq: number) {
+  function playTone(freq: number, when = 0, dur = 0.22) {
     if (!sonOn) return
     try {
       const Ctx = window.AudioContext ?? (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
       const ac = audioRef.current ?? new Ctx()
       audioRef.current = ac
+      const t0 = ac.currentTime + when
       const o = ac.createOscillator(), g = ac.createGain()
       o.type = 'sine'; o.frequency.value = freq
-      o.connect(g); g.connect(ac.destination)
-      g.gain.setValueAtTime(0.0001, ac.currentTime)
-      g.gain.exponentialRampToValueAtTime(0.18, ac.currentTime + 0.01)
-      g.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + 0.18)
-      o.start(); o.stop(ac.currentTime + 0.2)
+      o.connect(g); g.connect(sortieAudible(ac))
+      g.gain.setValueAtTime(0.0001, t0)
+      g.gain.exponentialRampToValueAtTime(0.2, t0 + 0.01)
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur)
+      o.start(t0); o.stop(t0 + dur + 0.02)
     } catch { /* audio best-effort */ }
+  }
+  // Correct → la HAUTEUR réelle de la note écrite. Faux → double bip grave neutre.
+  function playFeedbackSound(correct: boolean, diatonicIndex: number) {
+    if (correct) playTone(freqOfDiatonic(diatonicIndex), 0, 0.34)
+    else { playTone(220, 0, 0.09); playTone(220, 0.12, 0.09) }
   }
 
   // ── Démarrage d'une session ────────────────────────────────────────────────────
   function start() {
-    const inst = getInstrument(instrumentId)
-    const profile = instrumentId === CUSTOM_ID
-      ? customProfile(clef, customCfg.low, customCfg.high)
-      : profileForClef(inst!.primaryProfile, clef) // clef sélectionnée
-    const lastStep = profile.ambitusSequence.length - 1
-    const step = phase === 'P0' ? 0 : phase === 'P1' ? Math.min(1, lastStep) : lastStep
-    const pool = buildPool(profile, phase, step)
-    const ambitus = phase === 'P0'
-      ? { low: Math.min(...profile.landmarks), high: Math.max(...profile.landmarks) }
-      : profile.ambitusSequence[resolveAmbitusStep(profile, phase, step)]
+    // La clef travaillée est TIRÉE AU SORT parmi les clefs à travailler.
+    const clefs = availableClefsFor(instrumentId, customCfg)
+    const clef = clefs[Math.floor(Math.random() * clefs.length)]
+    setSessionClef(clef)
+
+    let pool: NoteItem[]
+    let ambitus: { low: number; high: number } | undefined
+    if (stringEnabled(instrumentId)) {
+      // Progression cordes (Dev) : cordes à vide → +1/+2/+3 doigts → fluidité.
+      pool = stringPool(instrumentId, clef, phase, stringStep)
+    } else {
+      const inst = getInstrument(instrumentId)
+      const profile = instrumentId === CUSTOM_ID
+        ? customProfile(clef, customCfg.ranges[clef] ?? DEFAULT_CLEF_RANGES[clef])
+        : profileForClef(inst!.primaryProfile, clef)
+      const lastStep = profile.ambitusSequence.length - 1
+      const step = phase === 'P0' ? 0 : phase === 'P1' ? Math.min(1, lastStep) : lastStep
+      pool = buildPool(profile, phase, step)
+      ambitus = phase === 'P0'
+        ? { low: Math.min(...profile.landmarks), high: Math.max(...profile.landmarks) }
+        : profile.ambitusSequence[resolveAmbitusStep(profile, phase, step)]
+    }
+    if (!ambitus) {
+      const idxs = pool.map(p => p.diatonicIndex)
+      ambitus = { low: Math.min(...idxs), high: Math.max(...idxs) }
+    }
 
     const config: NotesSessionConfig = {
-      clef: profile.clef, phase, ambitus,
+      clef, phase, ambitus,
       coloriser, etayage: phase === 'P0' ? 'visible' : phase === 'P1' ? 'estompe' : 'masque',
       guessFloorMs: DEFAULT_CONFIG.guessFloorMs, sonConfirmation: sonOn,
       rtTargetMs: DEFAULT_CONFIG.rtTargetMs, slowCeilingMs: DEFAULT_CONFIG.slowCeilingMs,
@@ -314,7 +366,7 @@ export default function NotesPage() {
     masteryRef.current = updateMastery(masteryRef.current, attempt, turnRef.current++)
 
     setResults(prev => { const n = [...prev]; n[idx] = correct ? 'correct' : 'wrong'; return n })
-    beep(correct ? 660 : 196)          // APRÈS la réponse uniquement (§2)
+    playFeedbackSound(correct, current.diatonicIndex) // APRÈS la réponse uniquement (§2)
 
     // Correction non bloquante : la bonne réponse s'affiche brièvement au-dessus de
     // la portée, sans figer l'entrée ni la roue (on peut enchaîner).
@@ -341,8 +393,20 @@ export default function NotesPage() {
       }
       void endSession(config)
     } else {
+      // Repères/Extension : déroulement. On APPEND la note suivante (sélection
+      // adaptative), curseur centré ; le passé reste visible (défile hors cadre),
+      // aucune note future n'est affichée.
       if (done >= TARGET_ISOLATED) { void endSession(config); return }
-      loadNext(config, poolRef.current)
+      const item = selectNextItem(poolRef.current, masteryRef.current, rngRef.current, {
+        rtTargetMs: config.rtTargetMs, floorWeight: FLOOR_WEIGHT,
+        turn: turnRef.current, previousItemId: prevIdRef.current,
+      })
+      prevIdRef.current = item.id
+      seqRef.current = [...seqRef.current, item]
+      cursorRef.current = seqRef.current.length - 1
+      setSequence(seqRef.current)
+      setResults(prev => [...prev, null])
+      setCursorIndex(cursorRef.current)
     }
   }
 
@@ -382,8 +446,10 @@ export default function NotesPage() {
       })
     } catch (e) { console.warn('Notes commit', e) }
 
+    // Barème calé sur les autres modules : 1 session Notes = 1 « exercice » ≈ ¼ d'une
+    // série (10 questions ≈ 500 XP) → ~125 XP au max, pondéré par la réussite.
     const medal = s.accuracy >= 0.9 ? 'or' : s.accuracy >= 0.75 ? 'argent' : 'bronze'
-    const xpEarned = Math.max(5, Math.round(s.accuracy * s.itemCount * 3))
+    const xpEarned = Math.max(5, Math.round(125 * s.accuracy))
     try { await addSession({ module: 'notes', xpEarned, medal }) } catch { /* offline ok */ }
 
     // Notes travaillées cette session (dédoublonnées) pour la heatmap du bilan.
@@ -408,7 +474,7 @@ export default function NotesPage() {
           title="Lecture de notes"
           lines={[
             'Une note s’affiche sur la portée : donne son nom.',
-            'Pose le pouce en bas de l’écran, fais glisser vers le nom, relâche.',
+            'Appuie ou glisse vers le nom de la note.',
             'Pas de son avant ta réponse : c’est à toi de lire.',
           ]}
           warning={{ tone: 'sound', text: 'Un petit son confirme ta réponse (désactivable dans les réglages).' }}
@@ -431,9 +497,10 @@ export default function NotesPage() {
       {screen === 'setup' && (
         <SetupScreen
           instrumentId={instrumentId} setInstrumentId={setInstrumentId}
-          clef={clef} setClef={setClef} availableClefs={availableClefs}
+          availableClefs={availableClefs}
           customCfg={customCfg} setCustomCfg={setCustomCfg}
           phase={phase} setPhase={setPhase}
+          stringStep={stringStep} setStringStep={setStringStep}
           coloriser={coloriser} setColoriser={setColoriser}
           sonOn={sonOn} setSonOn={setSonOn}
           wheelMode={wheelMode} setWheelMode={setWheelMode}
@@ -468,12 +535,15 @@ export default function NotesPage() {
             <NotesStaff
               items={sequence} clef={configRef.current?.clef ?? 'treble'}
               cursorIndex={cursorIndex} results={results} coloriser={coloriser}
+              stringColorId={stringEnabled(instrumentId) ? instrumentId : undefined}
             />
           </div>
-          {/* Roue plein écran, au-dessus (sans cadre), toujours accessible. */}
+          {/* Roue plein écran, au-dessus (sans cadre), toujours accessible.
+              En mode fixe, le cadran est centré SOUS la portée (fixedTop). */}
           <div style={{ position: 'absolute', inset: 0, zIndex: 2 }}>
             <RadialWheel
               mode={wheelMode}
+              fixedTop={372}
               etayage={configRef.current?.etayage ?? 'visible'}
               onSelect={handleAnswer}
               onHover={setHoverName}
@@ -485,7 +555,7 @@ export default function NotesPage() {
 
       {screen === 'summary' && summary && (
         <SummaryScreen
-          summary={summary} phase={phase} clef={clef}
+          summary={summary} phase={phase} clef={sessionClef}
           perNote={summaryData?.perNote ?? {}} items={summaryData?.items ?? []}
           onReplay={() => { setScreen('setup') }}
           onHome={() => navigate('/')}
@@ -496,11 +566,12 @@ export default function NotesPage() {
 }
 
 // ── Écran de configuration ────────────────────────────────────────────────────
-function SetupScreen({ instrumentId, setInstrumentId, clef, setClef, availableClefs, customCfg, setCustomCfg, phase, setPhase, coloriser, setColoriser, sonOn, setSonOn, wheelMode, setWheelMode, perNote, perContext, onStart }: {
+function SetupScreen({ instrumentId, setInstrumentId, availableClefs, customCfg, setCustomCfg, phase, setPhase, stringStep, setStringStep, coloriser, setColoriser, sonOn, setSonOn, wheelMode, setWheelMode, perNote, perContext, onStart }: {
   instrumentId: string; setInstrumentId: (v: string) => void
-  clef: Clef; setClef: (c: Clef) => void; availableClefs: Clef[]
+  availableClefs: Clef[]
   customCfg: CustomCfg; setCustomCfg: (c: CustomCfg) => void
   phase: Phase; setPhase: (p: Phase) => void
+  stringStep: number; setStringStep: (s: number) => void
   coloriser: boolean; setColoriser: (v: boolean) => void
   sonOn: boolean; setSonOn: (v: boolean) => void
   wheelMode: WheelMode; setWheelMode: (m: WheelMode) => void
@@ -511,12 +582,17 @@ function SetupScreen({ instrumentId, setInstrumentId, clef, setClef, availableCl
   const card: React.CSSProperties = { background: 'var(--surface)', border: '1px solid var(--border-c)', borderRadius: 16, padding: 16 }
 
   const isCustom = instrumentId === CUSTOM_ID
+  const isStr = stringEnabled(instrumentId)
   const inst = getInstrument(instrumentId)
   const instLabel = isCustom ? 'Personnalisé' : (inst?.label ?? '')
-  const profile = isCustom
-    ? customProfile(clef, customCfg.low, customCfg.high)
-    : (inst ? profileForClef(inst.primaryProfile, clef) : null)
-  const heatItems = profile ? buildPool(profile, phase, ambitusStepFor(profile, phase)) : []
+  // Pool d'une clef pour la heatmap de progression (cordes / perso / instrument).
+  const poolForClef = (c: Clef): NoteItem[] => {
+    if (isStr) return stringPool(instrumentId, c, phase, stringStep)
+    const p = isCustom
+      ? customProfile(c, customCfg.ranges[c] ?? DEFAULT_CLEF_RANGES[c])
+      : (inst ? profileForClef(inst.primaryProfile, c) : null)
+    return p ? buildPool(p, phase, ambitusStepFor(p, phase)) : []
+  }
 
   return (
     <div className="flex flex-col px-4 pb-8" style={{ gap: 14 }}>
@@ -524,16 +600,22 @@ function SetupScreen({ instrumentId, setInstrumentId, clef, setClef, availableCl
         <div className={label} style={{ marginBottom: 8 }}>Instrument</div>
         <select value={instrumentId} onChange={e => setInstrumentId(e.target.value)}
           style={{ width: '100%', minHeight: 44, borderRadius: 10, padding: '0 12px', background: 'var(--surface-2)', color: 'var(--text)', border: '1px solid var(--border-c)' }}>
-          {beginnerInstruments().map(i => <option key={i.id} value={i.id}>{i.label}</option>)}
-          <option value={CUSTOM_ID}>Personnalisé…</option>
+          <option value={CUSTOM_ID}>Personnalisé</option>
+          {beginnerInstruments().map(i => {
+            const on = stringEnabled(i.id) // cordes activées en Dev seulement
+            return <option key={i.id} value={i.id} disabled={!on}>{i.label}{on ? ' (dev)' : ' (bientôt)'}</option>
+          })}
         </select>
+        <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 8 }}>
+          {IS_DEV ? 'Dev : cordes activées (cordes à vide → doigts).' : 'Seul le mode Personnalisé est disponible pour l’instant.'}
+        </div>
       </div>
 
-      {/* Config personnalisée : clefs à travailler + tessiture (plage partagée). */}
+      {/* Config personnalisée : clefs à travailler + une tessiture PAR clef. */}
       {isCustom && (
         <div style={card}>
           <div className={label} style={{ marginBottom: 8 }}>Clefs à travailler</div>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14 }}>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             {ALL_CLEFS.map(c => {
               const on = customCfg.clefs.includes(c)
               return (
@@ -552,46 +634,53 @@ function SetupScreen({ instrumentId, setInstrumentId, clef, setClef, availableCl
               )
             })}
           </div>
-          <div className={label} style={{ marginBottom: 8 }}>Tessiture</div>
-          <div style={{ display: 'flex', gap: 10 }}>
-            <BoundPicker label="Note grave" value={customCfg.low} onChange={v => setCustomCfg({ ...customCfg, low: v })} />
-            <BoundPicker label="Note aiguë" value={customCfg.high} onChange={v => setCustomCfg({ ...customCfg, high: v })} />
+          {/* Une ligne de tessiture par clef sélectionnée (étiquette clef en tête). */}
+          <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {customCfg.clefs.map(c => {
+              const r = customCfg.ranges[c] ?? DEFAULT_CLEF_RANGES[c]
+              const setRange = (patch: Partial<ClefRange>) =>
+                setCustomCfg({ ...customCfg, ranges: { ...customCfg.ranges, [c]: { ...r, ...patch } } })
+              return (
+                <div key={c} style={{ display: 'flex', alignItems: 'flex-end', gap: 10 }}>
+                  <div style={{ minWidth: 42, fontWeight: 800, color: '#c084fc', paddingBottom: 8 }}>{CLEF_LABELS[c]}</div>
+                  <BoundPicker label="Grave" value={r.low} onChange={v => setRange({ low: v })} />
+                  <BoundPicker label="Aiguë" value={r.high} onChange={v => setRange({ high: v })} />
+                </div>
+              )
+            })}
           </div>
         </div>
       )}
 
-      {/* Sélecteur de clef (clefs de l'instrument, ordre pédagogique). */}
       <div style={card}>
-        <div className={label} style={{ marginBottom: 8 }}>Clef</div>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          {availableClefs.map(c => (
-            <button key={c} onClick={() => setClef(c)}
-              style={{
-                flex: '1 1 auto', minWidth: 64, minHeight: 44, borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: 'pointer',
-                border: `1.5px solid ${clef === c ? '#c084fc' : 'var(--border-c)'}`,
-                background: clef === c ? 'rgba(192,132,252,0.15)' : 'var(--surface-2)',
-                color: clef === c ? '#c084fc' : 'var(--text)',
-              }}>
-              {CLEF_LABELS[c]}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div style={card}>
-        <div className={label} style={{ marginBottom: 8 }}>Phase</div>
+        <div className={label} style={{ marginBottom: 8 }}>Niveau</div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {(['P0', 'P1', 'P2'] as Phase[]).map(p => (
-            <button key={p} onClick={() => setPhase(p)}
-              style={{
-                textAlign: 'left', padding: '10px 12px', borderRadius: 12, cursor: 'pointer',
-                border: `1.5px solid ${phase === p ? '#c084fc' : 'var(--border-c)'}`,
-                background: phase === p ? 'rgba(192,132,252,0.15)' : 'var(--surface-2)',
-              }}>
-              <div style={{ fontWeight: 800, color: phase === p ? '#c084fc' : 'var(--text)' }}>{PHASE_LABEL[p]}</div>
-              <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{PHASE_DESC[p]}</div>
-            </button>
-          ))}
+          {isStr
+            ? STRING_LEVELS.map(lvl => {
+                const active = phase === lvl.phase && (lvl.phase !== 'P1' || stringStep === lvl.step)
+                return (
+                  <button key={lvl.label} onClick={() => { setPhase(lvl.phase); if (lvl.phase === 'P1') setStringStep(lvl.step) }}
+                    style={{
+                      textAlign: 'left', padding: '10px 12px', borderRadius: 12, cursor: 'pointer',
+                      border: `1.5px solid ${active ? '#c084fc' : 'var(--border-c)'}`,
+                      background: active ? 'rgba(192,132,252,0.15)' : 'var(--surface-2)',
+                    }}>
+                    <div style={{ fontWeight: 800, color: active ? '#c084fc' : 'var(--text)' }}>{lvl.label}</div>
+                    <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{lvl.desc}</div>
+                  </button>
+                )
+              })
+            : (['P0', 'P1', 'P2'] as Phase[]).map(p => (
+                <button key={p} onClick={() => setPhase(p)}
+                  style={{
+                    textAlign: 'left', padding: '10px 12px', borderRadius: 12, cursor: 'pointer',
+                    border: `1.5px solid ${phase === p ? '#c084fc' : 'var(--border-c)'}`,
+                    background: phase === p ? 'rgba(192,132,252,0.15)' : 'var(--surface-2)',
+                  }}>
+                  <div style={{ fontWeight: 800, color: phase === p ? '#c084fc' : 'var(--text)' }}>{PHASE_LABEL[p]}</div>
+                  <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{PHASE_DESC[p]}</div>
+                </button>
+              ))}
         </div>
       </div>
 
@@ -623,23 +712,32 @@ function SetupScreen({ instrumentId, setInstrumentId, clef, setClef, availableCl
         <ToggleChip on={coloriser} onClick={() => setColoriser(!coloriser)} label="Couleur des notes" />
       </div>
 
-      {/* Progression détaillée : par (instrument × clef × phase) + heatmap par note. */}
+      {/* Progression détaillée : par clef (× phase) + heatmap par note. */}
       <div style={card}>
-        <div className={label} style={{ marginBottom: 10 }}>Ta progression — {instLabel} · {CLEF_LABELS[clef]}</div>
-        <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-          {(['P0', 'P1', 'P2'] as Phase[]).map(p => {
-            const ctx = perContext[contextKey(instrumentId, clef, p)]
-            return (
-              <div key={p} style={{ flex: 1, textAlign: 'center', background: 'var(--surface-2)', borderRadius: 10, padding: '8px 4px' }}>
-                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 2 }}>{PHASE_LABEL[p]}</div>
-                <div style={{ fontSize: 18, fontWeight: 900, color: 'var(--text)' }}>{ctx ? `${Math.round(ctx.bestAccuracy * 100)}%` : '—'}</div>
-                <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>{ctx ? `${ctx.sessions} session${ctx.sessions > 1 ? 's' : ''}` : ''}</div>
+        <div className={label} style={{ marginBottom: 10 }}>Ta progression — {instLabel}</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {availableClefs.map(c => (
+            <div key={c}>
+              <div style={{ fontWeight: 800, color: 'var(--text)', marginBottom: 6 }}>Clef de {CLEF_LABELS[c]}</div>
+              <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+                {(['P0', 'P1', 'P2'] as Phase[]).map(p => {
+                  const ctx = perContext[contextKey(instrumentId, c, p)]
+                  return (
+                    <div key={p} style={{ flex: 1, textAlign: 'center', background: 'var(--surface-2)', borderRadius: 10, padding: '8px 4px' }}>
+                      <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 2 }}>{PHASE_LABEL[p]}</div>
+                      <div style={{ fontSize: 18, fontWeight: 900, color: 'var(--text)' }}>{ctx ? `${Math.round(ctx.bestAccuracy * 100)}%` : '—'}</div>
+                      <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>{ctx ? `${ctx.sessions} sess.` : ''}</div>
+                    </div>
+                  )
+                })}
               </div>
-            )
-          })}
+              <NoteHeatmap items={poolForClef(c)} perNote={perNote} />
+            </div>
+          ))}
         </div>
-        <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 6 }}>Notes de la phase {PHASE_LABEL[phase]} (vert = acquis, orange = fragile, rouge = à revoir) :</div>
-        <NoteHeatmap items={heatItems} perNote={perNote} />
+        <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 8 }}>
+          Vert = acquis, orange = fragile, rouge = à revoir · notes de la phase {PHASE_LABEL[phase]}.
+        </div>
       </div>
 
       <button onClick={onStart}

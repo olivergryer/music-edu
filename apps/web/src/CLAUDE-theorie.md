@@ -17,8 +17,18 @@
 ## Catégories & niveaux
 - 6 catégories UI (merged)
 - Niveaux difficulté (= cycle) : `C1/1 → C1/2 → ... → C3` (filtre contenu questions — **distinct du Rang XP** cross-module Apprenti…Maestro ; voir CLAUDE.md)
+
+### Filtre de niveaux — `allowedLevelsFor(mode, level, onlyCurrent)`
+| Mode | Case « Niveau actuel seulement » cochée | décochée |
+|---|---|---|
+| Entraînement | le niveau sélectionné **seul** | **tous** les niveaux de `C1/1` au sélectionné |
+| Code de la route musicale | tous les niveaux jusqu'au sélectionné (case ignorée) | idem |
+
+## Timer
+- **Aucune temporisation sur tout le cycle 1** — critère = **niveau sélectionné au setup** (`isCycle1(level)`), pas le niveau de la question. Une session C1/x est intégralement sans chrono ; dès C2/1 le chrono s'applique à toutes les questions, y compris celles de niveau C1 incluses dans le pool.
+- Porté par `session.noTimer`, posé dans `handleStart()` / `handleTutorialDone()`. `QuizScreen` masque `TimerBar` + le compteur et n'arme pas l'intervalle → `timedOut` reste `false`, donc toujours 1 pt.
 - Timer CSS natif via ref (pas state) pour ne pas re-render
-- Limites par défaut : 20s (QCM/VF/VexFlow), 30s (texte) — surpassable via `temps_limite` dans question
+- Limites par défaut : 20s (QCM/VF/VexFlow), 30s (texte) — surpassable via `temps_limite` dans question (ignoré au cycle 1)
 - Timer freeze au choix : `TimerBar` capte `revealed` prop → `getBoundingClientRect()` → freeze CSS
 
 ## Tutoriel intro
@@ -29,10 +39,17 @@
 - "Ignorer" → `onDone(null)` → retour écran home normal
 
 ## Sources de données
-- `public/data/questions-base.json` — 112 questions manuelles
-- Script `node scripts/generate-questions.js` (depuis `apps/web/`) → 255 générées → 367 total
+- `public/data/questions-base.json` — 111 questions manuelles
+- Script `node scripts/generate-questions.js` (depuis `apps/web/`) → 285 générées → 396 total
 - **Relancer le script si `questions-base.json` modifié**
 - Import CSV enseignant supporté
+
+## Questions Tonalités (generate-questions.js)
+Vocabulaire unifié : constante `A_LA_CLEF = "à l'armure / à la clef"` — les deux termes sont toujours enseignés ensemble, jamais l'un sans l'autre.
+- `generateArmureQuestions()` → « Que trouve-t-on à l'armure / à la clef en X majeur/mineur ? » (30 q, ids `TCL_<Md|Mb|md|mb>_<note>`). Réponse = `formatAlts()`, distracteurs = armures voisines (`altDistr3`).
+- Questions « which » (`TGM_*_which` / `TGm_*_which`) → « Quelle tonalité majeure/mineure a N dièses/bémols à l'armure / à la clef ? ». **Réponses suffixées du mode** (`Ré majeur`, pas `Ré`), distracteurs via `keyDistr3ByCount()` = mêmes mode, armures voisines. Cas 0 altération : « n'a aucune altération ».
+- Mineur = armure du relatif majeur (mineur naturel). `explication` auto via `armureExplication()`.
+- Niveaux via `altCountToLevel()` : 0→C1/1, 1→C1/4, 2→C2/1, 3→C2/3, 4→C2/4, 5+→C3.
 
 ## Questions VexFlow intervalles (generate-questions.js)
 - `IntervalleStaff.jsx` : snapshot SVG avant/après draw → paths portée (`#9ca3af`) vs notes/hampes (`#6b7280`)

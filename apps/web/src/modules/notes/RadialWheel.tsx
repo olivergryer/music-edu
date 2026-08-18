@@ -31,13 +31,15 @@ interface Props {
   onGestureStart?: () => void
   radiusPx?: number
   deadRadiusPx?: number
+  /** Mode fixe : y au-dessous duquel centrer le cadran (sous la portée). */
+  fixedTop?: number
 }
 
 const CAN_VIBRATE = typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function'
 
 export default function RadialWheel({
   mode = 'drag', etayage, onSelect, onHover, onGestureStart,
-  radiusPx = 118, deadRadiusPx = DEFAULT_DEAD_RADIUS_PX,
+  radiusPx = 118, deadRadiusPx = DEFAULT_DEAD_RADIUS_PX, fixedTop = 0,
 }: Props) {
   const bandRef = useRef<HTMLDivElement>(null)
   const originRef = useRef<{ x: number; y: number } | null>(null)  // point de contact (angle)
@@ -66,9 +68,11 @@ export default function RadialWheel({
   }
 
   // ── Mode FIXE : cadran permanent, clic simple ────────────────────────────────
+  // Centré dans l'espace SOUS la portée (fixedTop) pour ne pas la recouvrir.
+  const fixedZoneTop = Math.min(fixedTop, bandSize.h - 2 * (radiusPx + 8))
   const fixedCenter = {
     x: bandSize.w / 2,
-    y: Math.min(Math.max(bandSize.h * 0.58, radiusPx + 8), Math.max(radiusPx + 8, bandSize.h - radiusPx - 8)),
+    y: Math.min(Math.max((fixedZoneTop + bandSize.h) / 2, radiusPx + 8), Math.max(radiusPx + 8, bandSize.h - radiusPx - 8)),
   }
   const fixedSectorAt = (p: { x: number; y: number }): number | null => {
     const dx = p.x - fixedCenter.x, dy = p.y - fixedCenter.y
