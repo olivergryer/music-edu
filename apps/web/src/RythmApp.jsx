@@ -1226,6 +1226,9 @@ export default function RythmApp() {
   const loopingRef = useRef(false);   // pilote le tick audio en boucle
   const loopTidRef = useRef(null);    // timer de relance de la boucle
   const resultsScoredRef = useRef(false); // garde-fou : ne scorer/compter qu'une fois par exercice
+  // Act 2 : le rythme écrit est FLOUTÉ par défaut à la correction (et en boucle) pour permettre
+  // de rejouer sans l'avoir lu. « Afficher » le révèle définitivement pour l'exercice courant.
+  const [scoreRevealed, setScoreRevealed] = useState(false);
 
   // ── Helpers ────────────────────────────────────────────────────────────────
   const clearTids = () => { tidsRef.current.forEach(clearTimeout); tidsRef.current = []; };
@@ -1388,6 +1391,7 @@ export default function RythmApp() {
     loopingRef.current = false;
     if (loopTidRef.current) { clearTimeout(loopTidRef.current); loopTidRef.current = null; }
     resultsScoredRef.current = false; // nouvel exercice → autorise un scoring
+    setScoreRevealed(false);          // act 2 : re-flouter le rythme écrit à chaque exercice/Rejouer
     clearTids();
     audioTidsRef.current.forEach(clearTimeout); audioTidsRef.current = [];
     cancelAnimationFrame(rafRef.current);
@@ -2349,6 +2353,8 @@ export default function RythmApp() {
   const vexFigs    = pattern?.figs ?? [];
   const canStart   = phase === "idle" || phase === "results";
   const isPlaying  = phase === "playing";
+  // Act 2 : rythme écrit masqué (flou) à la correction et en boucle tant que non « Affiché ».
+  const act2ScoreHidden = activity === 2 && (phase === "results" || phase === "practice") && !scoreRevealed;
 
   const handleNext = () => {
     if (!canStart) return;
@@ -2656,28 +2662,40 @@ export default function RythmApp() {
                       </svg>
                     )}
                   </button>
-                  <RythmStaff
-                    figures={vexFigs}
-                    timeSig={pattern.timeSig}
-                    activeIdx={isPlaying ? activeIdx : -1}
-                    scoreGrades={phase==="results" ? gradeMap : undefined}
-                    scoreDevs={phase==="results" ? devMap : undefined}
-                    sessionBpm={sessionBpm}
-                    readUnit={readUnit} tieAcrossBeat={tieAcrossBeat}
-                  />
-                  {phase==="results" && scores.length > 0 && (
-                    <div style={{
-                      position:'absolute', top:6, left:'50%', transform:'translateX(-50%)',
-                      pointerEvents:'none',
-                    }}>
-                      {/* Légende de l'axe de décalage (sans tête de note ni trait vertical) */}
-                      <svg width="92" height="24" style={{ display:'block' }}>
-                        <line x1="8"  y1="9" x2="84" y2="9" stroke="#9ca3af" strokeOpacity="0.55" />
-                        <line x1="46" y1="5" x2="46" y2="13" stroke="#9ca3af" strokeOpacity="0.8" />
-                        <text x="2"  y="22" fontSize="9" textAnchor="start" style={{ fill:'var(--text-muted)' }}>avance</text>
-                        <text x="90" y="22" fontSize="9" textAnchor="end"   style={{ fill:'var(--text-muted)' }}>retard</text>
-                      </svg>
-                    </div>
+                  <div style={{ filter: act2ScoreHidden ? 'blur(7px)' : 'none', transition: 'filter 0.2s' }}>
+                    <RythmStaff
+                      figures={vexFigs}
+                      timeSig={pattern.timeSig}
+                      activeIdx={isPlaying ? activeIdx : -1}
+                      scoreGrades={phase==="results" ? gradeMap : undefined}
+                      scoreDevs={phase==="results" ? devMap : undefined}
+                      sessionBpm={sessionBpm}
+                      readUnit={readUnit} tieAcrossBeat={tieAcrossBeat}
+                    />
+                    {phase==="results" && scores.length > 0 && (
+                      <div style={{
+                        position:'absolute', top:6, left:'50%', transform:'translateX(-50%)',
+                        pointerEvents:'none',
+                      }}>
+                        {/* Légende de l'axe de décalage (sans tête de note ni trait vertical) */}
+                        <svg width="92" height="24" style={{ display:'block' }}>
+                          <line x1="8"  y1="9" x2="84" y2="9" stroke="#9ca3af" strokeOpacity="0.55" />
+                          <line x1="46" y1="5" x2="46" y2="13" stroke="#9ca3af" strokeOpacity="0.8" />
+                          <text x="2"  y="22" fontSize="9" textAnchor="start" style={{ fill:'var(--text-muted)' }}>avance</text>
+                          <text x="90" y="22" fontSize="9" textAnchor="end"   style={{ fill:'var(--text-muted)' }}>retard</text>
+                        </svg>
+                      </div>
+                    )}
+                  </div>
+                  {/* Act 2 : bouton révélant le rythme écrit flouté (une seule fois par exercice) */}
+                  {act2ScoreHidden && (
+                    <button
+                      onPointerDown={e => e.stopPropagation()}
+                      onPointerUp={e => e.stopPropagation()}
+                      onClick={() => setScoreRevealed(true)}
+                      className="absolute left-1/2 top-1/2 z-20 rounded-xl border-none px-4 py-2 text-[13px] font-bold cursor-pointer"
+                      style={{ transform: 'translate(-50%,-50%)', background: 'rgba(74,108,247,0.92)', color: '#fff', boxShadow: '0 4px 16px rgba(0,0,0,0.4)' }}
+                    >{RYTHME.jeu.afficher}</button>
                   )}
                 </div>
               ) : (

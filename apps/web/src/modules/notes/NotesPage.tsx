@@ -712,7 +712,9 @@ function SetupScreen({ instrumentId, setInstrumentId, availableClefs, customCfg,
         <ToggleChip on={coloriser} onClick={() => setColoriser(!coloriser)} label="Couleur des notes" />
       </div>
 
-      {/* Progression détaillée : par clef (× phase) + heatmap par note. */}
+      {/* Encart « Ta progression » DÉSACTIVÉ pour l'instant (peu pertinent / non
+          optimisé). Réactiver en repassant la condition `false` à `true`. */}
+      {false && (
       <div style={card}>
         <div className={label} style={{ marginBottom: 10 }}>Ta progression — {instLabel}</div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -739,6 +741,7 @@ function SetupScreen({ instrumentId, setInstrumentId, availableClefs, customCfg,
           Vert = acquis, orange = fragile, rouge = à revoir · notes de la phase {PHASE_LABEL[phase]}.
         </div>
       </div>
+      )}
 
       <button onClick={onStart}
         style={{ width: '100%', padding: '14px 0', borderRadius: 14, border: 'none', color: '#fff', fontSize: 15, fontWeight: 800, cursor: 'pointer', background: 'linear-gradient(135deg,#7c3aed,#c084fc)' }}>
@@ -811,7 +814,9 @@ function SummaryScreen({ summary, phase, clef, perNote, items, onReplay, onHome 
           </div>
         )}
       </div>
-      {items.length > 0 && (
+      {/* Heatmap du bilan DÉSACTIVÉE pour l'instant (peu pertinente à la correction).
+          Réactiver en repassant `false` à `true`. */}
+      {false && items.length > 0 && (
         <div style={{ background: 'var(--surface)', border: '1px solid var(--border-c)', borderRadius: 16, padding: 16 }}>
           <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>
             Maîtrise des notes travaillées

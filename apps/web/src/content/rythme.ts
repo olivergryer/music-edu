@@ -217,6 +217,7 @@ export const RYTHME = {
     micEcoute: '🎤 Écoute…',
     micInactif: '🎤 Micro inactif',
     tapePourContinuer: 'Tape pour continuer →',
+    afficher: '👁 Afficher le rythme',
     taps: 'taps',
     extremeActive: 'Mode Extrême Activé',
     extremeScore: 'Score ×2',
