@@ -17,10 +17,25 @@ import { ThemeToggleInline } from '../../ThemeContext'
 
 import { arreter, chargerInstrument, jouerSuite } from './audio.ts'
 import { realiserProgression } from './dispositions.ts'
-import { INTRO_DEFAUT, avecIntro, estIntro, type Intro } from './intro.ts'
+import {
+  INTRO_DEFAUT,
+  avecIntro,
+  estIntro,
+  evenementsAccord,
+  type FormeAccord,
+  type Intro,
+} from './intro.ts'
+import { useEcouteAccord } from './useEcouteAccord.ts'
 import ToggleIntro from './ToggleIntro.tsx'
 import BoutonDemiVitesse, { DEMI_VITESSE } from './BoutonDemiVitesse.tsx'
 import ToggleToutEnDo from './ToggleToutEnDo.tsx'
+import {
+  LIBELLES_MODE_SESSION,
+  MODES_SESSION,
+  estModeSession,
+  type ModeSession,
+} from './modeSession.ts'
+
 import { partitionDeProgression } from './notation.ts'
 import PorteeSATB, { type VuePortee } from './PorteeSATB.tsx'
 import TogglePortee, { estVuePortee } from './TogglePortee.tsx'
@@ -28,6 +43,7 @@ import RoueFigee from './RoueFigee.tsx'
 import { LETTRES, nomNote, nomTonalite, type Alteration, type NoteNommee } from './tonalites.ts'
 import { type SecteurRoue } from './roue.ts'
 import {
+  hauteursDesBasses,
   ITEMS_PAR_SESSION_DICTEE,
   NIVEAU_DICTEE,
   compterJustes,
@@ -65,7 +81,7 @@ export default function DicteeBassePage() {
   const mp = useModuleProgress('harmonie')
 
   const [ecran, setEcran] = useState<Ecran>('reglages')
-  const [mode, setMode] = useState<Mode>('majeur')
+  const [modeSession, setModeSession] = useState<ModeSession>('majeur')
   const [items, setItems] = useState<ItemDictee[]>([])
   const [rang, setRang] = useState(0)
   const [saisies, setSaisies] = useState<(NoteNommee | null)[]>([])
@@ -86,12 +102,12 @@ export default function DicteeBassePage() {
   useEffect(() => {
     if (!mp.loaded) return
     const p = mp.progress.payload as {
-      dicteeMode?: Mode
+      dicteeMode?: unknown
       porteeVue?: unknown
       introTonale?: unknown
       toutEnDo?: unknown
     }
-    if (p.dicteeMode) setMode(p.dicteeMode)
+    if (estModeSession(p.dicteeMode)) setModeSession(p.dicteeMode)
     if (estVuePortee(p.porteeVue)) setVuePortee(p.porteeVue)
     if (estIntro(p.introTonale)) setIntro(p.introTonale)
     if (typeof p.toutEnDo === 'boolean') setToutEnDo(p.toutEnDo)
@@ -100,6 +116,11 @@ export default function DicteeBassePage() {
   useEffect(() => () => arreter(), [])
 
   const item = items[rang]
+
+  // ⚠ `mode` est celui de l'ITEM, `modeSession` celui du réglage : en « les deux »
+  // ils diffèrent, et tout l'affichage doit suivre l'item.
+  const mode: Mode =
+    item ? item.progression.mode : modeSession === 'mineur' ? 'mineur' : 'majeur'
 
   // La tonique se pose en tête : `NIVEAUX[1].contexteTonal` vaut true. Sa forme
   // — arpégée ou rien — est le réglage `intro`, commun au module.
@@ -113,15 +134,20 @@ export default function DicteeBassePage() {
   const vuePorteeEffective: VuePortee =
     toutEnDo && vuePortee !== 'masquee' ? 'ut' : vuePortee
 
+  const realisationSonnee = useMemo(
+    () => (progressionSonnee ? realiserProgression(progressionSonnee) : []),
+    [progressionSonnee],
+  )
+
   const aJouer = useMemo(() => {
     if (!item || !progressionSonnee) return null
-    const suite = realiserProgression(progressionSonnee)
+    const suite = realisationSonnee
     const [tonique] = realiserProgression({
       ...progressionSonnee,
       accords: [creerAccord(0, { degre: 1 })],
     })
     return avecIntro(suite, tonique, intro)
-  }, [item, progressionSonnee, intro])
+  }, [item, progressionSonnee, realisationSonnee, intro])
 
   const ecouter = useCallback(async (facteurTempo = 1) => {
     if (!aJouer || aJouer.accords.length === 0) return
@@ -143,11 +169,44 @@ export default function DicteeBassePage() {
     }
   }, [aJouer])
 
+  // Écoute d'un accord isolé : appui = plaqué, glissé vers le haut = arpégé.
+  // ⚠ Entendre chaque accord séparément allège nettement la dictée — demandé
+  // explicitement, à revoir si ça gêne en classe.
+  const ecouterAccord = useCallback(
+    (index: number, forme: FormeAccord) => {
+      const hauteurs = realisationSonnee[index]
+      if (!hauteurs) return
+      const plan = evenementsAccord(hauteurs, forme)
+      void jouerSuite(plan.accords, { bpm: BPM, durees: plan.durees, tenues: plan.tenues })
+    },
+    [realisationSonnee],
+  )
+  const gesteEcoute = useEcouteAccord(ecouterAccord)
+
+  // ⚠ APRÈS LA RÉPONSE SEULEMENT. Entendre les deux lignes de basse — la sienne et
+  // la bonne — jouées à l'identique : c'est la comparaison qui instruit, pas la
+  // correction écrite seule. Les basses sonnent NUES (décidé avec Matthieu), sans
+  // les accords : c'est la ligne qu'on compare.
+  const referencesBasses = useMemo(
+    () => realisationSonnee.map((accord) => accord[0]),
+    [realisationSonnee],
+  )
+  const ecouterBasses = useCallback(
+    (lesquelles: 'saisies' | 'attendues') => {
+      if (!item) return
+      const notes = lesquelles === 'saisies' ? saisies : item.basses
+      const accords = hauteursDesBasses(notes, referencesBasses)
+      if (accords.length === 0) return
+      void jouerSuite(accords, { bpm: BPM })
+    },
+    [item, saisies, referencesBasses],
+  )
+
   function commencer() {
     setErreur(null)
     const graine = Math.floor(Math.random() * 1_000_000)
     try {
-      const session = construireSessionDictee(mode, graine)
+      const session = construireSessionDictee(modeSession, graine)
       reponsesRef.current = []
       sessionMsRef.current = performance.now()
       setItems(session)
@@ -156,7 +215,7 @@ export default function DicteeBassePage() {
       setCurseur(0)
       setValide(false)
       debutMsRef.current = null
-      mp.startSession({ activite: 'basse', mode, graine })
+      mp.startSession({ activite: 'basse', mode: modeSession, graine })
       setEcran('jeu')
       // Le clic sur « Commencer » est le geste utilisateur qui débloque l'audio.
       chargerInstrument('piano').catch(() => setErreur('Chargement du son impossible.'))
@@ -241,7 +300,7 @@ export default function DicteeBassePage() {
               lastAt: Date.now(),
             },
           },
-          payload: { dicteeMode: mode, porteeVue: vuePortee, introTonale: intro, toutEnDo },
+          payload: { dicteeMode: modeSession, porteeVue: vuePortee, introTonale: intro, toutEnDo },
         },
       })
     } catch (e) {
@@ -283,11 +342,11 @@ export default function DicteeBassePage() {
             Mode
           </h2>
           <div className="flex" style={{ gap: 6 }}>
-            {(['majeur', 'mineur'] as Mode[]).map((m) => (
+            {MODES_SESSION.map((m) => (
               <button
                 key={m}
-                onClick={() => setMode(m)}
-                className={m === mode ? '' : 'bg-surface-2 text-app border-app'}
+                onClick={() => setModeSession(m)}
+                className={m === modeSession ? '' : 'bg-surface-2 text-app border-app'}
                 style={{
                   borderWidth: 1,
                   borderStyle: 'solid',
@@ -295,12 +354,12 @@ export default function DicteeBassePage() {
                   padding: '10px 16px',
                   minHeight: 44,
                   fontSize: 14,
-                  ...(m === mode
+                  ...(m === modeSession
                     ? { background: ACCENT, borderColor: ACCENT, color: '#0d1026', fontWeight: 600 }
                     : {}),
                 }}
               >
-                {m}
+                {LIBELLES_MODE_SESSION[m]}
               </button>
             ))}
           </div>
@@ -466,8 +525,8 @@ export default function DicteeBassePage() {
           return (
             <button
               key={i}
+              {...gesteEcoute(i)}
               onClick={() => !valide && setCurseur(i)}
-              disabled={valide}
               className="bg-surface text-app"
               style={{
                 borderWidth: i === curseur && !valide ? 2 : 1,
@@ -537,6 +596,42 @@ export default function DicteeBassePage() {
             {erreurs.length === 0
               ? 'Toutes les basses sont justes'
               : `${erreurs.length} basse${erreurs.length > 1 ? 's' : ''} à revoir`}
+          </div>
+
+          {/* Les deux lignes en regard. La comparaison est le point : on entend
+              où sa propre basse s'écarte. */}
+          <div className="flex" style={{ gap: 8, marginTop: 12 }}>
+            <button
+              onClick={() => ecouterBasses('saisies')}
+              className="bg-surface-2 text-app border-app"
+              style={{
+                flex: 1,
+                borderWidth: 1,
+                borderStyle: 'solid',
+                borderRadius: 12,
+                padding: '12px 10px',
+                minHeight: 48,
+                fontSize: 14,
+              }}
+            >
+              ▶ Mes basses
+            </button>
+            <button
+              onClick={() => ecouterBasses('attendues')}
+              className="bg-surface-2 text-app border-app"
+              style={{
+                flex: 1,
+                borderWidth: 1,
+                borderStyle: 'solid',
+                borderRadius: 12,
+                padding: '12px 10px',
+                minHeight: 48,
+                fontSize: 14,
+                color: SUCCES,
+              }}
+            >
+              ▶ Les bonnes
+            </button>
           </div>
 
           {erreurs.map((e) => (

@@ -16,7 +16,8 @@
 // Matthieu) : l'exercice mesure l'audition de la basse, pas l'oreille absolue.
 
 import { genererProgression } from './generateur.ts'
-import { gammeNommee, memeNote, nomNote, type NoteNommee } from './tonalites.ts'
+import { modesDeSession, type ModeSession } from './modeSession.ts'
+import { classeDeHauteur, gammeNommee, memeNote, nomNote, type NoteNommee } from './tonalites.ts'
 import { type Accord, type Mode, type Progression } from './types.ts'
 
 export const NIVEAU_DICTEE = 1
@@ -79,12 +80,13 @@ export function construireItemDictee(mode: Mode, graine: number, rang: number): 
 }
 
 export function construireSessionDictee(
-  mode: Mode,
+  mode: ModeSession,
   graine: number,
   nombreItems: number = ITEMS_PAR_SESSION_DICTEE,
 ): ItemDictee[] {
+  const modes = modesDeSession(mode, nombreItems, graine)
   return Array.from({ length: nombreItems }, (_, rang) =>
-    construireItemDictee(mode, graine, rang),
+    construireItemDictee(modes[rang], graine, rang),
   )
 }
 
@@ -178,4 +180,43 @@ export function scorerDictee(reponses: readonly ReponseDictee[]): ResumeDictee {
     medianRtMs: Math.round(mediane(reponses.map((r) => r.rtMs))),
     precisionNotes: notes === 0 ? 0 : justes / notes,
   }
+}
+
+// ─── Entendre les basses saisies ─────────────────────────────────────────────
+//
+// À la correction, l'élève doit pouvoir COMPARER : sa ligne de basse et la bonne,
+// jouées de la même façon. Une `NoteNommee` n'a pas d'octave — il faut donc la
+// poser quelque part, et le seul endroit juste est le plus près possible de la
+// basse attendue : c'est l'écart d'INTERVALLE qu'on veut entendre, pas un saut
+// d'octave qui n'a pas eu lieu.
+
+/**
+ * La hauteur MIDI d'une note nommée, dans l'octave la plus proche de `reference`.
+ *
+ * ⚠ L'octave se déduit de la CLASSE DE HAUTEUR, pas de la lettre : si♯ et do
+ * sonnent la même touche, et c'est bien la touche qu'on joue ici.
+ */
+export function hauteurBasse(note: NoteNommee, reference: number): number {
+  const pc = classeDeHauteur(note)
+  // L'octave de la référence, puis on rapproche d'un octave si l'autre côté est
+  // plus près — l'écart obtenu ne dépasse jamais un demi-octave.
+  const base = Math.floor(reference / 12) * 12 + pc
+  const candidats = [base - 12, base, base + 12]
+  return candidats.reduce((a, b) =>
+    Math.abs(b - reference) < Math.abs(a - reference) ? b : a,
+  )
+}
+
+/**
+ * Les basses d'une session de dictée, prêtes à sonner : une note par accord.
+ * `saisies` accepte les cases vides — elles ne produisent alors aucun son plutôt
+ * qu'un silence de la durée d'un accord, qui laisserait croire à une note tenue.
+ */
+export function hauteursDesBasses(
+  notes: readonly (NoteNommee | null)[],
+  references: readonly number[],
+): number[][] {
+  return notes.flatMap((note, i) =>
+    note === null ? [] : [[hauteurBasse(note, references[i] ?? 48)]],
+  )
 }

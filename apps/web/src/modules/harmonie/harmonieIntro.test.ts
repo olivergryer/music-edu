@@ -7,6 +7,7 @@ import {
   TENUE_PLAQUE,
   avecIntro,
   estIntro,
+  evenementsAccord,
   evenementsIntro,
 } from './intro.ts'
 
@@ -116,4 +117,42 @@ test('les trois tableaux du plan ont la même longueur', () => {
 test('un accord de tonique à trois sons donne une intro plus courte, pas une erreur', () => {
   const plan = avecIntro(SUITE, [48, 55, 64], 'arpegee')
   assert.equal(plan.decalage, 5)
+})
+
+// ─── L'écoute d'un accord isolé ──────────────────────────────────────────────
+//
+// Le geste des cases de saisie (flux, dictée) : appui = plaqué, glissé vers le
+// haut = arpégé. Même vocabulaire musical que l'intro, d'où la réutilisation.
+
+test('plaqué : un seul événement, toutes les voix ensemble', () => {
+  const plan = evenementsAccord(TONIQUE, 'plaque')
+  assert.deepEqual(plan.accords, [TONIQUE])
+  assert.equal(plan.durees[0], TENUE_PLAQUE)
+  assert.equal(plan.decalage, 0)
+})
+
+test('arpégé : une voix par événement, du grave à l’aigu, notes tenues', () => {
+  const plan = evenementsAccord(TONIQUE, 'arpege')
+  assert.deepEqual(plan.accords, [[48], [55], [60], [64]])
+  for (const d of plan.durees) assert.equal(d, PAS_ARPEGE)
+  // Chaque note tient au moins jusqu'à la fin de l'arpège : c'est l'accord qui
+  // se construit, pas quatre notes détachées.
+  plan.tenues.forEach((tenue, i) => {
+    assert.ok(tenue >= (TONIQUE.length - 1 - i) * PAS_ARPEGE, `voix ${i}`)
+  })
+})
+
+test('l’écoute d’un accord n’ajoute NI silence NI décalage', () => {
+  // Ce n'est pas une mise en place : rien ne suit, il n'y a rien à décaler.
+  for (const forme of ['plaque', 'arpege'] as const) {
+    const plan = evenementsAccord(TONIQUE, forme)
+    assert.equal(plan.decalage, 0)
+    assert.ok(plan.accords.every((a) => a.length > 0), 'un accord vide s’est glissé')
+    assert.equal(plan.durees.length, plan.accords.length)
+    assert.equal(plan.tenues.length, plan.accords.length)
+  }
+})
+
+test('un accord sans hauteur ne produit aucun événement', () => {
+  assert.deepEqual(evenementsAccord([], 'arpege').accords, [])
 })

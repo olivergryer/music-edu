@@ -30,10 +30,25 @@ import { chiffrageplat, romainChiffre } from './chiffrage.ts'
 import { realiserProgression } from './dispositions.ts'
 import { CercleTierces, type EtatTrace, type VersionJouee } from './Glyphes.tsx'
 import { lireDrapeaux } from './glyphe.ts'
-import { INTRO_DEFAUT, avecIntro, estIntro, type Intro } from './intro.ts'
+import {
+  INTRO_DEFAUT,
+  avecIntro,
+  estIntro,
+  evenementsAccord,
+  type FormeAccord,
+  type Intro,
+} from './intro.ts'
+import { useEcouteAccord } from './useEcouteAccord.ts'
 import ToggleIntro from './ToggleIntro.tsx'
 import BoutonDemiVitesse, { DEMI_VITESSE } from './BoutonDemiVitesse.tsx'
 import ToggleToutEnDo from './ToggleToutEnDo.tsx'
+import {
+  LIBELLES_MODE_SESSION,
+  MODES_SESSION,
+  estModeSession,
+  type ModeSession,
+} from './modeSession.ts'
+
 import { niveauSpec } from './niveaux.ts'
 import { partitionDeProgression } from './notation.ts'
 import PorteeSATB, { type VuePortee } from './PorteeSATB.tsx'
@@ -99,7 +114,7 @@ export default function ChiffrageFluxPage() {
   const mp = useModuleProgress('harmonie')
 
   const [ecran, setEcran] = useState<Ecran>('reglages')
-  const [mode, setMode] = useState<Mode>('majeur')
+  const [modeSession, setModeSession] = useState<ModeSession>('majeur')
   const [niveau, setNiveau] = useState<number>(NIVEAU_MIN_FLUX)
   const [items, setItems] = useState<ItemFlux[]>([])
   const [rang, setRang] = useState(0)
@@ -125,13 +140,13 @@ export default function ChiffrageFluxPage() {
   useEffect(() => {
     if (!mp.loaded) return
     const p = mp.progress.payload as {
-      fluxMode?: Mode
+      fluxMode?: unknown
       fluxNiveau?: number
       porteeVue?: unknown
       introTonale?: unknown
       toutEnDo?: unknown
     }
-    if (p.fluxMode) setMode(p.fluxMode)
+    if (estModeSession(p.fluxMode)) setModeSession(p.fluxMode)
     if (typeof p.fluxNiveau === 'number' && NIVEAUX.includes(p.fluxNiveau)) setNiveau(p.fluxNiveau)
     // Réglages communs aux quatre activités du module.
     if (estVuePortee(p.porteeVue)) setVuePortee(p.porteeVue)
@@ -143,6 +158,11 @@ export default function ChiffrageFluxPage() {
 
   const item = items[rang]
   const spec = niveauSpec(niveau)
+
+  // ⚠ `mode` est celui de l'ITEM, `modeSession` celui du réglage. La ROUE en
+  // dépend : ses libellés de degrés (III vs iii, VII°) sont ceux du mode courant.
+  const mode: Mode =
+    item ? item.progression.mode : modeSession === 'mineur' ? 'mineur' : 'majeur'
 
   // Le chiffrage plat sert de CLÉ : c'est le libellé que la roue renvoie. Un test
   // (`harmonieFlux.test.ts`) épingle son unicité par degré — deux états au même
@@ -257,11 +277,24 @@ export default function ChiffrageFluxPage() {
     [realisationAttendue, realisationSaisie, planDe, valide],
   )
 
+  // Écoute d'un accord isolé : appui = plaqué, glissé vers le haut = arpégé.
+  // On entend la version qui a SONNÉ, jamais la saisie de l'élève.
+  const ecouterAccord = useCallback(
+    (index: number, forme: FormeAccord) => {
+      const hauteurs = realisationAttendue[index]
+      if (!hauteurs) return
+      const plan = evenementsAccord(hauteurs, forme)
+      void jouerSuite(plan.accords, { bpm: BPM, durees: plan.durees, tenues: plan.tenues })
+    },
+    [realisationAttendue],
+  )
+  const gesteEcoute = useEcouteAccord(ecouterAccord)
+
   function commencer() {
     setErreur(null)
     const graine = Math.floor(Math.random() * 1_000_000)
     try {
-      const session = construireSessionFlux(mode, niveau, graine)
+      const session = construireSessionFlux(modeSession, niveau, graine)
       reponsesRef.current = []
       sessionMsRef.current = performance.now()
       setItems(session)
@@ -272,7 +305,7 @@ export default function ChiffrageFluxPage() {
       setFocus(null)
       setTrace({ phase: 'statique' })
       debutMsRef.current = null
-      mp.startSession({ activite: 'flux', mode, niveau, graine })
+      mp.startSession({ activite: 'flux', mode: modeSession, niveau, graine })
       setEcran('jeu')
       chargerInstrument('piano').catch(() => setErreur('Chargement du son impossible.'))
     } catch (e) {
@@ -318,6 +351,8 @@ export default function ChiffrageFluxPage() {
       justes,
       total: item.progression.accords.length,
       rtMs,
+      // Le mode de CET item : l'indice de déduction lit une matrice par item.
+      mode,
     })
 
     // bits 0-3 accords justes · bits 4-7 total · bits 8-11 niveau
@@ -377,7 +412,7 @@ export default function ChiffrageFluxPage() {
             },
           },
           payload: {
-            fluxMode: mode,
+            fluxMode: modeSession,
             fluxNiveau: niveau,
             porteeVue: vuePortee,
             introTonale: intro,
@@ -446,19 +481,19 @@ export default function ChiffrageFluxPage() {
 
           <Bloc titre="Mode">
             <div className="flex" style={{ gap: 6 }}>
-              {(['majeur', 'mineur'] as Mode[]).map((m) => (
+              {MODES_SESSION.map((m) => (
                 <button
                   key={m}
-                  onClick={() => setMode(m)}
-                  className={m === mode ? '' : 'bg-surface-2 text-app border-app'}
+                  onClick={() => setModeSession(m)}
+                  className={m === modeSession ? '' : 'bg-surface-2 text-app border-app'}
                   style={{
                     ...segment,
-                    ...(m === mode
+                    ...(m === modeSession
                       ? { background: ACCENT, borderColor: ACCENT, color: '#0d1026', fontWeight: 600 }
                       : {}),
                   }}
                 >
-                  {m}
+                  {LIBELLES_MODE_SESSION[m]}
                 </button>
               ))}
             </div>
@@ -615,6 +650,10 @@ export default function ChiffrageFluxPage() {
           </div>
         )}
 
+        <div className="flex justify-end">
+          <ToggleToutEnDo actif={toutEnDo} onChange={setToutEnDo} />
+        </div>
+
         {/* Les cases. Avant validation elles portent le curseur ; après, elles
             choisissent l'accord dont le cercle montre l'écart. */}
         <div className="flex flex-wrap justify-center" style={{ gap: 8 }}>
@@ -627,6 +666,7 @@ export default function ChiffrageFluxPage() {
             return (
               <button
                 key={i}
+                {...gesteEcoute(i)}
                 onClick={() => {
                   if (!valide) {
                     setCurseur(i)
@@ -759,16 +799,20 @@ export default function ChiffrageFluxPage() {
             {/* La portée, sur la version qu'on écoute. Elle suit les mêmes boutons
                 que le cercle : deux lectures d'un même geste. */}
             <div style={{ marginTop: 14 }}>
-              <TogglePortee vue={vuePortee} onChange={setVuePortee} />
+              <TogglePortee
+                vue={vuePorteeEffective}
+                onChange={setVuePortee}
+                sansTonalite={toutEnDo}
+              />
             </div>
-            {vuePortee !== 'masquee' && (
+            {vuePorteeEffective !== 'masquee' && (
               <div style={{ marginTop: 10 }}>
                 <PorteeSATB
                   partition={partitionDeProgression(
                     versionJouee === CORRIGE
                       ? item.progression
                       : { ...item.progression, accords: saisies as Accord[] },
-                    vuePortee,
+                    vuePorteeEffective,
                   )}
                   indexCourant={trace.phase === 'lecture' ? trace.index : null}
                   fautes={resultats.filter((r) => !r.exact).map((r) => r.index)}

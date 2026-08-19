@@ -18,8 +18,9 @@
 
 import { genererProgression, longueursDisponibles } from './generateur.ts'
 import { niveauSpec } from './niveaux.ts'
+import { modesDeSession, type ModeSession } from './modeSession.ts'
 import { mulberry32 } from './rng.ts'
-import { type Accord, type Mode, type Progression } from './types.ts'
+import { creerAccord, type Accord, type Mode, type Progression } from './types.ts'
 
 export const NIVEAUX_BINAIRE: readonly number[] = [2, 4, 5]
 export const ITEMS_PAR_SESSION_BINAIRE = 10
@@ -202,16 +203,75 @@ export function reponsesEquilibrees(nombreItems: number, graine: number): Repons
 }
 
 export function construireSessionBinaire(
-  mode: Mode,
+  mode: ModeSession,
   niveau: number,
   graine: number,
   nombreItems: number = ITEMS_PAR_SESSION_BINAIRE,
 ): ItemBinaire[] {
   specBinaire(niveau) // rejette tout de suite un niveau qui n'est pas binaire
   const attendues = reponsesEquilibrees(nombreItems, graine)
+  const modes = modesDeSession(mode, nombreItems, graine)
   return attendues.map((attendue, rang) =>
-    construireItemBinaire(mode, niveau, graine, rang, attendue),
+    construireItemBinaire(modes[rang], niveau, graine, rang, attendue),
   )
+}
+
+// ─── Entendre la réponse choisie ─────────────────────────────────────────────
+//
+// À la correction, l'élève entend ce qu'il a RÉPONDU à la place de l'accord visé :
+// « voilà ce que tu as dit, voilà ce qui a sonné ». La comparaison se fait à
+// l'oreille, sur la même suite, à la même place.
+//
+// ⚠ Cet accord n'a PAS à respecter les contraintes dures : ce n'est pas un item
+// d'exercice, c'est une erreur rendue audible. La forcer à être grammaticale
+// reviendrait à ne pas jouer ce que l'élève a répondu.
+
+/**
+ * L'accord qui correspond à la réponse donnée, à la place de la cible.
+ *
+ * Rendu tel quel si la réponse est juste — la fonction n'a pas à savoir si elle
+ * l'est ; l'appelant, lui, n'affichera le bouton que sur une faute.
+ */
+export function accordDeLaReponse(item: ItemBinaire, reponse: Reponse): Accord {
+  const vise = item.progression.accords[item.cible]
+  const { type } = specBinaire(item.niveau)
+  // ⚠ Reconstruit par `creerAccord`, jamais par une simple copie étalée : l'`id`
+  // encode degré, renversement et septième. Un id qui ment survivrait en silence
+  // jusqu'à la prochaine clé React ou au prochain message d'erreur.
+  const commun = { duree: vise.duree, positionMetrique: vise.positionMetrique }
+
+  switch (type) {
+    // Dominante ou sous-dominante : c'est le DEGRÉ qui change, à état constant.
+    case 'fonction':
+      return creerAccord(item.cible, {
+        ...commun,
+        degre: reponse === 0 ? 5 : 4,
+        renversement: vise.renversement,
+        septieme: vise.septieme,
+      })
+
+    // Fondamental ou renversé : le 1er renversement est le renversé le plus
+    // simple à entendre, et le seul offert avant le niveau 6.
+    case 'renversement':
+      return creerAccord(item.cible, {
+        ...commun,
+        degre: vise.degre,
+        renversement: reponse === 0 ? 0 : 1,
+        septieme: vise.septieme,
+      })
+
+    // Avec ou sans septième : seule la cardinalité bouge. ⚠ Retirer la septième
+    // d'un 3ᵉ renversement donnerait un accord impossible — on retombe alors au
+    // fondamental, qui est ce que « sans septième » veut dire à l'oreille.
+    case 'septieme':
+      return creerAccord(item.cible, {
+        ...commun,
+        degre: vise.degre,
+        septieme: reponse === 1,
+        renversement:
+          reponse === 0 && vise.renversement === 3 ? 0 : vise.renversement,
+      })
+  }
 }
 
 // ─── Score ───────────────────────────────────────────────────────────────────

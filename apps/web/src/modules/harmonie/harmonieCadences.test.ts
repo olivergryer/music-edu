@@ -27,6 +27,7 @@ import {
   type Palier,
   type ReponseCadence,
   type TypeCadence,
+  itemDeLaReponse,
 } from './cadences.ts'
 import { TESSITURES } from './dispositions.ts'
 import { cleVex } from './notation.ts'
@@ -369,5 +370,47 @@ test('la vue « en Ut » n’a pas d’armure', () => {
     const item = construireItemCadence(mode, 'tout', 'nue', 'demi', 'allemande', 13, 0)
     const attendue = mode === 'majeur' ? 'C' : 'Am'
     assert.equal(partitionDeCadence(item, 'ut').armure, attendue)
+  }
+})
+
+// ─── Entendre la réponse choisie ─────────────────────────────────────────────
+//
+// ⚠ C'est un AUTRE exemple, pas la cadence entendue transformée : une parfaite ne
+// se change pas en rompue. Ce qui doit être conservé, c'est le CONTEXTE — mode et
+// tonalité — sans quoi la comparaison porterait sur deux variables à la fois.
+
+test('itemDeLaReponse garde le mode et la tonalité, change le type', () => {
+  const item = construireSessionCadences('majeur', 'niveau3', 'nue', 404)[0]
+  for (const type of typesDuPalier('niveau3')) {
+    const fabrique = itemDeLaReponse(item, 'niveau3', 'nue', type, 'aucune', 404)
+    assert.equal(fabrique.type, type)
+    assert.equal(fabrique.mode, item.mode)
+    assert.equal(fabrique.tonique, item.tonique)
+  }
+})
+
+test('itemDeLaReponse est déterministe', () => {
+  const item = construireSessionCadences('mineur', 'tout', 'phrase', 7)[0]
+  const a = itemDeLaReponse(item, 'tout', 'phrase', 'rompue', 'aucune', 7)
+  const b = itemDeLaReponse(item, 'tout', 'phrase', 'rompue', 'aucune', 7)
+  assert.deepEqual(a.membres, b.membres)
+})
+
+// ⚠ `COMBINAISONS` est un garde-fou : la plagale n'admet aucune approche
+// chromatique. Un couple impossible doit RETOMBER sur « aucune », pas lever au
+// milieu d'une correction.
+test('itemDeLaReponse retombe sur « aucune » quand le couple est impossible', () => {
+  const item = construireSessionCadences('mineur', 'tout', 'nue', 21)[0]
+  const fabrique = itemDeLaReponse(item, 'tout', 'nue', 'plagale', 'napolitaine', 21)
+  assert.equal(fabrique.type, 'plagale')
+  assert.equal(fabrique.approche, 'aucune')
+})
+
+test('l’exemple fabriqué est sonorisable', () => {
+  const item = construireSessionCadences('majeur', 'niveau3', 'phrase', 33)[0]
+  for (const type of typesDuPalier('niveau3')) {
+    const hauteurs = realiserCadence(itemDeLaReponse(item, 'niveau3', 'phrase', type, 'aucune', 33))
+    assert.ok(hauteurs.length > 0, type)
+    assert.ok(hauteurs.every((a) => a.length === 4), `${type} : accord incomplet`)
   }
 })

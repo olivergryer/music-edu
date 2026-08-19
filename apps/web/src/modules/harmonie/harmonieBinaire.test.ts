@@ -2,11 +2,13 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 
 import {
+  accordDeLaReponse,
   ITEMS_PAR_SESSION_BINAIRE,
   NIVEAUX_BINAIRE,
   ciblesPossibles,
   construireSessionBinaire,
   reponseAttendue,
+  type Reponse,
   reponsesEquilibrees,
   scorerBinaire,
   specBinaire,
@@ -192,4 +194,59 @@ test('scorerBinaire : cas limites', () => {
   assert.equal(r.score, 50)
   assert.equal(r.accuracy, 0.5)
   assert.equal(r.medianRtMs, 2000)
+})
+
+// ─── Entendre la réponse choisie ─────────────────────────────────────────────
+//
+// À la correction, l'élève entend ce qu'il a RÉPONDU à la place de l'accord visé.
+// L'accord fabriqué n'a pas à être grammatical — c'est une erreur rendue audible —
+// mais il doit être un accord VALIDE, sans quoi `disposition` ne saurait pas le
+// sonoriser.
+
+test('accordDeLaReponse : la réponse juste redonne l’accord visé', () => {
+  for (const niveau of NIVEAUX_BINAIRE) {
+    for (const item of construireSessionBinaire('majeur', niveau, 55)) {
+      const vise = item.progression.accords[item.cible]
+      const juste = accordDeLaReponse(item, item.reponse)
+      assert.equal(juste.degre, vise.degre, `niveau ${niveau} : degré`)
+      assert.equal(juste.renversement, vise.renversement, `niveau ${niveau} : renversement`)
+      assert.equal(juste.septieme, vise.septieme, `niveau ${niveau} : septième`)
+    }
+  }
+})
+
+test('accordDeLaReponse : la réponse fausse produit un AUTRE accord', () => {
+  for (const niveau of NIVEAUX_BINAIRE) {
+    for (const item of construireSessionBinaire('mineur', niveau, 61)) {
+      const fausse: Reponse = item.reponse === 0 ? 1 : 0
+      const accord = accordDeLaReponse(item, fausse)
+      const vise = item.progression.accords[item.cible]
+      assert.notDeepEqual(
+        [accord.degre, accord.renversement, accord.septieme],
+        [vise.degre, vise.renversement, vise.septieme],
+        `niveau ${niveau} : la réponse fausse sonnerait comme la juste`,
+      )
+    }
+  }
+})
+
+// ⚠ Le 3ᵉ renversement EXIGE la septième : « sans septième » doit retomber au
+// fondamental, sinon `assertAccord` lèverait en pleine correction.
+test('accordDeLaReponse : « sans septième » ne laisse jamais un 3ᵉ renversement', () => {
+  const item = construireSessionBinaire('majeur', 5, 77).find(
+    (i) => i.progression.accords[i.cible].septieme,
+  )
+  assert.ok(item, 'aucun item avec septième au niveau 5')
+  const accord = accordDeLaReponse(item, 0)
+  assert.equal(accord.septieme, false)
+  assert.notEqual(accord.renversement, 3)
+})
+
+test('accordDeLaReponse : l’id décrit bien l’accord rendu', () => {
+  // L'`id` encode degré, renversement et septième : une copie étalée le laisserait
+  // mentir, et le mensonge survivrait jusqu'à la prochaine clé React.
+  for (const item of construireSessionBinaire('majeur', 2, 88)) {
+    const accord = accordDeLaReponse(item, 1)
+    assert.match(accord.id, new RegExp(`${accord.degre}`))
+  }
 })

@@ -23,12 +23,20 @@ import { INTRO_DEFAUT, avecIntro, estIntro, type Intro } from './intro.ts'
 import ToggleIntro from './ToggleIntro.tsx'
 import BoutonDemiVitesse, { DEMI_VITESSE } from './BoutonDemiVitesse.tsx'
 import ToggleToutEnDo from './ToggleToutEnDo.tsx'
+import {
+  LIBELLES_MODE_SESSION,
+  MODES_SESSION,
+  estModeSession,
+  type ModeSession,
+} from './modeSession.ts'
+
 import { niveauSpec } from './niveaux.ts'
 import { partitionDeProgression } from './notation.ts'
 import PorteeSATB, { type VuePortee } from './PorteeSATB.tsx'
 import TogglePortee, { estVuePortee } from './TogglePortee.tsx'
 import { nomTonalite } from './tonalites.ts'
 import {
+  accordDeLaReponse,
   ITEMS_PAR_SESSION_BINAIRE,
   NIVEAUX_BINAIRE,
   construireSessionBinaire,
@@ -53,7 +61,7 @@ export default function ChoixBinairePage() {
   const mp = useModuleProgress('harmonie')
 
   const [ecran, setEcran] = useState<Ecran>('reglages')
-  const [mode, setMode] = useState<Mode>('majeur')
+  const [modeSession, setModeSession] = useState<ModeSession>('majeur')
   const [niveau, setNiveau] = useState<number>(NIVEAUX_BINAIRE[0])
   const [items, setItems] = useState<ItemBinaire[]>([])
   const [rang, setRang] = useState(0)
@@ -73,13 +81,13 @@ export default function ChoixBinairePage() {
   useEffect(() => {
     if (!mp.loaded) return
     const p = mp.progress.payload as {
-      binaireMode?: Mode
+      binaireMode?: unknown
       binaireNiveau?: number
       porteeVue?: unknown
       introTonale?: unknown
       toutEnDo?: unknown
     }
-    if (p.binaireMode) setMode(p.binaireMode)
+    if (estModeSession(p.binaireMode)) setModeSession(p.binaireMode)
     if (typeof p.binaireNiveau === 'number' && NIVEAUX_BINAIRE.includes(p.binaireNiveau)) {
       setNiveau(p.binaireNiveau)
     }
@@ -92,6 +100,10 @@ export default function ChoixBinairePage() {
 
   const item = items[rang]
   const spec = specBinaire(niveau)
+
+  // ⚠ `mode` est celui de l'ITEM, `modeSession` celui du réglage.
+  const mode: Mode =
+    item ? item.progression.mode : modeSession === 'mineur' ? 'mineur' : 'majeur'
 
   // Le plan de lecture : l'intro tonale, puis la suite. `avecIntro` porte la
   // forme de l'intro et le décalage qu'elle introduit.
@@ -134,18 +146,31 @@ export default function ChoixBinairePage() {
     }
   }, [aJouer])
 
+  // ⚠ APRÈS LA RÉPONSE SEULEMENT, et sur une faute seulement : la suite rejouée
+  // avec, à la place de l'accord visé, l'accord que l'élève a RÉPONDU. « Voilà ce
+  // que tu as dit, voilà ce qui a sonné » — la comparaison se fait d'oreille, à la
+  // même place, dans la même suite.
+  const ecouterMaReponse = useCallback(() => {
+    if (!item || !progressionSonnee || repondu === null) return
+    const accords = progressionSonnee.accords.slice()
+    accords[item.cible] = accordDeLaReponse(item, repondu)
+    const suite = realiserProgression({ ...progressionSonnee, accords })
+    const plan = avecIntro(suite, null, 'aucune')
+    void jouerSuite(plan.accords, { bpm: BPM, durees: plan.durees, tenues: plan.tenues })
+  }, [item, progressionSonnee, repondu])
+
   function commencer() {
     setErreur(null)
     const graine = Math.floor(Math.random() * 1_000_000)
     try {
-      const session = construireSessionBinaire(mode, niveau, graine)
+      const session = construireSessionBinaire(modeSession, niveau, graine)
       reponsesRef.current = []
       sessionMsRef.current = performance.now()
       setItems(session)
       setRang(0)
       setRepondu(null)
       debutMsRef.current = null
-      mp.startSession({ activite: 'binaire', mode, niveau, graine })
+      mp.startSession({ activite: 'binaire', mode: modeSession, niveau, graine })
       setEcran('jeu')
       chargerInstrument('piano').catch(() => setErreur('Chargement du son impossible.'))
     } catch (e) {
@@ -202,7 +227,7 @@ export default function ChoixBinairePage() {
             },
           },
           payload: {
-            binaireMode: mode,
+            binaireMode: modeSession,
             binaireNiveau: niveau,
             porteeVue: vuePortee,
             introTonale: intro,
@@ -266,19 +291,19 @@ export default function ChoixBinairePage() {
 
           <Bloc titre="Mode">
             <div className="flex" style={{ gap: 6 }}>
-              {(['majeur', 'mineur'] as Mode[]).map((m) => (
+              {MODES_SESSION.map((m) => (
                 <button
                   key={m}
-                  onClick={() => setMode(m)}
-                  className={m === mode ? '' : 'bg-surface-2 text-app border-app'}
+                  onClick={() => setModeSession(m)}
+                  className={m === modeSession ? '' : 'bg-surface-2 text-app border-app'}
                   style={{
                     ...segment,
-                    ...(m === mode
+                    ...(m === modeSession
                       ? { background: ACCENT, borderColor: ACCENT, color: '#0d1026', fontWeight: 600 }
                       : {}),
                   }}
                 >
-                  {m}
+                  {LIBELLES_MODE_SESSION[m]}
                 </button>
               ))}
             </div>
@@ -475,6 +500,25 @@ export default function ChoixBinairePage() {
             <div style={{ fontSize: 16, fontWeight: 600, color: juste ? SUCCES : ERREUR }}>
               {juste ? 'Juste' : `C’était « ${spec.options[item.reponse]} »`}
             </div>
+            {!juste && (
+              <button
+                onClick={ecouterMaReponse}
+                className="bg-surface-2 text-app border-app"
+                style={{
+                  width: '100%',
+                  borderWidth: 1,
+                  borderStyle: 'solid',
+                  borderRadius: 12,
+                  padding: '12px 10px',
+                  minHeight: 48,
+                  fontSize: 14,
+                  marginTop: 10,
+                }}
+              >
+                ▶ Entendre ta réponse
+              </button>
+            )}
+
             <div
               className="text-app-muted flex flex-wrap items-center"
               style={{ fontSize: 13, marginTop: 6, lineHeight: 1.5, gap: 5 }}

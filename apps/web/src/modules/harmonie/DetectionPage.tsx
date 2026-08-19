@@ -42,6 +42,7 @@ import { lireDrapeaux } from './glyphe.ts'
 import { INTRO_DEFAUT, avecIntro, estIntro, type Intro, type PlanLecture } from './intro.ts'
 import ToggleIntro from './ToggleIntro.tsx'
 import BoutonDemiVitesse, { DEMI_VITESSE } from './BoutonDemiVitesse.tsx'
+import ToggleToutEnDo from './ToggleToutEnDo.tsx'
 import { partitionDeProgression } from './notation.ts'
 import PorteeSATB, { type VuePortee } from './PorteeSATB.tsx'
 import TogglePortee, { estVuePortee } from './TogglePortee.tsx'
@@ -53,6 +54,12 @@ import {
   type EtatTrace,
   type VersionJouee,
 } from './Glyphes.tsx'
+import {
+  LIBELLES_MODE_SESSION,
+  MODES_SESSION,
+  estModeSession,
+  type ModeSession,
+} from './modeSession.ts'
 import { creerAccord, type Accord, type Mode, type Progression } from './types.ts'
 
 const ACCENT = '#c084fc'
@@ -79,7 +86,7 @@ export default function DetectionPage() {
   const [showConsigne, setShowConsigne] = useState(() => !consigneSeen('harmonie'))
   const [ecran, setEcran] = useState<Ecran>('reglages')
 
-  const [mode, setMode] = useState<Mode>('majeur')
+  const [modeSession, setModeSession] = useState<ModeSession>('majeur')
   const [niveau, setNiveau] = useState(4) // dans [NIVEAU_MIN_DETECTION, NIVEAU_MAX_DETECTION]
 
   const [items, setItems] = useState<ItemDetection[]>([])
@@ -94,6 +101,7 @@ export default function DetectionPage() {
   // Réglages communs aux quatre activités du module.
   const [vuePortee, setVuePortee] = useState<VuePortee>('masquee')
   const [intro, setIntro] = useState<Intro>(INTRO_DEFAUT)
+  const [toutEnDo, setToutEnDo] = useState(false)
 
   const reponsesRef = useRef<ReponseDetection[]>([])
   const grainesRef = useRef(1)
@@ -106,15 +114,17 @@ export default function DetectionPage() {
   useEffect(() => {
     if (!mp.loaded) return
     const p = mp.progress.payload as {
-      dernierMode?: Mode
+      dernierMode?: unknown
       dernierNiveau?: number
       porteeVue?: unknown
       introTonale?: unknown
+      toutEnDo?: unknown
     }
-    if (p.dernierMode) setMode(p.dernierMode)
+    if (estModeSession(p.dernierMode)) setModeSession(p.dernierMode)
     if (typeof p.dernierNiveau === 'number') setNiveau(p.dernierNiveau)
     if (estVuePortee(p.porteeVue)) setVuePortee(p.porteeVue)
     if (estIntro(p.introTonale)) setIntro(p.introTonale)
+    if (typeof p.toutEnDo === 'boolean') setToutEnDo(p.toutEnDo)
   }, [mp.loaded, mp.progress.payload])
 
   useEffect(() => () => arreter(), [])
@@ -122,13 +132,28 @@ export default function DetectionPage() {
   const item = items[rang]
   const spec = niveauSpec(niveau)
 
+  // ⚠ `mode` est celui de l'ITEM courant, `modeSession` celui du RÉGLAGE. En
+  // session « les deux » ils diffèrent : tout ce qui s'affiche (chiffrage, roue,
+  // cercle, tonalité) doit suivre l'item, jamais le réglage.
+  const mode: Mode = item ? item.progression.mode : modeSession === 'mineur' ? 'mineur' : 'majeur'
+
   // La tonalité change à chaque item : sans cela, tout se jouerait en do et
   // l'élève pourrait s'appuyer sur une mémoire de hauteurs absolues au lieu
   // d'entendre des fonctions. TODO Matthieu — à confirmer en classe.
+  // ⚠ « Tout en do » écrase cette rotation : c'est précisément son objet — offrir
+  // un repère fixe à l'oreille, au prix de ce que la rotation protège.
   const progressionEcrite = useMemo<Progression | null>(
-    () => (item ? { ...item.progression, tonique: (grainesRef.current + rang * 7) % 12 } : null),
-    [item, rang],
+    () =>
+      item
+        ? {
+            ...item.progression,
+            tonique: toutEnDo ? 0 : (grainesRef.current + rang * 7) % 12,
+          }
+        : null,
+    [item, rang, toutEnDo],
   )
+
+  const vuePorteeEffective: VuePortee = toutEnDo && vuePortee !== 'masquee' ? 'ut' : vuePortee
 
   const realisationEcrite = useMemo(
     () => (progressionEcrite ? realiserProgression(progressionEcrite) : []),
@@ -215,7 +240,7 @@ export default function DetectionPage() {
     const graine = Math.floor(Math.random() * 1_000_000)
     grainesRef.current = graine
     try {
-      const session = construireSession(mode, niveau, graine)
+      const session = construireSession(modeSession, niveau, graine)
       reponsesRef.current = []
       sessionMsRef.current = performance.now()
       setItems(session)
@@ -224,7 +249,7 @@ export default function DetectionPage() {
       setTrace({ phase: 'statique' })
       debutMsRef.current = null
       affichageMsRef.current = performance.now()
-      mp.startSession({ mode, niveau, graine })
+      mp.startSession({ mode: modeSession, niveau, graine })
       setEcran('jeu')
       // Le clic sur « Commencer » est le geste utilisateur qui débloque l'audio.
       chargerInstrument('piano').catch(() => setErreur('Chargement du son impossible.'))
@@ -299,10 +324,11 @@ export default function DetectionPage() {
             },
           },
           payload: {
-            dernierMode: mode,
+            dernierMode: modeSession,
             dernierNiveau: niveau,
             porteeVue: vuePortee,
             introTonale: intro,
+            toutEnDo,
           },
         },
       })
@@ -392,10 +418,10 @@ export default function DetectionPage() {
 
       {ecran === 'reglages' && (
         <EcranReglages
-          mode={mode}
+          mode={modeSession}
           niveau={niveau}
           intro={intro}
-          onMode={setMode}
+          onMode={setModeSession}
           onNiveau={setNiveau}
           onIntro={setIntro}
           onCommencer={commencer}
@@ -418,8 +444,10 @@ export default function DetectionPage() {
           onEcouterEcrit={ecouterEcrit}
           onRepondre={repondre}
           onSuivant={suivant}
-          vuePortee={vuePortee}
+          vuePortee={vuePorteeEffective}
           onVuePortee={setVuePortee}
+          toutEnDo={toutEnDo}
+          onToutEnDo={setToutEnDo}
         />
       )}
 
@@ -445,10 +473,10 @@ function EcranReglages({
   onIntro,
   onCommencer,
 }: {
-  mode: Mode
+  mode: ModeSession
   niveau: number
   intro: Intro
-  onMode: (m: Mode) => void
+  onMode: (m: ModeSession) => void
   onNiveau: (n: number) => void
   onIntro: (i: Intro) => void
   onCommencer: () => void
@@ -468,12 +496,9 @@ function EcranReglages({
 
       <Bloc titre="Mode">
         <Segments
-          options={[
-            { valeur: 'majeur', label: 'Majeur' },
-            { valeur: 'mineur', label: 'Mineur' },
-          ]}
+          options={MODES_SESSION.map((m) => ({ valeur: m, label: LIBELLES_MODE_SESSION[m] }))}
           actif={mode}
-          onChange={(v) => onMode(v as Mode)}
+          onChange={(v) => onMode(v as ModeSession)}
         />
       </Bloc>
 
@@ -531,6 +556,8 @@ function EcranJeu({
   onSuivant,
   vuePortee,
   onVuePortee,
+  toutEnDo,
+  onToutEnDo,
 }: {
   item: ItemDetection
   /** La progression RÉELLEMENT sonnée : sa tonique change à chaque item. */
@@ -549,6 +576,8 @@ function EcranJeu({
   onSuivant: () => void
   vuePortee: VuePortee
   onVuePortee: (v: VuePortee) => void
+  toutEnDo: boolean
+  onToutEnDo: (v: boolean) => void
 }) {
   const aRepondu = repondu !== null
   const juste = repondu === item.indexPerturbe
@@ -665,6 +694,10 @@ function EcranJeu({
           {!aRepondu && <BoutonDemiVitesse onClick={onEcouterLentement} disabled={enLecture} />}
         </div>
 
+        <div className="flex justify-end">
+          <ToggleToutEnDo actif={toutEnDo} onChange={onToutEnDo} />
+        </div>
+
         {/* ▶ A n'existe QU'APRÈS la réponse — cf. en-tête du fichier. */}
         {aRepondu && (
           <button
@@ -744,7 +777,7 @@ function EcranJeu({
               corrigé. */}
           {progressionEcrite && (
             <div style={{ marginTop: 14 }}>
-              <TogglePortee vue={vuePortee} onChange={onVuePortee} />
+              <TogglePortee vue={vuePortee} onChange={onVuePortee} sansTonalite={toutEnDo} />
               {vuePortee !== 'masquee' && (
                 <div style={{ marginTop: 10 }}>
                   <PorteeSATB

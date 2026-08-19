@@ -19,6 +19,7 @@
 
 import { perturbationsPossibles, perturber } from './perturbation.ts'
 import { genererProgression, longueursDisponibles } from './generateur.ts'
+import { modesDeSession, type ModeSession } from './modeSession.ts'
 import { niveauSpec } from './niveaux.ts'
 import { vecteurErreur } from './metrique.ts'
 import {
@@ -177,7 +178,7 @@ export function construireItem(
 }
 
 export function construireSession(
-  mode: Mode,
+  mode: ModeSession,
   niveau: number,
   graine: number,
   nombreItems: number = ITEMS_PAR_SESSION,
@@ -188,8 +189,11 @@ export function construireSession(
         `(${NIVEAU_MIN_DETECTION} à ${NIVEAU_MAX_DETECTION})`,
     )
   }
+  // Le mode est une propriété de l'ITEM : en « les deux », il change d'un item à
+  // l'autre. Un `Mode` simple redonne exactement le comportement d'avant.
+  const modes = modesDeSession(mode, nombreItems, graine)
   return Array.from({ length: nombreItems }, (_, rang) =>
-    construireItem(mode, niveau, graine, rang, nombreItems),
+    construireItem(modes[rang], niveau, graine, rang, nombreItems),
   )
 }
 

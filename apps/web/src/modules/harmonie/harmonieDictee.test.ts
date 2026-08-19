@@ -9,10 +9,13 @@ import {
   compterJustes,
   construireSessionDictee,
   evaluerBasseNommee,
+  hauteurBasse,
+  hauteursDesBasses,
   scorerDictee,
   type ReponseDictee,
 } from './dictee.ts'
-import { gammeNommee, nomNote, type NoteNommee } from './tonalites.ts'
+import { realiserProgression } from './dispositions.ts'
+import { LETTRES, gammeNommee, nomNote, type NoteNommee } from './tonalites.ts'
 import { niveauSpec } from './niveaux.ts'
 import { creerAccord, type Mode } from './types.ts'
 
@@ -161,4 +164,50 @@ test('scorerDictee : session vide', () => {
     medianRtMs: 0,
     precisionNotes: 0,
   })
+})
+
+// ─── Entendre les basses saisies ─────────────────────────────────────────────
+//
+// Une `NoteNommee` n'a pas d'octave : il faut la poser quelque part, et le seul
+// endroit juste est au plus près de la basse attendue — c'est l'écart
+// d'INTERVALLE qu'on veut entendre, pas un saut d'octave qui n'a pas eu lieu.
+
+test('hauteurBasse pose la note dans l’octave la plus proche', () => {
+  // do3 = 48. Un ré se place au-dessus (50), un si en dessous (47).
+  assert.equal(hauteurBasse({ lettre: 'do', alteration: 0 }, 48), 48)
+  assert.equal(hauteurBasse({ lettre: 're', alteration: 0 }, 48), 50)
+  assert.equal(hauteurBasse({ lettre: 'si', alteration: 0 }, 48), 47)
+  // Jamais plus d'un demi-octave d'écart, quelle que soit la note.
+  for (const lettre of LETTRES) {
+    const h = hauteurBasse({ lettre, alteration: 0 }, 55)
+    assert.ok(Math.abs(h - 55) <= 6, `${lettre} : ${h} contre 55`)
+  }
+})
+
+// ⚠ L'octave se déduit de la CLASSE DE HAUTEUR, pas de la lettre : si♯ et do
+// sonnent la même touche, et c'est la touche qu'on joue.
+test('hauteurBasse : si♯ sonne comme un do, pas comme un si', () => {
+  assert.equal(
+    hauteurBasse({ lettre: 'si', alteration: 1 }, 48),
+    hauteurBasse({ lettre: 'do', alteration: 0 }, 48),
+  )
+})
+
+test('hauteursDesBasses saute les cases vides plutôt que d’y mettre un silence', () => {
+  const notes = [{ lettre: 'do' as const, alteration: 0 as const }, null, { lettre: 'sol' as const, alteration: 0 as const }]
+  const hauteurs = hauteursDesBasses(notes, [48, 50, 55])
+  assert.equal(hauteurs.length, 2)
+  // Un accord = une note : ce sont des basses nues, pas des accords.
+  assert.ok(hauteurs.every((a) => a.length === 1))
+})
+
+test('les basses attendues d’un item sont jouables telles quelles', () => {
+  const item = construireSessionDictee('mineur', 13)[0]
+  const references = realiserProgression(item.progression).map((a) => a[0])
+  const hauteurs = hauteursDesBasses(item.basses, references)
+
+  assert.equal(hauteurs.length, item.basses.length)
+  // Et elles retombent sur les basses réellement sonnées : la ligne « bonnes
+  // basses » doit être celle de l'exercice, pas une approximation.
+  hauteurs.forEach(([h], i) => assert.equal(h, references[i]))
 })

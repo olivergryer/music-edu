@@ -32,6 +32,12 @@ import TogglePortee, { estVuePortee } from './TogglePortee.tsx'
 import BoutonDemiVitesse, { DEMI_VITESSE } from './BoutonDemiVitesse.tsx'
 import ToggleToutEnDo from './ToggleToutEnDo.tsx'
 import {
+  LIBELLES_MODE_SESSION,
+  MODES_SESSION,
+  estModeSession,
+  type ModeSession,
+} from './modeSession.ts'
+import {
   APPROCHES,
   ITEMS_PAR_SESSION_CADENCES,
   LIBELLES_APPROCHE,
@@ -40,6 +46,7 @@ import {
   construireSessionCadences,
   partitionDeCadence,
   questionApproche,
+  itemDeLaReponse,
   realiserCadence,
   scorerCadences,
   typesDuPalier,
@@ -79,7 +86,7 @@ export default function CadencesPage() {
   const [palier, setPalier] = useState<Palier>('niveau3')
   // Le mineur est le cadre idiomatique des accords chromatiques ; c'est donc lui
   // que l'écran propose d'abord dès que le palier les contient.
-  const [mode, setMode] = useState<Mode>('majeur')
+  const [modeSession, setModeSession] = useState<ModeSession>('majeur')
   const [contexte, setContexte] = useState<Contexte>('phrase')
 
   const [items, setItems] = useState<ItemCadence[]>([])
@@ -91,6 +98,9 @@ export default function CadencesPage() {
   const [erreur, setErreur] = useState<string | null>(null)
   const [vuePortee, setVuePortee] = useState<VuePortee>('masquee')
   const [toutEnDo, setToutEnDo] = useState(false)
+  // La graine de la session : `itemDeLaReponse` la réemploie, donc l'exemple
+  // fabriqué est le même à chaque écoute.
+  const graineRef = useRef(1)
 
   const reponsesRef = useRef<ReponseCadence[]>([])
   const debutMsRef = useRef<number | null>(null)
@@ -100,13 +110,13 @@ export default function CadencesPage() {
   useEffect(() => {
     if (!mp.loaded) return
     const p = mp.progress.payload as {
-      cadenceMode?: Mode
+      cadenceMode?: unknown
       cadencePalier?: Palier
       cadenceContexte?: Contexte
       porteeVue?: unknown
       toutEnDo?: unknown
     }
-    if (p.cadenceMode) setMode(p.cadenceMode)
+    if (estModeSession(p.cadenceMode)) setModeSession(p.cadenceMode)
     if (p.cadencePalier) setPalier(p.cadencePalier)
     if (p.cadenceContexte) setContexte(p.cadenceContexte)
     if (estVuePortee(p.porteeVue)) setVuePortee(p.porteeVue)
@@ -150,11 +160,29 @@ export default function CadencesPage() {
     }
   }, [hauteurs])
 
+  // ⚠ APRÈS LA RÉPONSE SEULEMENT. Un exemple de la cadence RÉPONDUE, dans la même
+  // tonalité et le même mode : c'est la seule façon d'entendre une confusion entre
+  // deux types de cadence. Ce sera un AUTRE exemple — une parfaite ne se change
+  // pas en rompue, ce sont deux fins différentes.
+  const ecouterMaReponse = useCallback(() => {
+    if (!itemSonne || typeRepondu === null) return
+    const fabrique = itemDeLaReponse(
+      itemSonne,
+      palier,
+      contexte,
+      typeRepondu,
+      approcheRepondue ?? 'aucune',
+      graineRef.current,
+    )
+    void jouerSuite(realiserCadence(fabrique), { bpm: BPM })
+  }, [itemSonne, palier, contexte, typeRepondu, approcheRepondue])
+
   function commencer() {
     setErreur(null)
     const graine = Math.floor(Math.random() * 1_000_000)
+    graineRef.current = graine
     try {
-      const session = construireSessionCadences(mode, palier, contexte, graine)
+      const session = construireSessionCadences(modeSession, palier, contexte, graine)
       reponsesRef.current = []
       sessionMsRef.current = performance.now()
       setItems(session)
@@ -163,7 +191,7 @@ export default function CadencesPage() {
       setApprocheRepondue(null)
       setIndexCourant(null)
       debutMsRef.current = null
-      mp.startSession({ activite: 'cadences', mode, palier, contexte, graine })
+      mp.startSession({ activite: 'cadences', mode: modeSession, palier, contexte, graine })
       setEcran('jeu')
       chargerInstrument('piano').catch(() => setErreur('Chargement du son impossible.'))
     } catch (e) {
@@ -258,7 +286,7 @@ export default function CadencesPage() {
             },
           },
           payload: {
-            cadenceMode: mode,
+            cadenceMode: modeSession,
             cadencePalier: palier,
             cadenceContexte: contexte,
             porteeVue: vuePortee,
@@ -308,7 +336,7 @@ export default function CadencesPage() {
                     setPalier(p)
                     // Le chromatisme s'entend d'abord en mineur : c'est là qu'il
                     // est idiomatique. L'élève peut toujours repasser en majeur.
-                    if (p === 'tout') setMode('mineur')
+                    if (p === 'tout') setModeSession('mineur')
                   }}
                 >
                   {LIBELLES_PALIER[p]}
@@ -324,9 +352,9 @@ export default function CadencesPage() {
 
           <Bloc titre="Mode">
             <div className="flex" style={{ gap: 6 }}>
-              {(['majeur', 'mineur'] as Mode[]).map((m) => (
-                <Segment key={m} actif={m === mode} onClick={() => setMode(m)}>
-                  {m}
+              {MODES_SESSION.map((m) => (
+                <Segment key={m} actif={m === modeSession} onClick={() => setModeSession(m)}>
+                  {LIBELLES_MODE_SESSION[m]}
                 </Segment>
               ))}
             </div>
@@ -422,7 +450,7 @@ export default function CadencesPage() {
             {rang + 1} / {items.length}
           </span>
           <span className="text-app-muted" style={{ fontSize: 13 }}>
-            {LIBELLES_PALIER[palier].toLowerCase()} · {mode}
+            {LIBELLES_PALIER[palier].toLowerCase()} · {item.mode}
           </span>
         </div>
 
@@ -509,6 +537,25 @@ export default function CadencesPage() {
             >
               {typeJuste ? 'Cadence trouvée' : `C’était une ${LIBELLES_CADENCE[item.type].toLowerCase()}`}
             </div>
+            {!typeJuste && (
+              <button
+                onClick={ecouterMaReponse}
+                className="bg-surface-2 text-app border-app"
+                style={{
+                  width: '100%',
+                  borderWidth: 1,
+                  borderStyle: 'solid',
+                  borderRadius: 12,
+                  padding: '12px 10px',
+                  minHeight: 48,
+                  fontSize: 14,
+                  marginTop: 10,
+                }}
+              >
+                ▶ Entendre une {LIBELLES_CADENCE[typeRepondu ?? item.type].toLowerCase()}
+              </button>
+            )}
+
             {avecApproche && (
               <div className="text-app-muted" style={{ fontSize: 13, marginTop: 6, lineHeight: 1.5 }}>
                 {item.approche === 'aucune'

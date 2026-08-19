@@ -25,6 +25,7 @@
 import { genererProgression } from './generateur.ts'
 import { MATRICE_MAJEUR, MATRICE_MINEUR } from './matrice.ts'
 import { diagnostiquer, indiceDeDeduction, vecteurErreur } from './metrique.ts'
+import { modesDeSession, type ModeSession } from './modeSession.ts'
 import { NIVEAU_MAX_IMPLEMENTE, niveauSpec } from './niveaux.ts'
 import {
   creerAccord,
@@ -75,6 +76,13 @@ export interface ReponseFlux {
   justes: number
   total: number
   rtMs: number
+  /**
+   * Le mode de CET item. En session « les deux », il change d'un item à l'autre :
+   * l'indice de déduction lit une matrice par item, pas une par session.
+   * Optionnel pour ne pas casser les réponses déjà écrites — on retombe alors sur
+   * le mode passé au score.
+   */
+  mode?: Mode
 }
 
 // ─── Ce que l'élève peut saisir ──────────────────────────────────────────────
@@ -161,7 +169,7 @@ export function longueurPourRangFlux(rang: number, total: number): number {
 }
 
 export function construireSessionFlux(
-  mode: Mode,
+  mode: ModeSession,
   niveau: number,
   graine: number,
   nombreItems: number = ITEMS_PAR_SESSION_FLUX,
@@ -173,6 +181,7 @@ export function construireSessionFlux(
     )
   }
 
+  const modes = modesDeSession(mode, nombreItems, graine)
   return Array.from({ length: nombreItems }, (_, rang) => ({
     index: rang,
     // La tonalité change à chaque item, comme partout ailleurs dans le module :
@@ -181,7 +190,7 @@ export function construireSessionFlux(
     // transposition y ajoute une vraie marche, assumée.
     progression: {
       ...genererProgression(
-        mode,
+        modes[rang],
         niveau,
         longueurPourRangFlux(rang, nombreItems),
         graine + rang * PAS_GRAINE,
@@ -260,10 +269,13 @@ export function indiceDeductionSession(
   reponses: readonly ReponseFlux[],
   mode: Mode,
 ): number {
-  const matrice = mode === 'majeur' ? MATRICE_MAJEUR : MATRICE_MINEUR
   const indices: number[] = []
 
   for (const reponse of reponses) {
+    // ⚠ La matrice se choisit PAR ITEM : en session « les deux », une matrice de
+    // majeur appliquée à un item mineur mesurerait une syntaxe qui n'est pas la
+    // sienne. `mode` n'est plus qu'un défaut, pour les réponses sans mode.
+    const matrice = (reponse.mode ?? mode) === 'majeur' ? MATRICE_MAJEUR : MATRICE_MINEUR
     const paires = reponse.resultats
       .filter((r): r is ResultatAccord & { repondu: Accord } => r.repondu !== null)
       .map((r) => ({ attendu: r.attendu, repondu: r.repondu }))

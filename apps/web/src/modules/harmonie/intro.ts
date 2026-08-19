@@ -84,6 +84,34 @@ export function evenementsIntro(
   return { accords, durees, tenues }
 }
 
+/** Comment sonne un accord qu'on demande à entendre seul. */
+export type FormeAccord = 'plaque' | 'arpege'
+
+/**
+ * Un accord isolé, plaqué ou arpégé — l'écoute accord par accord des cases de
+ * saisie (flux et dictée).
+ *
+ * Même vocabulaire que l'intro, et pour cause : c'est le même geste musical, il
+ * n'a pas à être décrit deux fois. L'arpège garde donc ses notes tenues.
+ */
+export function evenementsAccord(hauteurs: readonly number[], forme: FormeAccord): PlanLecture {
+  const voix = [...hauteurs]
+  if (voix.length === 0) return { accords: [], durees: [], tenues: [], decalage: 0 }
+
+  if (forme === 'plaque') {
+    return { accords: [voix], durees: [TENUE_PLAQUE], tenues: [TENUE_PLAQUE], decalage: 0 }
+  }
+
+  // Arpège seul : pas de plaqué final ni de silence — c'est une écoute, pas une
+  // mise en place. La dernière note tient ce que tiendrait un plaqué.
+  return {
+    accords: voix.map((h) => [h]),
+    durees: voix.map(() => PAS_ARPEGE),
+    tenues: voix.map((_, i) => (voix.length - 1 - i) * PAS_ARPEGE + TENUE_PLAQUE),
+    decalage: 0,
+  }
+}
+
 /**
  * Intro + progression en un seul plan de lecture.
  *

@@ -29,6 +29,7 @@ import {
   type NomChromatique,
 } from './chromatiques.ts'
 import { dispositionAuSoprano, dispositionLibre, disposition, placer } from './dispositions.ts'
+import { modesDeSession, type ModeSession } from './modeSession.ts'
 import { parseGabarit } from './gabarits.ts'
 import {
   armureVex,
@@ -335,15 +336,66 @@ export function couplesEquilibres(
 }
 
 export function construireSessionCadences(
-  mode: Mode,
+  mode: ModeSession,
   palier: Palier,
   contexte: Contexte,
   graine: number,
   nombreItems: number = ITEMS_PAR_SESSION_CADENCES,
 ): ItemCadence[] {
+  const modes = modesDeSession(mode, nombreItems, graine)
   return couplesEquilibres(palier, nombreItems, graine).map((couple, rang) =>
-    construireItemCadence(mode, palier, contexte, couple.type, couple.approche, graine, rang),
+    construireItemCadence(
+      modes[rang],
+      palier,
+      contexte,
+      couple.type,
+      couple.approche,
+      graine,
+      rang,
+    ),
   )
+}
+
+// ─── Entendre la réponse choisie ─────────────────────────────────────────────
+//
+// À la correction, l'élève entend un exemple de ce qu'il a RÉPONDU, à côté de ce
+// qui a sonné. C'est la seule façon de comprendre une confusion entre deux types
+// de cadence : les nommer ne suffit pas.
+//
+// ⚠ CE SERA UN AUTRE EXEMPLE, pas la cadence entendue transformée. Une parfaite
+// ne se change pas en rompue : ce sont deux fins différentes, pas deux habillages
+// de la même. On garde donc la tonique, le mode, le palier, le contexte, la graine
+// et le rang — tout ce qui peut l'être — et le type change.
+
+/**
+ * Un item de comparaison : la même situation, mais avec le type (et l'approche)
+ * que l'élève a répondus.
+ *
+ * ⚠ `COMBINAISONS` est un garde-fou, pas une suggestion : la plagale n'admet
+ * aucune approche chromatique. Un couple impossible retombe sur `'aucune'` plutôt
+ * que de laisser `construireItemCadence` lever au milieu d'une correction.
+ */
+export function itemDeLaReponse(
+  item: ItemCadence,
+  palier: Palier,
+  contexte: Contexte,
+  type: TypeCadence,
+  approche: Approche,
+  graine: number,
+): ItemCadence {
+  const approcheTenable = COMBINAISONS[approche].includes(type) ? approche : 'aucune'
+  const fabrique = construireItemCadence(
+    item.mode,
+    palier,
+    contexte,
+    type,
+    approcheTenable,
+    graine,
+    item.index,
+  )
+  // La tonalité de l'item entendu, sinon la comparaison porterait aussi sur la
+  // hauteur — deux variables au lieu d'une.
+  return { ...fabrique, tonique: item.tonique }
 }
 
 // ─── Réalisation sonore ──────────────────────────────────────────────────────

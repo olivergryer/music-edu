@@ -36,7 +36,9 @@ les imports de types — requis par `node --test`, qui efface les types sans les
 | `detection.ts` | Activité de détection, **pur** : `construireSession`, rampe de difficulté, `scorerSession`, `encoderDrapeaux`/`decoderDrapeaux`. |
 | `glyphe.ts` | Glyphe de correction A/B, **pur** : `geometrieGlyphe`, `lireDrapeaux`, `angleCercleDeg`/`pointCercle`. |
 | `audio.ts` | Chemin audio unique du module (soundfont GM). Hors de la règle « fonctions pures » : Web Audio. `durees` = pas rythmique, `tenues` = durée sonore. |
-| `intro.ts` | L'intro tonale, **pure** : `avecIntro` rend un `PlanLecture` (accords · durées · tenues · **décalage**). N'importe rien d'`audio.ts`. |
+| `intro.ts` | L'intro tonale ET l'écoute d'un accord isolé (`evenementsAccord`), **pures** : rendent un `PlanLecture` (accords · durées · tenues · **décalage**). N'importent rien d'`audio.ts`. |
+| `modeSession.ts` | `ModeSession = Mode | 'les_deux'` · `modesDeSession` — le mode du RÉGLAGE, distinct du mode de l'ITEM. |
+| `useEcouteAccord.ts` | Le geste d'écoute sur une case : appui = plaqué, glissé vers le haut = arpégé. |
 | `Glyphes.tsx` | Les deux rendus SVG : `CercleTierces`, `EcartEmpilement`, `GlypheColonne`, `LegendeColonne`. |
 | `DetectionPage.tsx` · `BancPage.tsx` | Les deux écrans. `BancPage` est `IS_DEV` seulement. |
 
@@ -647,6 +649,92 @@ activité fabrique sa partition comme elle peut (`partitionDeCadence` pour les c
 regrave sur la **signature du contenu**, pas sur l'identité de l'objet — sinon la portée clignoterait
 à chaque rendu pendant la réécoute.
 
+## Le mode est une propriété de l'ITEM — `modeSession.ts` (2026-08-19)
+
+Le réglage Mode a **trois positions** : Majeur · Mineur · **Les deux**. ⚠ `Mode` (types.ts) n'a pas
+bougé — c'est le RÉGLAGE qui s'élargit en `ModeSession`, et chaque item porte déjà son mode
+(`Progression.mode`, `ItemCadence.mode`).
+
+`Mode ⊂ ModeSession` : les cinq builders de session ont élargi leur premier paramètre sans qu'aucun
+appel existant ne change de comportement — **un test épingle cet invariant**, et il doit rester vert.
+
+En « les deux », autant de majeurs que de mineurs **puis mélange** (`modesDeSession`), comme
+`reponsesEquilibrees` : une alternance stricte serait équilibrée mais devinable. La graine est
+décalée de 977, sinon le mélange des modes suivrait exactement celui des réponses du binaire et
+le mode annoncerait la réponse.
+
+⚠ **Dans les pages, `mode` désigne le mode de l'ITEM, `modeSession` celui du réglage.** Tout ce qui
+s'affiche — chiffrage, libellés de la roue, cercle des tierces, nom de tonalité — suit l'item. Les
+deux pièges rencontrés : les libellés de degrés de la roue du flux (III vs iii) et le bit 8 des
+`flags` de la dictée.
+
+⚠ **`indiceDeductionSession` choisit sa matrice PAR ITEM** : `ReponseFlux.mode` porte le mode de
+l'item, et le paramètre `mode` n'est plus qu'un défaut pour les réponses déjà écrites. Une matrice de
+majeur appliquée à un item mineur mesurerait une syntaxe qui n'est pas la sienne.
+
+## Toutes les activités transposent (2026-08-19)
+
+`genererProgression` rend toujours `tonique: 0` : le binaire et le flux sonnaient donc **entièrement
+en do**, contrairement à la détection, la dictée et les cadences. Ils transposent désormais eux aussi,
+avec la même formule `(graine + rang * 7) % 12`. Sans quoi le badge de tonalité du binaire n'aurait
+rien à annoncer, et une mémoire de hauteurs absolues remplacerait l'audition des fonctions.
+
+⚠ **Flux niveau 7** : ce niveau n'a pas de contexte tonal. Le transposer ajoute une vraie marche —
+établir une tonalité qu'on ne connaît pas. Assumé, à surveiller à l'usage.
+
+## « Tout sur do » — `ToggleToutEnDo.tsx` (2026-08-19)
+
+L'inverse à la demande : un repère fixe. ⚠ Il vit **dans l'activité**, pas dans l'écran de réglages
+(contrairement à `ToggleIntro`) : on doit pouvoir basculer sans quitter l'exercice. Persisté dans
+`payload.toutEnDo`, commun aux activités.
+
+Actif, il force la progression **sonnée** sur `tonique: 0` et la portée en vue `'ut'`. Le sélecteur de
+portée se réduit alors à deux positions (`sansTonalite`) : « Tonalité » et « En Ut » ne se
+distingueraient plus.
+
+⚠ **En mineur, le son et l'écrit divergent volontairement** (décidé avec Matthieu) : do mineur à
+l'oreille, **la mineur** sur la portée. C'est la raison d'être de la vue « En Ut » — armure vide,
+sensible en altération accidentelle — préférée à un do mineur à trois bémols.
+
+## Écouter autrement — ½ vitesse et accord par accord (2026-08-19)
+
+**`BoutonDemiVitesse`** — bouton PONCTUEL (il ne bascule aucun réglage), `bpm * DEMI_VITESSE`, intro
+comprise. ⚠ **Pendant l'exercice seulement** : à la correction, les boutons servent à comparer deux
+versions, et un jumeau lent par version chargerait la barre sans rien apporter.
+
+**`useEcouteAccord`** — sur une case de saisie (flux et dictée **seulement**) : appui = accord
+plaqué, glissé vers le haut = arpégé. Même vocabulaire que `RoueFigee`, et `evenementsAccord`
+réutilise les constantes de l'intro : un seul endroit décrit ce qu'est un arpège dans ce module.
+⚠ **`setPointerCapture` est obligatoire** — l'arpège se demande en tirant vers le haut, donc hors des
+limites de la case ; sans capture, le `pointerup` partirait ailleurs.
+
+⚠ **Pas en détection** : les accords y sont les boutons de réponse, et les entendre un à un
+permettrait de comparer accord par accord au lieu de tenir la suite en tête — l'audiation
+disparaîtrait. ⚠ **En dictée, c'est une vraie facilité** : demandé explicitement, à revoir en classe.
+
+## Entendre ce qu'on a répondu (2026-08-19)
+
+⚠ **APRÈS LA RÉPONSE UNIQUEMENT**, comme « ▶ A après la réponse ».
+
+- **Dictée** — « ▶ Mes basses » / « ▶ Les bonnes » : les basses **nues**, à la suite (décidé avec
+  Matthieu). Une `NoteNommee` n'a pas d'octave : `hauteurBasse` la pose au plus près de la basse
+  attendue, car c'est l'écart d'INTERVALLE qu'on veut entendre, pas un saut d'octave qui n'a pas eu
+  lieu. ⚠ L'octave se déduit de la classe de hauteur : si♯ sonne comme un do.
+- **Binaire** — `accordDeLaReponse` remet, à la place de l'accord visé, celui qu'implique la réponse
+  donnée. ⚠ Il **n'a pas à respecter les contraintes dures** : ce n'est pas un item d'exercice, c'est
+  une erreur rendue audible. Mais il passe par `creerAccord` — l'`id` encode degré, renversement et
+  septième, une copie étalée le laisserait mentir.
+- **Cadences** — `itemDeLaReponse` fabrique un exemple du type répondu, même mode et même tonalité,
+  déterministe. ⚠ **Ce sera un AUTRE exemple**, pas la cadence entendue transformée : une parfaite ne
+  se change pas en rompue. ⚠ `COMBINAISONS` sert de garde-fou — un couple impossible (plagale +
+  napolitaine) retombe sur `'aucune'` plutôt que de lever en pleine correction.
+
+## La portée réserve ses lignes supplémentaires (2026-08-19)
+
+`HAUTEUR` de `PorteeSATB` **se calcule** désormais (`Y_FA` + portée + 4 interlignes + demi-tête +
+air) au lieu d'être une constante en dur qui rognait les basses graves. Le souffle sous la portée est
+porté par le composant, pas par chaque page.
+
 ## Suite
 
 Exercice à trous · **niveau 0** (`qualite_binaire`, majeur ou mineur — le dernier trou du barème) ·
@@ -659,3 +747,6 @@ l'écran en mineur. Un tirage par item demanderait de changer de mode en cours d
 
 **Couverture du barème** : 0 aucune activité · 1 dictée · 2 binaire · 3 détection · 4-5 binaire +
 détection · 6-7 **flux** + détection · 8 non générable.
+
+**La réorganisation activités × niveaux** est analysée dans `docs/organisation-harmonie.md` (trois
+pistes, une recommandation) — note de conception, rien n'est codé.
