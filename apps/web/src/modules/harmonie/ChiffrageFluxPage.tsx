@@ -201,7 +201,9 @@ export default function ChiffrageFluxPage() {
   // « Tout en do » : la progression SONNÉE est ramenée sur do ; la portée suit la
   // vue « En Ut » — donc la mineur en mineur, armure vide (cf. `ToggleToutEnDo`).
   const progressionSonnee = useMemo(
-    () => (item ? (toutEnDo ? { ...item.progression, tonique: 0 } : item.progression) : null),
+    () => (item ? (toutEnDo
+          ? { ...item.progression, tonique: TONIQUE_UT[item.progression.mode] }
+          : item.progression) : null),
     [item, toutEnDo],
   )
   const vuePorteeEffective: VuePortee = toutEnDo && vuePortee !== 'masquee' ? 'ut' : vuePortee

@@ -147,7 +147,9 @@ export default function DetectionPage() {
       item
         ? {
             ...item.progression,
-            tonique: toutEnDo ? 0 : (grainesRef.current + rang * 7) % 12,
+            tonique: toutEnDo
+              ? TONIQUE_UT[item.progression.mode]
+              : (grainesRef.current + rang * 7) % 12,
           }
         : null,
     [item, rang, toutEnDo],

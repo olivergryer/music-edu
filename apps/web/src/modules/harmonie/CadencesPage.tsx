@@ -133,7 +133,7 @@ export default function CadencesPage() {
   // « Tout en do » : l'item SONNÉ est ramené sur do ; la portée suit la vue
   // « En Ut » — donc la mineur en mineur, armure vide (cf. `ToggleToutEnDo`).
   const itemSonne = useMemo(
-    () => (item ? (toutEnDo ? { ...item, tonique: 0 } : item) : null),
+    () => (item ? (toutEnDo ? { ...item, tonique: TONIQUE_UT[item.mode] } : item) : null),
     [item, toutEnDo],
   )
   const vuePorteeEffective: VuePortee = toutEnDo && vuePortee !== 'masquee' ? 'ut' : vuePortee

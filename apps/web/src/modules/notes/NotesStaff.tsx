@@ -25,6 +25,9 @@ const ERR = '#f87171'
 const PITCH_COLORS = ['#ef4444', '#f59e0b', '#eab308', '#22c55e', '#06b6d4', '#3b82f6', '#a855f7']
 const HEAD_RX = 7.2
 const HEAD_RY = 4.7
+const LINE_PX = 10        // espacement VexFlow entre deux lignes de portée
+const TOP_MARGIN = 22     // marge au-dessus de la 6e ligne supplémentaire
+const LEDGERS_ABOVE = 6   // lignes suppl. potentielles au-dessus (flûte / violon)
 
 function palette(dark: boolean) {
   // Portée + lignes supplémentaires : plus clair en dark pour un contraste net sur
@@ -59,11 +62,13 @@ interface Geom {
 }
 
 export default function NotesStaff({
-  items, clef, cursorIndex, results, coloriser = false, stringColorId, height = 260, notePx = 84,
+  items, clef, cursorIndex, results, coloriser = false, stringColorId, height = 210, notePx = 84,
 }: Props) {
-  // Portée verticalement CENTRÉE : ménage de la place au-dessus ET en dessous pour
-  // les lignes supplémentaires (ex. Do2 en clef de sol ≈ 4 lignes sous la portée).
-  const staveY = Math.round(height / 2 - 20)
+  // Portée ANCRÉE EN HAUT : marge supérieure + place pour 6 lignes supplémentaires
+  // au-dessus (flûte / violon en clef de sol montent très haut). En remontant la
+  // portée on dégage de l'espace en bas pour la roue de saisie. Position CONSTANTE
+  // (dérivée de constantes, pas de la hauteur) → la portée ne bouge jamais.
+  const staveY = TOP_MARGIN + LEDGERS_ABOVE * LINE_PX
   const viewportRef = useRef<HTMLDivElement>(null)
   const innerRef = useRef<HTMLDivElement>(null)
   const geomRef = useRef<Geom>({ heads: [], centersX: [], cursorEl: null, cursorY: 0 })

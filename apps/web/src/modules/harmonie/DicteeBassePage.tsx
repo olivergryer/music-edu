@@ -43,6 +43,7 @@ import RoueFigee from './RoueFigee.tsx'
 import { LETTRES, nomNote, nomTonalite, type Alteration, type NoteNommee } from './tonalites.ts'
 import { type SecteurRoue } from './roue.ts'
 import {
+  bassesDeProgression,
   hauteursDesBasses,
   ITEMS_PAR_SESSION_DICTEE,
   NIVEAU_DICTEE,
@@ -128,11 +129,22 @@ export default function DicteeBassePage() {
   // suit la vue « En Ut » — donc la mineur en mineur, armure vide (cf.
   // `ToggleToutEnDo`). Le son et l'écrit divergent alors volontairement.
   const progressionSonnee = useMemo(
-    () => (item ? (toutEnDo ? { ...item.progression, tonique: 0 } : item.progression) : null),
+    () => (item ? (toutEnDo
+          ? { ...item.progression, tonique: TONIQUE_UT[item.progression.mode] }
+          : item.progression) : null),
     [item, toutEnDo],
   )
   const vuePorteeEffective: VuePortee =
     toutEnDo && vuePortee !== 'masquee' ? 'ut' : vuePortee
+
+  // ⚠ LES RÉPONSES ATTENDUES SUIVENT CE QUI A SONNÉ. « Tout en do » ne change pas
+  // que le son : la tonalité écrite et les basses attendues sont celles de do,
+  // sinon on demanderait à l'élève de nommer des notes dans une tonalité qu'il n'a
+  // jamais entendue.
+  const bassesAttendues = useMemo(
+    () => (progressionSonnee ? bassesDeProgression(progressionSonnee, mode) : []),
+    [progressionSonnee, mode],
+  )
 
   const realisationSonnee = useMemo(
     () => (progressionSonnee ? realiserProgression(progressionSonnee) : []),
@@ -194,12 +206,12 @@ export default function DicteeBassePage() {
   const ecouterBasses = useCallback(
     (lesquelles: 'saisies' | 'attendues') => {
       if (!item) return
-      const notes = lesquelles === 'saisies' ? saisies : item.basses
+      const notes = lesquelles === 'saisies' ? saisies : bassesAttendues
       const accords = hauteursDesBasses(notes, referencesBasses)
       if (accords.length === 0) return
       void jouerSuite(accords, { bpm: BPM })
     },
-    [item, saisies, referencesBasses],
+    [item, saisies, bassesAttendues, referencesBasses],
   )
 
   function commencer() {
@@ -241,16 +253,18 @@ export default function DicteeBassePage() {
   function valider() {
     if (!item || valide) return
     const rtMs = Math.round(performance.now() - (debutMsRef.current ?? sessionMsRef.current))
-    const justes = compterJustes(item.basses, saisies)
-    const total = item.basses.length
+    const justes = compterJustes(bassesAttendues, saisies)
+    const total = bassesAttendues.length
 
     setValide(true)
     reponsesRef.current.push({ index: rang, correct: justes === total, rtMs, justes, total })
 
     // bits 0-3 justesse de chaque basse · bits 4-7 tonique · bit 8 mode
-    let flags = (item.progression.tonique & 0b1111) << 4
+    // La tonique LOGÉE dans le log est celle qui a sonné : c'est dans celle-là que
+    // l'élève a répondu.
+    let flags = ((progressionSonnee?.tonique ?? 0) & 0b1111) << 4
     if (mode === 'mineur') flags |= 1 << 8
-    item.basses.forEach((b, i) => {
+    bassesAttendues.forEach((b, i) => {
       const r = saisies[i]
       if (r && r.lettre === b.lettre && r.alteration === b.alteration) flags |= 1 << i
     })
@@ -469,7 +483,7 @@ export default function DicteeBassePage() {
   if (!item) return null
 
   const complet = saisies.every((n) => n !== null)
-  const erreurs = valide ? evaluerBasseNommee(item.basses, saisies) : []
+  const erreurs = valide ? evaluerBasseNommee(bassesAttendues, saisies) : []
 
   return (
     <Cadre onRetour={() => setEcran('reglages')}>
@@ -481,7 +495,7 @@ export default function DicteeBassePage() {
           {rang + 1} / {items.length}
         </span>
         <span style={{ fontSize: 14, fontWeight: 600, color: ACCENT }}>
-          {nomTonalite(item.progression.tonique, mode)}
+          {nomTonalite(progressionSonnee?.tonique ?? item.progression.tonique, mode)}
         </span>
       </div>
 
@@ -517,7 +531,7 @@ export default function DicteeBassePage() {
       {/* Les emplacements de basse — toucher l'un d'eux y ramène le curseur. */}
       <div className="flex flex-wrap justify-center" style={{ gap: 8 }}>
         {saisies.map((note, i) => {
-          const attendue = item.basses[i]
+          const attendue = bassesAttendues[i]
           const juste = valide && note && note.lettre === attendue.lettre && note.alteration === attendue.alteration
           let bordure = i === curseur && !valide ? ACCENT : 'var(--border-c)'
           if (valide) bordure = juste ? SUCCES : ERREUR

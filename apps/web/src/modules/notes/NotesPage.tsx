@@ -608,8 +608,8 @@ export default function NotesPage() {
               </span>
             ) : null}
           </div>
-          {/* Portée — position FIXE (top constant). */}
-          <div style={{ position: 'absolute', top: 104, left: 12, right: 12, pointerEvents: 'none', zIndex: 1 }}>
+          {/* Portée — position FIXE (top constant), remontée pour dégager la roue. */}
+          <div style={{ position: 'absolute', top: 96, left: 12, right: 12, pointerEvents: 'none', zIndex: 1 }}>
             <NotesStaff
               items={sequence} clef={configRef.current?.clef ?? 'treble'}
               cursorIndex={cursorIndex} results={results} coloriser={coloriser}

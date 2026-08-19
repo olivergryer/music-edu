@@ -110,7 +110,9 @@ export default function ChoixBinairePage() {
   // « Tout en do » : la progression SONNÉE est ramenée sur do ; la portée suit la
   // vue « En Ut » — donc la mineur en mineur, armure vide (cf. `ToggleToutEnDo`).
   const progressionSonnee = useMemo(
-    () => (item ? (toutEnDo ? { ...item.progression, tonique: 0 } : item.progression) : null),
+    () => (item ? (toutEnDo
+          ? { ...item.progression, tonique: TONIQUE_UT[item.progression.mode] }
+          : item.progression) : null),
     [item, toutEnDo],
   )
   const vuePorteeEffective: VuePortee = toutEnDo && vuePortee !== 'masquee' ? 'ut' : vuePortee
@@ -380,7 +382,7 @@ export default function ChoixBinairePage() {
               sous-dominante, fondamental ou renversé, avec ou sans septième — ne
               se déduit de la tonalité. */}
           <span style={{ fontSize: 14, fontWeight: 600, color: ACCENT }}>
-            {nomTonalite(item.progression.tonique, mode)}
+            {nomTonalite(progressionSonnee?.tonique ?? item.progression.tonique, mode)}
           </span>
           <span className="text-app-muted" style={{ fontSize: 13 }}>
             niveau {niveau}
