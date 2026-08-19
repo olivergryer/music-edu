@@ -9,8 +9,13 @@ import {
   rythmeIndivDuJour,
   resteAvantStreak,
   RYTHME_INDIV_POUR_STREAK,
+  theorieSeriesDuJour,
+  resteAvantStreakTheorie,
+  THEORIE_SERIES_POUR_STREAK,
   DEFAULT_STATE,
   mergeWithDefaults,
+  readGuestProgress,
+  writeGuestProgress,
   getRank,
   getNextRank,
   todayStr,
@@ -37,8 +42,10 @@ export default function useProgressFirebase() {
 
   useEffect(() => {
     if (!user) {
-      setRawData(DEFAULT_STATE)
-      setLoaded(false)
+      // Invité : progression locale (localStorage). `loaded = true` pour qu'addSession
+      // accumule dès maintenant — la série de 10 et le streak fonctionnent hors compte.
+      setRawData(readGuestProgress() ?? DEFAULT_STATE)
+      setLoaded(true)
       return
     }
     // Le cache persistant sert cette lecture hors ligne. Le `catch` reste
@@ -56,23 +63,28 @@ export default function useProgressFirebase() {
   }, [user])
 
   const addSession = useCallback(async (params: AddSessionParams): Promise<AddSessionResult> => {
-    if (!user || !loaded) return { newTrophies: [], rankedUp: false }
+    if (!loaded) return { newTrophies: [], rankedUp: false }
 
     // applySession calcule lui-même le decay depuis lastDate persisté.
     const result = applySession(rawDataRef.current, params, todayStr())
     setRawData(result.newState)
 
-    // Écritures NON attendues, volontairement. Hors ligne, Firestore n'acquitte
-    // qu'au retour du réseau : `await` figeait donc tous les écrans de fin de
-    // session. Le cache persistant applique la donnée localement tout de suite et
-    // rejoue l'écriture à la reconnexion — l'état affiché est déjà à jour via
-    // `setRawData` ci-dessus, il n'y a rien à attendre.
-    void setDoc(doc(db, 'users', user.uid, 'progress', 'data'), result.newState)
-      .catch(err => console.warn('Progression : enregistrement différé.', err))
-    void addDoc(collection(db, 'users', user.uid, 'history'), {
-      ...result.historyEntry,
-      createdAt: serverTimestamp(),
-    }).catch(err => console.warn('Historique : enregistrement différé.', err))
+    if (user) {
+      // Écritures NON attendues, volontairement. Hors ligne, Firestore n'acquitte
+      // qu'au retour du réseau : `await` figeait donc tous les écrans de fin de
+      // session. Le cache persistant applique la donnée localement tout de suite et
+      // rejoue l'écriture à la reconnexion — l'état affiché est déjà à jour via
+      // `setRawData` ci-dessus, il n'y a rien à attendre.
+      void setDoc(doc(db, 'users', user.uid, 'progress', 'data'), result.newState)
+        .catch(err => console.warn('Progression : enregistrement différé.', err))
+      void addDoc(collection(db, 'users', user.uid, 'history'), {
+        ...result.historyEntry,
+        createdAt: serverTimestamp(),
+      }).catch(err => console.warn('Historique : enregistrement différé.', err))
+    } else {
+      // Invité : progression conservée en localStorage (pas d'historique Firestore).
+      writeGuestProgress(result.newState)
+    }
 
     // Alimentation de la couche de célébration. C'est ici — et non chez les 11
     // appelants — que le branchement se fait : tout module, présent ou futur,
@@ -109,5 +121,9 @@ export default function useProgressFirebase() {
     rythmeIndivDuJour: rythmeIndivDuJour(rawData, todayStr()),
     resteAvantStreak: resteAvantStreak(rawData, todayStr()),
     seuilRythmeIndiv: RYTHME_INDIV_POUR_STREAK,
+    // Idem pour les séries d'entraînement Théorie (10 questions).
+    theorieSeriesDuJour: theorieSeriesDuJour(rawData, todayStr()),
+    resteAvantStreakTheorie: resteAvantStreakTheorie(rawData, todayStr()),
+    seuilTheorieSeries: THEORIE_SERIES_POUR_STREAK,
   }
 }

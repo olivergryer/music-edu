@@ -3,6 +3,7 @@ import { createUserWithEmailAndPassword } from 'firebase/auth'
 import { doc, setDoc } from 'firebase/firestore'
 import { useNavigate, Link } from 'react-router-dom'
 import { auth, db } from '../lib/firebase'
+import { readGuestProgress, clearGuestProgress, mergeGuestInto, DEFAULT_STATE } from '../hooks/progressLogic'
 
 function generateTeacherCode(): string {
   const letters = 'ABCDEFGHJKLMNPQRSTUVWXYZ'
@@ -35,6 +36,15 @@ export default function RegisterPage() {
       })
       if (teacherCode) {
         await setDoc(doc(db, 'teacherCodes', teacherCode), { uid: user.uid, displayName })
+      }
+      // Reverse la progression invité (localStorage) dans le compte neuf, puis l'efface.
+      // Compte neuf → progress vide : on fusionne dans DEFAULT_STATE.
+      const guest = readGuestProgress()
+      if (guest) {
+        try {
+          await setDoc(doc(db, 'users', user.uid, 'progress', 'data'), mergeGuestInto(DEFAULT_STATE, guest))
+          clearGuestProgress()
+        } catch { /* échec fusion : on n'empêche pas la création du compte */ }
       }
       navigate('/')
     } catch (err: unknown) {

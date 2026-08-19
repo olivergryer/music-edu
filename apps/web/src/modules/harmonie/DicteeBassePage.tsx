@@ -17,6 +17,10 @@ import { ThemeToggleInline } from '../../ThemeContext'
 
 import { arreter, chargerInstrument, jouerSuite } from './audio.ts'
 import { realiserProgression } from './dispositions.ts'
+import { INTRO_DEFAUT, avecIntro, estIntro, type Intro } from './intro.ts'
+import ToggleIntro from './ToggleIntro.tsx'
+import BoutonDemiVitesse, { DEMI_VITESSE } from './BoutonDemiVitesse.tsx'
+import ToggleToutEnDo from './ToggleToutEnDo.tsx'
 import { partitionDeProgression } from './notation.ts'
 import PorteeSATB, { type VuePortee } from './PorteeSATB.tsx'
 import TogglePortee, { estVuePortee } from './TogglePortee.tsx'
@@ -25,6 +29,7 @@ import { LETTRES, nomNote, nomTonalite, type Alteration, type NoteNommee } from 
 import { type SecteurRoue } from './roue.ts'
 import {
   ITEMS_PAR_SESSION_DICTEE,
+  NIVEAU_DICTEE,
   compterJustes,
   construireSessionDictee,
   evaluerBasseNommee,
@@ -68,8 +73,10 @@ export default function DicteeBassePage() {
   const [valide, setValide] = useState(false)
   const [enLecture, setEnLecture] = useState(false)
   const [erreur, setErreur] = useState<string | null>(null)
-  // Réglage commun aux quatre activités du module.
+  // Réglages communs aux quatre activités du module.
   const [vuePortee, setVuePortee] = useState<VuePortee>('masquee')
+  const [intro, setIntro] = useState<Intro>(INTRO_DEFAUT)
+  const [toutEnDo, setToutEnDo] = useState(false)
 
   const reponsesRef = useRef<ReponseDictee[]>([])
   const debutMsRef = useRef<number | null>(null)
@@ -78,32 +85,54 @@ export default function DicteeBassePage() {
 
   useEffect(() => {
     if (!mp.loaded) return
-    const p = mp.progress.payload as { dicteeMode?: Mode; porteeVue?: unknown }
+    const p = mp.progress.payload as {
+      dicteeMode?: Mode
+      porteeVue?: unknown
+      introTonale?: unknown
+      toutEnDo?: unknown
+    }
     if (p.dicteeMode) setMode(p.dicteeMode)
     if (estVuePortee(p.porteeVue)) setVuePortee(p.porteeVue)
+    if (estIntro(p.introTonale)) setIntro(p.introTonale)
+    if (typeof p.toutEnDo === 'boolean') setToutEnDo(p.toutEnDo)
   }, [mp.loaded, mp.progress.payload])
 
   useEffect(() => () => arreter(), [])
 
   const item = items[rang]
 
-  // La tonique sonne en tête : `NIVEAUX[1].contexteTonal` vaut true.
+  // La tonique se pose en tête : `NIVEAUX[1].contexteTonal` vaut true. Sa forme
+  // — arpégée ou rien — est le réglage `intro`, commun au module.
+  // « Tout en do » : la progression SONNÉE est ramenée sur do. La portée, elle,
+  // suit la vue « En Ut » — donc la mineur en mineur, armure vide (cf.
+  // `ToggleToutEnDo`). Le son et l'écrit divergent alors volontairement.
+  const progressionSonnee = useMemo(
+    () => (item ? (toutEnDo ? { ...item.progression, tonique: 0 } : item.progression) : null),
+    [item, toutEnDo],
+  )
+  const vuePorteeEffective: VuePortee =
+    toutEnDo && vuePortee !== 'masquee' ? 'ut' : vuePortee
+
   const aJouer = useMemo(() => {
-    if (!item) return []
-    const suite = realiserProgression(item.progression)
+    if (!item || !progressionSonnee) return null
+    const suite = realiserProgression(progressionSonnee)
     const [tonique] = realiserProgression({
-      ...item.progression,
+      ...progressionSonnee,
       accords: [creerAccord(0, { degre: 1 })],
     })
-    return [tonique, ...suite]
-  }, [item])
+    return avecIntro(suite, tonique, intro)
+  }, [item, progressionSonnee, intro])
 
-  const ecouter = useCallback(async () => {
-    if (aJouer.length === 0) return
+  const ecouter = useCallback(async (facteurTempo = 1) => {
+    if (!aJouer || aJouer.accords.length === 0) return
     if (finLectureRef.current) clearTimeout(finLectureRef.current)
     setEnLecture(true)
     try {
-      const duree = await jouerSuite(aJouer, { bpm: BPM })
+      const duree = await jouerSuite(aJouer.accords, {
+        bpm: BPM * facteurTempo,
+        durees: aJouer.durees,
+        tenues: aJouer.tenues,
+      })
       finLectureRef.current = setTimeout(() => {
         setEnLecture(false)
         if (debutMsRef.current === null) debutMsRef.current = performance.now()
@@ -212,7 +241,7 @@ export default function DicteeBassePage() {
               lastAt: Date.now(),
             },
           },
-          payload: { dicteeMode: mode, porteeVue: vuePortee },
+          payload: { dicteeMode: mode, porteeVue: vuePortee, introTonale: intro, toutEnDo },
         },
       })
     } catch (e) {
@@ -222,7 +251,10 @@ export default function DicteeBassePage() {
     const medal = resume.accuracy >= 0.9 ? 'or' : resume.accuracy >= 0.75 ? 'argent' : 'bronze'
     const xpEarned = Math.max(5, Math.round(resume.accuracy * resume.itemCount * 3))
     try {
-      await addSession({ module: 'harmonie', xpEarned, medal })
+      await addSession({
+        module: 'harmonie', xpEarned, medal,
+        details: { level: `Niveau ${NIVEAU_DICTEE}`, items: resume.itemCount, mode: 'Dictée de basse' },
+      })
     } catch {
       /* hors ligne : la session per-module est déjà persistée */
     }
@@ -239,8 +271,11 @@ export default function DicteeBassePage() {
         <Erreur texte={erreur} />
         <p className="text-app-muted" style={{ fontSize: 14, margin: 0, lineHeight: 1.5 }}>
           Tu entends une suite courte. Note la <strong style={{ color: 'var(--text)' }}>basse</strong>{' '}
-          de chaque accord — la note la plus grave. La tonique sonne d’abord et la tonalité est
-          écrite : c’est elle qui donne les dièses et les bémols.
+          de chaque accord — la note la plus grave.{' '}
+          {intro === 'arpegee'
+            ? 'La tonique se pose d’abord et la tonalité est écrite'
+            : 'La tonalité est écrite'}{' '}
+          : c’est elle qui donne les dièses et les bémols.
         </p>
 
         <section>
@@ -269,6 +304,13 @@ export default function DicteeBassePage() {
               </button>
             ))}
           </div>
+        </section>
+
+        <section>
+          <h2 className="text-app-muted" style={{ fontSize: 12, margin: '0 0 8px', fontWeight: 500 }}>
+            Intro tonale
+          </h2>
+          <ToggleIntro intro={intro} onChange={setIntro} />
         </section>
 
         <button
@@ -384,23 +426,34 @@ export default function DicteeBassePage() {
         </span>
       </div>
 
-      <button
-        onClick={() => void ecouter()}
-        disabled={enLecture}
-        style={{
-          background: ACCENT,
-          border: 'none',
-          borderRadius: 12,
-          padding: '14px 20px',
-          minHeight: 52,
-          fontSize: 16,
-          fontWeight: 600,
-          color: '#0d1026',
-          opacity: enLecture ? 0.6 : 1,
-        }}
-      >
-        {enLecture ? '▶ …' : '▶ Écouter'}
-      </button>
+      {/* ⚠ Le « ▶ ½ » n'existe que tant que l'élève note ses basses. */}
+      <div className="flex" style={{ gap: 8 }}>
+        <button
+          onClick={() => void ecouter()}
+          disabled={enLecture}
+          style={{
+            flex: 1,
+            background: ACCENT,
+            border: 'none',
+            borderRadius: 12,
+            padding: '14px 20px',
+            minHeight: 52,
+            fontSize: 16,
+            fontWeight: 600,
+            color: '#0d1026',
+            opacity: enLecture ? 0.6 : 1,
+          }}
+        >
+          {enLecture ? '▶ …' : '▶ Écouter'}
+        </button>
+        {!valide && (
+          <BoutonDemiVitesse onClick={() => void ecouter(DEMI_VITESSE)} disabled={enLecture} />
+        )}
+      </div>
+
+      <div className="flex justify-end">
+        <ToggleToutEnDo actif={toutEnDo} onChange={setToutEnDo} />
+      </div>
 
       {/* Les emplacements de basse — toucher l'un d'eux y ramène le curseur. */}
       <div className="flex flex-wrap justify-center" style={{ gap: 8 }}>
@@ -499,11 +552,15 @@ export default function DicteeBassePage() {
           {/* La suite écrite : c'est là que l'élève voit la basse qu'il cherchait
               À SA PLACE, sous les trois voix supérieures. */}
           <div style={{ marginTop: 14 }}>
-            <TogglePortee vue={vuePortee} onChange={setVuePortee} />
-            {vuePortee !== 'masquee' && (
+            <TogglePortee
+              vue={vuePorteeEffective}
+              onChange={setVuePortee}
+              sansTonalite={toutEnDo}
+            />
+            {vuePorteeEffective !== 'masquee' && (
               <div style={{ marginTop: 10 }}>
                 <PorteeSATB
-                  partition={partitionDeProgression(item.progression, vuePortee)}
+                  partition={partitionDeProgression(item.progression, vuePorteeEffective)}
                   fautes={erreurs.map((e) => e.index)}
                 />
               </div>

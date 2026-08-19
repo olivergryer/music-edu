@@ -41,7 +41,18 @@ const SOPRANO = 3
 // réserve, les extrêmes seraient rognés par le cadre SVG.
 const Y_SOL = 34
 const Y_FA = 126
-const HAUTEUR = 224
+// Interligne VexFlow par défaut : cinq lignes de portée sur 40 px.
+const INTERLIGNE = 10
+const HAUTEUR_PORTEE = 4 * INTERLIGNE
+// ⚠ La hauteur du cadre se CALCULE, elle ne se choisit pas : sous la dernière
+// ligne de la clef de fa il faut la place de quatre lignes supplémentaires (do1),
+// de la demi-tête qui les traverse, et d'un peu d'air avant le bouton suivant.
+// Une constante en dur (224) rognait les basses graves.
+const LIGNES_SUP_SOUS_FA = 4
+const DEMI_TETE = 6
+const AIR_BAS = 24
+const HAUTEUR =
+  Y_FA + HAUTEUR_PORTEE + LIGNES_SUP_SOUS_FA * INTERLIGNE + DEMI_TETE + AIR_BAS
 const LARGEUR_ACCORD = 56
 // Clef + armure : jusqu'à sept altérations (mi♭ mineur, sol♯ mineur).
 const MARGE_CLEF = 120
@@ -213,7 +224,10 @@ export default function PorteeSATB({
   return (
     <div
       ref={viewportRef}
-      style={{ width: '100%', overflowX: 'auto', overflowY: 'hidden' }}
+      // Le souffle sous la portée est porté par le COMPOSANT, pas par chaque
+      // page : sans lui, « Suivant » vient coller aux lignes supplémentaires de
+      // la basse.
+      style={{ width: '100%', overflowX: 'auto', overflowY: 'hidden', paddingBottom: 12 }}
       role="img"
       aria-label={legende}
     >

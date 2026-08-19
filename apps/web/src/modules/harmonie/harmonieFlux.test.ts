@@ -285,6 +285,19 @@ test('accordSaisi reconstruit un accord conforme', () => {
   assert.equal(a.septieme, true)
 })
 
+// ─── La transposition ────────────────────────────────────────────────────────
+//
+// Comme partout ailleurs dans le module : `genererProgression` rend `tonique: 0`,
+// et sans transposition explicite tout le flux sonnerait en do.
+test('la tonalité change d’un item à l’autre', () => {
+  for (const niveau of [NIVEAU_MIN_FLUX, NIVEAU_MAX_FLUX]) {
+    const toniques = new Set(
+      construireSessionFlux('majeur', niveau, 512).map((i) => i.progression.tonique),
+    )
+    assert.ok(toniques.size > 4, `niveau ${niveau} : trop peu de tonalités (${toniques.size})`)
+  }
+})
+
 // ─── Le score ────────────────────────────────────────────────────────────────
 
 function reponse(attendus: Accord[], repondus: (Accord | null)[], rtMs = 5000): ReponseFlux {

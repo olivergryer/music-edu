@@ -98,16 +98,48 @@ button:focus-visible, a:focus-visible {
   50%       { opacity: 1; }
 }
 
-/* Scrollbar horizontale toujours visible (utilisée pour la portée accordeur) */
+/* ── Barres de défilement ──────────────────────────────────────────────────────
+   Une zone qui cache du contenu doit le DIRE. Par défaut les navigateurs mobiles
+   masquent la barre jusqu'au premier geste : rien n'indique alors qu'il reste
+   quelque chose à droite ou en dessous, et le contenu passe inaperçu.
+
+   Rendu ici visible en permanence, en fin et en clair — le navigateur ne dessine
+   la barre QUE s'il y a réellement débordement, donc aucune fausse indication.
+   Règle globale : toute zone défilante, présente ou future, est couverte sans
+   qu'on ait à y penser. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--text-muted) transparent;
+}
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+  -webkit-appearance: none;
+}
+*::-webkit-scrollbar-track {
+  background: var(--surface-2);
+  border-radius: 999px;
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--text-muted);
+  border-radius: 999px;
+}
+*::-webkit-scrollbar-thumb:hover { background: var(--text); }
+
+/* Le défilement de la PAGE, lui, reste discret : la barre du navigateur y est
+   déjà comprise, et un rail permanent sur toute la hauteur alourdirait chaque
+   écran. */
+html::-webkit-scrollbar-track,
+body::-webkit-scrollbar-track { background: transparent; }
+
+/* Variante accentuée (orange), pour les zones où le défilement latéral est le
+   geste principal et non un secours — la portée de l'accordeur. */
 .scroll-x-hint {
   overflow-x: auto;
   overflow-y: hidden;
-  scrollbar-width: thin;
   scrollbar-color: #FF8B3D var(--surface-2);
 }
-.scroll-x-hint::-webkit-scrollbar          { height: 8px; -webkit-appearance: none; }
-.scroll-x-hint::-webkit-scrollbar-track    { background: var(--surface-2); border-radius: 4px; }
-.scroll-x-hint::-webkit-scrollbar-thumb    { background: #FF8B3D; border-radius: 4px; }
+.scroll-x-hint::-webkit-scrollbar-thumb    { background: #FF8B3D; }
 .scroll-x-hint::-webkit-scrollbar-thumb:hover { background: #ff7a1f; }
 
 /* Démo du décompte (Rythme, act. 1 & 2) — geste de frappe, en DEUX animations

@@ -7,6 +7,7 @@ import RythmStaff from './RythmStaff.jsx'
 import TourGuide from './TourGuide'
 import ConsigneOverlay, { consigneSeen } from './ConsigneOverlay'
 import useProgressFirebase from './hooks/useProgressFirebase'
+import { NIVEAUX_THEORIE } from './hooks/progressLogic'
 import { IS_DEV } from './isDev'
 
 const CATEGORIES = [
@@ -18,7 +19,16 @@ const CATEGORIES = [
   { id: 'culture_musicale',       label: 'Culture musicale',       includes: ['formes_musicales', 'histoire_styles', 'compositeurs'] },
 ]
 
-const LEVELS = ['C1/1','C1/2','C1/3','C1/4','C2/1','C2/2','C2/3','C2/4','C3']
+// Source de vérité dans progressLogic : les trophées du Code de la route en
+// dérivent leurs identifiants, qui sont persistés. Deux listes divergeraient.
+const LEVELS = NIVEAUX_THEORIE
+
+// Libellé de la sélection de catégories, tel qu'il apparaît dans l'historique du
+// tableau de bord. Le Code de la route couvre tout, quoi qu'ait coché l'élève.
+function categoriesLabel(mode, catIds) {
+  if (mode === 'examen' || !catIds || catIds.length === 0) return 'Toutes'
+  return catIds.map(id => CATEGORIES.find(c => c.id === id)?.label ?? id).join(', ')
+}
 
 function normalizeText(str) {
   return str.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]/g, ' ').replace(/\s+/g, ' ').trim()
@@ -468,8 +478,43 @@ function HelpModalTheorie({ onTuto, onTour, onClose }) {
   )
 }
 
+// Jauge de validation de la journée par séries d'entraînement.
+// Même règle que les exercices Rythme isolés : une série de 10 questions est une
+// activité partielle, il en faut `seuil` dans la journée pour valider le streak.
+function JaugeStreakTheorie({ faits, seuil }) {
+  const complet = faits >= seuil
+  const reste = seuil - faits
+  return (
+    <div className="bg-surface border border-app rounded-2xl mb-4" style={{ padding: '11px 16px' }}>
+      <div className="flex justify-between items-center mb-1.5">
+        <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text)' }}>
+          {complet ? 'Journée validée' : 'Série du jour'}
+        </span>
+        <span style={{ fontSize: 11, fontWeight: 800, color: complet ? '#34d399' : '#8B5CF6' }}>
+          {complet ? '🔥' : `${faits}/${seuil}`}
+        </span>
+      </div>
+      <div className="w-full h-[5px] rounded-full overflow-hidden" style={{ background: 'var(--surface-2)' }}>
+        <div
+          className="h-full rounded-full"
+          style={{
+            width: `${Math.min(100, (faits / seuil) * 100)}%`,
+            background: complet ? '#34d399' : 'linear-gradient(90deg,#8B5CF6,#c084fc)',
+            transition: 'width 0.45s ease-out, background 0.3s',
+          }}
+        />
+      </div>
+      <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 5 }}>
+        {complet
+          ? 'Ta série est prolongée pour aujourd\'hui.'
+          : `Encore ${reste} série${reste > 1 ? 's' : ''} d'entraînement pour valider ta journée. Le Code de la route la valide d'un coup.`}
+      </div>
+    </div>
+  )
+}
+
 // ── Page de préparation (page unique) ───────────────────────────────────────────
-function SetupScreen({ questions, onStart, onLoadCSV, csvCount, templateQuestions }) {
+function SetupScreen({ questions, onStart, onLoadCSV, csvCount, templateQuestions, seriesFaites, seuilSeries }) {
   const [level, setLevel] = useState(loadStoredLevel)
   const [onlyCurrent, setOnlyCurrent] = useState(loadStoredOnlyCurrent)
   const [cats, setCats] = useState([])
@@ -499,6 +544,8 @@ function SetupScreen({ questions, onStart, onLoadCSV, csvCount, templateQuestion
     <div>
       <h2 className="text-xl font-black mb-1" style={{ color: '#8B5CF6' }}>Théorie</h2>
       <p className="text-sm text-app-muted mb-5">Quiz de théorie musicale</p>
+
+      <JaugeStreakTheorie faits={seriesFaites} seuil={seuilSeries} />
 
       {/* Niveau */}
       <div className="bg-surface border border-app rounded-2xl p-5 mb-4" data-tour="niveau-select">
@@ -679,6 +726,23 @@ function QuizScreen({ session, mode, onAnswer, onNext }) {
       </div>
       {!noTimer && <TimerBar limit={limit} timedOut={timedOut} revealed={revealed} />}
 
+      {/* Emplacement RÉSERVÉ pour « Suivant ». La hauteur est tenue même quand le
+          bouton est absent : sa position ne dépend donc ni de la longueur de
+          l'énoncé ni du nombre de réponses, et rien ne se décale au moment de la
+          révélation — le doigt retrouve toujours le bouton au même endroit. */}
+      <div style={{ minHeight: 46 }} className="mb-3">
+        {revealed && (
+          <button
+            className="w-full rounded-xl px-4 py-3 text-sm font-bold text-white border-none"
+            style={{ background: '#8B5CF6' }}
+            onClick={onNext}
+            onPointerDown={e => e.stopPropagation()}
+          >
+            {isLast ? 'Voir les résultats →' : 'Suivant →'}
+          </button>
+        )}
+      </div>
+
       {timedOut && !revealed && (
         <div className="text-xs text-red-400 text-center mb-2.5">Temps écoulé — réponds quand même pour 0,5 pt</div>
       )}
@@ -749,16 +813,6 @@ function QuizScreen({ session, mode, onAnswer, onNext }) {
           </div>
         )}
 
-        {revealed && (
-          <button
-            className="w-full rounded-xl px-4 py-3 text-sm font-bold text-white border-none mt-4"
-            style={{ background: '#8B5CF6' }}
-            onClick={onNext}
-            onPointerDown={e => e.stopPropagation()}
-          >
-            {isLast ? 'Voir les résultats →' : 'Suivant →'}
-          </button>
-        )}
       </div>
 
       {mode === 'entrainement' && answers.length > 0 && (
@@ -786,7 +840,27 @@ function ResultScreen({ session, mode, onReplay, addSession }) {
       ? Math.round(totalPts * 100) + (passed ? 500 : 0)
       : Math.round(totalPts * 50)
     const medal = pct >= 0.9 ? '🥇' : pct >= 0.7 ? '🥈' : '🥉'
-    addSession({ module: 'theorie', xpEarned, medal })
+    // Une série d'entraînement (10 questions) est une activité PARTIELLE : il en
+    // faut THEORIE_SERIES_POUR_STREAK dans la journée pour valider le streak.
+    // Le Code de la route (40 questions) reste une session pleine.
+    addSession({
+      module: 'theorie', xpEarned, medal,
+      meta: {
+        serieTheorie: mode !== 'examen',
+        // Débloque le trophée du niveau — uniquement sur un Code de la route REÇU.
+        ...(mode === 'examen' && passed && session.level ? { codeReussi: session.level } : {}),
+      },
+      details: {
+        mode: mode === 'examen' ? 'Code de la route' : 'Entraînement',
+        level: session.level,
+        category: session.categories,
+        items: maxPts,
+        // Score et mention n'ont de sens qu'au Code de la route, qui a un seuil ;
+        // en entraînement la médaille dit déjà l'essentiel.
+        score: mode === 'examen' ? `${totalPts}/${maxPts}` : undefined,
+        passed: mode === 'examen' ? passed : undefined,
+      },
+    })
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -844,7 +918,7 @@ function ResultScreen({ session, mode, onReplay, addSession }) {
 
 // ── Page principale ────────────────────────────────────────────────────────────
 export default function TheoriePage() {
-  const { addSession } = useProgressFirebase()
+  const { addSession, theorieSeriesDuJour, seuilTheorieSeries } = useProgressFirebase()
   const [screen, setScreen] = useState('setup')
   const [mode, setMode] = useState(null)
   const [allQuestions, setAllQuestions] = useState([])
@@ -870,7 +944,10 @@ export default function TheoriePage() {
     const pool = buildPool(mergedQuestions, m, level, categories, onlyCurrent)
     if (pool.length === 0) { alert('Aucune question ne correspond à cette sélection. Élargis le niveau ou les catégories.'); return }
     setMode(m)
-    setSession({ pool, currentIdx: 0, answers: [], noTimer: isCycle1(level) })
+    setSession({
+      pool, currentIdx: 0, answers: [], noTimer: isCycle1(level),
+      level, categories: categoriesLabel(m, categories),
+    })
     // Consigne d'arrivée (1ʳᵉ fois / non masquée) avant de lancer le quiz
     if (consigneSeen('theorie')) setScreen('quiz')
     else setShowConsigne(true)
@@ -884,7 +961,10 @@ export default function TheoriePage() {
     const pool = buildPool(mergedQuestions, m, level, cats, loadStoredOnlyCurrent())
     if (pool.length === 0) { setMode(m); setScreen('setup'); return }
     setMode(m)
-    setSession({ pool, currentIdx: 0, answers: [], noTimer: isCycle1(level) })
+    setSession({
+      pool, currentIdx: 0, answers: [], noTimer: isCycle1(level),
+      level, categories: categoriesLabel(m, cats),
+    })
     setScreen('quiz')
   }
 
@@ -941,7 +1021,7 @@ export default function TheoriePage() {
         </div>
 
         {showTutorial && <TheorieTutorial onDone={handleTutorialDone} />}
-        {screen === 'setup' && !showTutorial && <SetupScreen questions={mergedQuestions} onStart={handleStart} onLoadCSV={setCsvQuestions} csvCount={csvQuestions.length} templateQuestions={allQuestions} />}
+        {screen === 'setup' && !showTutorial && <SetupScreen questions={mergedQuestions} onStart={handleStart} onLoadCSV={setCsvQuestions} csvCount={csvQuestions.length} templateQuestions={allQuestions} seriesFaites={theorieSeriesDuJour} seuilSeries={seuilTheorieSeries} />}
         {screen === 'quiz' && session && <QuizScreen key={session.currentIdx} session={session} mode={mode} onAnswer={handleAnswer} onNext={handleNext} />}
         {screen === 'result' && session && <ResultScreen session={session} mode={mode} addSession={addSession} onReplay={() => { setSession(null); setMode(null); setScreen('setup') }} />}
         {showHelp && (

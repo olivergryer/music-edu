@@ -26,7 +26,7 @@ import { classifyAttempt, updateMastery } from './mastery.ts'
 import { computeSessionSummary } from './summary.ts'
 import { flagsToBitmask } from './encode.ts'
 import { noteNameOf, degreeOfName, degreeOf, octaveOf, diatonic } from './diatonic.ts'
-import { isStringInstrument, stringPool } from './strings.ts'
+import { isStringInstrument, stringPool, stringDefaultRange } from './strings.ts'
 import { IS_DEV } from '../../isDev'
 import { mulberry32, type Rng } from './rng.ts'
 import { busMaitre } from '../../lib/busMaitre'
@@ -120,9 +120,37 @@ function customProfile(clef: Clef, range: ClefRange): ReadingProfile {
   return { id: 'custom', clef, landmarks, ambitusSequence: [{ low: lo, high: hi }] }
 }
 
-function availableClefsFor(instrumentId: string, custom: CustomCfg): Clef[] {
-  if (instrumentId === CUSTOM_ID) return custom.clefs.length ? custom.clefs : ['treble']
-  return instrumentClefs(getInstrument(instrumentId) ?? beginnerInstruments()[0])
+// ── Config clefs + tessiture pour les instruments à cordes (comme Perso) ──────
+const STRING_IDS = ['violon', 'alto', 'violoncelle', 'contrebasse']
+
+function stringDefaultCfg(id: string): CustomCfg {
+  const inst = getInstrument(id)!
+  const clefs = instrumentClefs(inst)
+  const ranges = {} as Record<Clef, ClefRange>
+  for (const c of ALL_CLEFS) ranges[c] = stringDefaultRange(id, c)
+  return { clefs, ranges }
+}
+
+function loadStringCfgs(): Record<string, CustomCfg> {
+  const out: Record<string, CustomCfg> = {}
+  for (const id of STRING_IDS) out[id] = stringDefaultCfg(id)
+  try {
+    const raw = JSON.parse(localStorage.getItem('notes_stringcfg') || '')
+    if (raw) for (const id of STRING_IDS) {
+      const r = raw[id]
+      if (r && Array.isArray(r.clefs)) {
+        const avail = instrumentClefs(getInstrument(id)!)
+        const clefs = r.clefs.filter((c: Clef) => avail.includes(c))
+        const ranges = { ...out[id].ranges }
+        if (r.ranges) for (const c of ALL_CLEFS) {
+          const rr = r.ranges[c]
+          if (rr && typeof rr.low === 'number' && typeof rr.high === 'number') ranges[c] = { low: rr.low, high: rr.high }
+        }
+        if (clefs.length) out[id] = { clefs, ranges }
+      }
+    }
+  } catch { /* défauts */ }
+  return out
 }
 
 const MASTERY_COLOR: Record<MasteryLevel, string> = {
@@ -182,6 +210,7 @@ export default function NotesPage() {
     return (['P0', 'P1', 'P2'] as string[]).includes(v) ? (v as Phase) : 'P0'
   })
   const [customCfg, setCustomCfg] = useState<CustomCfg>(loadCustom)
+  const [stringCfgs, setStringCfgs] = useState<Record<string, CustomCfg>>(loadStringCfgs)
   const [coloriser, setColoriser] = useState(() => LS.get('notes_couleur', '0') === '1')
   const [sonOn, setSonOn] = useState(() => LS.get('notes_son', '1') === '1')
   const [wheelMode, setWheelMode] = useState<WheelMode>(() => (LS.get('notes_wheelmode', 'fixed') === 'drag' ? 'drag' : 'fixed'))
@@ -194,6 +223,18 @@ export default function NotesPage() {
   useEffect(() => { LS.set('notes_son', sonOn ? '1' : '0') }, [sonOn])
   useEffect(() => { LS.set('notes_wheelmode', wheelMode) }, [wheelMode])
   useEffect(() => { LS.set('notes_custom', JSON.stringify(customCfg)) }, [customCfg])
+  useEffect(() => { LS.set('notes_stringcfg', JSON.stringify(stringCfgs)) }, [stringCfgs])
+
+  // Config active (clefs + tessitures) selon l'instrument : Perso ou profil corde.
+  const isCustomInst = instrumentId === CUSTOM_ID
+  const isStrInst = stringEnabled(instrumentId)
+  const activeCfg: CustomCfg | null = isCustomInst ? customCfg : (isStrInst ? stringCfgs[instrumentId] : null)
+  const setActiveCfg = (next: CustomCfg) => {
+    if (isCustomInst) setCustomCfg(next)
+    else if (isStrInst) setStringCfgs({ ...stringCfgs, [instrumentId]: next })
+  }
+  const selectableClefs: Clef[] = isCustomInst ? ALL_CLEFS : (isStrInst ? instrumentClefs(getInstrument(instrumentId)!) : [])
+  const selectedClefs: Clef[] = activeCfg?.clefs ?? []
 
   // État de jeu
   const [sequence, setSequence] = useState<NoteItem[]>([])
@@ -238,40 +279,72 @@ export default function NotesPage() {
   }, [screen, phase])
 
   // Son de CONFIRMATION — jamais avant la réponse (§2). Court, désactivable.
-  function playTone(freq: number, when = 0, dur = 0.22) {
-    if (!sonOn) return
+  function audioCtx(): AudioContext | null {
     try {
       const Ctx = window.AudioContext ?? (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
-      const ac = audioRef.current ?? new Ctx()
-      audioRef.current = ac
-      const t0 = ac.currentTime + when
-      const o = ac.createOscillator(), g = ac.createGain()
-      o.type = 'sine'; o.frequency.value = freq
-      o.connect(g); g.connect(busMaitre(ac))
-      g.gain.setValueAtTime(0.0001, t0)
-      g.gain.exponentialRampToValueAtTime(0.2, t0 + 0.01)
-      g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur)
-      o.start(t0); o.stop(t0 + dur + 0.02)
-    } catch { /* audio best-effort */ }
+      audioRef.current = audioRef.current ?? new Ctx()
+      return audioRef.current
+    } catch { return null }
   }
-  // Correct → la HAUTEUR réelle de la note écrite. Faux → double bip grave neutre.
-  function playFeedbackSound(correct: boolean, diatonicIndex: number) {
-    if (correct) playTone(freqOfDiatonic(diatonicIndex), 0, 0.34)
-    else { playTone(220, 0, 0.09); playTone(220, 0.12, 0.09) }
+  function playTone(freq: number, when = 0, dur = 0.22) {
+    if (!sonOn) return
+    const ac = audioCtx(); if (!ac) return
+    const t0 = ac.currentTime + when
+    const o = ac.createOscillator(), g = ac.createGain()
+    o.type = 'sine'; o.frequency.value = freq
+    o.connect(g); g.connect(busMaitre(ac))
+    g.gain.setValueAtTime(0.0001, t0)
+    g.gain.exponentialRampToValueAtTime(0.2, t0 + 0.01)
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur)
+    o.start(t0); o.stop(t0 + dur + 0.02)
+  }
+  // Note « piano » synthétisée (additive + enveloppe percussive) — homogène sur tous
+  // les registres, sans fichier audio.
+  function playPiano(freq: number, when = 0) {
+    if (!sonOn) return
+    const ac = audioCtx(); if (!ac) return
+    const t0 = ac.currentTime + when
+    const dur = 0.85
+    const master = ac.createGain()
+    master.connect(busMaitre(ac))
+    master.gain.setValueAtTime(0.0001, t0)
+    master.gain.exponentialRampToValueAtTime(0.26, t0 + 0.006) // attaque rapide
+    master.gain.exponentialRampToValueAtTime(0.0001, t0 + dur) // décroissance
+    const partials: [number, number][] = [[1, 1], [2, 0.5], [3, 0.28], [4, 0.13], [5, 0.06]]
+    for (const [mult, amp] of partials) {
+      const o = ac.createOscillator(), g = ac.createGain()
+      o.type = 'sine'; o.frequency.value = freq * mult
+      g.gain.value = amp
+      o.connect(g); g.connect(master)
+      o.start(t0); o.stop(t0 + dur + 0.02)
+    }
+  }
+  // Correct → la note écrite au PIANO. Clefs graves (Fa/Ut3/Ut4) montées d'1 octave
+  // pour rester audibles sur HP de smartphone. Faux → double bip grave neutre.
+  function playFeedbackSound(correct: boolean, diatonicIndex: number, clef: Clef) {
+    if (correct) {
+      const octaveUp = clef === 'treble' ? 1 : 2
+      playPiano(freqOfDiatonic(diatonicIndex) * octaveUp)
+    } else {
+      playTone(220, 0, 0.09); playTone(220, 0.12, 0.09)
+    }
   }
 
   // ── Démarrage d'une session ────────────────────────────────────────────────────
   function start() {
     // La clef travaillée est TIRÉE AU SORT parmi les clefs à travailler.
-    const clefs = availableClefsFor(instrumentId, customCfg)
+    const clefs: Clef[] = selectedClefs.length ? selectedClefs : ['treble']
     const clef = clefs[Math.floor(Math.random() * clefs.length)]
     setSessionClef(clef)
 
     let pool: NoteItem[]
     let ambitus: { low: number; high: number } | undefined
-    if (stringEnabled(instrumentId)) {
-      // Progression cordes (Dev) : cordes à vide → +1/+2/+3 doigts → fluidité.
-      pool = stringPool(instrumentId, clef, phase, stringStep)
+    if (isStrInst) {
+      // Progression cordes (Dev) : cordes à vide → +1/+2/+3 doigts → fluidité,
+      // filtrée par la tessiture de la clef tirée (n'affiche que le lisible).
+      const range = stringCfgs[instrumentId]?.ranges[clef] ?? stringDefaultRange(instrumentId, clef)
+      pool = stringPool(instrumentId, clef, phase, stringStep, range)
+      if (pool.length === 0) pool = stringPool(instrumentId, clef, phase, stringStep) // garde-fou
     } else {
       const inst = getInstrument(instrumentId)
       const profile = instrumentId === CUSTOM_ID
@@ -366,7 +439,7 @@ export default function NotesPage() {
     masteryRef.current = updateMastery(masteryRef.current, attempt, turnRef.current++)
 
     setResults(prev => { const n = [...prev]; n[idx] = correct ? 'correct' : 'wrong'; return n })
-    playFeedbackSound(correct, current.diatonicIndex) // APRÈS la réponse uniquement (§2)
+    playFeedbackSound(correct, current.diatonicIndex, config.clef) // APRÈS la réponse uniquement (§2)
 
     // Correction non bloquante : la bonne réponse s'affiche brièvement au-dessus de
     // la portée, sans figer l'entrée ni la roue (on peut enchaîner).
@@ -450,7 +523,12 @@ export default function NotesPage() {
     // série (10 questions ≈ 500 XP) → ~125 XP au max, pondéré par la réussite.
     const medal = s.accuracy >= 0.9 ? 'or' : s.accuracy >= 0.75 ? 'argent' : 'bronze'
     const xpEarned = Math.max(5, Math.round(125 * s.accuracy))
-    try { await addSession({ module: 'notes', xpEarned, medal }) } catch { /* offline ok */ }
+    try {
+      await addSession({
+        module: 'notes', xpEarned, medal,
+        details: { level: PHASE_LABEL[config.phase], items: attempts.length, mode: CLEF_LABELS[config.clef] },
+      })
+    } catch { /* offline ok */ }
 
     // Notes travaillées cette session (dédoublonnées) pour la heatmap du bilan.
     const practiced = new Map<string, NoteItem>()
@@ -463,7 +541,7 @@ export default function NotesPage() {
   // ── Rendu ──────────────────────────────────────────────────────────────────────
   const target = phase === 'P2' ? TARGET_LINES * LINE_LEN : TARGET_ISOLATED
   const payload = (mp.progress.payload ?? {}) as { perNote?: PerNoteMap; perContext?: PerContextMap }
-  const availableClefs = availableClefsFor(instrumentId, customCfg)
+  const availableClefs = selectedClefs
 
   return (
     <div className="bg-app min-h-dvh flex flex-col" style={{ maxWidth: 540, margin: '0 auto', width: '100%' }}>
@@ -498,7 +576,7 @@ export default function NotesPage() {
         <SetupScreen
           instrumentId={instrumentId} setInstrumentId={setInstrumentId}
           availableClefs={availableClefs}
-          customCfg={customCfg} setCustomCfg={setCustomCfg}
+          activeCfg={activeCfg} setActiveCfg={setActiveCfg} selectableClefs={selectableClefs}
           phase={phase} setPhase={setPhase}
           stringStep={stringStep} setStringStep={setStringStep}
           coloriser={coloriser} setColoriser={setColoriser}
@@ -566,10 +644,10 @@ export default function NotesPage() {
 }
 
 // ── Écran de configuration ────────────────────────────────────────────────────
-function SetupScreen({ instrumentId, setInstrumentId, availableClefs, customCfg, setCustomCfg, phase, setPhase, stringStep, setStringStep, coloriser, setColoriser, sonOn, setSonOn, wheelMode, setWheelMode, perNote, perContext, onStart }: {
+function SetupScreen({ instrumentId, setInstrumentId, availableClefs, activeCfg, setActiveCfg, selectableClefs, phase, setPhase, stringStep, setStringStep, coloriser, setColoriser, sonOn, setSonOn, wheelMode, setWheelMode, perNote, perContext, onStart }: {
   instrumentId: string; setInstrumentId: (v: string) => void
   availableClefs: Clef[]
-  customCfg: CustomCfg; setCustomCfg: (c: CustomCfg) => void
+  activeCfg: CustomCfg | null; setActiveCfg: (c: CustomCfg) => void; selectableClefs: Clef[]
   phase: Phase; setPhase: (p: Phase) => void
   stringStep: number; setStringStep: (s: number) => void
   coloriser: boolean; setColoriser: (v: boolean) => void
@@ -587,9 +665,9 @@ function SetupScreen({ instrumentId, setInstrumentId, availableClefs, customCfg,
   const instLabel = isCustom ? 'Personnalisé' : (inst?.label ?? '')
   // Pool d'une clef pour la heatmap de progression (cordes / perso / instrument).
   const poolForClef = (c: Clef): NoteItem[] => {
-    if (isStr) return stringPool(instrumentId, c, phase, stringStep)
+    if (isStr) return stringPool(instrumentId, c, phase, stringStep, activeCfg?.ranges[c])
     const p = isCustom
-      ? customProfile(c, customCfg.ranges[c] ?? DEFAULT_CLEF_RANGES[c])
+      ? customProfile(c, activeCfg?.ranges[c] ?? DEFAULT_CLEF_RANGES[c])
       : (inst ? profileForClef(inst.primaryProfile, c) : null)
     return p ? buildPool(p, phase, ambitusStepFor(p, phase)) : []
   }
@@ -611,20 +689,25 @@ function SetupScreen({ instrumentId, setInstrumentId, availableClefs, customCfg,
         </div>
       </div>
 
-      {/* Config personnalisée : clefs à travailler + une tessiture PAR clef. */}
-      {isCustom && (
+      {/* Clefs à travailler + une tessiture PAR clef (Perso ET profils cordes).
+          Les clefs non pertinentes pour l'instrument sont grisées. */}
+      {activeCfg && (
         <div style={card}>
           <div className={label} style={{ marginBottom: 8 }}>Clefs à travailler</div>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             {ALL_CLEFS.map(c => {
-              const on = customCfg.clefs.includes(c)
+              const selectable = selectableClefs.includes(c)
+              const on = activeCfg.clefs.includes(c)
               return (
-                <button key={c} onClick={() => {
-                  const next = on ? customCfg.clefs.filter(x => x !== c) : [...customCfg.clefs, c]
-                  if (next.length) setCustomCfg({ ...customCfg, clefs: next }) // au moins 1 clef
-                }}
+                <button key={c} disabled={!selectable}
+                  onClick={() => {
+                    if (!selectable) return
+                    const next = on ? activeCfg.clefs.filter(x => x !== c) : [...activeCfg.clefs, c]
+                    if (next.length) setActiveCfg({ ...activeCfg, clefs: next }) // au moins 1 clef
+                  }}
                   style={{
-                    flex: '1 1 auto', minWidth: 64, minHeight: 44, borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: 'pointer',
+                    flex: '1 1 auto', minWidth: 64, minHeight: 44, borderRadius: 10, fontSize: 14, fontWeight: 700,
+                    cursor: selectable ? 'pointer' : 'not-allowed', opacity: selectable ? 1 : 0.4,
                     border: `1.5px solid ${on ? '#c084fc' : 'var(--border-c)'}`,
                     background: on ? 'rgba(192,132,252,0.15)' : 'var(--surface-2)',
                     color: on ? '#c084fc' : 'var(--text)',
@@ -636,10 +719,10 @@ function SetupScreen({ instrumentId, setInstrumentId, availableClefs, customCfg,
           </div>
           {/* Une ligne de tessiture par clef sélectionnée (étiquette clef en tête). */}
           <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {customCfg.clefs.map(c => {
-              const r = customCfg.ranges[c] ?? DEFAULT_CLEF_RANGES[c]
+            {activeCfg.clefs.map(c => {
+              const r = activeCfg.ranges[c] ?? DEFAULT_CLEF_RANGES[c]
               const setRange = (patch: Partial<ClefRange>) =>
-                setCustomCfg({ ...customCfg, ranges: { ...customCfg.ranges, [c]: { ...r, ...patch } } })
+                setActiveCfg({ ...activeCfg, ranges: { ...activeCfg.ranges, [c]: { ...r, ...patch } } })
               return (
                 <div key={c} style={{ display: 'flex', alignItems: 'flex-end', gap: 10 }}>
                   <div style={{ minWidth: 42, fontWeight: 800, color: '#c084fc', paddingBottom: 8 }}>{CLEF_LABELS[c]}</div>

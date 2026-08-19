@@ -175,12 +175,19 @@ export function construireSessionFlux(
 
   return Array.from({ length: nombreItems }, (_, rang) => ({
     index: rang,
-    progression: genererProgression(
-      mode,
-      niveau,
-      longueurPourRangFlux(rang, nombreItems),
-      graine + rang * PAS_GRAINE,
-    ),
+    // La tonalité change à chaque item, comme partout ailleurs dans le module :
+    // en do d'un bout à l'autre, une mémoire de hauteurs absolues remplacerait
+    // l'audition des fonctions. ⚠ Au niveau 7 la tonique ne sonne pas : la
+    // transposition y ajoute une vraie marche, assumée.
+    progression: {
+      ...genererProgression(
+        mode,
+        niveau,
+        longueurPourRangFlux(rang, nombreItems),
+        graine + rang * PAS_GRAINE,
+      ),
+      tonique: (graine + rang * 7) % 12,
+    },
   }))
 }
 

@@ -19,10 +19,15 @@ import { ThemeToggleInline } from '../../ThemeContext'
 import { arreter, chargerInstrument, jouerSuite } from './audio.ts'
 import ChiffrageEmpile from './ChiffrageEmpile.tsx'
 import { realiserProgression } from './dispositions.ts'
+import { INTRO_DEFAUT, avecIntro, estIntro, type Intro } from './intro.ts'
+import ToggleIntro from './ToggleIntro.tsx'
+import BoutonDemiVitesse, { DEMI_VITESSE } from './BoutonDemiVitesse.tsx'
+import ToggleToutEnDo from './ToggleToutEnDo.tsx'
 import { niveauSpec } from './niveaux.ts'
 import { partitionDeProgression } from './notation.ts'
 import PorteeSATB, { type VuePortee } from './PorteeSATB.tsx'
 import TogglePortee, { estVuePortee } from './TogglePortee.tsx'
+import { nomTonalite } from './tonalites.ts'
 import {
   ITEMS_PAR_SESSION_BINAIRE,
   NIVEAUX_BINAIRE,
@@ -55,8 +60,10 @@ export default function ChoixBinairePage() {
   const [repondu, setRepondu] = useState<Reponse | null>(null)
   const [enLecture, setEnLecture] = useState(false)
   const [erreur, setErreur] = useState<string | null>(null)
-  // Réglage commun aux quatre activités du module.
+  // Réglages communs aux quatre activités du module.
   const [vuePortee, setVuePortee] = useState<VuePortee>('masquee')
+  const [intro, setIntro] = useState<Intro>(INTRO_DEFAUT)
+  const [toutEnDo, setToutEnDo] = useState(false)
 
   const reponsesRef = useRef<ReponseBinaire[]>([])
   const debutMsRef = useRef<number | null>(null)
@@ -69,12 +76,16 @@ export default function ChoixBinairePage() {
       binaireMode?: Mode
       binaireNiveau?: number
       porteeVue?: unknown
+      introTonale?: unknown
+      toutEnDo?: unknown
     }
     if (p.binaireMode) setMode(p.binaireMode)
     if (typeof p.binaireNiveau === 'number' && NIVEAUX_BINAIRE.includes(p.binaireNiveau)) {
       setNiveau(p.binaireNiveau)
     }
     if (estVuePortee(p.porteeVue)) setVuePortee(p.porteeVue)
+    if (estIntro(p.introTonale)) setIntro(p.introTonale)
+    if (typeof p.toutEnDo === 'boolean') setToutEnDo(p.toutEnDo)
   }, [mp.loaded, mp.progress.payload])
 
   useEffect(() => () => arreter(), [])
@@ -82,23 +93,37 @@ export default function ChoixBinairePage() {
   const item = items[rang]
   const spec = specBinaire(niveau)
 
+  // Le plan de lecture : l'intro tonale, puis la suite. `avecIntro` porte la
+  // forme de l'intro et le décalage qu'elle introduit.
+  // « Tout en do » : la progression SONNÉE est ramenée sur do ; la portée suit la
+  // vue « En Ut » — donc la mineur en mineur, armure vide (cf. `ToggleToutEnDo`).
+  const progressionSonnee = useMemo(
+    () => (item ? (toutEnDo ? { ...item.progression, tonique: 0 } : item.progression) : null),
+    [item, toutEnDo],
+  )
+  const vuePorteeEffective: VuePortee = toutEnDo && vuePortee !== 'masquee' ? 'ut' : vuePortee
+
   const aJouer = useMemo(() => {
-    if (!item) return []
-    const suite = realiserProgression(item.progression)
-    if (!niveauSpec(item.niveau).contexteTonal) return suite
+    if (!item || !progressionSonnee) return null
+    const suite = realiserProgression(progressionSonnee)
+    if (!niveauSpec(item.niveau).contexteTonal) return avecIntro(suite, null, intro)
     const [tonique] = realiserProgression({
-      ...item.progression,
+      ...progressionSonnee,
       accords: [creerAccord(0, { degre: 1 })],
     })
-    return [tonique, ...suite]
-  }, [item])
+    return avecIntro(suite, tonique, intro)
+  }, [item, progressionSonnee, intro])
 
-  const ecouter = useCallback(async () => {
-    if (aJouer.length === 0) return
+  const ecouter = useCallback(async (facteurTempo = 1) => {
+    if (!aJouer || aJouer.accords.length === 0) return
     if (finLectureRef.current) clearTimeout(finLectureRef.current)
     setEnLecture(true)
     try {
-      const duree = await jouerSuite(aJouer, { bpm: BPM })
+      const duree = await jouerSuite(aJouer.accords, {
+        bpm: BPM * facteurTempo,
+        durees: aJouer.durees,
+        tenues: aJouer.tenues,
+      })
       finLectureRef.current = setTimeout(() => {
         setEnLecture(false)
         if (debutMsRef.current === null) debutMsRef.current = performance.now()
@@ -176,7 +201,13 @@ export default function ChoixBinairePage() {
               lastAt: Date.now(),
             },
           },
-          payload: { binaireMode: mode, binaireNiveau: niveau, porteeVue: vuePortee },
+          payload: {
+            binaireMode: mode,
+            binaireNiveau: niveau,
+            porteeVue: vuePortee,
+            introTonale: intro,
+            toutEnDo,
+          },
         },
       })
     } catch (e) {
@@ -186,7 +217,10 @@ export default function ChoixBinairePage() {
     const medal = resume.accuracy >= 0.9 ? 'or' : resume.accuracy >= 0.75 ? 'argent' : 'bronze'
     const xpEarned = Math.max(5, Math.round(resume.accuracy * resume.itemCount * 3))
     try {
-      await addSession({ module: 'harmonie', xpEarned, medal })
+      await addSession({
+        module: 'harmonie', xpEarned, medal,
+        details: { level: `Niveau ${niveau}`, items: resume.itemCount, mode: 'Choix binaire' },
+      })
     } catch {
       /* hors ligne : la session per-module est déjà persistée */
     }
@@ -248,6 +282,10 @@ export default function ChoixBinairePage() {
                 </button>
               ))}
             </div>
+          </Bloc>
+
+          <Bloc titre="Intro tonale">
+            <ToggleIntro intro={intro} onChange={setIntro} actif={niveauSpec(niveau).contexteTonal} />
           </Bloc>
 
           <button onClick={commencer} style={boutonPlein}>
@@ -312,6 +350,13 @@ export default function ChoixBinairePage() {
           <span className="text-app-muted" style={{ fontSize: 13 }}>
             {rang + 1} / {items.length}
           </span>
+          {/* La tonalité est écrite, comme en dictée de basse : elle oriente sans
+              rien donner: aucune des trois questions du binaire — dominante ou
+              sous-dominante, fondamental ou renversé, avec ou sans septième — ne
+              se déduit de la tonalité. */}
+          <span style={{ fontSize: 14, fontWeight: 600, color: ACCENT }}>
+            {nomTonalite(item.progression.tonique, mode)}
+          </span>
           <span className="text-app-muted" style={{ fontSize: 13 }}>
             niveau {niveau}
           </span>
@@ -359,13 +404,26 @@ export default function ChoixBinairePage() {
           </div>
         </div>
 
-        <button
-          onClick={() => void ecouter()}
-          disabled={enLecture}
-          style={{ ...boutonPlein, opacity: enLecture ? 0.6 : 1 }}
-        >
-          {enLecture ? '▶ …' : '▶ Écouter'}
-        </button>
+        {/* ⚠ Le « ▶ ½ » n'existe que tant que l'élève cherche. */}
+        <div className="flex" style={{ gap: 8 }}>
+          <button
+            onClick={() => void ecouter()}
+            disabled={enLecture}
+            style={{ ...boutonPlein, flex: 1, opacity: enLecture ? 0.6 : 1 }}
+          >
+            {enLecture ? '▶ …' : '▶ Écouter'}
+          </button>
+          {repondu === null && (
+            <BoutonDemiVitesse
+              onClick={() => void ecouter(DEMI_VITESSE)}
+              disabled={enLecture}
+            />
+          )}
+        </div>
+
+        <div className="flex justify-end">
+          <ToggleToutEnDo actif={toutEnDo} onChange={setToutEnDo} />
+        </div>
 
         <div className="flex" style={{ gap: 10 }}>
           {spec.options.map((label, i) => {
@@ -428,11 +486,15 @@ export default function ChoixBinairePage() {
             {/* La suite écrite. Une seule version ici : il n'y a pas de « version
                 de l'élève » à opposer, la réponse est un choix. */}
             <div style={{ marginTop: 14 }}>
-              <TogglePortee vue={vuePortee} onChange={setVuePortee} />
-              {vuePortee !== 'masquee' && (
+              <TogglePortee
+                vue={vuePorteeEffective}
+                onChange={setVuePortee}
+                sansTonalite={toutEnDo}
+              />
+              {vuePorteeEffective !== 'masquee' && (
                 <div style={{ marginTop: 10 }}>
                   <PorteeSATB
-                    partition={partitionDeProgression(item.progression, vuePortee)}
+                    partition={partitionDeProgression(item.progression, vuePorteeEffective)}
                     fautes={juste ? [] : [item.cible]}
                   />
                 </div>

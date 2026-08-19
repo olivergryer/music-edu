@@ -154,6 +154,31 @@ test('les progressions respectent le vocabulaire de leur niveau', () => {
   }
 })
 
+// ─── La transposition ────────────────────────────────────────────────────────
+//
+// `genererProgression` rend toujours `tonique: 0` : sans transposition explicite,
+// toute l'activité sonnerait en do et l'élève s'appuierait sur une mémoire de
+// hauteurs absolues au lieu d'entendre des fonctions. Le badge de tonalité de
+// l'écran n'aurait rien à annoncer non plus.
+test('la tonalité change d’un item à l’autre', () => {
+  for (const niveau of NIVEAUX_BINAIRE) {
+    const toniques = new Set(
+      construireSessionBinaire('majeur', niveau, 404).map((i) => i.progression.tonique),
+    )
+    assert.ok(toniques.size > 4, `niveau ${niveau} : trop peu de tonalités (${toniques.size})`)
+  }
+})
+
+test('la transposition ne change ni la cible ni la réponse attendue', () => {
+  // Le degré, le renversement et la septième — donc les trois questions du
+  // binaire — sont indépendants de la tonique. Un test le grave.
+  for (const niveau of NIVEAUX_BINAIRE) {
+    for (const item of construireSessionBinaire('mineur', niveau, 91)) {
+      assert.equal(reponseAttendue(niveau, item.progression.accords[item.cible]), item.reponse)
+    }
+  }
+})
+
 // ─── Le score ────────────────────────────────────────────────────────────────
 
 test('scorerBinaire : cas limites', () => {

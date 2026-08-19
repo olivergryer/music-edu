@@ -2,7 +2,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 
-import { STRING_OPEN, STRING_COLORS, isStringInstrument, stringColorOf, stringPool } from './strings.ts'
+import { STRING_OPEN, STRING_COLORS, isStringInstrument, stringColorOf, stringPool, stringDefaultRange } from './strings.ts'
 import { diatonic, noteNameOf, octaveOf } from './diatonic.ts'
 
 test('les 4 instruments à cordes ont 4 cordes à vide', () => {
@@ -50,6 +50,21 @@ test('couleur par corde : chaque note prend la couleur de sa corde', () => {
   assert.equal(stringColorOf(d, 'violon'), STRING_COLORS[1])       // ré3 → corde 1
   assert.equal(stringColorOf(9999, 'violon'), STRING_COLORS[3])    // très aigu → corde la plus haute
   assert.equal(stringColorOf(20, 'flute'), undefined)
+})
+
+test('tessiture filtre le pool : violoncelle en clef de sol exclut le Do grave', () => {
+  const range = stringDefaultRange('violoncelle', 'treble')
+  // Do1 (corde à vide la plus grave) NON inclus en clef de sol.
+  assert.ok(!stringPool('violoncelle', 'treble', 'P0', 0, range).some(p => p.diatonicIndex === diatonic(1, 0)))
+  // En clef de fa, le Do grave EST présent.
+  const rangeFa = stringDefaultRange('violoncelle', 'bass')
+  assert.ok(stringPool('violoncelle', 'bass', 'P0', 0, rangeFa).some(p => p.diatonicIndex === diatonic(1, 0)))
+})
+
+test('stringDefaultRange : grave ≥ corde à vide la plus grave', () => {
+  const r = stringDefaultRange('contrebasse', 'bass')
+  assert.ok(r.low >= Math.min(...STRING_OPEN.contrebasse))
+  assert.ok(r.high > r.low)
 })
 
 test('contrebasse : cordes ÉCRITES une octave au-dessus du son', () => {

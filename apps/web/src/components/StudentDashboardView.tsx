@@ -7,19 +7,22 @@ import {
   type ProgressState,
 } from '../hooks/progressLogic'
 import { MODULES, MODULE_IDS, moduleLabel, moduleColor, type ModuleId } from '../lib/modules'
+import { groupHistory, joursValidantStreak, iconeMedaille, type GroupedEntry } from '../hooks/historyGrouping'
+import type { HistoryEntry as HistoryEntryBase } from '../hooks/progressLogic'
 
-export interface HistoryEntry {
-  date: string
-  module: string
-  xp: number
-  medal: string
-}
+// Le tableau de bord lit l'historique tel qu'il sort de Firestore : le module y
+// est une chaîne libre, pas encore validée contre le registre (données legacy).
+export type HistoryEntry = Omit<HistoryEntryBase, 'module'> & { module: string }
 
 // Libellés/couleurs dérivés du registre unique (lib/modules.ts).
 export const MODULE_LABELS: Record<string, string> = Object.fromEntries(MODULE_IDS.map(id => [id, MODULES[id].label]))
 export const MODULE_COLORS: Record<string, string> = Object.fromEntries(MODULE_IDS.map(id => [id, MODULES[id].color]))
-// Icônes : conservées localement (emojis, hors registre).
-export const MODULE_ICONS:  Record<string, string> = { rythme: '🥁', theorie: '🎼', accordeur: '🎵', notes: '🎼' }
+// Icônes : conservées localement (emojis, hors registre). Une par module et
+// toutes distinctes — Théorie et Notes partageaient 🎼, indiscernables dans
+// l'historique où les deux se côtoient ligne à ligne.
+export const MODULE_ICONS:  Record<string, string> = {
+  rythme: '🥁', theorie: '🎼', notes: '🎵', harmonie: '🎹', accordeur: '🎺',
+}
 
 // Stat legacy affichée par module (le doc gamification global stocke des compteurs
 // de forme hétérogène). Fallback « — » pour un module sans compteur legacy (ex. Notes
@@ -63,6 +66,8 @@ export default function StudentDashboardView({ progress, rawProgress, history, t
   const daysIdle = computeDaysIdle(progress.streak.lastDate, today)
   const decayDelta = rawProgress.xp - progress.xp
   const recentTrophies = progress.trophies.slice(-3)
+
+  const grouped = useMemo(() => groupHistory(history), [history])
 
   // Vitesse XP/sem : somme xp des 14 derniers jours / 2.
   const speedXpPerWeek = useMemo(() => {
@@ -179,14 +184,18 @@ export default function StudentDashboardView({ progress, rawProgress, history, t
         </div>
       </div>
 
-      {/* Stats modules */}
+      {/* Stats modules — déroulant horizontal : à cinq modules et plus, une ligne
+          de cartes équiréparties devient illisible sur mobile. Chaque carte garde
+          donc une largeur fixe et on fait défiler ; la barre de défilement globale
+          (index.css) signale ce qui dépasse. */}
       <div className={cardCls}>
         <span className={labelCls}>Activité par module</span>
-        <div className="flex gap-2.5">
+        <div className="flex gap-2.5 overflow-x-auto pb-2" style={{ scrollSnapType: 'x proximity' }}>
           {MODULE_IDS.map(id => {
             const { xpTotal, stat } = legacyModuleStat(id, progress.modules)
             return (
-              <div key={id} className="flex-1 bg-surface-2 rounded-xl p-2.5">
+              <div key={id} className="bg-surface-2 rounded-xl p-2.5 shrink-0"
+                style={{ width: 108, scrollSnapAlign: 'start' }}>
                 <div className="text-xs font-bold mb-1" style={{ color: moduleColor(id) }}>{moduleLabel(id)}</div>
                 <div className="text-base font-black text-app">{xpTotal}</div>
                 <div className="text-[10px] text-app-muted">XP · {stat}</div>
@@ -252,29 +261,83 @@ export default function StudentDashboardView({ progress, rawProgress, history, t
         </div>
       </div>
 
-      {/* Historique complet */}
+      {/* Historique — sessions consécutives d'un même module fusionnées. Le
+          compteur affiche donc « N lignes sur M sessions » : sans ça, un
+          historique qui rétrécit sans explication inquiète plus qu'il n'aide. */}
       <div className={cardCls}>
         <div className="flex justify-between items-center mb-3">
           <span className={labelCls} style={{ margin: 0 }}>Historique des sessions</span>
-          <span className="text-xs text-app-muted">{history.length}</span>
+          <span className="text-xs text-app-muted">
+            {grouped.length < history.length ? `${grouped.length} · ${history.length} sessions` : history.length}
+          </span>
         </div>
-        {history.length === 0 ? (
+        {grouped.length === 0 ? (
           <p className="text-sm text-app-muted text-center py-3">Aucune session enregistrée.</p>
-        ) : history.map((h, i) => (
-          <div key={i} className="flex justify-between items-center py-2"
-            style={{ borderBottom: i < history.length - 1 ? '1px solid var(--border-c)' : 'none' }}>
-            <div className="flex gap-2 items-center">
-              <span className="text-base">{h.medal}</span>
-              <span className="text-xs text-app-muted">{MODULE_ICONS[h.module] ?? ''} {MODULE_LABELS[h.module] ?? h.module}</span>
-            </div>
-            <div className="flex gap-2.5 items-center">
-              <span className="text-xs font-bold" style={{ color: MODULE_COLORS[h.module] ?? '#4A6CF7' }}>+{h.xp} XP</span>
-              <span className="text-[10px] text-app-muted">{h.date}</span>
-            </div>
-          </div>
+        ) : grouped.map((g, i) => (
+          <LigneHistorique key={`${g.date}-${g.module}-${i}`} groupe={g} dernier={i === grouped.length - 1} />
         ))}
       </div>
     </>
+  )
+}
+
+// ─── Ligne d'historique ───────────────────────────────────────────────────────
+
+// Nom de l'unité comptée, par module. Théorie pose des questions, les autres
+// font faire des exercices — dire « 40 exercices » d'un Code de la route serait
+// faux.
+const UNITE: Record<string, [string, string]> = {
+  theorie: ['question', 'questions'],
+}
+function uniteDe(module: string, n: number): string {
+  const [sing, plur] = UNITE[module] ?? ['exercice', 'exercices']
+  return n > 1 ? plur : sing
+}
+
+function LigneHistorique({ groupe, dernier }: { groupe: GroupedEntry; dernier: boolean }) {
+  const { module, xp, count, items, levels, medal, date, single } = groupe
+  const couleur = MODULE_COLORS[module] ?? '#4A6CF7'
+
+  // Ce que la ligne raconte, du plus parlant au moins parlant. `items` prime sur
+  // `count` : quinze exercices isolés font quinze sessions, mais c'est bien
+  // « 15 exercices » qui a du sens. À défaut — historique ancien, sans compteur —
+  // on annonce des sessions plutôt qu'un « 0 exercice » mensonger.
+  const morceaux: string[] = []
+  if (single?.mode) morceaux.push(single.mode)
+  if (items !== null && items > 0) morceaux.push(`${items} ${uniteDe(module, items)}`)
+  else if (count > 1) morceaux.push(`${count} sessions`)
+  if (levels.length > 0) morceaux.push(levels.slice(0, 3).join(', ') + (levels.length > 3 ? '…' : ''))
+  if (single?.category && single.category !== 'Toutes') morceaux.push(single.category)
+  if (single?.score) morceaux.push(single.score)
+
+  return (
+    <div className="flex justify-between items-start gap-2 py-2"
+      style={{ borderBottom: dernier ? 'none' : '1px solid var(--border-c)' }}>
+      <div className="flex gap-2 items-start min-w-0">
+        <span className="text-base leading-tight">{iconeMedaille(medal)}</span>
+        <div className="min-w-0">
+          <div className="text-xs text-app-muted flex items-center gap-1.5 flex-wrap">
+            <span>{MODULE_ICONS[module] ?? ''} {MODULE_LABELS[module] ?? module}</span>
+            {count > 1 && items !== null && (
+              <span className="text-[10px] text-app-muted opacity-70">· {count} sessions</span>
+            )}
+            {single?.passed === true && (
+              <span className="text-[10px] font-bold" style={{ color: '#22C55E' }}>✓ Reçu</span>
+            )}
+            {single?.passed === false && (
+              <span className="text-[10px] font-bold" style={{ color: '#f87171' }}>✗ Échoué</span>
+            )}
+          </div>
+          {morceaux.length > 0 && (
+            <div className="text-[10px] text-app-muted leading-snug">{morceaux.join(' · ')}</div>
+          )}
+        </div>
+      </div>
+      <div className="flex gap-2.5 items-center shrink-0">
+        <span className="text-xs font-bold" style={{ color: couleur }}>+{xp} XP</span>
+        <span className="text-[10px] text-app-muted">{date}</span>
+      </div>
+    </div>
   )
 }
 
@@ -331,12 +394,23 @@ function XpCumulativeChart({ history }: { history: HistoryEntry[] }) {
 
 // ─── Heatmap calendrier ───────────────────────────────────────────────────────
 
+// Liseré doré d'une journée qui valide le streak. Choisi dans la palette
+// existante (warning), pas un or pur : il doit se lire sur le violet des cases
+// bien remplies comme sur le fond des cases vides.
+const OR_STREAK = '#fbbf24'
+
 function ActivityHeatmap({ history, today }: { history: HistoryEntry[]; today: string }) {
   const dailyXp = useMemo(() => {
     const m = new Map<string, number>()
     for (const h of history) m.set(h.date, (m.get(h.date) ?? 0) + (h.xp ?? 0))
     return m
   }, [history])
+
+  // Ne concerne QUE les sessions écrites depuis l'ajout du champ : les journées
+  // validées auparavant n'ont pas la donnée et resteront sans liseré. Rien ne
+  // permet de la reconstituer — la règle des dix Rythme isolés dépend d'un
+  // drapeau qui n'était pas enregistré.
+  const joursStreak = useMemo(() => joursValidantStreak(history), [history])
 
   const WEEKS = 12
   const DAYS_PER_WEEK = 7
@@ -379,22 +453,38 @@ function ActivityHeatmap({ history, today }: { history: HistoryEntry[]; today: s
         {DAY_LABELS.map((d, i) => (
           <text key={i} x="2" y={i * (CELL + GAP) + CELL - 2} fontSize="8" fill="var(--text-muted)">{d}</text>
         ))}
-        {cells.map((c, i) => (
-          <rect key={i}
-            x={20 + c.col * (CELL + GAP)}
-            y={c.row * (CELL + GAP)}
-            width={CELL} height={CELL} rx="2"
-            fill={cellColor(c.xp)}>
-            <title>{c.date}{c.xp > 0 ? ` · ${c.xp} XP` : c.xp === 0 ? ' · aucune activité' : ''}</title>
-          </rect>
-        ))}
+        {cells.map((c, i) => {
+          const valide = joursStreak.has(c.date)
+          return (
+            <rect key={i}
+              x={20 + c.col * (CELL + GAP)}
+              y={c.row * (CELL + GAP)}
+              width={CELL} height={CELL} rx="2"
+              fill={cellColor(c.xp)}
+              stroke={valide ? OR_STREAK : 'none'}
+              strokeWidth={valide ? 1.5 : 0}>
+              <title>
+                {c.date}
+                {c.xp > 0 ? ` · ${c.xp} XP` : c.xp === 0 ? ' · aucune activité' : ''}
+                {valide ? ' · journée validée' : ''}
+              </title>
+            </rect>
+          )
+        })}
       </svg>
-      <div className="flex items-center gap-1.5 mt-2 text-[10px] text-app-muted">
+      <div className="flex items-center gap-1.5 mt-2 text-[10px] text-app-muted flex-wrap">
         <span>Moins</span>
         {[0, 50, 250, 1000, 3000].map(v => (
           <span key={v} style={{ display: 'inline-block', width: 10, height: 10, borderRadius: 2, background: cellColor(v) }} />
         ))}
         <span>Plus</span>
+        <span className="ml-2 flex items-center gap-1">
+          <span style={{
+            display: 'inline-block', width: 10, height: 10, borderRadius: 2,
+            background: 'var(--surface-2)', border: `1.5px solid ${OR_STREAK}`,
+          }} />
+          Journée validée
+        </span>
       </div>
     </div>
   )

@@ -35,7 +35,8 @@ les imports de types — requis par `node --test`, qui efface les types sans les
 | `ChiffrageEmpile.tsx` | Rendu empilé des étages (6 sur 4, 7 sur +). |
 | `detection.ts` | Activité de détection, **pur** : `construireSession`, rampe de difficulté, `scorerSession`, `encoderDrapeaux`/`decoderDrapeaux`. |
 | `glyphe.ts` | Glyphe de correction A/B, **pur** : `geometrieGlyphe`, `lireDrapeaux`, `angleCercleDeg`/`pointCercle`. |
-| `audio.ts` | Chemin audio unique du module (soundfont GM). Hors de la règle « fonctions pures » : Web Audio. |
+| `audio.ts` | Chemin audio unique du module (soundfont GM). Hors de la règle « fonctions pures » : Web Audio. `durees` = pas rythmique, `tenues` = durée sonore. |
+| `intro.ts` | L'intro tonale, **pure** : `avecIntro` rend un `PlanLecture` (accords · durées · tenues · **décalage**). N'importe rien d'`audio.ts`. |
 | `Glyphes.tsx` | Les deux rendus SVG : `CercleTierces`, `EcartEmpilement`, `GlypheColonne`, `LegendeColonne`. |
 | `DetectionPage.tsx` · `BancPage.tsx` | Les deux écrans. `BancPage` est `IS_DEV` seulement. |
 
@@ -132,7 +133,7 @@ immédiatement mais suppose le vocabulaire chromatique, d'où son arrivée au ni
 
 ## Tests
 
-`npm run test` depuis `apps/web/`. 7 fichiers `harmonie*.test.ts`, 103 tests, graines fixes. Les
+`npm run test` depuis `apps/web/`. Les fichiers `harmonie*.test.ts`, graines fixes. Les
 tables dures (`qualite`, `notesCommunes`, `TABLE_DISPOSITIONS`) sont vérifiées **entrée par entrée**
 contre `harmonieRef.ts`, qui reconstruit les accords indépendamment.
 
@@ -522,6 +523,55 @@ gravure qui échoue affiche « Portée indisponible » et laisse intact le reste
 | `DetectionPage` | suit ▶ Écouter / ▶ Écouter ce qui était écrit |
 | `ChoixBinairePage` | la suite entendue, accord visé marqué |
 | `DicteeBassePage` | la suite entendue, basses fautives marquées |
+
+## L'intro tonale — `intro.ts` + `ToggleIntro.tsx` (2026-08-19)
+
+Poser la tonalité par **un seul accord plaqué** collé devant la progression ne suffisait pas :
+sans respiration, l'oreille prend cet accord pour le premier de l'exercice. L'intro est maintenant
+un **plan de lecture** — arpège montant dont chaque note continue de sonner, accord plaqué où
+l'arpège se referme, un temps de silence, puis la suite.
+
+```
+temps  0    .5   1    1.5   2                    4          5
+       do   mi   sol  do'   [DO MI SOL DO']      (silence)  → progression
+       └──── chaque note continue de sonner ─┘    1 temps
+```
+
+Les hauteurs de l'arpège **sont les quatre voix de l'accord de tonique déjà réalisé**, prises une à
+une (`realiserProgression` les rend du grave à l'aigu). Rien n'est recalculé : l'arpège et le plaqué
+sont le même accord.
+
+⚠ **`durees` ≠ `tenues`.** `audio.ts` distingue désormais le **pas rythmique** (quand l'événement
+suivant démarre) de la **durée sonore**. C'est leur divorce qui fait résonner l'arpège par-dessus
+lui-même ; par défaut `tenues = durees` et rien ne change pour les appelants existants. Le silence
+est un accord **sans hauteur** (`[]`) — `jouerSuite` n'a aucun cas particulier à traiter.
+
+⚠ **`decalage` ne vaut plus 0 ou 1 mais 0 ou 5.** Il voyage désormais DANS le `PlanLecture` rendu
+par `avecIntro`, au lieu d'être une constante `decalageContexte` recopiée dans chaque page. Toute
+page qui remettrait un `1` en dur décalerait silencieusement la trajectoire animée du cercle des
+tierces. Les index négatifs pendant l'intro ne tracent rien, comme c'était déjà le cas à −1.
+
+⚠ **`intro.ts` n'importe RIEN d'`audio.ts`** — qui charge `soundfont-player`, que `node --test` ne
+résout pas. La forme musicale est dans `intro.ts` (pur, testé), la lecture dans `audio.ts`.
+
+**Décidé avec Matthieu (2026-08-19)** :
+- **Deux positions seulement** — « Aucune » ou « Intro ». Le plaqué sec d'avant n'est pas conservé
+  comme troisième position : il n'était bon à rien musicalement.
+- **Arpège montant, notes tenues** — l'accord se construit à l'oreille. Un arpège détaché a été
+  écarté : il sonne comme un exercice de doigté, pas comme une tonalité qu'on installe.
+- **`contexteTonal: false` reste un verrou de NIVEAU**, pas un réglage : au niveau 7 (détection et
+  flux) la tonique ne sonne pas quoi qu'affiche le toggle, qui s'y grise. C'est la difficulté du
+  niveau.
+- **Cadences hors périmètre** : la tonique y est un *membre* de l'item (contexte « nue »), affichée
+  et gravée sur la portée. Son réglage « Contexte » ne bouge pas.
+
+Le réglage vit dans **`payload.introTonale`**, donc commun aux quatre activités et retrouvé d'une
+session à l'autre — comme `porteeVue`. ⚠ Mais **sa place à l'écran n'est pas celle de
+`TogglePortee`** : la portée est un corrigé, elle vit dans le bloc de feedback ; l'intro est un
+réglage d'écoute, elle doit être posée **avant** la première lecture, donc dans l'écran de réglages.
+
+Le banc (`/harmonie/banc`) a le même sélecteur : c'est là que se jugent à l'oreille les longueurs
+d'arpège et de silence, réglées par les constantes `PAS_ARPEGE` / `TENUE_PLAQUE` / `SILENCE`.
 
 ## Reconnaissance de cadences — `cadences.ts` + `chromatiques.ts` (2026-08-04)
 

@@ -29,6 +29,8 @@ import { chiffrageDe, chiffrer, romainChiffre } from './chiffrage.ts'
 import { accordChromatique } from './chromatiques.ts'
 import PorteeSATB, { type VuePortee } from './PorteeSATB.tsx'
 import TogglePortee, { estVuePortee } from './TogglePortee.tsx'
+import BoutonDemiVitesse, { DEMI_VITESSE } from './BoutonDemiVitesse.tsx'
+import ToggleToutEnDo from './ToggleToutEnDo.tsx'
 import {
   APPROCHES,
   ITEMS_PAR_SESSION_CADENCES,
@@ -88,6 +90,7 @@ export default function CadencesPage() {
   const [indexCourant, setIndexCourant] = useState<number | null>(null)
   const [erreur, setErreur] = useState<string | null>(null)
   const [vuePortee, setVuePortee] = useState<VuePortee>('masquee')
+  const [toutEnDo, setToutEnDo] = useState(false)
 
   const reponsesRef = useRef<ReponseCadence[]>([])
   const debutMsRef = useRef<number | null>(null)
@@ -101,11 +104,13 @@ export default function CadencesPage() {
       cadencePalier?: Palier
       cadenceContexte?: Contexte
       porteeVue?: unknown
+      toutEnDo?: unknown
     }
     if (p.cadenceMode) setMode(p.cadenceMode)
     if (p.cadencePalier) setPalier(p.cadencePalier)
     if (p.cadenceContexte) setContexte(p.cadenceContexte)
     if (estVuePortee(p.porteeVue)) setVuePortee(p.porteeVue)
+    if (typeof p.toutEnDo === 'boolean') setToutEnDo(p.toutEnDo)
   }, [mp.loaded, mp.progress.payload])
 
   useEffect(() => () => arreter(), [])
@@ -115,15 +120,23 @@ export default function CadencesPage() {
   // La réponse est complète quand les questions posées ont toutes reçu un choix.
   const repondu = typeRepondu !== null && (!avecApproche || approcheRepondue !== null)
 
-  const hauteurs = useMemo(() => (item ? realiserCadence(item) : []), [item])
+  // « Tout en do » : l'item SONNÉ est ramené sur do ; la portée suit la vue
+  // « En Ut » — donc la mineur en mineur, armure vide (cf. `ToggleToutEnDo`).
+  const itemSonne = useMemo(
+    () => (item ? (toutEnDo ? { ...item, tonique: 0 } : item) : null),
+    [item, toutEnDo],
+  )
+  const vuePorteeEffective: VuePortee = toutEnDo && vuePortee !== 'masquee' ? 'ut' : vuePortee
 
-  const ecouter = useCallback(async () => {
+  const hauteurs = useMemo(() => (itemSonne ? realiserCadence(itemSonne) : []), [itemSonne])
+
+  const ecouter = useCallback(async (facteurTempo = 1) => {
     if (hauteurs.length === 0) return
     if (finLectureRef.current) clearTimeout(finLectureRef.current)
     setEnLecture(true)
     try {
       const duree = await jouerSuite(hauteurs, {
-        bpm: BPM,
+        bpm: BPM * facteurTempo,
         onAccord: (i: number) => setIndexCourant(i),
       })
       finLectureRef.current = setTimeout(() => {
@@ -249,6 +262,7 @@ export default function CadencesPage() {
             cadencePalier: palier,
             cadenceContexte: contexte,
             porteeVue: vuePortee,
+            toutEnDo,
           },
         },
       })
@@ -263,6 +277,7 @@ export default function CadencesPage() {
         module: 'harmonie',
         xpEarned: Math.max(5, Math.round(p * resume.itemCount * 3)),
         medal,
+        details: { level: LIBELLES_PALIER[palier], items: resume.itemCount, mode: 'Cadences' },
       })
     } catch {
       /* hors ligne : la session per-module est déjà persistée */
@@ -411,13 +426,26 @@ export default function CadencesPage() {
           </span>
         </div>
 
+        {/* ⚠ Le « ▶ ½ » n'existe que tant que l'élève cherche. */}
+        <div className="flex" style={{ gap: 8 }}>
         <button
           onClick={() => void ecouter()}
           disabled={enLecture}
-          style={{ ...boutonPlein, opacity: enLecture ? 0.6 : 1 }}
+          style={{ ...boutonPlein, flex: 1, opacity: enLecture ? 0.6 : 1 }}
         >
           {enLecture ? '▶ …' : '▶ Écouter'}
         </button>
+          {!repondu && (
+            <BoutonDemiVitesse
+              onClick={() => void ecouter(DEMI_VITESSE)}
+              disabled={enLecture}
+            />
+          )}
+        </div>
+
+        <div className="flex justify-end">
+          <ToggleToutEnDo actif={toutEnDo} onChange={setToutEnDo} />
+        </div>
 
         {/* Les positions. Avant la réponse elles ne montrent RIEN du contenu — un
             chiffrage donnerait la cadence. Le trait marque où elle commence. */}
@@ -493,12 +521,16 @@ export default function CadencesPage() {
             )}
 
             <div style={{ marginTop: 14 }}>
-              <TogglePortee vue={vuePortee} onChange={setVuePortee} />
+              <TogglePortee
+                vue={vuePorteeEffective}
+                onChange={setVuePortee}
+                sansTonalite={toutEnDo}
+              />
             </div>
-            {vuePortee !== 'masquee' && (
+            {vuePorteeEffective !== 'masquee' && (
               <div style={{ marginTop: 10 }}>
                 <PorteeSATB
-                  partition={partitionDeCadence(item, vuePortee)}
+                  partition={partitionDeCadence(item, vuePorteeEffective)}
                   indexCourant={indexCourant}
                   legende="Réalisation à quatre voix de la cadence"
                 />

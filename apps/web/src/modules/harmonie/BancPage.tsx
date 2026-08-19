@@ -33,6 +33,7 @@ import { NIVEAUX, NIVEAU_MAX_IMPLEMENTE, niveauSpec } from './niveaux.ts'
 import { ligneRestreinte } from './matrice.ts'
 import { perturbationsPossibles, perturber } from './perturbation.ts'
 import { creerAccord, type Accord, type Degre, type Mode, type Progression } from './types.ts'
+import { INTRO_DEFAUT, avecIntro, type Intro, type PlanLecture } from './intro.ts'
 import { realiserProgression, plageTransposition } from './dispositions.ts'
 
 const ACCENT = '#c084fc'
@@ -52,6 +53,7 @@ function Banc() {
   const [transposition, setTransposition] = useState(0)
   const [bpm, setBpm] = useState(66)
   const [instrument, setInstrument] = useState<NomInstrument>('piano')
+  const [intro, setIntro] = useState<Intro>(INTRO_DEFAUT)
 
   const [indexActif, setIndexActif] = useState<number | null>(null)
   const [enLecture, setEnLecture] = useState(false)
@@ -130,16 +132,18 @@ function Banc() {
   useEffect(() => () => arreter(), [])
 
   const jouer = useCallback(
-    async (accords: readonly number[][], options: { suivreIndex?: boolean } = {}) => {
+    async (plan: PlanLecture, options: { suivreIndex?: boolean } = {}) => {
       if (finLecture.current) clearTimeout(finLecture.current)
       setEnLecture(true)
       setIndexActif(null)
       try {
         const duree = await jouerSuite(
-          accords.map((a) => a.map((h) => h + transposition)),
+          plan.accords.map((a) => a.map((h) => h + transposition)),
           {
             bpm,
             instrument,
+            durees: plan.durees,
+            tenues: plan.tenues,
             onAccord: options.suivreIndex ? setIndexActif : undefined,
           },
         )
@@ -159,34 +163,38 @@ function Banc() {
   // l'exige (annexe §3 — hors contexte, un accord mineur est indécidable entre i
   // en mineur et VI en majeur). C'est bien le degré I qui sonne, pas le premier
   // accord de la progression : au régime `atome` celle-ci ne commence pas sur I.
-  const avecContexte = useCallback(
-    (accords: number[][]): number[][] => {
-      if (!spec.contexteTonal || !progression) return accords
-      const [toniqueRealisee] = realiserProgression({
-        ...progression,
-        accords: [creerAccord(0, { degre: 1 })],
-      })
-      return [toniqueRealisee, ...accords]
-    },
-    [spec.contexteTonal, progression],
+  const toniqueRealisee = useMemo<number[] | null>(() => {
+    if (!spec.contexteTonal || !progression) return null
+    const [accordTonique] = realiserProgression({
+      ...progression,
+      accords: [creerAccord(0, { degre: 1 })],
+    })
+    return accordTonique
+  }, [spec.contexteTonal, progression])
+
+  // C'est ici que se juge à l'oreille la forme de l'intro — longueur de l'arpège,
+  // du silence. Les constantes se règlent dans `intro.ts`, par HMR.
+  const planDe = useCallback(
+    (accords: number[][]) => avecIntro(accords, toniqueRealisee, intro),
+    [toniqueRealisee, intro],
   )
 
-  // `suivreIndex` allume l'accord en cours. Le contexte tonal occupe l'index 0
-  // quand il est joué : on décale pour que la surbrillance retombe sur le bon.
-  const decalageContexte = spec.contexteTonal ? 1 : 0
+  // `suivreIndex` allume l'accord en cours. L'intro occupe les premiers index
+  // quand elle est jouée : on décale pour que la surbrillance retombe sur le bon.
+  const decalageContexte = planDe(realisation).decalage
 
   const jouerProgression = useCallback(() => {
-    void jouer(avecContexte(realisation), { suivreIndex: true })
-  }, [jouer, avecContexte, realisation])
+    void jouer(planDe(realisation), { suivreIndex: true })
+  }, [jouer, planDe, realisation])
 
   const jouerPerturbee = useCallback(
     (index: number, substitut: Accord) => {
       if (!progression) return
       const accords = progression.accords.slice()
       accords[index] = substitut
-      void jouer(avecContexte(realiserProgression({ ...progression, accords })))
+      void jouer(planDe(realiserProgression({ ...progression, accords })))
     },
-    [jouer, avecContexte, progression],
+    [jouer, planDe, progression],
   )
 
   const perturbations = useMemo(() => {
@@ -328,6 +336,17 @@ function Banc() {
             />
           </Champ>
 
+          <Champ label="Intro tonale">
+            <Segments
+              options={[
+                { valeur: 'arpegee', label: 'Arpégée' },
+                { valeur: 'aucune', label: 'Aucune' },
+              ]}
+              actif={intro}
+              onChange={(v) => setIntro(v as Intro)}
+            />
+          </Champ>
+
           <Champ
             label={`Timbre${
               !gesteRecu ? ' — un clic active le son' : chargement ? ' — chargement…' : ''
@@ -353,7 +372,11 @@ function Banc() {
             aDroite={
               <div className="flex items-center" style={{ gap: 8 }}>
                 <span className="text-app-muted" style={{ fontSize: 12 }}>
-                  {spec.contexteTonal ? 'tonique jouée avant' : 'sans contexte tonal'}
+                  {!spec.contexteTonal
+                    ? 'sans contexte tonal'
+                    : intro === 'arpegee'
+                      ? 'intro tonale avant'
+                      : 'tonique non jouée'}
                 </span>
                 <Bouton onClick={jouerProgression} principal>
                   {enLecture ? '▶ …' : '▶ Écouter'}
@@ -381,7 +404,7 @@ function Banc() {
                   key={accord.id}
                   onClick={() => {
                     setIndexDemande(i)
-                    void jouer([realisation[i]])
+                    void jouer(avecIntro([realisation[i]], null, intro))
                   }}
                   className="bg-surface-2 border-app text-app"
                   style={{

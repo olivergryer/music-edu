@@ -30,6 +30,10 @@ import { chiffrageplat, romainChiffre } from './chiffrage.ts'
 import { realiserProgression } from './dispositions.ts'
 import { CercleTierces, type EtatTrace, type VersionJouee } from './Glyphes.tsx'
 import { lireDrapeaux } from './glyphe.ts'
+import { INTRO_DEFAUT, avecIntro, estIntro, type Intro } from './intro.ts'
+import ToggleIntro from './ToggleIntro.tsx'
+import BoutonDemiVitesse, { DEMI_VITESSE } from './BoutonDemiVitesse.tsx'
+import ToggleToutEnDo from './ToggleToutEnDo.tsx'
 import { niveauSpec } from './niveaux.ts'
 import { partitionDeProgression } from './notation.ts'
 import PorteeSATB, { type VuePortee } from './PorteeSATB.tsx'
@@ -110,6 +114,8 @@ export default function ChiffrageFluxPage() {
   const [trace, setTrace] = useState<EtatTrace>({ phase: 'statique' })
   const [versionJouee, setVersionJouee] = useState<VersionJouee>(CORRIGE)
   const [vuePortee, setVuePortee] = useState<VuePortee>('masquee')
+  const [intro, setIntro] = useState<Intro>(INTRO_DEFAUT)
+  const [toutEnDo, setToutEnDo] = useState(false)
 
   const reponsesRef = useRef<ReponseFlux[]>([])
   const debutMsRef = useRef<number | null>(null)
@@ -118,11 +124,19 @@ export default function ChiffrageFluxPage() {
 
   useEffect(() => {
     if (!mp.loaded) return
-    const p = mp.progress.payload as { fluxMode?: Mode; fluxNiveau?: number; porteeVue?: unknown }
+    const p = mp.progress.payload as {
+      fluxMode?: Mode
+      fluxNiveau?: number
+      porteeVue?: unknown
+      introTonale?: unknown
+      toutEnDo?: unknown
+    }
     if (p.fluxMode) setMode(p.fluxMode)
     if (typeof p.fluxNiveau === 'number' && NIVEAUX.includes(p.fluxNiveau)) setNiveau(p.fluxNiveau)
-    // Réglage commun aux quatre activités du module.
+    // Réglages communs aux quatre activités du module.
     if (estVuePortee(p.porteeVue)) setVuePortee(p.porteeVue)
+    if (estIntro(p.introTonale)) setIntro(p.introTonale)
+    if (typeof p.toutEnDo === 'boolean') setToutEnDo(p.toutEnDo)
   }, [mp.loaded, mp.progress.payload])
 
   useEffect(() => () => arreter(), [])
@@ -164,33 +178,43 @@ export default function ChiffrageFluxPage() {
     [echelles, mode],
   )
 
+  // « Tout en do » : la progression SONNÉE est ramenée sur do ; la portée suit la
+  // vue « En Ut » — donc la mineur en mineur, armure vide (cf. `ToggleToutEnDo`).
+  const progressionSonnee = useMemo(
+    () => (item ? (toutEnDo ? { ...item.progression, tonique: 0 } : item.progression) : null),
+    [item, toutEnDo],
+  )
+  const vuePorteeEffective: VuePortee = toutEnDo && vuePortee !== 'masquee' ? 'ut' : vuePortee
+
   const realisationAttendue = useMemo(
-    () => (item ? realiserProgression(item.progression) : []),
-    [item],
+    () => (progressionSonnee ? realiserProgression(progressionSonnee) : []),
+    [progressionSonnee],
   )
 
   // Ce que l'élève a chiffré, réalisé à quatre voix comme le corrigé. Vide tant
   // que la grille n'est pas complète — la validation l'exige de toute façon.
   const realisationSaisie = useMemo(() => {
-    if (!item || saisies.length === 0 || saisies.some((a) => a === null)) return []
-    return realiserProgression({ ...item.progression, accords: saisies as Accord[] })
-  }, [item, saisies])
+    if (!progressionSonnee || saisies.length === 0 || saisies.some((a) => a === null)) return []
+    return realiserProgression({ ...progressionSonnee, accords: saisies as Accord[] })
+  }, [progressionSonnee, saisies])
 
-  const avecContexte = useCallback(
-    (accords: number[][]): number[][] => {
-      if (!spec.contexteTonal || !item) return accords
-      const [tonique] = realiserProgression({
-        ...item.progression,
-        accords: [creerAccord(0, { degre: 1 })],
-      })
-      return [tonique, ...accords]
-    },
-    [spec.contexteTonal, item],
+  // L'accord de tonique réalisé, ou `null` au niveau 7 : la tonique n'y sonne
+  // pas, et le réglage d'intro y reste donc sans effet.
+  const toniqueRealisee = useMemo<number[] | null>(() => {
+    if (!spec.contexteTonal || !progressionSonnee) return null
+    const [tonique] = realiserProgression({
+      ...progressionSonnee,
+      accords: [creerAccord(0, { degre: 1 })],
+    })
+    return tonique
+  }, [spec.contexteTonal, progressionSonnee])
+
+  // L'intro sonne EN TÊTE : les index rendus par `onAccord` sont décalés
+  // d'autant, et c'est le plan de lecture qui porte ce décalage.
+  const planDe = useCallback(
+    (accords: number[][]) => avecIntro(accords, toniqueRealisee, intro),
+    [toniqueRealisee, intro],
   )
-
-  // Le contexte tonal sonne EN TÊTE : l'index rendu par `onAccord` est alors
-  // décalé d'un cran par rapport à la progression.
-  const decalageContexte = spec.contexteTonal ? 1 : 0
 
   /**
    * ⚠ La trajectoire ne s'anime QU'APRÈS validation. L'animer pendant que l'élève
@@ -198,7 +222,7 @@ export default function ChiffrageFluxPage() {
    * que le « ▶ A n'existe qu'après la réponse » de la détection.
    */
   const ecouter = useCallback(
-    async (quelle: VersionJouee) => {
+    async (quelle: VersionJouee, facteurTempo = 1) => {
       const base = quelle === CORRIGE ? realisationAttendue : realisationSaisie
       if (base.length === 0) return
 
@@ -209,11 +233,14 @@ export default function ChiffrageFluxPage() {
         setVersionJouee(quelle)
         setTrace({ phase: 'lecture', index: -1 })
       }
+      const plan = planDe(base)
       try {
-        const duree = await jouerSuite(avecContexte(base), {
-          bpm: BPM,
+        const duree = await jouerSuite(plan.accords, {
+          bpm: BPM * facteurTempo,
+          durees: plan.durees,
+          tenues: plan.tenues,
           onAccord: anime
-            ? (i: number) => setTrace({ phase: 'lecture', index: i - decalageContexte })
+            ? (i: number) => setTrace({ phase: 'lecture', index: i - plan.decalage })
             : undefined,
         })
         finLectureRef.current = setTimeout(() => {
@@ -227,7 +254,7 @@ export default function ChiffrageFluxPage() {
         setEnLecture(false)
       }
     },
-    [realisationAttendue, realisationSaisie, avecContexte, decalageContexte, valide],
+    [realisationAttendue, realisationSaisie, planDe, valide],
   )
 
   function commencer() {
@@ -349,7 +376,13 @@ export default function ChiffrageFluxPage() {
               lastAt: Date.now(),
             },
           },
-          payload: { fluxMode: mode, fluxNiveau: niveau, porteeVue: vuePortee },
+          payload: {
+            fluxMode: mode,
+            fluxNiveau: niveau,
+            porteeVue: vuePortee,
+            introTonale: intro,
+            toutEnDo,
+          },
         },
       })
     } catch (e) {
@@ -360,7 +393,10 @@ export default function ChiffrageFluxPage() {
     const medal = p >= 0.9 ? 'or' : p >= 0.75 ? 'argent' : 'bronze'
     const xpEarned = Math.max(5, Math.round(p * resume.itemCount * 5))
     try {
-      await addSession({ module: 'harmonie', xpEarned, medal })
+      await addSession({
+        module: 'harmonie', xpEarned, medal,
+        details: { level: `Niveau ${niveau}`, items: resume.itemCount, mode: 'Chiffrage en flux' },
+      })
     } catch {
       /* hors ligne : la session per-module est déjà persistée */
     }
@@ -398,11 +434,14 @@ export default function ChiffrageFluxPage() {
                 </button>
               ))}
             </div>
-            <p className="text-app-muted" style={{ fontSize: 12, margin: '8px 0 0', lineHeight: 1.5 }}>
-              {niveauSpec(niveau).contexteTonal
-                ? 'La tonique sonne avant la suite.'
-                : 'La tonique ne sonne pas : à toi de l’établir à l’oreille.'}
-            </p>
+          </Bloc>
+
+          <Bloc titre="Intro tonale">
+            <ToggleIntro
+              intro={intro}
+              onChange={setIntro}
+              actif={niveauSpec(niveau).contexteTonal}
+            />
           </Bloc>
 
           <Bloc titre="Mode">
@@ -530,13 +569,21 @@ export default function ChiffrageFluxPage() {
         </div>
 
         {!valide ? (
-          <button
-            onClick={() => void ecouter(CORRIGE)}
-            disabled={enLecture}
-            style={{ ...boutonPlein, opacity: enLecture ? 0.6 : 1 }}
-          >
-            {enLecture ? '▶ …' : '▶ Écouter'}
-          </button>
+          // ⚠ Le « ▶ ½ » n'existe que pendant l'exercice : à la correction, les
+          // deux boutons servent à comparer, pas à ralentir.
+          <div className="flex" style={{ gap: 8 }}>
+            <button
+              onClick={() => void ecouter(CORRIGE)}
+              disabled={enLecture}
+              style={{ ...boutonPlein, flex: 1, opacity: enLecture ? 0.6 : 1 }}
+            >
+              {enLecture ? '▶ …' : '▶ Écouter'}
+            </button>
+            <BoutonDemiVitesse
+              onClick={() => void ecouter(CORRIGE, DEMI_VITESSE)}
+              disabled={enLecture}
+            />
+          </div>
         ) : (
           // Deux écoutes en regard : ce qui a sonné, et ce que l'élève en a écrit.
           // Le cercle suit celle qu'on lance.

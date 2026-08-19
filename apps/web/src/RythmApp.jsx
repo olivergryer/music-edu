@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { Link } from "react-router-dom";
+import { useAuth } from "./auth/AuthProvider";
 import { useTheme, ThemeToggleInline } from "./ThemeContext";
 import useSwipe from "./hooks/useSwipe";
 import RythmStaff from "./RythmStaff";
@@ -374,9 +375,12 @@ function JaugeStreakRythme({ faits, seuil }) {
 // Trophées et montée de rang ne sont plus affichés ici : CelebrationLayer s'en
 // charge globalement, pour TOUS les modules. Les afficher aussi sur cet écran
 // ferait doublon.
-function SeriesEndScreen({ xpLog, medals, totalXp, dominantMedal, perfectSeries, addSession, onReplay, onBack }) {
+function SeriesEndScreen({ xpLog, medals, totalXp, dominantMedal, perfectSeries, niveau, activity, isGuest, addSession, onReplay, onBack }) {
   useEffect(() => {
-    addSession({ module: "rythme", xpEarned: totalXp, medal: dominantMedal, meta: { perfectSeries } });
+    addSession({
+      module: "rythme", xpEarned: totalXp, medal: dominantMedal, meta: { perfectSeries },
+      details: { level: niveau, items: medals.length, mode: `Série · activité ${activity}` },
+    });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -414,6 +418,8 @@ function SeriesEndScreen({ xpLog, medals, totalXp, dominantMedal, perfectSeries,
 
         {/* Trophées et montée de rang : voir CelebrationLayer (affichage global). */}
 
+        {isGuest && <GuestSignupBanner style={{ marginBottom: 14 }} />}
+
         <div className="flex gap-2.5 mt-2">
           <button onClick={onBack} className="flex-1 py-3.5 rounded-2xl cursor-pointer bg-surface-2 border border-app text-app-muted text-sm font-bold">
             {RYTHME.serie.retour}
@@ -437,8 +443,10 @@ function loadSettings() {
 }
 
 // ─── Tutorial ────────────────────────────────────────────────────────────────
-export const ENABLE_TUTORIAL = true;   // true = toujours | false = jamais | "once" = une fois
-export const TUTORIAL_VERSION = "1";   // incrémenter force réaffichage en mode "once"
+export const ENABLE_TUTORIAL = true;   // true = activé (respecte la case « ne plus afficher ») | false = jamais
+export const TUTORIAL_VERSION = "1";   // incrémenter force réaffichage (nouvelle clé de masquage)
+// Clé localStorage : l'utilisateur a coché « ne plus afficher » → auto-lancement désactivé.
+export const TUTO_HIDE_KEY = `rythm-tuto-hide-${TUTORIAL_VERSION}`;
 
 const ACT_ICONS = {
   1: (
@@ -597,6 +605,7 @@ function TutorialOverlay({ onDone, niveauOrder, activity: initActivity, inputMod
 
   const [tutoActivity,  setTutoActivity]  = useState(initActivity || 1);
   const [tutoInputMode, setTutoInputMode] = useState(initInputMode || "tap");
+  const [dontShow,      setDontShow]      = useState(false);
   const niveaux = niveauOrder.length > 0 ? niveauOrder : NIVEAUX;
   const [tutoNiveau, setTutoNiveau] = useState(niveaux[0] ?? null);
 
@@ -708,7 +717,7 @@ function TutorialOverlay({ onDone, niveauOrder, activity: initActivity, inputMod
           ))}
         </div>
         <button
-          onClick={() => onDone(null)}
+          onClick={() => onDone(null, dontShow)}
           style={{ background:'none', border:'none', color: dark ? '#6b7280' : '#9ca3af', fontSize:13, fontWeight:700, cursor:'pointer', padding:'4px 8px' }}
         >{RYTHME.tutoriel.ignorer}</button>
       </div>
@@ -724,6 +733,26 @@ function TutorialOverlay({ onDone, niveauOrder, activity: initActivity, inputMod
         <div style={{ fontSize:14, fontWeight:500, color: dark ? '#d1d5db' : '#374151', lineHeight:1.6 }}>{body}</div>
       </div>
 
+      {/* Case « ne plus afficher » — désactive le lancement automatique du tutoriel */}
+      <label
+        onClick={() => setDontShow(v => !v)}
+        style={{ width:'100%', maxWidth:400, display:'flex', alignItems:'center', justifyContent:'center', gap:8, marginBottom:14, cursor:'pointer', userSelect:'none' }}
+      >
+        <span style={{
+          width:18, height:18, borderRadius:5, flexShrink:0,
+          border:`2px solid ${dontShow ? '#4A6CF7' : (dark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.25)')}`,
+          background: dontShow ? '#4A6CF7' : 'transparent',
+          display:'flex', alignItems:'center', justifyContent:'center', transition:'all 0.15s',
+        }}>
+          {dontShow && (
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+          )}
+        </span>
+        <span style={{ fontSize:13, fontWeight:600, color: dark ? '#9ca3af' : '#6b7280' }}>{RYTHME.tutoriel.nePlusAfficher}</span>
+      </label>
+
       {/* Navigation */}
       <div style={{ width:'100%', maxWidth:400, display:'flex', gap:10 }}>
         {slide > 0 && (
@@ -733,11 +762,40 @@ function TutorialOverlay({ onDone, niveauOrder, activity: initActivity, inputMod
           >{RYTHME.tutoriel.precedent}</button>
         )}
         <button
-          onClick={() => slide < TUTO_TOTAL - 1 ? setSlide(s => s + 1) : onDone({ activity: tutoActivity, inputMode: tutoInputMode, niveau: tutoNiveau })}
+          onClick={() => slide < TUTO_TOTAL - 1 ? setSlide(s => s + 1) : onDone({ activity: tutoActivity, inputMode: tutoInputMode, niveau: tutoNiveau }, dontShow)}
           style={{ flex:2, padding:'14px 0', borderRadius:16, border:'none', background:'linear-gradient(135deg,#4A6CF7,#8B5CF6)', color:'#fff', fontSize:15, fontWeight:900, cursor:'pointer', boxShadow:'0 8px 24px rgba(74,108,247,0.35)' }}
         >{slide < TUTO_TOTAL - 1 ? RYTHME.tutoriel.suivant : RYTHME.tutoriel.commencer}</button>
       </div>
     </div>
+  );
+}
+
+// ─── Bandeau invité : incite à créer un compte pour sauvegarder la progression ──
+// Affiché uniquement pour un invité (non connecté), aux moments de fin (résultats,
+// fin de série). La progression est bien conservée en local, mais un compte la
+// sécurise et la synchronise → argument d'incitation.
+function GuestSignupBanner({ style }) {
+  return (
+    <Link to="/register" className="block w-full no-underline" style={style}>
+      <div className="w-full rounded-2xl flex items-center gap-3" style={{
+        background: 'linear-gradient(135deg, rgba(124,58,237,0.16), rgba(74,108,247,0.16))',
+        border: '1px solid rgba(192,132,252,0.35)', padding: '12px 14px',
+      }}>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#c084fc" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+          <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+          <circle cx="9" cy="7" r="4"/>
+          <line x1="19" y1="8" x2="19" y2="14"/>
+          <line x1="22" y1="11" x2="16" y2="11"/>
+        </svg>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 12.5, fontWeight: 800, color: 'var(--text)' }}>{RYTHME.invite.texte}</div>
+          <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1, lineHeight: 1.3 }}>{RYTHME.invite.sousTexte}</div>
+        </div>
+        <span style={{ flexShrink: 0, fontSize: 12, fontWeight: 800, color: '#fff', background: '#7c3aed', borderRadius: 10, padding: '8px 12px', whiteSpace: 'nowrap' }}>
+          {RYTHME.invite.cta}
+        </span>
+      </div>
+    </Link>
   );
 }
 
@@ -756,8 +814,7 @@ export default function RythmApp() {
   const [openAccordion,   setOpenAccordion]   = useState("saisie");
   const [showTutorial,    setShowTutorial]    = useState(() => {
     if (!ENABLE_TUTORIAL) return false;
-    if (ENABLE_TUTORIAL === true) return true;
-    return !localStorage.getItem(`rythm-tuto-${TUTORIAL_VERSION}`);
+    return !localStorage.getItem(TUTO_HIDE_KEY); // masqué si l'utilisateur a coché « ne plus afficher »
   });
   const [showHelp,         setShowHelp]         = useState(false);
   const [showConsigne,     setShowConsigne]     = useState(false); // overlay consigne d'arrivée (home + revue depuis "?")
@@ -908,10 +965,12 @@ export default function RythmApp() {
   }, [_resetToDefault]);
 
   const { addSession, rythmeIndivDuJour, seuilRythmeIndiv } = useProgressFirebase();
+  const { user } = useAuth();
+  const isGuest = !user; // non connecté → progression locale + incitation à créer un compte
 
-  const handleTutorialDone = (selections) => {
-    if (ENABLE_TUTORIAL === "once") {
-      localStorage.setItem(`rythm-tuto-${TUTORIAL_VERSION}`, "1");
+  const handleTutorialDone = (selections, dontShow) => {
+    if (dontShow) {
+      try { localStorage.setItem(TUTO_HIDE_KEY, "1"); } catch {}
     }
     setShowTutorial(false);
     if (!selections) return; // "Ignorer"
@@ -1834,9 +1893,13 @@ export default function RythmApp() {
     const maxPtsLocal   = activity === 5 ? 100 : Math.round(100 * bonusMult * (scoreWasExtreme ? 2 : 1));
     const pctLocal      = maxPtsLocal ? Math.round((earnedPts / maxPtsLocal) * 100) : 0;
     const medalLocal    = pctLocal >= 90 ? "🥇" : pctLocal >= 70 ? "🥈" : pctLocal >= 50 ? "🥉" : "🎯";
-    addSession({ module: "rythme", xpEarned: earnedPts, medal: medalLocal, meta: { individual: true } });
+    addSession({
+      module: "rythme", xpEarned: earnedPts, medal: medalLocal,
+      meta: { individual: true },
+      details: { level: activeNiveau, items: 1, mode: `Activité ${activity}` },
+    });
     setRetryMode(false); retryModeRef.current = false; // Reset retry mode après enregistrement
-  }, [phase, seriesMode, pattern, earnedPts, scores, activity, revealBeat, scoreWasExtreme, addSession, retryMode]);
+  }, [phase, seriesMode, pattern, earnedPts, scores, activity, revealBeat, scoreWasExtreme, addSession, retryMode, activeNiveau]);
 
 
   // ── Page réglages ──────────────────────────────────────────────────────────
@@ -2109,6 +2172,10 @@ export default function RythmApp() {
             style={{ padding:'14px 0', borderRadius:14, border:'2px solid rgba(74,108,247,0.35)', background:'none', color:'#4A6CF7', fontSize:14, fontWeight:800, cursor:'pointer' }}>
             {RYTHME.aide.reglages}
           </button>
+          <button onClick={() => { setShowHelp(false); setShowTutorial(true); }}
+            style={{ padding:'14px 0', borderRadius:14, border:'2px solid rgba(74,108,247,0.35)', background:'none', color:'#4A6CF7', fontSize:14, fontWeight:800, cursor:'pointer' }}>
+            {RYTHME.aide.revoirTuto}
+          </button>
         </div>
         <button onClick={() => setShowHelp(false)} style={{ marginTop:16, background:'none', border:'none', color:'var(--text-muted)', fontSize:12, cursor:'pointer' }}>{RYTHME.aide.fermer}</button>
       </div>
@@ -2287,6 +2354,9 @@ export default function RythmApp() {
         totalXp={totalXp}
         dominantMedal={dominantMedal}
         perfectSeries={perfectSeries}
+        niveau={activeNiveau}
+        activity={activity}
+        isGuest={isGuest}
         addSession={addSession}
         onReplay={() => {
           const baseBpm = tempoMode === "fixed" ? bpmFixed : Math.round((bpmMin + bpmMax) / 2);
@@ -2846,6 +2916,13 @@ export default function RythmApp() {
                     style={{ background: 'rgba(192,132,252,0.14)', color: '#c084fc' }}
                   >{RYTHME.resultats12.rejouerBoucle}</button>
                 </div>
+              </div>
+            )}
+
+            {/* Bandeau invité : sauvegarder la progression (résultats act 1/2) */}
+            {isGuest && (activity === 1 || activity === 2) && phase === "results" && (
+              <div className="w-full mt-3" onPointerDown={e => e.stopPropagation()} onPointerUp={e => e.stopPropagation()}>
+                <GuestSignupBanner />
               </div>
             )}
 

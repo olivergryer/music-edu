@@ -115,6 +115,7 @@ export const RYTHME = {
     precedent: '← Précédent',
     suivant: 'Suivant →',
     commencer: '▶ Commencer !',
+    nePlusAfficher: 'Ne plus afficher ce tutoriel',
   },
 
   // ── Aide (bouton « ? ») ────────────────────────────────────────────────────
@@ -123,6 +124,7 @@ export const RYTHME = {
     sousTitre: 'Que veux-tu consulter ?',
     consignes: 'Consignes',
     reglages: 'Réglages',
+    revoirTuto: 'Revoir le tutoriel',
     fermer: 'Fermer',
   },
 
@@ -343,6 +345,13 @@ export const RYTHME = {
     // globalement et pour tous les modules — plus de textes propres à Rythme.
     retour: '← Activités',
     rejouer: '🔄 Rejouer la série',
+  },
+
+  // ── Bandeau invité (non connecté) — incitation à créer un compte ───────────
+  invite: {
+    texte: 'Ta progression n’est pas sauvegardée.',
+    sousTexte: 'Crée un compte pour garder ton XP, ta série et tes trophées.',
+    cta: 'Créer un compte',
   },
 
   // ── Erreurs ────────────────────────────────────────────────────────────────

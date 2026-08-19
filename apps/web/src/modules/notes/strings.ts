@@ -28,6 +28,25 @@ export function isStringInstrument(id: string): boolean {
   return id in STRING_OPEN
 }
 
+// Lignes extrêmes de la portée par clef (index diatonique) — pour borner les
+// tessitures par défaut à ~2 lignes supplémentaires sous la portée.
+const CLEF_STAFF: Record<Clef, { bottom: number; top: number }> = {
+  treble: { bottom: n(3, 2), top: n(4, 3) }, // mi3 → fa4
+  bass:   { bottom: n(1, 4), top: n(2, 5) }, // sol1 → la2
+  alto:   { bottom: n(2, 3), top: n(3, 4) }, // fa2 → sol3
+  tenor:  { bottom: n(2, 1), top: n(3, 2) }, // re2 → mi3
+}
+
+// Tessiture par défaut d'un instrument à cordes dans une clef : grave borné à la
+// corde à vide la plus grave OU ~2 lignes suppl. sous la portée (le plus haut des
+// deux, pour éviter p.ex. le Do grave du violoncelle en clef de sol).
+export function stringDefaultRange(instrumentId: string, clef: Clef): { low: number; high: number } {
+  const opens = STRING_OPEN[instrumentId]
+  const staff = CLEF_STAFF[clef]
+  const lowestOpen = opens ? Math.min(...opens) : staff.bottom
+  return { low: Math.max(lowestOpen, staff.bottom - 4), high: staff.top + 8 }
+}
+
 // Couleur de la corde à laquelle appartient une note (la plus haute corde ≤ note).
 export function stringColorOf(diatonicIndex: number, instrumentId: string): string | undefined {
   const opens = STRING_OPEN[instrumentId]
@@ -48,11 +67,13 @@ function fingerSet(opens: number[], maxFinger: number): number[] {
 //   P0        = cordes à vide.
 //   P1 (step) = cordes à vide + jusqu'à `step` doigts (1..3).
 //   P2        = ensemble complet (+ 3 doigts), joué en lignes.
-export function stringPool(instrumentId: string, clef: Clef, phase: Phase, step: number): NoteItem[] {
+export function stringPool(instrumentId: string, clef: Clef, phase: Phase, step: number, range?: { low: number; high: number }): NoteItem[] {
   const opens = STRING_OPEN[instrumentId]
   if (!opens) return []
-  const idxs = phase === 'P0'
+  let idxs = phase === 'P0'
     ? [...opens].sort((a, b) => a - b)
     : fingerSet(opens, phase === 'P2' ? 3 : Math.max(1, Math.min(3, step)))
+  // Filtre par tessiture de la clef (n'affiche que les notes lisibles dans la clef).
+  if (range) idxs = idxs.filter(i => i >= range.low && i <= range.high)
   return idxs.map(i => ({ id: `${clef}:${i}`, clef, diatonicIndex: i }))
 }

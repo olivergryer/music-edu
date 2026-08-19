@@ -88,6 +88,11 @@ export interface OptionsLecture {
   // Pulsations par accord, dans l'ordre. Défaut : 1 partout, dernier accord tenu
   // deux fois plus longtemps — le seul geste musical qu'on s'autorise ici.
   durees?: number[]
+  // Durée SONORE de chaque accord, en pulsations. Distincte du pas rythmique
+  // `durees`, dont elle reprend les valeurs par défaut. C'est leur divorce qui
+  // laisse une note résonner par-dessus les suivantes — l'arpège de l'intro
+  // tonale (`intro.ts`) est le seul appelant à s'en servir.
+  tenues?: number[]
   onAccord?: (index: number) => void
 }
 
@@ -119,12 +124,14 @@ export async function jouerSuite(
   const pulsation = 60 / bpm
   const durees =
     options.durees ?? accords.map((_, i) => (i === accords.length - 1 ? 2 : 1))
+  const tenues = options.tenues ?? durees
 
   const depart = ctx.currentTime + 0.12
   let decalage = 0
 
   accords.forEach((hauteurs, index) => {
-    const tenue = durees[index] * pulsation
+    const pas = durees[index] * pulsation
+    const tenue = tenues[index] * pulsation
     for (const midi of hauteurs) {
       joueur.play(midiVersNom(midi), depart + decalage, {
         duration: tenue * 0.98,
@@ -141,7 +148,7 @@ export async function jouerSuite(
         ),
       )
     }
-    decalage += tenue
+    decalage += pas
   })
 
   return decalage * 1000

@@ -23,17 +23,31 @@ export function estVuePortee(v: unknown): v is VuePortee {
 export default function TogglePortee({
   vue,
   onChange,
+  sansTonalite = false,
 }: {
   vue: VuePortee
   onChange: (v: VuePortee) => void
+  /**
+   * Vrai quand « tout en do » est actif : la tonalité entendue EST do, donc les
+   * positions « Tonalité » et « En Ut » ne se distinguent plus. On n'en garde
+   * qu'une, rebaptisée « Affichée » — trois positions dont deux identiques
+   * seraient un piège.
+   */
+  sansTonalite?: boolean
 }) {
+  const positions = sansTonalite
+    ? POSITIONS.filter((p) => p.valeur !== 'tonalite').map((p) =>
+        p.valeur === 'ut' ? { ...p, label: 'Affichée', aide: 'Écrite sur do' } : p,
+      )
+    : POSITIONS
+
   return (
     <div className="flex items-center" style={{ gap: 6 }}>
       <span className="text-app-muted" style={{ fontSize: 12, flexShrink: 0 }}>
         Portée
       </span>
       <div className="flex" style={{ gap: 4, flex: 1 }}>
-        {POSITIONS.map((p) => {
+        {positions.map((p) => {
           const actif = p.valeur === vue
           return (
             <button

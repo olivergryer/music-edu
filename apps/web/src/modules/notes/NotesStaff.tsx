@@ -115,7 +115,13 @@ export default function NotesStaff({
       // peut dessiner les lignes supplémentaires hors <path>).
       svg.querySelectorAll('path, line, rect').forEach(p => {
         const s = p.getAttribute('stroke') ?? '', f = p.getAttribute('fill') ?? ''
-        if (!s || s === '#000000' || s === 'black') p.setAttribute('stroke', C.stave)
+        const stroked = !s || s === '#000000' || s === 'black'
+        if (stroked) {
+          p.setAttribute('stroke', C.stave)
+          // Épaissit portée/hampes/LIGNES SUPPLÉMENTAIRES pour une meilleure lisibilité.
+          const sw = parseFloat(p.getAttribute('stroke-width') || '1')
+          p.setAttribute('stroke-width', String(Math.max(sw, 1.8)))
+        }
         if (f === '#000000' || f === 'black') p.setAttribute('fill', C.stave)
       })
       svg.querySelectorAll('text').forEach(t => t.setAttribute('fill', C.stave))

@@ -164,7 +164,17 @@ export function construireItemBinaire(
     )
     if (cible === undefined) continue
 
-    return { index: rang, niveau, progression, cible, reponse: attendue }
+    // La tonalité change à chaque item, comme en détection et en dictée : sinon
+    // tout sonnerait en do et l'élève pourrait s'appuyer sur une mémoire de
+    // hauteurs absolues au lieu d'entendre des fonctions. Ni `ciblesPossibles`
+    // ni `reponseAttendue` ne dépendent de la tonique — on transpose après.
+    return {
+      index: rang,
+      niveau,
+      progression: { ...progression, tonique: (graine + rang * 7) % 12 },
+      cible,
+      reponse: attendue,
+    }
   }
 
   throw new Error(

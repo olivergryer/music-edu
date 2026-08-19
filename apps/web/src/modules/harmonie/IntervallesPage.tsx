@@ -192,7 +192,10 @@ export default function IntervallesPage() {
     const medal = resume.accuracy >= 0.9 ? 'or' : resume.accuracy >= 0.75 ? 'argent' : 'bronze'
     const xpEarned = Math.max(5, Math.round(resume.accuracy * resume.itemCount * 3))
     try {
-      await addSession({ module: 'harmonie', xpEarned, medal })
+      await addSession({
+        module: 'harmonie', xpEarned, medal,
+        details: { level: `Niveau ${niveau}`, items: resume.itemCount, mode: 'Intervalles' },
+      })
     } catch {
       /* hors ligne : la session per-module est déjà persistée */
     }

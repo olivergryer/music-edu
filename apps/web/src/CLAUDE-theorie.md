@@ -11,6 +11,28 @@
 - **Entraînement** : 10 questions, feedback immédiat, catégories au choix
 - **Examen** : 40 questions, toutes catégories, seuil **35/40**
 
+## Streak — 2 séries pour valider la journée
+Une série d'entraînement (10 questions) est une activité **partielle** : il en faut
+`THEORIE_SERIES_POUR_STREAK = 2` dans la même journée pour valider le streak. Le Code de la
+route musicale (40 questions) reste une session pleine et valide immédiatement.
+
+- Même mécanique que les exercices Rythme isolés : compteur `dailyTheorieSerie` dans
+  `ProgressState`, fonctions pures `theorieSeriesDuJour` / `resteAvantStreakTheorie`
+  (`hooks/progressLogic.ts`), couvertes par `hooks/progressStreak.test.ts`.
+- Le signal passe par `meta.serieTheorie` : `addSession({ …, meta: { serieTheorie: mode !== 'examen' } })`
+  dans `ResultScreen`. **Sans ce meta, la session validerait immédiatement.**
+- Le compteur n'est jamais remis à zéro en base : c'est la **lecture** qui neutralise celui
+  de la veille (test dédié).
+- Affichage : `JaugeStreakTheorie` en haut de `SetupScreen`, alimentée par
+  `theorieSeriesDuJour` / `seuilTheorieSeries` exposés par `useProgressFirebase`.
+
+## Bouton « Suivant »
+Placé **en haut**, juste sous la barre de progression, dans un conteneur à `minHeight: 46`
+tenu même quand le bouton est absent. Position invariante quelles que soient la longueur de
+l'énoncé et le nombre de réponses, et aucun décalage au moment de la révélation.
+`onPointerDown` doit garder son `stopPropagation()` — le conteneur racine capte les taps pour
+l'avance au tap (cf. règle CLAUDE.md).
+
 ## Types de questions
 `qcm` · `vrai_faux` · `texte` · `vexflow_intervalle` (portée VexFlow + 4 choix) · `vexflow_rythme` (motif rythmique + 4 choix)
 

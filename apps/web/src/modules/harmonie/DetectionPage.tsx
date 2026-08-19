@@ -39,6 +39,9 @@ import {
   type ReponseDetection,
 } from './detection.ts'
 import { lireDrapeaux } from './glyphe.ts'
+import { INTRO_DEFAUT, avecIntro, estIntro, type Intro, type PlanLecture } from './intro.ts'
+import ToggleIntro from './ToggleIntro.tsx'
+import BoutonDemiVitesse, { DEMI_VITESSE } from './BoutonDemiVitesse.tsx'
 import { partitionDeProgression } from './notation.ts'
 import PorteeSATB, { type VuePortee } from './PorteeSATB.tsx'
 import TogglePortee, { estVuePortee } from './TogglePortee.tsx'
@@ -88,8 +91,9 @@ export default function DetectionPage() {
   // Trajectoire sur le cercle des tierces — correction seulement.
   const [trace, setTrace] = useState<EtatTrace>({ phase: 'statique' })
   const [versionJouee, setVersionJouee] = useState<VersionJouee>('entendu')
-  // Réglage commun aux quatre activités du module.
+  // Réglages communs aux quatre activités du module.
   const [vuePortee, setVuePortee] = useState<VuePortee>('masquee')
+  const [intro, setIntro] = useState<Intro>(INTRO_DEFAUT)
 
   const reponsesRef = useRef<ReponseDetection[]>([])
   const grainesRef = useRef(1)
@@ -105,10 +109,12 @@ export default function DetectionPage() {
       dernierMode?: Mode
       dernierNiveau?: number
       porteeVue?: unknown
+      introTonale?: unknown
     }
     if (p.dernierMode) setMode(p.dernierMode)
     if (typeof p.dernierNiveau === 'number') setNiveau(p.dernierNiveau)
     if (estVuePortee(p.porteeVue)) setVuePortee(p.porteeVue)
+    if (estIntro(p.introTonale)) setIntro(p.introTonale)
   }, [mp.loaded, mp.progress.payload])
 
   useEffect(() => () => arreter(), [])
@@ -136,25 +142,27 @@ export default function DetectionPage() {
     [progressionEcrite, item],
   )
 
-  // Contexte tonal : la tonique sonne avant l'item quand le niveau l'exige.
-  const avecContexte = useCallback(
-    (accords: number[][]): number[][] => {
-      if (!spec.contexteTonal || !progressionEcrite) return accords
-      const [tonique] = realiserProgression({
-        ...progressionEcrite,
-        accords: [creerAccord(0, { degre: 1 })],
-      })
-      return [tonique, ...accords]
-    },
-    [spec.contexteTonal, progressionEcrite],
+  // Contexte tonal : la tonique est posée avant l'item quand le niveau l'exige.
+  // `null` au niveau 7 — l'élève doit y établir la tonalité lui-même, et le
+  // réglage d'intro y reste sans effet.
+  const toniqueRealisee = useMemo<number[] | null>(() => {
+    if (!spec.contexteTonal || !progressionEcrite) return null
+    const [tonique] = realiserProgression({
+      ...progressionEcrite,
+      accords: [creerAccord(0, { degre: 1 })],
+    })
+    return tonique
+  }, [spec.contexteTonal, progressionEcrite])
+
+  // L'intro sonne EN TÊTE de la suite : les index que renvoie `onAccord` sont
+  // décalés d'autant, et c'est le plan lui-même qui porte ce décalage.
+  const planDe = useCallback(
+    (accords: number[][]) => avecIntro(accords, toniqueRealisee, intro),
+    [toniqueRealisee, intro],
   )
 
-  // Le contexte tonal sonne EN TÊTE de la suite : l'index que renvoie `onAccord`
-  // est alors décalé d'un cran par rapport à la progression.
-  const decalageContexte = spec.contexteTonal ? 1 : 0
-
   const jouer = useCallback(
-    async (accords: number[][], quelle: VersionJouee, decalage: number, anime: boolean) => {
+    async (plan: PlanLecture, quelle: VersionJouee, anime: boolean, facteurTempo = 1) => {
       if (finLectureRef.current) clearTimeout(finLectureRef.current)
       setEnLecture(true)
       if (anime) {
@@ -162,10 +170,12 @@ export default function DetectionPage() {
         setTrace({ phase: 'lecture', index: -1 })
       }
       try {
-        const duree = await jouerSuite(accords, {
-          bpm: BPM,
+        const duree = await jouerSuite(plan.accords, {
+          bpm: BPM * facteurTempo,
+          durees: plan.durees,
+          tenues: plan.tenues,
           onAccord: anime
-            ? (i: number) => setTrace({ phase: 'lecture', index: i - decalage })
+            ? (i: number) => setTrace({ phase: 'lecture', index: i - plan.decalage })
             : undefined,
         })
         finLectureRef.current = setTimeout(() => {
@@ -188,13 +198,16 @@ export default function DetectionPage() {
   // ⚠ `anime` vaut `repondu !== null` : AVANT la réponse, la trajectoire reste
   // muette. L'animer donnerait les degrés entendus un par un, donc la réponse —
   // même règle que « ▶ A n'existe qu'après la réponse ».
-  const ecouterEntendu = useCallback(() => {
-    void jouer(avecContexte(realisationEntendue), 'entendu', decalageContexte, repondu !== null)
-  }, [jouer, avecContexte, realisationEntendue, decalageContexte, repondu])
+  const ecouterEntendu = useCallback(
+    (facteurTempo = 1) => {
+      void jouer(planDe(realisationEntendue), 'entendu', repondu !== null, facteurTempo)
+    },
+    [jouer, planDe, realisationEntendue, repondu],
+  )
 
   const ecouterEcrit = useCallback(() => {
-    void jouer(avecContexte(realisationEcrite), 'ecrit', decalageContexte, repondu !== null)
-  }, [jouer, avecContexte, realisationEcrite, decalageContexte, repondu])
+    void jouer(planDe(realisationEcrite), 'ecrit', repondu !== null)
+  }, [jouer, planDe, realisationEcrite, repondu])
 
   // ── Démarrage ──────────────────────────────────────────────────────────────
   async function commencer() {
@@ -285,7 +298,12 @@ export default function DetectionPage() {
               lastAt: Date.now(),
             },
           },
-          payload: { dernierMode: mode, dernierNiveau: niveau, porteeVue: vuePortee },
+          payload: {
+            dernierMode: mode,
+            dernierNiveau: niveau,
+            porteeVue: vuePortee,
+            introTonale: intro,
+          },
         },
       })
     } catch (e) {
@@ -295,7 +313,10 @@ export default function DetectionPage() {
     const medal = resume.accuracy >= 0.9 ? 'or' : resume.accuracy >= 0.75 ? 'argent' : 'bronze'
     const xpEarned = Math.max(5, Math.round(resume.accuracy * resume.itemCount * 3))
     try {
-      await addSession({ module: 'harmonie', xpEarned, medal })
+      await addSession({
+        module: 'harmonie', xpEarned, medal,
+        details: { level: `Niveau ${niveau}`, items: resume.itemCount, mode: 'Détection d’erreur' },
+      })
     } catch {
       /* hors ligne : la session per-module est déjà persistée */
     }
@@ -373,8 +394,10 @@ export default function DetectionPage() {
         <EcranReglages
           mode={mode}
           niveau={niveau}
+          intro={intro}
           onMode={setMode}
           onNiveau={setNiveau}
+          onIntro={setIntro}
           onCommencer={commencer}
         />
       )}
@@ -390,7 +413,8 @@ export default function DetectionPage() {
           enLecture={enLecture}
           trace={trace}
           versionJouee={versionJouee}
-          onEcouterEntendu={ecouterEntendu}
+          onEcouterEntendu={() => ecouterEntendu()}
+          onEcouterLentement={() => ecouterEntendu(DEMI_VITESSE)}
           onEcouterEcrit={ecouterEcrit}
           onRepondre={repondre}
           onSuivant={suivant}
@@ -415,14 +439,18 @@ export default function DetectionPage() {
 function EcranReglages({
   mode,
   niveau,
+  intro,
   onMode,
   onNiveau,
+  onIntro,
   onCommencer,
 }: {
   mode: Mode
   niveau: number
+  intro: Intro
   onMode: (m: Mode) => void
   onNiveau: (n: number) => void
+  onIntro: (i: Intro) => void
   onCommencer: () => void
 }) {
   const spec = niveauSpec(niveau)
@@ -461,6 +489,10 @@ function EcranReglages({
         </p>
       </Bloc>
 
+      <Bloc titre="Intro tonale">
+        <ToggleIntro intro={intro} onChange={onIntro} actif={spec.contexteTonal} />
+      </Bloc>
+
       <button
         onClick={onCommencer}
         style={{
@@ -493,6 +525,7 @@ function EcranJeu({
   trace,
   versionJouee,
   onEcouterEntendu,
+  onEcouterLentement,
   onEcouterEcrit,
   onRepondre,
   onSuivant,
@@ -510,6 +543,7 @@ function EcranJeu({
   trace: EtatTrace
   versionJouee: VersionJouee
   onEcouterEntendu: () => void
+  onEcouterLentement: () => void
   onEcouterEcrit: () => void
   onRepondre: (i: number) => void
   onSuivant: () => void
@@ -607,23 +641,29 @@ function EcranJeu({
       </div>
 
       <div className="flex flex-col" style={{ gap: 10 }}>
-        <button
-          onClick={onEcouterEntendu}
-          disabled={enLecture}
-          style={{
-            background: aRepondu ? 'var(--surface-2)' : ACCENT,
-            border: aRepondu ? '1px solid var(--border-c)' : 'none',
-            borderRadius: 12,
-            padding: '14px 20px',
-            minHeight: 52,
-            fontSize: 16,
-            fontWeight: 600,
-            color: aRepondu ? 'var(--text)' : '#0d1026',
-            opacity: enLecture ? 0.6 : 1,
-          }}
-        >
-          {enLecture ? '▶ …' : '▶ Écouter'}
-        </button>
+        {/* ⚠ Le « ▶ ½ » n'existe que PENDANT l'exercice : à la correction, les
+            écoutes servent à comparer deux versions, pas à ralentir. */}
+        <div className="flex" style={{ gap: 8 }}>
+          <button
+            onClick={onEcouterEntendu}
+            disabled={enLecture}
+            style={{
+              flex: 1,
+              background: aRepondu ? 'var(--surface-2)' : ACCENT,
+              border: aRepondu ? '1px solid var(--border-c)' : 'none',
+              borderRadius: 12,
+              padding: '14px 20px',
+              minHeight: 52,
+              fontSize: 16,
+              fontWeight: 600,
+              color: aRepondu ? 'var(--text)' : '#0d1026',
+              opacity: enLecture ? 0.6 : 1,
+            }}
+          >
+            {enLecture ? '▶ …' : '▶ Écouter'}
+          </button>
+          {!aRepondu && <BoutonDemiVitesse onClick={onEcouterLentement} disabled={enLecture} />}
+        </div>
 
         {/* ▶ A n'existe QU'APRÈS la réponse — cf. en-tête du fichier. */}
         {aRepondu && (
