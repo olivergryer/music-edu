@@ -682,19 +682,30 @@ rien à annoncer, et une mémoire de hauteurs absolues remplacerait l'audition d
 ⚠ **Flux niveau 7** : ce niveau n'a pas de contexte tonal. Le transposer ajoute une vraie marche —
 établir une tonalité qu'on ne connaît pas. Assumé, à surveiller à l'usage.
 
-## « Tout sur do » — `ToggleToutEnDo.tsx` (2026-08-19)
+## « Tout en Ut » — `ToggleToutEnDo.tsx` (2026-08-19)
 
-L'inverse à la demande : un repère fixe. ⚠ Il vit **dans l'activité**, pas dans l'écran de réglages
-(contrairement à `ToggleIntro`) : on doit pouvoir basculer sans quitter l'exercice. Persisté dans
-`payload.toutEnDo`, commun aux activités.
+L'inverse de la transposition, à la demande : un repère fixe. ⚠ Il vit **dans l'activité**, pas dans
+l'écran de réglages (contrairement à `ToggleIntro`) : on doit pouvoir basculer sans quitter
+l'exercice. Persisté dans `payload.toutEnDo`, commun aux activités.
 
-Actif, il force la progression **sonnée** sur `tonique: 0` et la portée en vue `'ut'`. Le sélecteur de
-portée se réduit alors à deux positions (`sansTonalite`) : « Tonalité » et « En Ut » ne se
-distingueraient plus.
+⚠ **« En Ut » n'est PAS « sur do »** : c'est **Do majeur ou LA MINEUR**, soit exactement `TONIQUE_UT`
+(`notation.ts`), les deux tonalités à armure vide. Les pages transposent donc la progression sonnée
+sur `TONIQUE_UT[mode]`, jamais sur `0` en dur.
 
-⚠ **En mineur, le son et l'écrit divergent volontairement** (décidé avec Matthieu) : do mineur à
-l'oreille, **la mineur** sur la portée. C'est la raison d'être de la vue « En Ut » — armure vide,
-sensible en altération accidentelle — préférée à un do mineur à trois bémols.
+**Tout doit coïncider** (décidé avec Matthieu 2026-08-19, après un premier essai raté) : ce qui sonne,
+la tonalité écrite à l'écran, **les réponses attendues** et la portée. Le premier essai forçait le son
+sur do dans les deux modes et laissait la portée en la mineur : en dictée, un mi♭ juste se serait
+écrit « sol » sur la partition de correction. La règle en une phrase :
+
+> On ne demande jamais à l'élève de nommer des notes dans une tonalité qu'il n'a pas entendue.
+
+D'où, en dictée, `bassesAttendues` **recalculées sur la progression SONNÉE** (`bassesDeProgression`) et
+non lues sur l'item, le badge de tonalité pris sur la tonique sonnée, et la tonique des `flags` prise
+elle aussi sur ce qui a sonné. Le flux, la détection et les cadences ne sont pas concernés : leurs
+réponses sont des degrés ou des types, invariants par transposition.
+
+La portée passe en vue `'ut'` et le sélecteur se réduit à deux positions (`sansTonalite`) :
+« Tonalité » et « En Ut » désignent alors la même chose.
 
 ## Écouter autrement — ½ vitesse et accord par accord (2026-08-19)
 

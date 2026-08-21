@@ -43,7 +43,7 @@ import { INTRO_DEFAUT, avecIntro, estIntro, type Intro, type PlanLecture } from 
 import ToggleIntro from './ToggleIntro.tsx'
 import BoutonDemiVitesse, { DEMI_VITESSE } from './BoutonDemiVitesse.tsx'
 import ToggleToutEnDo from './ToggleToutEnDo.tsx'
-import { partitionDeProgression } from './notation.ts'
+import { partitionDeProgression, TONIQUE_UT } from './notation.ts'
 import PorteeSATB, { type VuePortee } from './PorteeSATB.tsx'
 import TogglePortee, { estVuePortee } from './TogglePortee.tsx'
 import {

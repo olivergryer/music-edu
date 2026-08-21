@@ -31,7 +31,7 @@ import {
 } from './modeSession.ts'
 
 import { niveauSpec } from './niveaux.ts'
-import { partitionDeProgression } from './notation.ts'
+import { partitionDeProgression, TONIQUE_UT } from './notation.ts'
 import PorteeSATB, { type VuePortee } from './PorteeSATB.tsx'
 import TogglePortee, { estVuePortee } from './TogglePortee.tsx'
 import { nomTonalite } from './tonalites.ts'
