@@ -526,6 +526,9 @@ export default function NotesPage() {
     try {
       await addSession({
         module: 'notes', xpEarned, medal,
+        // Signal du trophée « Lecture parfaite » : il ne peut se déduire de
+        // l'état persisté, seule la session en cours connaît son sans-faute.
+        meta: { sansFaute: s.accuracy >= 1 && attempts.length > 0 },
         details: { level: PHASE_LABEL[config.phase], items: attempts.length, mode: CLEF_LABELS[config.clef] },
       })
     } catch { /* offline ok */ }

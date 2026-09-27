@@ -28,6 +28,9 @@ const HEAD_RY = 4.7
 const LINE_PX = 10        // espacement VexFlow entre deux lignes de portée
 const TOP_MARGIN = 22     // marge au-dessus de la 6e ligne supplémentaire
 const LEDGERS_ABOVE = 6   // lignes suppl. potentielles au-dessus (flûte / violon)
+const STAVE_PX = 1.8      // épaisseur lignes de portée / hampes
+const LEDGER_PX = 2.4     // lignes suppl. un peu plus épaisses que la portée : courtes,
+                          // isolées, elles ont besoin de plus de matière pour se lire
 
 function palette(dark: boolean) {
   // Portée + lignes supplémentaires : plus clair en dark pour un contraste net sur
@@ -102,6 +105,12 @@ export default function NotesStaff({
 
       const stave = new Stave(10, staveY, contentW - 20)
       stave.addClef(clef)
+      // Lignes supplémentaires : couleur/épaisseur imposées AU DESSIN (VexFlow les
+      // dessine avec son style par défaut `#444` / lineWidth 2 — gris sombre
+      // invisible sur le fond dark, et non rattrapable par le patch post-rendu qui
+      // ne cible que stroke noir/vide). Même leçon que la colorisation Rythme :
+      // contrôler la source, pas la sortie.
+      stave.setDefaultLedgerLineStyle({ strokeStyle: C.stave, lineWidth: LEDGER_PX })
       stave.setContext(ctx).draw()
 
       const vexNotes = items.map(it => new StaveNote({ clef, keys: [toVexKey(it.diatonicIndex)], duration: 'q' }))
@@ -116,16 +125,15 @@ export default function NotesStaff({
       if (!svg) return
       svg.style.background = 'transparent'
 
-      // Portée + hampes + LIGNES SUPPLÉMENTAIRES au thème (path/line/rect : VexFlow
-      // peut dessiner les lignes supplémentaires hors <path>).
+      // Portée + hampes au thème (les lignes supplémentaires, elles, sont déjà à la
+      // bonne couleur/épaisseur : style posé sur le Stave avant le dessin).
       svg.querySelectorAll('path, line, rect').forEach(p => {
         const s = p.getAttribute('stroke') ?? '', f = p.getAttribute('fill') ?? ''
         const stroked = !s || s === '#000000' || s === 'black'
         if (stroked) {
           p.setAttribute('stroke', C.stave)
-          // Épaissit portée/hampes/LIGNES SUPPLÉMENTAIRES pour une meilleure lisibilité.
           const sw = parseFloat(p.getAttribute('stroke-width') || '1')
-          p.setAttribute('stroke-width', String(Math.max(sw, 1.8)))
+          p.setAttribute('stroke-width', String(Math.max(sw, STAVE_PX)))
         }
         if (f === '#000000' || f === 'black') p.setAttribute('fill', C.stave)
       })

@@ -4,8 +4,9 @@ import {
   localDateStr,
   getRank, getNextRank, rankLabel, displayStreak,
   RANKS, TROPHIES,
-  type ProgressState,
+  type ProgressState, type Trophee,
 } from '../hooks/progressLogic'
+import TropheeIcon from './TropheeIcon'
 import { MODULES, MODULE_IDS, moduleLabel, moduleColor, type ModuleId } from '../lib/modules'
 import { groupHistory, joursValidantStreak, iconeMedaille, type GroupedEntry } from '../hooks/historyGrouping'
 import type { HistoryEntry as HistoryEntryBase } from '../hooks/progressLogic'
@@ -37,6 +38,64 @@ function legacyModuleStat(id: ModuleId, mods: ProgressState['modules']): { xpTot
 
 const cardCls = "bg-surface rounded-2xl p-5 mb-3 border border-app"
 const labelCls = "text-xs font-bold text-app-muted uppercase tracking-widest mb-3 block"
+
+// Partition d'affichage, calculée une seule fois : la liste des trophées est
+// statique. Le groupe « code » a sa propre carte (voir plus bas).
+const tropheesGeneraux = TROPHIES.filter(t => t.groupe !== 'code')
+const tropheesCode     = TROPHIES.filter(t => t.groupe === 'code')
+
+// Grille de trophées réutilisée par les deux cartes. Le survol est piloté par le
+// parent : un seul tooltip ouvert à la fois, toutes cartes confondues.
+function GrilleTrophees({ liste, obtenus, survole, setSurvole }: {
+  liste: Trophee[]
+  obtenus: string[]
+  survole: string | null
+  setSurvole: (id: string | null) => void
+}) {
+  return (
+    <div className="grid grid-cols-4 gap-2">
+      {liste.map((t, i) => {
+        const unlocked = obtenus.includes(t.id)
+        const col = i % 4
+        // Ancrage du tooltip selon la colonne : bord gauche (col 0), bord droit
+        // (col 3), centré sinon — évite le débordement hors écran.
+        const tipPos = col === 0 ? 'left-0' : col === 3 ? 'right-0' : 'left-1/2 -translate-x-1/2'
+        return (
+          <div
+            key={t.id}
+            className="relative"
+            onMouseEnter={() => setSurvole(t.id)}
+            onMouseLeave={() => setSurvole(null)}
+          >
+            <div
+              className="rounded-xl py-2.5 px-1 text-center border border-app transition-opacity"
+              style={{
+                background: unlocked ? '#8B5CF610' : 'var(--surface-2)',
+                borderColor: unlocked ? '#8B5CF6' : 'var(--border-c)',
+                opacity: unlocked ? 1 : 0.35,
+              }}
+            >
+              <div
+                className="flex justify-center mb-1"
+                style={{ color: unlocked ? '#8B5CF6' : 'var(--text-muted)' }}
+              >
+                <TropheeIcon id={t.icon} size={26} />
+              </div>
+              <div className="text-[9px] font-bold leading-tight" style={{ color: unlocked ? '#8B5CF6' : 'var(--text-muted)' }}>
+                {t.label}
+              </div>
+            </div>
+            {survole === t.id && (
+              <div className={`absolute bottom-[calc(100%+6px)] ${tipPos} w-max max-w-[150px] bg-surface border border-app rounded-lg px-2 py-1.5 text-[10px] text-app whitespace-normal z-10 pointer-events-none shadow-sm leading-snug`}>
+                {t.hint}
+              </div>
+            )}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
 
 interface Props {
   /** État de progression décayé (affichage). */
@@ -133,7 +192,13 @@ export default function StudentDashboardView({ progress, rawProgress, history, t
         {speedXpPerWeek > 0 && <DiagBadge color="#4A6CF7">⚡ {speedXpPerWeek} XP/sem</DiagBadge>}
         {recentTrophies.length > 0 && (
           <DiagBadge color="#8B5CF6">
-            🏅 {recentTrophies.map(id => TROPHIES.find(t => t.id === id)?.icon ?? '?').join(' ')}
+            <span className="inline-flex items-center gap-1 align-middle">
+              <TropheeIcon id="trophee" size={13} strokeWidth={2} />
+              {recentTrophies.map(id => {
+                const t = TROPHIES.find(x => x.id === id)
+                return t ? <TropheeIcon key={id} id={t.icon} size={13} strokeWidth={2} /> : null
+              })}
+            </span>
           </DiagBadge>
         )}
         {daysIdle === 0 && decayDelta === 0 && speedXpPerWeek === 0 && recentTrophies.length === 0 && (
@@ -217,48 +282,23 @@ export default function StudentDashboardView({ progress, rawProgress, history, t
         <ActivityHeatmap history={history} today={today} />
       </div>
 
-      {/* Trophées */}
+      {/* Trophées — grille principale. Les neuf trophées du Code de la route
+          sont sortis dans leur propre carte : une seule activité d'un seul
+          module occupait sinon près de la moitié de la grille. */}
       <div className={cardCls}>
         <div className="flex justify-between items-center mb-3">
           <span className={labelCls} style={{ margin: 0 }}>Trophées</span>
-          <span className="text-xs text-app-muted">{progress.trophies.length} / {TROPHIES.length}</span>
+          <span className="text-xs text-app-muted">{tropheesGeneraux.filter(t => progress.trophies.includes(t.id)).length} / {tropheesGeneraux.length}</span>
         </div>
-        <div className="grid grid-cols-4 gap-2">
-          {TROPHIES.map((t, i) => {
-            const unlocked = progress.trophies.includes(t.id)
-            const col = i % 4
-            // Ancrage du tooltip selon la colonne : bord gauche (col 0), bord droit
-            // (col 3), centré sinon — évite le débordement hors écran.
-            const tipPos = col === 0 ? 'left-0' : col === 3 ? 'right-0' : 'left-1/2 -translate-x-1/2'
-            return (
-              <div
-                key={t.id}
-                className="relative"
-                onMouseEnter={() => setHoveredTrophy(t.id)}
-                onMouseLeave={() => setHoveredTrophy(null)}
-              >
-                <div
-                  className="rounded-xl py-2.5 px-1 text-center border border-app transition-opacity"
-                  style={{
-                    background: unlocked ? '#8B5CF610' : 'var(--surface-2)',
-                    borderColor: unlocked ? '#8B5CF6' : 'var(--border-c)',
-                    opacity: unlocked ? 1 : 0.35,
-                  }}
-                >
-                  <div className="text-xl mb-1">{t.icon}</div>
-                  <div className="text-[9px] font-bold leading-tight" style={{ color: unlocked ? '#8B5CF6' : 'var(--text-muted)' }}>
-                    {t.label}
-                  </div>
-                </div>
-                {hoveredTrophy === t.id && (
-                  <div className={`absolute bottom-[calc(100%+6px)] ${tipPos} w-max max-w-[150px] bg-surface border border-app rounded-lg px-2 py-1.5 text-[10px] text-app whitespace-normal z-10 pointer-events-none shadow-sm leading-snug`}>
-                    {t.hint}
-                  </div>
-                )}
-              </div>
-            )
-          })}
+        <GrilleTrophees liste={tropheesGeneraux} obtenus={progress.trophies} survole={hoveredTrophy} setSurvole={setHoveredTrophy} />
+      </div>
+
+      <div className={cardCls}>
+        <div className="flex justify-between items-center mb-3">
+          <span className={labelCls} style={{ margin: 0 }}>Code de la route musicale</span>
+          <span className="text-xs text-app-muted">{tropheesCode.filter(t => progress.trophies.includes(t.id)).length} / {tropheesCode.length}</span>
         </div>
+        <GrilleTrophees liste={tropheesCode} obtenus={progress.trophies} survole={hoveredTrophy} setSurvole={setHoveredTrophy} />
       </div>
 
       {/* Historique — sessions consécutives d'un même module fusionnées. Le

@@ -9,11 +9,12 @@
 import { useEffect, useState } from 'react'
 import { useCelebrations, type Celebration } from '../hooks/CelebrationContext'
 import { RANKS, TROPHIES, rankLabel } from '../hooks/progressLogic'
+import TropheeIcon, { type TropheeIconId } from './TropheeIcon'
 
 const DUREE_MS = 2600
 
 interface Contenu {
-  icone: string
+  icone: TropheeIconId
   titre: string
   detail: string
   couleur: string
@@ -22,7 +23,7 @@ interface Contenu {
 function contenuDe(c: Celebration): Contenu {
   if (c.type === 'streak') {
     return {
-      icone: '🔥',
+      icone: 'flamme',
       titre: 'Journée validée !',
       detail: c.jours > 1 ? `${c.jours} jours d’affilée` : 'Premier jour de ta série',
       couleur: '#fbbf24',
@@ -31,7 +32,7 @@ function contenuDe(c: Celebration): Contenu {
   if (c.type === 'rang') {
     const rang = RANKS.find(r => r.id === c.rangId)
     return {
-      icone: '⭐',
+      icone: 'rang',
       titre: 'Rang supérieur !',
       detail: rang ? rankLabel(rang) : c.rangId,
       couleur: '#c084fc',
@@ -39,7 +40,7 @@ function contenuDe(c: Celebration): Contenu {
   }
   const trophee = TROPHIES.find(t => t.id === c.trophyId)
   return {
-    icone: trophee?.icon ?? '🏅',
+    icone: trophee?.icon ?? 'trophee',
     titre: 'Trophée débloqué !',
     detail: trophee?.label ?? c.trophyId,
     couleur: '#34d399',
@@ -98,7 +99,9 @@ export default function CelebrationLayer() {
           transition: reducedMotion ? 'opacity 0.3s' : undefined,
         }}
       >
-        <span style={{ fontSize: 30, lineHeight: 1 }}>{icone}</span>
+        <span style={{ display: 'flex', color: couleur, flexShrink: 0 }}>
+          <TropheeIcon id={icone} size={30} strokeWidth={1.6} />
+        </span>
         <div style={{ textAlign: 'left', minWidth: 0 }}>
           <div style={{ fontSize: 14, fontWeight: 900, color: couleur }}>{titre}</div>
           <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{detail}</div>

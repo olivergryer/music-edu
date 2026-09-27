@@ -1,6 +1,11 @@
 // Logique pure de progression (XP, streak, trophées, compteurs par module).
 // Sans React, sans Firebase — testable directement depuis Node.
 
+// Import de TYPE uniquement (effacé à la compilation) : la liste des trophées
+// doit référencer une icône qui existe, sinon la faute de frappe ne se voit qu'à
+// l'écran. Aucun code de composant n'est tiré ici.
+import type { TropheeIconId } from '../components/TropheeIcon'
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface Streak {
@@ -38,6 +43,8 @@ export interface AddSessionParams {
     perfectSeries?: boolean
     individual?: boolean
     serieTheorie?: boolean
+    /** Notes : session terminée sans aucune erreur — débloque « Lecture parfaite ». */
+    sansFaute?: boolean
     /** Théorie : niveau reçu au Code de la route musicale — débloque son trophée. */
     codeReussi?: string
   }
@@ -141,94 +148,180 @@ export function idTropheeCode(niveau: string): string {
   return `code_${niveau.replace('/', '_')}`
 }
 
-// Un trophée par niveau reçu au Code de la route musicale. L'icône marque le
-// cycle — neuf fois le même pictogramme rendrait la grille illisible, alors que
-// le libellé porte déjà le niveau exact.
-const TROPHEES_CODE = NIVEAUX_THEORIE.map(niveau => ({
+// Un trophée par niveau reçu au Code de la route musicale. L'icône est une portée
+// en perspective, et le nombre de repères au loin marque le cycle — neuf fois le
+// même pictogramme rendrait la grille illisible, alors que le libellé porte déjà
+// le niveau exact.
+const TROPHEES_CODE: Trophee[] = NIVEAUX_THEORIE.map(niveau => ({
   id: idTropheeCode(niveau),
-  icon: niveau.startsWith('C1') ? '🚦' : niveau.startsWith('C2') ? '🛣️' : '🏁',
+  icon: niveau.startsWith('C1') ? 'perspective-1' : niveau.startsWith('C2') ? 'perspective-2' : 'perspective-3',
   label: `Code ${niveau}`,
   hint: `Être reçu au Code de la route musicale au niveau ${niveau}`,
+  groupe: 'code',
   check: (_s: ProgressState, meta?: AddSessionParams['meta']) => meta?.codeReussi === niveau,
 }))
 
-export const TROPHIES = [
+export interface Trophee {
+  /** Clé technique PERSISTÉE dans Firestore — ne jamais renommer. */
+  id: string
+  icon: TropheeIconId
+  label: string
+  hint: string
+  /**
+   * Regroupement d'affichage. `'code'` sort le trophée de la grille principale
+   * vers la sous-section « Code de la route » : neuf trophées pour une seule
+   * activité d'un seul module noyaient la grille.
+   */
+  groupe?: 'code'
+  check: (s: ProgressState, meta?: AddSessionParams['meta']) => boolean
+}
+
+/** Nombre de modules dans lesquels au moins une activité a été jouée. */
+function modulesJoues(s: ProgressState): number {
+  const m = s.modules
+  return [
+    m.rythme.seriesPlayed + m.rythme.exercisesPlayed,
+    m.theorie.sessionsPlayed,
+    m.accordeur.sessionsPlayed,
+    m.notes.sessionsPlayed,
+    m.harmonie.sessionsPlayed,
+  ].filter(n => n >= 1).length
+}
+
+export const TROPHIES: Trophee[] = [
+  // ── Transverses ────────────────────────────────────────────────────────────
   {
     id: 'first_note',
-    icon: '♩', label: 'Première note',
-    hint: 'Jouer ton premier exercice ou ta première session',
-    check: (s: ProgressState) =>
-      s.modules.rythme.seriesPlayed >= 1 ||
-      s.modules.rythme.exercisesPlayed >= 1 ||
-      s.modules.theorie.sessionsPlayed >= 1 ||
-      s.modules.accordeur.sessionsPlayed >= 1,
+    icon: 'note', label: 'Première note',
+    hint: 'Jouer ton premier exercice ou ta première session, dans n’importe quel module',
+    // Ce test omettait Notes et Harmonie : un élève qui ne pratiquait que ces
+    // deux modules ne débloquait JAMAIS son premier trophée.
+    check: (s: ProgressState) => modulesJoues(s) >= 1,
   },
   {
-    id: 'first_series',
-    icon: '🎵', label: 'Première série',
-    hint: 'Terminer une série complète de 10 exercices de rythme',
-    check: (s: ProgressState) => s.modules.rythme.seriesPlayed >= 1,
+    id: 'duo',
+    icon: 'duo', label: 'Duo',
+    hint: 'Pratiquer deux modules différents',
+    // Idem : la condition était « rythme ET théorie », donc inatteignable pour
+    // qui travaillait Notes + Harmonie.
+    check: (s: ProgressState) => modulesJoues(s) >= 2,
   },
   {
     id: 'portee',
-    icon: '♫', label: 'Sur la portée',
+    icon: 'portee-flamme', label: 'Sur la portée',
     hint: 'Pratiquer 7 jours de suite sur Tessitura',
     check: (s: ProgressState) => s.streak.current >= 7,
   },
   {
     id: 'mesure',
-    icon: '♬', label: 'Barre de mesure',
+    icon: 'barre-mesure', label: 'Barre de mesure',
     hint: 'Pratiquer 30 jours de suite sur Tessitura',
     check: (s: ProgressState) => s.streak.current >= 30,
   },
   {
-    id: 'clef_sol',
-    icon: '🎼', label: 'Clé de Sol',
-    hint: '10 séries de rythme ou 10 sessions de théorie',
-    check: (s: ProgressState) => s.modules.rythme.seriesPlayed >= 10 || s.modules.theorie.sessionsPlayed >= 10,
-  },
-  {
     id: 'do_majeur',
-    icon: '🎹', label: 'Do majeur',
+    icon: 'accord', label: 'Do majeur',
     hint: 'Atteindre le rang Soliste',
-    check: (s: ProgressState) => RANKS.findIndex(l => l.id === getRank(s.xp).id) >= 3,
+    check: (s: ProgressState) => getRankIdx(s.xp) >= 3,
   },
   {
     id: 'diapason',
-    icon: '🎺', label: 'Diapason',
-    hint: 'Atteindre le rang Maestro',
-    check: (s: ProgressState) => RANKS.findIndex(l => l.id === getRank(s.xp).id) >= 6,
+    icon: 'diapason', label: 'Diapason',
+    // `diapason` et `concert` testaient tous deux « rang Maestro » : deux
+    // trophées pour un seul fait. `diapason` reprend le palier Virtuose, qui
+    // était manifestement son intention (il précède `concert` dans la liste).
+    // Personne ne le perd : tout détenteur avait Maestro, donc Virtuose aussi.
+    hint: 'Atteindre le rang Virtuose',
+    check: (s: ProgressState) => getRankIdx(s.xp) >= 5,
   },
   {
     id: 'concert',
-    icon: '🎻', label: 'Concert',
+    icon: 'pupitre', label: 'Concert',
     hint: 'Atteindre le rang Maestro',
-    check: (s: ProgressState) => getRank(s.xp).id === 'Maestro',
+    check: (s: ProgressState) => getRankIdx(s.xp) >= 6,
+  },
+
+  // ── Rythme ─────────────────────────────────────────────────────────────────
+  {
+    id: 'first_series',
+    icon: 'serie-dix', label: 'Première série',
+    hint: 'Terminer une série complète de 10 exercices de rythme',
+    check: (s: ProgressState) => s.modules.rythme.seriesPlayed >= 1,
   },
   {
     id: 'perfect_series',
-    icon: '⭐', label: 'Série parfaite',
-    hint: 'Réussir une série de 10 exercices sans faute',
+    icon: 'etoile', label: 'Série parfaite',
+    hint: 'Réussir une série de 10 exercices de rythme sans faute',
     check: (_s: ProgressState, meta?: AddSessionParams['meta']) => meta?.perfectSeries === true,
   },
   {
+    id: 'clef_sol',
+    icon: 'clef-sol', label: 'Clé de Sol',
+    // Critère resserré sur le seul Rythme : la variante « ou 10 sessions de
+    // théorie » en faisait un trophée sans module, impossible à situer dans la
+    // grille. Les comptes qui l'avaient obtenu par la théorie le gardent.
+    hint: '10 séries de rythme terminées',
+    check: (s: ProgressState) => s.modules.rythme.seriesPlayed >= 10,
+  },
+  {
     id: 'virtuose',
-    icon: '🏆', label: 'Virtuose',
+    // Renommé : « Virtuose » est un RANG (80 000 XP). Un trophée homonyme
+    // brouillait la distinction Rang / Niveau / trophée. L'id reste intact.
+    icon: 'metronome', label: 'Métronome humain',
     hint: '50 séries de rythme terminées',
     check: (s: ProgressState) => s.modules.rythme.seriesPlayed >= 50,
   },
+
+  // ── Théorie ────────────────────────────────────────────────────────────────
   {
     id: 'theoricien',
-    icon: '📖', label: 'Théoricien',
+    icon: 'livre', label: 'Théoricien.ne',
     hint: '20 sessions de théorie terminées',
     check: (s: ProgressState) => s.modules.theorie.sessionsPlayed >= 20,
   },
+
+  // ── Notes ──────────────────────────────────────────────────────────────────
   {
-    id: 'duo',
-    icon: '🎶', label: 'Duo',
-    hint: 'Jouer au moins une série de rythme et une session de théorie',
-    check: (s: ProgressState) => s.modules.rythme.seriesPlayed >= 1 && s.modules.theorie.sessionsPlayed >= 1,
+    id: 'notes_premiere',
+    icon: 'dechiffrage', label: 'Premier déchiffrage',
+    hint: 'Terminer une session de lecture de notes',
+    check: (s: ProgressState) => s.modules.notes.sessionsPlayed >= 1,
   },
+  {
+    id: 'notes_sans_faute',
+    icon: 'lecture-parfaite', label: 'Lecture parfaite',
+    hint: 'Terminer une session de notes sans aucune erreur',
+    check: (_s: ProgressState, meta?: AddSessionParams['meta']) => meta?.sansFaute === true,
+  },
+  {
+    id: 'notes_dix',
+    icon: 'clef-fa', label: 'Clé de Fa',
+    hint: '10 sessions de lecture de notes',
+    check: (s: ProgressState) => s.modules.notes.sessionsPlayed >= 10,
+  },
+  {
+    id: 'notes_cinquante',
+    icon: 'oeil', label: 'Lecteur.rice à vue',
+    hint: '50 sessions de lecture de notes',
+    check: (s: ProgressState) => s.modules.notes.sessionsPlayed >= 50,
+  },
+
+  // ── Accordeur / Harmonie ───────────────────────────────────────────────────
+  // Modules destinés aux plus avancés : un seul palier chacun, l'entrée étant
+  // déjà couverte par « Première note » et « Duo ».
+  {
+    id: 'accordeur_dix',
+    icon: 'accordeur', label: 'Juste ton',
+    hint: '10 sessions d’accordeur',
+    check: (s: ProgressState) => s.modules.accordeur.sessionsPlayed >= 10,
+  },
+  {
+    id: 'harmonie_dix',
+    icon: 'harmonie', label: 'Oreille harmonique',
+    hint: '10 sessions d’harmonie',
+    check: (s: ProgressState) => s.modules.harmonie.sessionsPlayed >= 10,
+  },
+
   ...TROPHEES_CODE,
 ]
 
