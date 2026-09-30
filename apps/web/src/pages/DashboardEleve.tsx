@@ -10,6 +10,7 @@ import { todayStr } from '../hooks/progressLogic'
 import PwaInstallTutorial from '../components/PwaInstallTutorial'
 import PwaInAppBrowserOverlay from '../components/PwaInAppBrowserOverlay'
 import StudentDashboardView, { type HistoryEntry } from '../components/StudentDashboardView'
+import { dateExpiration } from '../lib/donneesPersonnelles'
 
 export default function DashboardEleve() {
   const { user, profile } = useAuth()
@@ -56,6 +57,7 @@ export default function DashboardEleve() {
           profIds: arrayUnion(profUid),
           profCodes: arrayUnion(code),
           [`profNames.${code}`]: profDisplayName,
+          expireAt: dateExpiration(),
         })
         setTeacherMsg('Professeur ajouté !')
         setTeacherInput('')
@@ -75,6 +77,7 @@ export default function DashboardEleve() {
     await updateDoc(doc(db, 'users', user.uid), {
       profIds: arrayRemove(profUid),
       profCodes: arrayRemove(code),
+      expireAt: dateExpiration(),
     })
   }
 

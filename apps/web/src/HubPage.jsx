@@ -178,8 +178,24 @@ export default function HubPage() {
         </div>
       </div>
 
-      <footer className="mt-auto pt-12 text-xs text-app-muted opacity-40 text-center">
-        <div>
+      {/* Pied de page — accès légal obligatoire, et phrase de description qui
+          sert aussi de contenu textuel indexable : une SPA ne livre sinon qu'un
+          index.html vide aux moteurs. Volontairement discret : ce n'est pas une
+          destination, mais ça doit rester atteignable en un geste. */}
+      <footer className="mt-auto pt-12 text-xs text-app-muted text-center">
+        <p className="opacity-60 max-w-md mx-auto mb-3" style={{ lineHeight: 1.5 }}>
+          Tessitura est une application gratuite d’exercices de rythme, de théorie musicale,
+          de lecture de notes, d’harmonie et d’accordage pour les élèves de conservatoire et
+          d’école de musique, du cycle 1 au cycle 3.
+        </p>
+        <nav className="flex justify-center gap-3 flex-wrap mb-4">
+          <Link to="/mentions-legales" className="text-app-muted no-underline hover:text-app transition-colors">Mentions légales</Link>
+          <span className="opacity-40">·</span>
+          <Link to="/confidentialite" className="text-app-muted no-underline hover:text-app transition-colors">Confidentialité</Link>
+          <span className="opacity-40">·</span>
+          <Link to="/credits" className="text-app-muted no-underline hover:text-app transition-colors">Crédits</Link>
+        </nav>
+        <div className="opacity-40">
           Tessitura
           {__APP_VERSION__ && <span style={{ marginLeft: 8 }}>v{__APP_VERSION__}</span>}
           {__BUILD_DATE__ && (
@@ -188,7 +204,7 @@ export default function HubPage() {
             </span>
           )}
         </div>
-        <div style={{ marginTop: 4 }}>
+        <div className="opacity-40" style={{ marginTop: 4 }}>
           Conçue et développée par Matthieu GAILLARD © {__BUILD_DATE__ ? new Date(__BUILD_DATE__).getFullYear() : new Date().getFullYear()}
         </div>
       </footer>

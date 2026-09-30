@@ -38,6 +38,9 @@ const DashboardProfEleve   = lazy(() => import('./pages/DashboardProfEleve'))
 const FeedbackPage         = lazy(() => import('./pages/FeedbackPage'))
 const QuestionsAdminPage   = lazy(() => import('./QuestionsAdminPage'))
 const CalibrationPage      = lazy(() => import('./pages/CalibrationPage'))
+const MentionsLegalesPage  = lazy(() => import('./pages/legal/MentionsLegalesPage'))
+const ConfidentialitePage  = lazy(() => import('./pages/legal/ConfidentialitePage'))
+const CreditsPage          = lazy(() => import('./pages/legal/CreditsPage'))
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth()
@@ -105,6 +108,9 @@ function AppRoutes() {
       <Route path="/dashboard/prof" element={<ProtectedRoute><DashboardProf /></ProtectedRoute>} />
       <Route path="/dashboard/prof/eleve/:uid" element={<ProtectedRoute><DashboardProfEleve /></ProtectedRoute>} />
       <Route path="/feedback" element={<FeedbackPage />} />
+      <Route path="/mentions-legales" element={<MentionsLegalesPage />} />
+      <Route path="/confidentialite" element={<ConfidentialitePage />} />
+      <Route path="/credits" element={<CreditsPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
       {/* Atterrissage des liens d'action Firebase (réinitialisation de mot de

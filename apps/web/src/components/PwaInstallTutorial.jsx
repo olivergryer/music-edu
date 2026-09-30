@@ -2,6 +2,7 @@
 // 2 contextes : 'hub' (case "Ne plus afficher" simple) | 'dashboard' (case + modal de confirmation).
 
 import { useState } from 'react'
+import { SITE_HOST } from '../lib/site'
 
 const BENEFICES = [
   '✦ Accès rapide depuis ton écran d\'accueil',
@@ -116,7 +117,7 @@ function InstallInstructions({ pwa }) {
         }}>
           Qwant ne pose qu’un <b>raccourci</b> : Tessitura s’ouvrira avec les barres du
           navigateur en haut et en bas. Pour une vraie installation en plein écran,
-          ouvre <b>tessitura-music.vercel.app</b> dans <b>Chrome</b>, puis reviens ici.
+          ouvre <b>{SITE_HOST}</b> dans <b>Chrome</b>, puis reviens ici.
         </div>
         <div style={{ textAlign: 'left', display: 'flex', flexDirection: 'column', gap: 12 }}>
           <Step n={1} text="Dans Chrome, appuie sur le menu ⋮ en haut à droite." icon="⋮" />

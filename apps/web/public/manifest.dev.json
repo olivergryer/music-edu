@@ -1,14 +1,19 @@
 {
+  "id": "/",
   "name": "Tessitura DEV",
   "short_name": "Tessitura DEV",
   "description": "Apprends la musique. Progresse à ton rythme. (version dev)",
+  "lang": "fr",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "theme_color": "#fbbf24",
   "background_color": "#F4F5F7",
   "orientation": "portrait-primary",
-  "categories": ["music", "education"],
-  "permissions": ["microphone"],
+  "categories": [
+    "music",
+    "education"
+  ],
   "icons": [
     {
       "src": "/icon-dev.svg",

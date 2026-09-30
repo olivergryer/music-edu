@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { doc, getDoc, setDoc, addDoc, collection, serverTimestamp } from 'firebase/firestore'
+import { dateExpiration } from '../lib/donneesPersonnelles'
 import { db } from '../lib/firebase'
 import { useAuth } from '../auth/AuthProvider'
 import { useCelebrations, type Celebration } from './CelebrationContext'
@@ -75,8 +76,13 @@ export default function useProgressFirebase() {
       // session. Le cache persistant applique la donnée localement tout de suite et
       // rejoue l'écriture à la reconnexion — l'état affiché est déjà à jour via
       // `setRawData` ci-dessus, il n'y a rien à attendre.
-      void setDoc(doc(db, 'users', user.uid, 'progress', 'data'), result.newState)
-        .catch(err => console.warn('Progression : enregistrement différé.', err))
+      // `expireAt` accompagne l'écriture existante — aucune écriture de plus.
+      // Repoussé à chaque session : la conservation court depuis la DERNIÈRE
+      // utilisation, comme l'annonce la politique de confidentialité.
+      void setDoc(doc(db, 'users', user.uid, 'progress', 'data'), {
+        ...result.newState,
+        expireAt: dateExpiration(),
+      }).catch(err => console.warn('Progression : enregistrement différé.', err))
       void addDoc(collection(db, 'users', user.uid, 'history'), {
         ...result.historyEntry,
         createdAt: serverTimestamp(),

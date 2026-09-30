@@ -12,7 +12,7 @@
 //     le contenu ne change jamais à URL constante : les servir depuis le cache
 //     est à la fois plus sûr hors ligne et plus rapide en ligne.
 
-const VERSION = 'v4';
+const VERSION = 'v5';
 const HTML_CACHE = `tessitura-html-${VERSION}`;
 const ASSET_CACHE = `tessitura-assets-${VERSION}`;
 const SAMPLES_CACHE = 'audio-samples-v2'; // volumineux et stables : non versionnés
@@ -20,10 +20,10 @@ const FONT_CACHE = 'tessitura-fonts-v1';  // idem : les polices ne changent jama
 
 const CACHES_ACTIFS = [HTML_CACHE, ASSET_CACHE, SAMPLES_CACHE, FONT_CACHE];
 
-// Hôtes tiers dont les réponses DOIVENT être mises en cache pour que l'appli
-// tienne hors ligne. Google Fonts est chargé en render-blocking dans index.html :
-// sans cache, chaque démarrage sans réseau attend son échec.
-const HOTES_POLICES = ['fonts.googleapis.com', 'fonts.gstatic.com'];
+// Polices auto-hébergées. Elles venaient d'un CDN tiers et devaient être
+// rattrapées en cross-origin ; désormais same-origin, elles sont simplement
+// précachées et servies depuis le cache.
+const PREFIXE_POLICES = '/fonts/';
 
 // Page de repli pour toute navigation hors ligne. Le rewrite Vercel renvoie
 // index.html sur toutes les routes, donc « / » suffit à démarrer l'appli.
@@ -37,6 +37,10 @@ const PRECACHE = [
   // Source de vérité des formules du module Rythme : sans elle, Rythme démarre
   // sur son catalogue par défaut au lieu du contenu réel.
   '/formules-rythme-template.csv',
+  // Polices : sans elles, le premier démarrage hors ligne retombe sur les
+  // polices système, y compris pour le titre de l'écran de démarrage.
+  '/fonts/inter-latin-var.woff2',
+  '/fonts/righteous-latin-400.woff2',
 ];
 
 self.addEventListener('install', (event) => {
@@ -153,16 +157,15 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Polices Google : cache d'abord. Elles ne changent jamais à URL constante,
-  // et sans elles le rendu hors ligne retombe sur les polices système.
-  if (HOTES_POLICES.includes(url.hostname)) {
+  // Le cross-origin restant (Firebase surtout) et les écritures passent en
+  // direct : Firestore gère lui-même son hors-ligne via IndexedDB.
+  if (request.method !== 'GET' || url.origin !== location.origin) return;
+
+  // Polices : cache d'abord, elles ne changent jamais à URL constante.
+  if (url.pathname.startsWith(PREFIXE_POLICES)) {
     event.respondWith(cacheDAbord(request, FONT_CACHE));
     return;
   }
-
-  // Le reste du cross-origin (Firebase surtout) et les écritures passent en
-  // direct : Firestore gère lui-même son hors-ligne via IndexedDB.
-  if (request.method !== 'GET' || url.origin !== location.origin) return;
 
   if (request.mode === 'navigate') {
     event.respondWith(navigation(request));

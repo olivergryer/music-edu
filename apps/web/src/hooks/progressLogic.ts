@@ -344,7 +344,12 @@ export const DEFAULT_STATE: ProgressState = {
 }
 
 export function mergeWithDefaults(data: Record<string, unknown>): ProgressState {
-  const d = data as Partial<ProgressState> & { modules?: Record<string, unknown> }
+  // `expireAt` est une métadonnée de conservation (TTL), pas de la progression.
+  // Sans ce retrait, le `...d` ci-dessous la ferait entrer dans l'état, d'où elle
+  // ressortirait à la prochaine écriture — et, chez un invité, jusque dans le
+  // localStorage.
+  const { expireAt: _expireAt, ...reste } = data
+  const d = reste as Partial<ProgressState> & { modules?: Record<string, unknown> }
   return {
     ...DEFAULT_STATE,
     ...d,

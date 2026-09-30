@@ -27,13 +27,27 @@ service cloud.firestore {
         allow read: if request.auth.uid == uid
           || (request.auth != null && request.auth.uid in get(/databases/$(db)/documents/users/$(uid)).data.profIds);
         allow create: if request.auth.uid == uid && request.resource.data.schemaVersion is int;
-        allow update, delete: if false;
+        allow update: if false;
+        // Immuables, mais EFFAÇABLES par leur titulaire : sans cette permission,
+        // le bouton « Effacer mes données » laisserait derrière lui l'intégralité
+        // des sessions jouées. La permission reste la plus étroite possible —
+        // seul le propriétaire, seulement en suppression.
+        allow delete: if request.auth.uid == uid;
       }
 
       // Calibration interne (outil dev), accès strictement perso
       match /calibrations/{session} {
         allow read, write: if request.auth.uid == uid;
       }
+    }
+
+    // Retours utilisateurs (/feedback). La collection n'avait AUCUNE règle :
+    // Firestore refuse par défaut, donc le formulaire échouait en silence pour
+    // tout le monde. Création seule, et par n'importe qui — la page est publique
+    // et un invité doit pouvoir signaler un bug. Relecture réservée à la console.
+    match /feedback/{id} {
+      allow create: if true;
+      allow read, update, delete: if false;
     }
 
     // Lecture publique (auth requis) pour lookup code prof

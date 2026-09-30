@@ -26,7 +26,9 @@ const pwaEnvPlugin = {
     return html
       .replace('href="/manifest.json"', 'href="/manifest.dev.json"')
       .replace(/href="\/apple-touch-icon[^"]*\.png"/g, 'href="/icon-dev.svg"')
-      .replace('<title>Tessitura</title>', '<title>Tessitura DEV</title>')
+      // Le titre n'est plus la chaîne fixe « Tessitura » depuis l'ajout du bloc
+      // SEO : on préfixe ce qu'il contient, quel qu'il soit.
+      .replace(/<title>(.*?)<\/title>/, '<title>DEV · $1</title>')
       .replace(/content="Tessitura"/g, 'content="Tessitura DEV"')
   },
 }

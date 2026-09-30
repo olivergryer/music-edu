@@ -1486,6 +1486,22 @@ export default function AccordeurPage() {
             )}
           </div>
 
+          {/* Mention obligatoire sur le micro. Elle est ici, sur l'écran qui
+              précède la demande d'autorisation, et non dans une page annexe :
+              l'information doit être lue au moment où l'autorisation est
+              demandée, pas après. */}
+          <div className="flex items-start gap-2 text-left mx-auto mb-5" style={{ maxWidth: 340 }}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                 className="text-app-muted shrink-0" style={{ marginTop: 2 }} aria-hidden="true">
+              <rect x="9" y="2" width="6" height="11" rx="3" />
+              <path d="M5 11a7 7 0 0 0 14 0M12 18v4" />
+            </svg>
+            <span className="text-app-muted" style={{ fontSize: 11, lineHeight: 1.45 }}>
+              Le son de ton micro est analysé sur ton appareil. Il n’est jamais envoyé ni enregistré.
+            </span>
+          </div>
+
           {/* ── Live ── */}
           {modeLive && (() => {
             const liveCouleur = liveNote ? couleurJustesse(liveNote.muCents, seuil) : 'var(--text-muted)'

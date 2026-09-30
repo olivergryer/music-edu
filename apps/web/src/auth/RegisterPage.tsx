@@ -1,6 +1,7 @@
 import { useState, FormEvent } from 'react'
 import { createUserWithEmailAndPassword } from 'firebase/auth'
 import { doc, setDoc } from 'firebase/firestore'
+import { dateExpiration } from '../lib/donneesPersonnelles'
 import { useNavigate, Link } from 'react-router-dom'
 import { auth, db } from '../lib/firebase'
 import { readGuestProgress, clearGuestProgress, mergeGuestInto, DEFAULT_STATE } from '../hooks/progressLogic'
@@ -33,6 +34,7 @@ export default function RegisterPage() {
         displayName,
         teacherCode,
         profIds: [],
+        expireAt: dateExpiration(),
       })
       if (teacherCode) {
         await setDoc(doc(db, 'teacherCodes', teacherCode), { uid: user.uid, displayName })
