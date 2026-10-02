@@ -15,8 +15,12 @@
 export const ROUTES = [
   {
     path: '/',
-    title: 'Tessitura — solfège et pratique musicale pour jeunes élèves',
-    description: 'Application gratuite d’exercices de rythme, de théorie musicale, de lecture de notes, d’harmonie et d’accordage pour les élèves de conservatoire et d’école de musique, du cycle 1 au cycle 3.',
+    // Titre volontairement réduit à la marque. Le poids du référencement est
+    // porté par les pages de module, dont les titres restent descriptifs, et par
+    // la description ci-dessous — qui n'apparaît qu'en résultat de recherche,
+    // jamais dans l'onglet du navigateur.
+    title: 'Tessitura',
+    description: 'Application gratuite d’exercices de rythme, de théorie musicale, de lecture de notes, d’harmonie et d’intonation. Entraînement progressif du cycle 1 au cycle 3, sans inscription.',
   },
   {
     path: '/rythme',
@@ -26,12 +30,12 @@ export const ROUTES = [
   {
     path: '/theorie',
     title: 'Quiz de théorie musicale par niveau — Tessitura',
-    description: 'Quiz de théorie musicale organisés par niveau de conservatoire, du cycle 1 au cycle 3, en mode entraînement ou examen. Gratuit, sans inscription.',
+    description: 'Quiz de théorie musicale organisés par niveau, du cycle 1 au cycle 3, en mode entraînement ou examen. Gratuit, sans inscription.',
   },
   {
     path: '/notes',
     title: 'Lecture de notes sur la portée — Tessitura',
-    description: 'Entraînement à la lecture de notes en clé de sol, de fa et d’ut, avec une tessiture adaptable à votre instrument. Gratuit, sans inscription.',
+    description: 'Entraînement à la lecture de notes en clé de sol, de fa et d’ut, avec une tessiture adaptable à son instrument. Gratuit, sans inscription.',
   },
   {
     path: '/harmonie',
@@ -41,7 +45,7 @@ export const ROUTES = [
   {
     path: '/accordeur',
     title: 'Accordeur en ligne gratuit — Tessitura',
-    description: 'Un accordeur qui analyse la justesse de phrases entières, pas seulement de notes isolées. Le son est traité sur votre appareil et n’est jamais enregistré.',
+    description: 'Un accordeur qui analyse la justesse de phrases entières, pas seulement de notes isolées. Le son est traité sur l’appareil et n’est jamais enregistré.',
   },
   {
     path: '/mentions-legales',

@@ -185,8 +185,7 @@ export default function HubPage() {
       <footer className="mt-auto pt-12 text-xs text-app-muted text-center">
         <p className="opacity-60 max-w-md mx-auto mb-3" style={{ lineHeight: 1.5 }}>
           Tessitura est une application gratuite d’exercices de rythme, de théorie musicale,
-          de lecture de notes, d’harmonie et d’accordage pour les élèves de conservatoire et
-          d’école de musique, du cycle 1 au cycle 3.
+          de lecture de notes, d’harmonie et d’intonation.
         </p>
         <nav className="flex justify-center gap-3 flex-wrap mb-4">
           <Link to="/mentions-legales" className="text-app-muted no-underline hover:text-app transition-colors">Mentions légales</Link>
