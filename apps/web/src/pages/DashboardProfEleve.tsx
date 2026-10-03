@@ -11,6 +11,7 @@ import {
   type ProgressState,
 } from '../hooks/progressLogic'
 import StudentDashboardView, { type HistoryEntry } from '../components/StudentDashboardView'
+import { estAdmin } from '../lib/admin'
 
 export default function DashboardProfEleve() {
   const { uid } = useParams<{ uid: string }>()
@@ -32,7 +33,13 @@ export default function DashboardProfEleve() {
       const userSnap = await getDoc(doc(db, 'users', uid!))
       if (!userSnap.exists()) { setForbidden(true); return }
       const data = userSnap.data() as { displayName?: string; profIds?: string[] }
-      if (!data.profIds?.includes(user!.uid)) { setForbidden(true); return }
+      // Un admin consulte n'importe quel compte, y compris non rattaché à lui.
+      // Le serveur applique la même règle de son côté (firestore.rules) : ce test
+      // n'évite que l'affichage d'un écran vide après un refus de permission.
+      if (!data.profIds?.includes(user!.uid) && !estAdmin(user!.uid)) {
+        setForbidden(true)
+        return
+      }
       setDisplayName(data.displayName ?? '—')
 
       const [progSnap, histSnap] = await Promise.all([

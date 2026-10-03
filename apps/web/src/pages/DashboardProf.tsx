@@ -4,65 +4,17 @@ import { collection, query, where, getDocs, getDoc, doc, orderBy, limit } from '
 import { signOut } from 'firebase/auth'
 import { db, auth } from '../lib/firebase'
 import { useAuth } from '../auth/AuthProvider'
-import { getRank, rankLabel, displayStreak, todayStr } from '../hooks/useProgressFirebase'
 import { usePwaInstall } from '../hooks/usePwaInstall'
 import PwaInstallTutorial from '../components/PwaInstallTutorial'
 import PwaInAppBrowserOverlay from '../components/PwaInAppBrowserOverlay'
-import { MODULE_IDS, moduleColor, type ModuleId } from '../lib/modules'
-import { estAdmin } from '../lib/admin'
+import { estAdmin, estCompteTest } from '../lib/admin'
 import AdminComptes from './AdminComptes'
-
-interface EleveProgress {
-  xp: number
-  streak: { current: number; longest: number; lastDate: string | null }
-  modules: {
-    rythme: { seriesPlayed: number; xpTotal: number }
-    theorie: { sessionsPlayed: number; xpTotal: number }
-    accordeur: { sessionsPlayed: number; xpTotal: number }
-    notes: { sessionsPlayed: number; xpTotal: number }
-  }
-}
-
-interface LastSession {
-  date: string
-  module: string
-  xp: number
-  medal: string
-}
-
-interface EleveData {
-  uid: string
-  displayName: string
-  progress: EleveProgress | null
-  lastSession: LastSession | null
-}
-
-const MODULE_ICONS: Record<string, string> = { rythme: '🥁', theorie: '🎼', accordeur: '🎵', notes: '🎼' }
-
-// Compteur legacy affiché par module (forme hétérogène du doc gamification global).
-// Fallback 0/« — » pour un module sans compteur legacy. Itérable sur MODULE_IDS.
-function profModuleStat(id: ModuleId, mods: EleveProgress['modules']): { count: number; unit: string } {
-  const m = (mods as Record<string, { seriesPlayed?: number; sessionsPlayed?: number }>)[id]
-  if (!m) return { count: 0, unit: '—' }
-  if (m.seriesPlayed !== undefined) return { count: m.seriesPlayed, unit: 'séries' }
-  if (m.sessionsPlayed !== undefined) return { count: m.sessionsPlayed, unit: 'sessions' }
-  return { count: 0, unit: '—' }
-}
-
-const DEFAULT_PROGRESS: EleveProgress = {
-  xp: 0,
-  streak: { current: 0, longest: 0, lastDate: null },
-  modules: {
-    rythme: { seriesPlayed: 0, xpTotal: 0 },
-    theorie: { sessionsPlayed: 0, xpTotal: 0 },
-    accordeur: { sessionsPlayed: 0, xpTotal: 0 },
-    notes: { sessionsPlayed: 0, xpTotal: 0 },
-  },
-}
+import CarteEleve, { DEFAULT_PROGRESS, type EleveData, type EleveProgress, type LastSession } from './CarteEleve'
 
 export default function DashboardProf() {
   const { user, profile } = useAuth()
   const [eleves, setEleves] = useState<EleveData[]>([])
+  const [afficherTests, setAfficherTests] = useState(false)
   const [loading, setLoading] = useState(true)
   const pwa = usePwaInstall()
   const [showPwaTuto, setShowPwaTuto] = useState(false)
@@ -99,6 +51,13 @@ export default function DashboardProf() {
     }
     chargerEleves()
   }, [user])
+
+  // Les comptes du protocole de test sont rattachés au même code prof que de
+  // vrais élèves : sans ce tri, ils noieraient la liste de travail. Le filtrage
+  // est fait à l'affichage et non au chargement — basculer la case ne doit pas
+  // relancer une centaine de lectures Firestore.
+  const nbTests = eleves.filter(e => estCompteTest(e.uid)).length
+  const elevesVisibles = afficherTests ? eleves : eleves.filter(e => !estCompteTest(e.uid))
 
   return (
     <div className="bg-app min-h-dvh flex flex-col items-center px-4 py-3 pb-10">
@@ -137,65 +96,40 @@ export default function DashboardProf() {
         )}
 
         <h1 className="text-xl font-black text-app mb-4">
-          Mes élèves {!loading && `(${eleves.length})`}
+          Mes élèves {!loading && `(${elevesVisibles.length})`}
         </h1>
+
+        {!loading && nbTests > 0 && (
+          <label className="flex items-center gap-2 text-xs text-app-muted mb-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={afficherTests}
+              onChange={e => setAfficherTests(e.target.checked)}
+              style={{ accentColor: '#FF8B3D', width: 15, height: 15 }}
+            />
+            Afficher les {nbTests} comptes du protocole de test
+          </label>
+        )}
 
         {loading && <p className="text-app-muted text-center mt-10">Chargement…</p>}
 
-        {!loading && eleves.length === 0 && (
+        {!loading && elevesVisibles.length === 0 && (
           <div className="bg-surface border border-app rounded-2xl p-6 text-center text-app-muted">
             <div className="text-3xl mb-2">🎓</div>
             <p className="text-sm m-0">Aucun élève encore. Partagez votre code prof !</p>
           </div>
         )}
 
-        {eleves.map(e => {
-          const prog = e.progress ?? DEFAULT_PROGRESS
-          const rank = getRank(prog.xp)
-          return (
-            <Link key={e.uid} to={`/dashboard/prof/eleve/${e.uid}`}
-              className="block bg-surface border border-app rounded-2xl px-5 py-4 mb-3 no-underline text-app hover:bg-surface-2 transition-colors cursor-pointer">
-              <div className="flex justify-between items-center mb-3">
-                <div className="text-base font-bold text-app">{e.displayName}</div>
-                <div className="flex gap-2.5 items-center">
-                  <span className="text-xs font-bold" style={{ color: '#8B5CF6' }}>{rankLabel(rank)}</span>
-                  <span className="text-xs text-app-muted">{prog.xp} XP</span>
-                  {(() => { const s = displayStreak(prog.streak, todayStr()); return (
-                    <span className="text-xs" style={{ color: s > 0 ? '#FF8B3D' : 'var(--text-muted)' }}>
-                      {s}j
-                    </span>
-                  )})()}
-                </div>
-              </div>
-
-              <div className="flex gap-2 mb-2.5">
-                {MODULE_IDS.map(k => {
-                  const { count, unit } = profModuleStat(k, prog.modules)
-                  return (
-                    <div key={k} className="flex-1 bg-surface-2 rounded-lg p-2 text-center">
-                      <div className="text-sm">{MODULE_ICONS[k]}</div>
-                      <div className="text-sm font-bold text-app">{count}</div>
-                      <div className="text-[9px] text-app-muted">{unit}</div>
-                    </div>
-                  )
-                })}
-              </div>
-
-              {e.lastSession ? (
-                <div className="flex items-center gap-2 bg-surface-2 rounded-lg px-2.5 py-1.5">
-                  <span className="text-sm">{e.lastSession.medal}</span>
-                  <span className="text-xs text-app-muted">{MODULE_ICONS[e.lastSession.module] ?? ''} {e.lastSession.module}</span>
-                  <span className="text-xs font-bold ml-auto" style={{ color: moduleColor(e.lastSession.module) }}>
-                    +{e.lastSession.xp} XP
-                  </span>
-                  <span className="text-[10px] text-app-muted">{e.lastSession.date}</span>
-                </div>
-              ) : (
-                <div className="text-xs text-app-muted italic">Aucune session enregistrée.</div>
-              )}
-            </Link>
-          )
-        })}
+        {elevesVisibles.map(e => (
+          <CarteEleve
+            key={e.uid}
+            eleve={e}
+            attenue={estCompteTest(e.uid)}
+            badges={estCompteTest(e.uid)
+              ? <span className="text-[10px] text-app-muted">test</span>
+              : undefined}
+          />
+        ))}
 
         {/* Supervision — visible des seuls comptes administrateurs, et placée
             APRÈS les élèves rattachés : c'est eux l'écran de travail quotidien. */}
