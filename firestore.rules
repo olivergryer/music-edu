@@ -2,21 +2,36 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{db}/documents {
 
+    // ─── Administration ──────────────────────────────────────────────────────
+    // Liste d'UID EN DUR. Ne jamais la remplacer par un champ `role: 'admin'`
+    // lu dans users/{uid} : l'écriture de ce document est autorisée à son
+    // propriétaire, donc n'importe quel élève pourrait s'auto-promouvoir et
+    // lire les données de tous les autres.
+    // Doit rester synchronisée avec src/lib/admin.ts (qui, lui, ne gouverne que
+    // l'affichage — la décision d'autoriser se prend ici).
+    function estAdmin() {
+      return request.auth != null
+        && request.auth.uid in ['9GDHSCG2zdOfaPZgqZiE4nqq4bD3'];
+    }
+
     match /users/{uid} {
-      // Soi-même, ou un prof dont l'UID est dans profIds du document
+      // Soi-même, un prof dont l'UID est dans profIds du document, ou un admin
       allow read: if request.auth.uid == uid
-        || (request.auth != null && request.auth.uid in resource.data.profIds);
+        || (request.auth != null && request.auth.uid in resource.data.profIds)
+        || estAdmin();
       allow write: if request.auth.uid == uid;
 
       match /progress/{doc} {
         allow read: if request.auth.uid == uid
-          || (request.auth != null && request.auth.uid in get(/databases/$(db)/documents/users/$(uid)).data.profIds);
+          || (request.auth != null && request.auth.uid in get(/databases/$(db)/documents/users/$(uid)).data.profIds)
+          || estAdmin();
         allow write: if request.auth.uid == uid;
       }
 
       match /history/{session} {
         allow read: if request.auth.uid == uid
-          || (request.auth != null && request.auth.uid in get(/databases/$(db)/documents/users/$(uid)).data.profIds);
+          || (request.auth != null && request.auth.uid in get(/databases/$(db)/documents/users/$(uid)).data.profIds)
+          || estAdmin();
         allow write: if request.auth.uid == uid;
       }
 
@@ -25,7 +40,8 @@ service cloud.firestore {
       // Immuables : créées une fois, jamais modifiées ni supprimées.
       match /sessions/{sessionId} {
         allow read: if request.auth.uid == uid
-          || (request.auth != null && request.auth.uid in get(/databases/$(db)/documents/users/$(uid)).data.profIds);
+          || (request.auth != null && request.auth.uid in get(/databases/$(db)/documents/users/$(uid)).data.profIds)
+          || estAdmin();
         allow create: if request.auth.uid == uid && request.resource.data.schemaVersion is int;
         allow update: if false;
         // Immuables, mais EFFAÇABLES par leur titulaire : sans cette permission,

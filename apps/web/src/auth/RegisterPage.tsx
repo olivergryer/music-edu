@@ -1,6 +1,6 @@
 import { useState, FormEvent } from 'react'
 import { createUserWithEmailAndPassword } from 'firebase/auth'
-import { doc, setDoc } from 'firebase/firestore'
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore'
 import { dateExpiration } from '../lib/donneesPersonnelles'
 import { useNavigate, Link } from 'react-router-dom'
 import { auth, db } from '../lib/firebase'
@@ -34,6 +34,10 @@ export default function RegisterPage() {
         displayName,
         teacherCode,
         profIds: [],
+        // Date de création du compte. Firebase Auth la connaît déjà, mais elle
+        // n'est lisible que par le SDK Admin : la recopier ici est le seul moyen
+        // de l'afficher dans l'interface d'administration.
+        createdAt: serverTimestamp(),
         expireAt: dateExpiration(),
       })
       if (teacherCode) {

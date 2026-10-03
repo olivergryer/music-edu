@@ -9,6 +9,8 @@ import { usePwaInstall } from '../hooks/usePwaInstall'
 import PwaInstallTutorial from '../components/PwaInstallTutorial'
 import PwaInAppBrowserOverlay from '../components/PwaInAppBrowserOverlay'
 import { MODULE_IDS, moduleColor, type ModuleId } from '../lib/modules'
+import { estAdmin } from '../lib/admin'
+import AdminComptes from './AdminComptes'
 
 interface EleveProgress {
   xp: number
@@ -194,6 +196,10 @@ export default function DashboardProf() {
             </Link>
           )
         })}
+
+        {/* Supervision — visible des seuls comptes administrateurs, et placée
+            APRÈS les élèves rattachés : c'est eux l'écran de travail quotidien. */}
+        {user && estAdmin(user.uid) && <AdminComptes uidProf={user.uid} />}
 
       </div>
     </div>

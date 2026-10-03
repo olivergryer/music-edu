@@ -115,8 +115,9 @@ export default function ConfidentialitePage() {
       <Section titre="Destinataires et sous-traitants">
         <P>
           Les données ne sont ni vendues ni partagées. Un professeur voit la progression des
-          élèves qui se sont rattachés à son code, et eux seuls. Les prestataires techniques
-          suivants interviennent :
+          élèves qui se sont rattachés à son code, et eux seuls. L’éditeur, en tant que
+          responsable du traitement, peut accéder à l’ensemble des comptes pour administrer
+          le service. Les prestataires techniques suivants interviennent :
         </P>
         <Liste items={[
           <>Vercel Inc. — hébergement de l’application</>,
