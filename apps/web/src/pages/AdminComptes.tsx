@@ -16,13 +16,12 @@ import { useState, useEffect } from 'react'
 import { collection, getDocs, doc, getDoc, query, orderBy, limit } from 'firebase/firestore'
 import { db } from '../lib/firebase'
 import { estCompteTest } from '../lib/admin'
-import CarteEleve, { DEFAULT_PROGRESS, type EleveData, type EleveProgress, type LastSession } from './CarteEleve'
+import CarteEleve, { DEFAULT_PROGRESS, xpAffiche, type EleveData, type EleveProgress, type LastSession } from './CarteEleve'
+import { SelecteurTri, trier, useTriMemorise } from './TriComptes'
 
 interface Compte extends EleveData {
   role: string
   teacherCode: string | null
-  /** Date de création, absente tant que `scripts/backfill-created-at.ts` n'a pas tourné. */
-  creeLe: Date | null
   /** Élève : codes des professeurs rejoints. */
   profCodes: string[]
   /** Prof : nombre d'élèves rattachés, calculé sur l'ensemble des comptes. */
@@ -38,7 +37,7 @@ function versDate(valeur: unknown): Date | null {
   return null
 }
 
-function formaterDate(d: Date | null): string {
+function formaterDate(d: Date | null | undefined): string {
   return d ? d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—'
 }
 
@@ -47,6 +46,7 @@ export default function AdminComptes({ uidProf }: { uidProf: string }) {
   const [comptes, setComptes] = useState<Compte[] | null>(null)
   const [erreur, setErreur] = useState('')
   const [afficherTests, setAfficherTests] = useState(false)
+  const [tri, setTri] = useTriMemorise('admin-comptes')
 
   // Chargement différé : rien n'est lu tant que le panneau n'est pas déplié.
   // Une trentaine de comptes, c'est près de cent lectures Firestore — à ne pas
@@ -72,10 +72,12 @@ export default function AdminComptes({ uidProf }: { uidProf: string }) {
             getDoc(doc(db, 'users', d.id, 'progress', 'data')),
             getDocs(query(collection(db, 'users', d.id, 'history'), orderBy('createdAt', 'desc'), limit(1))),
           ])
+          const progress = progSnap.exists() ? (progSnap.data() as EleveProgress) : DEFAULT_PROGRESS
           return {
             uid: d.id,
             displayName: (data.displayName as string) ?? '—',
-            progress: progSnap.exists() ? (progSnap.data() as EleveProgress) : DEFAULT_PROGRESS,
+            progress,
+            xpAffiche: xpAffiche(progress),
             lastSession: histSnap.empty ? null : (histSnap.docs[0].data() as LastSession),
             role: (data.role as string) ?? '—',
             teacherCode: (data.teacherCode as string | null) ?? null,
@@ -86,9 +88,6 @@ export default function AdminComptes({ uidProf }: { uidProf: string }) {
           } satisfies Compte
         }))
 
-        // Les plus récents d'abord : c'est l'ordre utile pour surveiller les
-        // inscriptions. Les comptes sans date remontent en fin de liste.
-        lignes.sort((a, b) => (b.creeLe?.getTime() ?? 0) - (a.creeLe?.getTime() ?? 0))
         setComptes(lignes)
       } catch (e) {
         setErreur(
@@ -101,7 +100,10 @@ export default function AdminComptes({ uidProf }: { uidProf: string }) {
     charger()
   }, [ouvert, comptes])
 
-  const visibles = (comptes ?? []).filter(c => afficherTests || !c.estTest)
+  const visibles = trier(
+    (comptes ?? []).filter(c => afficherTests || !c.estTest),
+    tri.critere, tri.descendant,
+  ) as Compte[]
   const nbTests = (comptes ?? []).filter(c => c.estTest).length
   const nbReels = (comptes ?? []).length - nbTests
 
@@ -139,17 +141,20 @@ export default function AdminComptes({ uidProf }: { uidProf: string }) {
 
           {comptes !== null && !erreur && (
             <>
-              {nbTests > 0 && (
-                <label className="flex items-center gap-2 text-xs text-app-muted mb-3 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={afficherTests}
-                    onChange={e => setAfficherTests(e.target.checked)}
-                    style={{ accentColor: '#FF8B3D', width: 15, height: 15 }}
-                  />
-                  Afficher les {nbTests} comptes du protocole de test
-                </label>
-              )}
+              <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
+                {nbTests > 0 ? (
+                  <label className="flex items-center gap-2 text-xs text-app-muted cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={afficherTests}
+                      onChange={e => setAfficherTests(e.target.checked)}
+                      style={{ accentColor: '#FF8B3D', width: 15, height: 15 }}
+                    />
+                    Afficher les {nbTests} comptes du protocole de test
+                  </label>
+                ) : <span />}
+                <SelecteurTri etat={tri} onChange={setTri} />
+              </div>
 
               {visibles.map(c => (
                 <CarteEleve

@@ -9,12 +9,14 @@ import PwaInstallTutorial from '../components/PwaInstallTutorial'
 import PwaInAppBrowserOverlay from '../components/PwaInAppBrowserOverlay'
 import { estAdmin, estCompteTest } from '../lib/admin'
 import AdminComptes from './AdminComptes'
-import CarteEleve, { DEFAULT_PROGRESS, type EleveData, type EleveProgress, type LastSession } from './CarteEleve'
+import CarteEleve, { DEFAULT_PROGRESS, xpAffiche, type EleveData, type EleveProgress, type LastSession } from './CarteEleve'
+import { SelecteurTri, trier, useTriMemorise } from './TriComptes'
 
 export default function DashboardProf() {
   const { user, profile } = useAuth()
   const [eleves, setEleves] = useState<EleveData[]>([])
   const [afficherTests, setAfficherTests] = useState(false)
+  const [tri, setTri] = useTriMemorise('mes-eleves')
   const [loading, setLoading] = useState(true)
   const pwa = usePwaInstall()
   const [showPwaTuto, setShowPwaTuto] = useState(false)
@@ -36,6 +38,7 @@ export default function DashboardProf() {
         snap.docs.map(async d => {
           const uid = d.id
           const displayName = (d.data().displayName as string) ?? '—'
+          const creeLe = (d.data().createdAt as { toDate?: () => Date } | undefined)?.toDate?.() ?? null
           const [progDoc, histSnap] = await Promise.all([
             // Doc de gamification globale, PAS les docs progress/{moduleId} per-module.
             getDoc(doc(db, 'users', uid, 'progress', 'data')),
@@ -43,7 +46,7 @@ export default function DashboardProf() {
           ])
           const progress = progDoc.exists() ? (progDoc.data() as EleveProgress) : DEFAULT_PROGRESS
           const lastSession = histSnap.empty ? null : (histSnap.docs[0].data() as LastSession)
-          return { uid, displayName, progress, lastSession }
+          return { uid, displayName, progress, lastSession, creeLe, xpAffiche: xpAffiche(progress) }
         })
       )
       setEleves(results)
@@ -57,7 +60,10 @@ export default function DashboardProf() {
   // est fait à l'affichage et non au chargement — basculer la case ne doit pas
   // relancer une centaine de lectures Firestore.
   const nbTests = eleves.filter(e => estCompteTest(e.uid)).length
-  const elevesVisibles = afficherTests ? eleves : eleves.filter(e => !estCompteTest(e.uid))
+  const elevesVisibles = trier(
+    afficherTests ? eleves : eleves.filter(e => !estCompteTest(e.uid)),
+    tri.critere, tri.descendant,
+  )
 
   return (
     <div className="bg-app min-h-dvh flex flex-col items-center px-4 py-3 pb-10">
@@ -95,9 +101,12 @@ export default function DashboardProf() {
           </div>
         )}
 
-        <h1 className="text-xl font-black text-app mb-4">
-          Mes élèves {!loading && `(${elevesVisibles.length})`}
-        </h1>
+        <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
+          <h1 className="text-xl font-black text-app m-0">
+            Mes élèves {!loading && `(${elevesVisibles.length})`}
+          </h1>
+          {!loading && elevesVisibles.length > 1 && <SelecteurTri etat={tri} onChange={setTri} />}
+        </div>
 
         {!loading && nbTests > 0 && (
           <label className="flex items-center gap-2 text-xs text-app-muted mb-3 cursor-pointer">

@@ -8,10 +8,14 @@
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { getRank, rankLabel, displayStreak, todayStr } from '../hooks/useProgressFirebase'
+import { applyDecay, computeDaysIdle } from '../hooks/progressLogic'
 import { MODULE_IDS, moduleColor, type ModuleId } from '../lib/modules'
 
 export interface EleveProgress {
+  /** XP persisté — PAS celui que l'élève voit : le decay s'applique en plus. */
   xp: number
+  /** Plus haut XP jamais atteint. Absent des documents antérieurs au champ. */
+  xpPeak?: number
   streak: { current: number; longest: number; lastDate: string | null }
   modules: {
     rythme: { seriesPlayed: number; xpTotal: number }
@@ -33,6 +37,26 @@ export interface EleveData {
   displayName: string
   progress: EleveProgress | null
   lastSession: LastSession | null
+  /** Date de création du compte. Absente tant que le rattrapage n'a pas tourné. */
+  creeLe?: Date | null
+  /**
+   * XP après decay — ce que l'élève voit sur son propre écran.
+   * Calculé par `xpAffiche()` au chargement, et non à l'affichage, pour que le
+   * tri et la carte montrent exactement la même valeur.
+   */
+  xpAffiche?: number
+}
+
+/**
+ * XP réellement affiché à l'élève : le champ `xp` persisté, amputé du decay
+ * accumulé depuis sa dernière activité.
+ *
+ * Les cartes professeur montraient jusqu'ici le `xp` brut, donc un chiffre
+ * supérieur à celui que l'élève lisait sur son propre tableau de bord.
+ */
+export function xpAffiche(prog: EleveProgress | null): number {
+  if (!prog) return 0
+  return applyDecay(prog.xp, computeDaysIdle(prog.streak.lastDate, todayStr()))
 }
 
 export const MODULE_ICONS: Record<string, string> = {
@@ -72,7 +96,8 @@ interface Props {
 
 export default function CarteEleve({ eleve, badges, complement, attenue }: Props) {
   const prog = eleve.progress ?? DEFAULT_PROGRESS
-  const rank = getRank(prog.xp)
+  const xp = eleve.xpAffiche ?? xpAffiche(prog)
+  const rank = getRank(xp)
   const streak = displayStreak(prog.streak, todayStr())
 
   return (
@@ -88,7 +113,7 @@ export default function CarteEleve({ eleve, badges, complement, attenue }: Props
         </div>
         <div className="flex gap-2.5 items-center shrink-0">
           <span className="text-xs font-bold" style={{ color: '#8B5CF6' }}>{rankLabel(rank)}</span>
-          <span className="text-xs text-app-muted">{prog.xp} XP</span>
+          <span className="text-xs text-app-muted">{xp} XP</span>
           <span className="text-xs" style={{ color: streak > 0 ? '#FF8B3D' : 'var(--text-muted)' }}>
             {streak}j
           </span>

@@ -54,6 +54,14 @@ export interface ProgressState {
   /** Points du jour, tous modules confondus (voir POINTS_JOURNEE). */
   dailyPoints: DailyCounter
   highestRankIdx: number  // plus haut rang jamais atteint (index dans RANKS)
+  /**
+   * Plus haut total d'XP jamais atteint, decay compris. Sert au classement
+   * « XP ever » des tableaux de bord : `xp` seul ne dit rien du travail fourni
+   * par un élève devenu inactif, puisque le decay l'a rogné.
+   * Pour un compte antérieur à ce champ, `mergeWithDefaults` l'initialise à son
+   * XP du moment : l'historique d'avant est définitivement perdu.
+   */
+  xpPeak: number
   /** Version du recalcul rétroactif de la série déjà appliqué (0 = jamais). */
   serieRecalculee: number
 }
@@ -70,6 +78,13 @@ export interface AddSessionParams {
     sansFaute?: boolean
     /** Théorie : niveau reçu au Code de la route musicale — débloque son trophée. */
     codeReussi?: string
+    /**
+     * Rythme : série quittée avant la fin, avec le nombre d'exercices joués.
+     * Ne compte pas comme série terminée (trophées de séries).
+     */
+    serieInterrompue?: number
+    /** Force les points du jour de la session (voir `pointsSession`). */
+    points?: number
   }
   /** Détails affichés dans l'historique du tableau de bord. Tous facultatifs. */
   details?: SessionDetails
@@ -109,6 +124,8 @@ export interface HistoryEntry extends SessionDetails {
   streakValidated?: boolean
   /** Cette session a atteint l'objectif de rattrapage : série rompue rétablie. */
   streakRepaired?: boolean
+  /** Points du jour rapportés (absent des entrées antérieures au barème en points). */
+  points?: number
 }
 
 export interface ApplySessionResult {
@@ -369,6 +386,7 @@ export const DEFAULT_STATE: ProgressState = {
   dailyTheorieSerie: { date: null, count: 0 },
   dailyPoints: { date: null, count: 0 },
   highestRankIdx: 0,
+  xpPeak: 0,
   serieRecalculee: 0,
 }
 
@@ -387,6 +405,9 @@ export function mergeWithDefaults(data: Record<string, unknown>): ProgressState 
     dailyTheorieSerie: { ...DEFAULT_STATE.dailyTheorieSerie, ...(d.dailyTheorieSerie ?? {}) },
     dailyPoints: { ...DEFAULT_STATE.dailyPoints, ...(d.dailyPoints ?? {}) },
     highestRankIdx: d.highestRankIdx ?? DEFAULT_STATE.highestRankIdx,
+    // Compte antérieur au champ : on démarre son pic à l'XP courant plutôt qu'à
+    // zéro, sinon il resterait classé dernier jusqu'à sa prochaine session.
+    xpPeak: d.xpPeak ?? d.xp ?? DEFAULT_STATE.xpPeak,
     serieRecalculee: d.serieRecalculee ?? DEFAULT_STATE.serieRecalculee,
     modules: {
       rythme:    { ...DEFAULT_STATE.modules.rythme,    ...(d.modules?.['rythme']    ?? {}) },
@@ -426,6 +447,59 @@ export function clearGuestProgress(): void {
   try {
     localStorage.removeItem(GUEST_PROGRESS_KEY)
   } catch { /* ignore */ }
+}
+
+// ─── Session en attente (série Rythme en cours) ───────────────────────────────
+// Une série de 10 n'est enregistrée qu'à la fin. Pour qu'une série interrompue
+// compte quand même, son état est sauvegardé ici après chaque exercice :
+//   - quitter la série dans l'app l'enregistre aussitôt (RythmApp) ;
+//   - une fermeture brutale (onglet, app tuée) est rattrapée au prochain
+//     chargement de la progression (useProgressFirebase).
+// Pas d'enregistrement sur `pagehide` : l'écriture Firestore n'y aboutit pas de
+// façon fiable, et la session serait retirée d'ici avant d'être sauvée.
+export const SESSION_EN_ATTENTE_KEY = 'session-en-attente-v1'
+
+export interface SessionEnAttente {
+  date: string
+  params: AddSessionParams
+}
+
+export function ecrireSessionEnAttente(session: SessionEnAttente): void {
+  if (typeof localStorage === 'undefined') return
+  try {
+    localStorage.setItem(SESSION_EN_ATTENTE_KEY, JSON.stringify(session))
+  } catch { /* stockage indisponible : la série ne comptera qu'une fois terminée */ }
+}
+
+/** Abandonne la session en attente (série terminée normalement). */
+export function effacerSessionEnAttente(): void {
+  if (typeof localStorage === 'undefined') return
+  try { localStorage.removeItem(SESSION_EN_ATTENTE_KEY) } catch { /* ignore */ }
+}
+
+/**
+ * Lit ET retire la session en attente. Le retrait immédiat garantit qu'elle
+ * n'est enregistrée qu'une fois, même si plusieurs instances du hook la voient.
+ */
+export function prendreSessionEnAttente(): SessionEnAttente | null {
+  if (typeof localStorage === 'undefined') return null
+  try {
+    const raw = localStorage.getItem(SESSION_EN_ATTENTE_KEY)
+    if (!raw) return null
+    localStorage.removeItem(SESSION_EN_ATTENTE_KEY)
+    return JSON.parse(raw) as SessionEnAttente
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Paramètres à enregistrer pour une session rattrapée. Jouée un autre jour, elle
+ * garde son XP mais ne rapporte aucun point : ils valideraient la mauvaise journée.
+ */
+export function parametresRattrapes(session: SessionEnAttente, today: string): AddSessionParams {
+  if (session.date === today) return session.params
+  return { ...session.params, meta: { ...session.params.meta, points: 0 } }
 }
 
 // Fusionne une progression invité dans un état de compte (typiquement neuf à
@@ -470,6 +544,7 @@ export function mergeGuestInto(account: ProgressState, guest: ProgressState): Pr
     dailyTheorieSerie: laterCounter(account.dailyTheorieSerie, guest.dailyTheorieSerie),
     dailyPoints:       laterCounter(account.dailyPoints,       guest.dailyPoints),
     highestRankIdx: Math.max(account.highestRankIdx, guest.highestRankIdx, getRankIdx(xp)),
+    xpPeak: Math.max(account.xpPeak, guest.xpPeak, xp),
     serieRecalculee: account.serieRecalculee,
   }
 }
@@ -515,6 +590,8 @@ export const POINTS_JOURNEE = 10
 
 /** Points rapportés par une session, selon son module et sa nature. */
 export function pointsSession(module: AddSessionParams['module'], meta: AddSessionParams['meta'] = {}): number {
+  if (typeof meta.points === 'number') return meta.points
+  if (typeof meta.serieInterrompue === 'number') return meta.serieInterrompue
   if (module === 'rythme' && meta.individual === true) return 1
   if (module === 'theorie' && meta.serieTheorie === true) return POINTS_JOURNEE / 2
   return POINTS_JOURNEE
@@ -610,6 +687,7 @@ export interface EntreeSerie {
   module: AddSessionParams['module']
   individual?: boolean
   mode?: string
+  points?: number
 }
 
 /**
@@ -618,6 +696,7 @@ export interface EntreeSerie {
  * antérieures à ce champ comptent comme des sessions complètes.
  */
 export function pointsEntreeHistorique(e: EntreeSerie): number {
+  if (typeof e.points === 'number') return e.points
   if (e.module === 'theorie' && e.mode === 'Entraînement') return POINTS_JOURNEE / 2
   return pointsSession(e.module, { individual: e.individual === true })
 }
@@ -794,8 +873,10 @@ export function applySession(
 
   // Points du jour → validation de la journée et rattrapage éventuel.
   const isRythmeIndiv = module === 'rythme' && meta.individual === true
+  const serieInterrompue = module === 'rythme' && typeof meta.serieInterrompue === 'number'
   const pointsAvant = pointsDuJour(prev, today)
-  const pointsApres = pointsAvant + pointsSession(module, meta)
+  const pointsGagnes = pointsSession(module, meta)
+  const pointsApres = pointsAvant + pointsGagnes
   const newDailyPoints: DailyCounter = { date: today, count: pointsApres }
   const { streak: newStreak, repaired: streakRepaired } = avancerSerie(prev.streak, pointsAvant, pointsApres, today)
 
@@ -805,8 +886,8 @@ export function applySession(
     moduleUpdate = {
       ...prev.modules,
       rythme: {
-        seriesPlayed:    prev.modules.rythme.seriesPlayed    + (isRythmeIndiv ? 0 : 1),
-        exercisesPlayed: prev.modules.rythme.exercisesPlayed + (isRythmeIndiv ? 1 : 0),
+        seriesPlayed:    prev.modules.rythme.seriesPlayed    + (isRythmeIndiv || serieInterrompue ? 0 : 1),
+        exercisesPlayed: prev.modules.rythme.exercisesPlayed + (isRythmeIndiv ? 1 : serieInterrompue ? meta.serieInterrompue ?? 0 : 0),
         xpTotal:         prev.modules.rythme.xpTotal         + xpGained,
       },
     }
@@ -842,6 +923,8 @@ export function applySession(
   // highestRankIdx : on garde le max entre l'ancien et le rang atteint après cette session.
   const newRankIdx = getRankIdx(newXp)
   const newHighestRankIdx = Math.max(prev.highestRankIdx, newRankIdx)
+  // Pic d'XP : jamais révisé à la baisse, le decay ne l'atteint pas.
+  const newXpPeak = Math.max(prev.xpPeak ?? 0, newXp)
 
   const newStateBeforeTrophies: ProgressState = {
     ...prev,
@@ -850,6 +933,7 @@ export function applySession(
     modules: moduleUpdate,
     dailyPoints: newDailyPoints,
     highestRankIdx: newHighestRankIdx,
+    xpPeak: newXpPeak,
   }
 
   const newTrophyIds = checkNewTrophies(newStateBeforeTrophies, meta, prev.trophies)
@@ -875,6 +959,7 @@ export function applySession(
     individual: meta.individual === true ? true : undefined,
     streakValidated: streakValidated ? true : undefined,
     streakRepaired: streakRepaired ? true : undefined,
+    points: pointsGagnes,
     ...params.details,
   })
 

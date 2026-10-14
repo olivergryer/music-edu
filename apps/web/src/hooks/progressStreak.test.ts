@@ -18,6 +18,7 @@ import {
   objectifDuJour,
   rejouerSerie,
   appliquerRecalculSerie,
+  parametresRattrapes,
   POINTS_JOURNEE,
   VERSION_RECALCUL_SERIE,
   DEFAULT_STATE,
@@ -72,6 +73,44 @@ test('pointsDuJour : repli sur les anciens compteurs le jour du déploiement', (
   assert.equal(pointsDuJour(s, AUJOURD_HUI), 8)
   const dejaValidee = etat({ streak: serie(4, AUJOURD_HUI) })
   assert.equal(pointsDuJour(dejaValidee, AUJOURD_HUI), POINTS_JOURNEE)
+})
+
+// ── Série Rythme interrompue ─────────────────────────────────────────────────
+
+const SERIE_7_SUR_10: AddSessionParams = {
+  module: 'rythme', xpEarned: 420, medal: '🥈', meta: { serieInterrompue: 7 },
+}
+
+test('série interrompue : 1 point par exercice joué, XP créditée', () => {
+  const r = applySession(etat(), SERIE_7_SUR_10, AUJOURD_HUI)
+  assert.equal(r.newState.dailyPoints.count, 7)
+  assert.equal(r.newState.xp, 420)
+  assert.equal(r.historyEntry.points, 7)
+})
+
+test('série interrompue : ne compte pas comme série terminée', () => {
+  const r = applySession(etat(), SERIE_7_SUR_10, AUJOURD_HUI)
+  assert.equal(r.newState.modules.rythme.seriesPlayed, 0)
+  assert.equal(r.newState.modules.rythme.exercisesPlayed, 7)
+  assert.ok(!r.newTrophies.includes('first_series'))
+})
+
+test('série interrompue + 3 exercices isolés valident la journée', () => {
+  const r = jouer(etat(), [SERIE_7_SUR_10, EXO_RYTHME, EXO_RYTHME, EXO_RYTHME])
+  assert.equal(r.newState.streak.lastDate, AUJOURD_HUI)
+})
+
+test('session rattrapée : points gardés le jour même, perdus un autre jour', () => {
+  const memeJour = parametresRattrapes({ date: AUJOURD_HUI, params: SERIE_7_SUR_10 }, AUJOURD_HUI)
+  assert.equal(pointsSession(memeJour.module, memeJour.meta), 7)
+  const veille = parametresRattrapes({ date: HIER, params: SERIE_7_SUR_10 }, AUJOURD_HUI)
+  assert.equal(pointsSession(veille.module, veille.meta), 0)
+  assert.equal(applySession(etat(), veille, AUJOURD_HUI).newState.xp, 420)
+})
+
+test('rejouerSerie : le champ `points` de l’historique prime sur le barème', () => {
+  const entries = [e('2026-08-10', 'rythme', { points: 6 }), e('2026-08-10', 'rythme', { points: 4 })]
+  assert.equal(rejouerSerie(entries, AUJOURD_HUI).streak.lastDate, '2026-08-10')
 })
 
 // ── Jauge ────────────────────────────────────────────────────────────────────

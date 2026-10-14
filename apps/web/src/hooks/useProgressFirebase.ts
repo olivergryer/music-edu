@@ -13,6 +13,8 @@ import {
   appliquerRecalculSerie,
   VERSION_RECALCUL_SERIE,
   POINTS_JOURNEE,
+  prendreSessionEnAttente,
+  parametresRattrapes,
   DEFAULT_STATE,
   mergeWithDefaults,
   readGuestProgress,
@@ -39,7 +41,7 @@ async function recalculerSerie(uid: string, state: ProgressState): Promise<Progr
   if (snap.metadata.fromCache) return state
   const entries: EntreeSerie[] = snap.docs.map(d => {
     const e = d.data()
-    return { date: e.date, module: e.module, individual: e.individual, mode: e.mode }
+    return { date: e.date, module: e.module, individual: e.individual, mode: e.mode, points: e.points }
   })
   const { state: next } = appliquerRecalculSerie(state, entries, todayStr())
   // `merge` : seuls les champs recalculés sont écrits, `expireAt` reste intact.
@@ -54,18 +56,28 @@ async function recalculerSerie(uid: string, state: ProgressState): Promise<Progr
 
 export { RANKS, TROPHIES, getRank, getNextRank, rankLabel, displayStreak, todayStr } from './progressLogic'
 
+// Série Rythme laissée en plan lors de la vie précédente de la page (onglet
+// fermé, app tuée). Lue et retirée UNE fois, au chargement du module : à cet
+// instant, aucune série ne peut être en cours, et une série commencée ensuite ne
+// risque pas d'être prise pour une série abandonnée. Enregistrée par la première
+// instance du hook chargée, une fois l'authentification connue.
+let sessionAbandonnee = prendreSessionEnAttente()
+
 interface AddSessionResult {
   newTrophies: string[]
   rankedUp: boolean
 }
 
 export default function useProgressFirebase() {
-  const { user } = useAuth()
+  const { user, loading: authLoading } = useAuth()
   const { pousser } = useCelebrations()
   // rawData = état persisté tel quel (non-décayé). Source de vérité pour applySession.
   const [rawData, setRawData] = useState<ProgressState>(DEFAULT_STATE)
   const [loaded, setLoaded] = useState(false)
   const rawDataRef = useRef(rawData)
+  // Compte dont `rawData` est issu (null = invité). Lors du passage invité →
+  // connecté, `loaded` vaut encore true le temps d'un rendu, sur l'état invité.
+  const chargePourRef = useRef<string | null | undefined>(undefined)
 
   useEffect(() => { rawDataRef.current = rawData }, [rawData])
 
@@ -74,11 +86,13 @@ export default function useProgressFirebase() {
       // Invité : progression locale (localStorage). `loaded = true` pour qu'addSession
       // accumule dès maintenant — la série de 10 et le streak fonctionnent hors compte.
       setRawData(readGuestProgress() ?? DEFAULT_STATE)
+      chargePourRef.current = null
       setLoaded(true)
       return
     }
     // Repasse à « non chargé » : l'état invité lu avant la réponse de l'auth ne
     // doit ni recevoir de session ni déclencher la pop-up de rattrapage.
+    chargePourRef.current = undefined
     setLoaded(false)
     // Le cache persistant sert cette lecture hors ligne. Le `catch` reste
     // indispensable : sans lui, un échec laissait `loaded` à false pour toujours,
@@ -98,7 +112,7 @@ export default function useProgressFirebase() {
         console.warn('Progression : lecture impossible, démarrage sur l’état par défaut.', err)
         setRawData(DEFAULT_STATE)
       })
-      .finally(() => setLoaded(true))
+      .finally(() => { chargePourRef.current = user.uid; setLoaded(true) })
   }, [user])
 
   const addSession = useCallback(async (params: AddSessionParams): Promise<AddSessionResult> => {
@@ -148,6 +162,14 @@ export default function useProgressFirebase() {
 
     return { newTrophies: result.newTrophies, rankedUp: result.rankedUp }
   }, [user, loaded, pousser])
+
+  useEffect(() => {
+    if (!loaded || authLoading || !sessionAbandonnee) return
+    if (chargePourRef.current !== (user?.uid ?? null)) return
+    const session = sessionAbandonnee
+    sessionAbandonnee = null
+    void addSession(parametresRattrapes(session, todayStr()))
+  }, [loaded, authLoading, user, addSession])
 
   // Vue décayée pour l'affichage (non persistée — recalculée à chaque render).
   const displayData = applyDecayOnly(rawData, todayStr())

@@ -211,6 +211,8 @@ export const RYTHME = {
   // ── En jeu ─────────────────────────────────────────────────────────────────
   jeu: {
     retourActivites: '← Activités',
+    serieEnCours: 'Série de 10',
+    compteurSerie: (n: number, total: number) => `Exercice ${n}/${total}`,
     prepareToi: 'Prépare-toi…',
     memorise: 'Découvre le rythme…',
     ecoute: 'Écoute le rythme…',

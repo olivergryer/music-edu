@@ -225,6 +225,13 @@ Groupes : `binary` (4/4) ou `ternary` (12/8) · `totalMs = 4 * beatMs` pour les 
 - **Recalcul rétroactif** une fois par compte (`serieRecalculee` vs `VERSION_RECALCUL_SERIE`),
   au chargement du hook : rejeu de l'historique, jamais à la baisse, trophées 7/30 j en
   silence, ignoré si la lecture vient du cache.
+- **Série interrompue** : l'état de la série est sauvegardé après chaque exercice
+  (localStorage `session-en-attente-v1`) et enregistré comme `meta.serieInterrompue: n`
+  (n points, XP gagnée, pas de `seriesPlayed`) au retour à l'accueil du module, au démontage, ou
+  au prochain chargement si l'app a été fermée (lu une fois au chargement du module du hook ;
+  un autre jour → XP seule, 0 point). Série complète → `effacerSessionEnAttente()` dans `handleNext`.
+  Chaque entrée d'historique porte désormais `points`, prioritaire au rejeu.
+- Compteur de série en jeu : « Exercice n/10 » + 10 segments sous l'en-tête.
 - Triolets (`RythmStaff.jsx`) : un « 3 » par groupe (fermé à 2 valeurs de base, min. 1 temps)
   — jamais de « 6 » fusionné, sauf sextolet de doubles croches.
 

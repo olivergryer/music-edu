@@ -11,7 +11,8 @@ import { scoreRhythm } from "./rythmScoringScore.ts";
 import { DEFAULT_PARAMS as RYTHM_SCORING_PARAMS } from "./rythmScoringParams.ts";
 import { deadzone as scoringDeadzone } from "./rythmScoringAnalyze.ts";
 import useSheetData from "./useSheetData";
-import useProgressFirebase from "./hooks/useProgressFirebase";
+import useProgressFirebase, { todayStr } from "./hooks/useProgressFirebase";
+import { ecrireSessionEnAttente, effacerSessionEnAttente, prendreSessionEnAttente, parametresRattrapes } from "./hooks/progressLogic.ts";
 import { generateDistractorSet, deriveNiveau } from "./rythmDistractors";
 import { buildPalette, scoreActivity5, measureStatus, groupOf } from "./rythmActivity5";
 import { RYTHME } from "./content/rythme.ts";
@@ -337,6 +338,12 @@ function MetronomeViz({ flash }) {
   // </svg>
   */
   return null; // dot déplacé dans l'en-tête central
+}
+
+// Médaille la plus fréquente d'une série (fin de série et série interrompue).
+function medailleDominante(medals) {
+  const counts = medals.reduce((acc, m) => { acc[m] = (acc[m] ?? 0) + 1; return acc; }, {});
+  return ["🥇","🥈","🥉","🎯"].find(m => counts[m] === Math.max(...Object.values(counts))) ?? "🎯";
 }
 
 // ─── Écran fin de série ───────────────────────────────────────────────────────
@@ -1869,6 +1876,43 @@ export default function RythmApp() {
     setRetryMode(false); retryModeRef.current = false; // Reset retry mode après enregistrement
   }, [phase, seriesMode, pattern, earnedPts, scores, activity, revealBeat, scoreWasExtreme, addSession, retryMode, activeNiveau]);
 
+  // ── Série interrompue ──────────────────────────────────────────────────────
+  // Une série n'est enregistrée qu'à la fin des 10 exercices. Pour qu'une série
+  // quittée en route compte (1 point du jour par exercice + l'XP gagnée), son état
+  // est sauvegardé après chaque exercice terminé, puis enregistré :
+  //   - au retour à l'accueil du module (← Activités, sortie par les réglages) ;
+  //   - au démontage (navigation vers une autre page de l'app) ;
+  //   - au prochain chargement si l'app a été fermée (useProgressFirebase).
+  // Une série menée à son terme efface la sauvegarde (handleNext).
+  useEffect(() => {
+    if (phase !== "results" || !seriesMode || !pattern) return;
+    // Act 1/2 : earnedPts est posé un tick après les scores — on attend.
+    if ((activity === 1 || activity === 2) && scores.length === 0 && tapTimesRef.current.length > 0) return;
+    const bonusMult   = 1 + REVEAL_BONUS[revealBeat] / 100;
+    const maxPtsLocal = activity === 5 ? 100 : Math.round(100 * bonusMult * (scoreWasExtreme ? 2 : 1));
+    const pctLocal    = maxPtsLocal ? Math.round((earnedPts / maxPtsLocal) * 100) : 0;
+    const medalLocal  = pctLocal >= 90 ? "🥇" : pctLocal >= 70 ? "🥈" : pctLocal >= 50 ? "🥉" : "🎯";
+    const xpLog  = [...seriesXpLog, earnedPts];
+    const medals = [...seriesMedals, medalLocal];
+    ecrireSessionEnAttente({
+      date: todayStr(),
+      params: {
+        module: "rythme", xpEarned: xpLog.reduce((a, b) => a + b, 0), medal: medailleDominante(medals),
+        meta: { serieInterrompue: medals.length },
+        details: { level: activeNiveau, items: medals.length, mode: `Série interrompue · activité ${activity}` },
+      },
+    });
+  }, [phase, seriesMode, pattern, earnedPts, scores, activity, revealBeat, scoreWasExtreme, seriesXpLog, seriesMedals, activeNiveau]);
+
+  const enregistrerSerieInterrompueRef = useRef(() => {});
+  enregistrerSerieInterrompueRef.current = () => {
+    const session = prendreSessionEnAttente();
+    if (session) addSession(parametresRattrapes(session, todayStr()));
+  };
+  useEffect(() => {
+    if (currentPage === "home") enregistrerSerieInterrompueRef.current();
+  }, [currentPage]);
+  useEffect(() => () => enregistrerSerieInterrompueRef.current(), []);
 
   // ── Page réglages ──────────────────────────────────────────────────────────
   if (currentPage === "settings") {
@@ -2312,8 +2356,7 @@ export default function RythmApp() {
   if (currentPage === "series-end") {
     const totalXp     = seriesXpLog.reduce((a, b) => a + b, 0);
     const perfectSeries = seriesMedals.length === 10 && seriesMedals.every(m => m === "🥇");
-    const medalCounts = seriesMedals.reduce((acc, m) => { acc[m] = (acc[m] ?? 0) + 1; return acc; }, {});
-    const dominantMedal = ["🥇","🥈","🥉","🎯"].find(m => medalCounts[m] === Math.max(...Object.values(medalCounts))) ?? "🎯";
+    const dominantMedal = medailleDominante(seriesMedals);
 
     return (
       <SeriesEndScreen
@@ -2405,6 +2448,8 @@ export default function RythmApp() {
       const updatedXpLog  = [...seriesXpLog, earnedPts];
       const updatedMedals = [...seriesMedals, medal];
       if (nextIdx >= 10) {
+        // Série complète : SeriesEndScreen l'enregistre, la sauvegarde n'a plus lieu d'être.
+        effacerSessionEnAttente();
         setSeriesXpLog(updatedXpLog);
         setSeriesMedals(updatedMedals);
         setCurrentPage("series-end");
@@ -2520,6 +2565,31 @@ export default function RythmApp() {
         </div>
       </div>
 
+      {/* ── COMPTEUR DE SÉRIE ── un segment par exercice, rempli une fois terminé */}
+      {seriesMode && (
+        <div className="w-full max-w-xl mb-2.5" onPointerDown={e => e.stopPropagation()}>
+          <div className="flex justify-between items-center mb-1" style={{ fontSize: 11, fontWeight: 700 }}>
+            <span style={{ color: 'var(--text-muted)' }}>{RYTHME.jeu.serieEnCours}</span>
+            <span style={{ color: '#4A6CF7' }}>{RYTHME.jeu.compteurSerie(Math.min(seriesIdx + 1, 10), 10)}</span>
+          </div>
+          <div className="flex gap-1">
+            {Array.from({ length: 10 }, (_, i) => {
+              const fait = i < seriesIdx || (i === seriesIdx && phase === "results");
+              const courant = i === seriesIdx && !fait;
+              return (
+                <div
+                  key={i}
+                  className="flex-1 h-[5px] rounded-full"
+                  style={{
+                    background: fait ? 'linear-gradient(90deg,#4A6CF7,#8B5CF6)' : courant ? 'rgba(74,108,247,0.35)' : 'var(--surface-2)',
+                    transition: 'background 0.3s',
+                  }}
+                />
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* ── ZONE PRINCIPALE ── */}
       <div className="flex-1 w-full max-w-xl flex gap-2.5 items-stretch">

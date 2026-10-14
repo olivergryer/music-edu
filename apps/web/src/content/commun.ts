@@ -28,7 +28,7 @@ export const COMMUN = {
     // Barème rappelé selon l'endroit où la jauge est affichée.
     bareme: {
       hub: '1 point par exercice de rythme isolé, 5 par série de théorie, 10 par session complète.',
-      rythme: '1 point par exercice isolé, 10 pour une série de 10.',
+      rythme: 'Un point par exercice.',
       theorie: '5 points par série d’entraînement, 10 pour le Code de la route.',
     },
   },
