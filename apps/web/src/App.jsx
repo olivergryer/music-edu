@@ -8,6 +8,7 @@ import LimiteChargement from './components/LimiteChargement'
 import CelebrationLayer from './components/CelebrationLayer'
 import IndicateurSync from './components/IndicateurSync'
 import AvertissementSon from './components/AvertissementSon'
+import PopupRattrapage from './components/PopupRattrapage'
 import { CelebrationProvider } from './hooks/CelebrationContext'
 import { IS_DEV } from './isDev'
 
@@ -135,6 +136,7 @@ export default function App() {
             <CelebrationLayer />
             <IndicateurSync />
             <AvertissementSon />
+            <PopupRattrapage />
             <AppRoutes />
           </CelebrationProvider>
         </AuthProvider>

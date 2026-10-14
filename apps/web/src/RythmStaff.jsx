@@ -294,20 +294,28 @@ export default function RythmStaff({
       // Triolet : 3 (ou n) dans l'espace de 2 → chiffre « 3 ». Duolet : 2 dans l'espace de
       // 3 → chiffre « 2 ». Chiffre affiché = num_notes (ratioed:false), au-dessus de la ligature
       // (ou entre crochets si valeur non ligaturable).
+      // Triolets consécutifs : un chiffre « 3 » par groupe, jamais un « 6 » fusionné. Le groupe
+      // se ferme dès qu'il remplit l'espace de 2 valeurs de base (3 croches t = 1 noire,
+      // 3 noires t = 2 noires), avec un minimum d'un temps : 6 doubles croches t = sextolet « 6 ».
+      const baseOf = f => f.dur.replace(/r$/, "").replace(/d$/, "");
       let i = 0;
       while (i < figs.length) {
         const kind = figs[i].triplet ? "triplet" : figs[i].duplet ? "duplet" : null;
         if (kind) {
           const start  = i;
           const tNotes = [];
+          const span   = Math.max(1, 2 * (DUR_Q[baseOf(figs[start])] ?? 0.5));
+          let filled   = 0;
           while (i < figs.length && (kind === "triplet" ? figs[i].triplet : figs[i].duplet)) {
+            if (kind === "triplet") filled += (DUR_Q[baseOf(figs[i])] ?? 0.5) * (2 / 3);
             tNotes.push(vexNotes[i++]);
+            if (kind === "triplet" && filled >= span - 1e-6) break;
           }
           if (tNotes.length >= 2) {
             const base0    = figs[start].dur.replace(/d$/, "").replace(/r$/, "");
             const isBeamed = BEAMABLE.has(base0);
             const notesOccupied = kind === "triplet"
-              ? (tNotes.length === 3 ? 2 : tNotes.length)
+              ? (tNotes.length === 3 ? 2 : tNotes.length === 6 ? 4 : tNotes.length)
               : 3; // duolet : 2 (num_notes) dans l'espace de 3
             const tuplet   = new Tuplet(tNotes, {
               num_notes:      tNotes.length,

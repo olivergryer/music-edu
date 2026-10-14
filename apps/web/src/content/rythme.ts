@@ -212,7 +212,7 @@ export const RYTHME = {
   jeu: {
     retourActivites: '← Activités',
     prepareToi: 'Prépare-toi…',
-    memorise: 'Mémorise le rythme…',
+    memorise: 'Découvre le rythme…',
     ecoute: 'Écoute le rythme…',
     aToiDeJouer: 'À toi de jouer !',
     zoneTap: 'Tape n’importe où',
@@ -321,17 +321,6 @@ export const RYTHME = {
     taReponse: 'Ta réponse — touche pour réécouter',
     solution: 'Solution',
     aucuneCellule: '(aucune cellule posée)',
-  },
-
-  // ── Jauge de validation de la journée (streak) ─────────────────────────────
-  streak: {
-    titre: 'Ta journée',
-    validee: 'Journée validée',
-    detail: (reste: number) =>
-      reste === 1
-        ? 'Encore 1 exercice pour valider ta journée.'
-        : `Encore ${reste} exercices pour valider ta journée.`,
-    detailValidee: 'Ta série continue. Une série de 10 la valide aussi d’un coup.',
   },
 
   // ── Fin de série ───────────────────────────────────────────────────────────

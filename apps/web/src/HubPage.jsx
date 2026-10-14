@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import useProgressFirebase, { rankLabel, displayStreak, todayStr } from './hooks/useProgressFirebase'
+import JaugeJournee from './components/JaugeJournee'
+import { COMMUN } from './content/commun'
 import { usePwaInstall } from './hooks/usePwaInstall'
 import { useAuth } from './auth/AuthProvider'
 import { useTheme } from './ThemeContext'
@@ -66,7 +68,7 @@ function ModuleCard({ label, desc, active, color, testPhase, devBadge }) {
 }
 
 export default function HubPage() {
-  const { xp, rank, streak, trophies } = useProgressFirebase()
+  const { xp, rank, streak, trophies, pointsDuJour, pointsJournee, rattrapage } = useProgressFirebase()
   const { user, profile } = useAuth()
   const { dark } = useTheme()
   const liveStreak = displayStreak(streak, todayStr())
@@ -134,6 +136,18 @@ export default function HubPage() {
             ))}
           </div>
         )}
+
+        {/* Jauge de la journée — tous modules confondus, d'où sa place ici. */}
+        <div className="mt-8 mx-auto" style={{ maxWidth: 540 }}>
+          <JaugeJournee
+            points={pointsDuJour}
+            journee={pointsJournee}
+            rattrapage={rattrapage}
+            bareme={COMMUN.jauge.bareme.hub}
+            couleurs={['#7c3aed', '#c084fc']}
+            marginBottom={0}
+          />
+        </div>
 
         {/* Barre progression utilisateur */}
         <div className="mt-8 flex gap-3 items-center justify-center flex-wrap text-sm text-app-muted">

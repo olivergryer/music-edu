@@ -16,6 +16,8 @@ import { generateDistractorSet, deriveNiveau } from "./rythmDistractors";
 import { buildPalette, scoreActivity5, measureStatus, groupOf } from "./rythmActivity5";
 import { RYTHME } from "./content/rythme.ts";
 import DemoDecompte from "./components/DemoDecompte.tsx";
+import JaugeJournee from "./components/JaugeJournee.tsx";
+import { COMMUN } from "./content/commun.ts";
 import { busMaitre } from "./lib/busMaitre";
 
 // ─── Figures de base ──────────────────────────────────────────────────────────
@@ -335,40 +337,6 @@ function MetronomeViz({ flash }) {
   // </svg>
   */
   return null; // dot déplacé dans l'en-tête central
-}
-
-// ─── Jauge « validation de la journée » ───────────────────────────────────────
-// Un exercice Rythme joué SEUL ne valide pas la journée : il en faut `seuil`
-// dans la même journée (progressLogic.RYTHME_INDIV_POUR_STREAK). La règle
-// existait sans être visible nulle part — l'élève enchaînait sans savoir où il
-// en était. Une série de 10 valide, elle, immédiatement.
-function JaugeStreakRythme({ faits, seuil }) {
-  const complet = faits >= seuil;
-  return (
-    <div className="w-full rounded-2xl mb-3" style={{ background:'var(--surface)', border:'1px solid var(--border-c)', padding:'11px 16px' }}>
-      <div className="flex justify-between items-center mb-1.5">
-        <span style={{ fontSize:11, fontWeight:700, color:'var(--text)' }}>
-          {complet ? RYTHME.streak.validee : RYTHME.streak.titre}
-        </span>
-        <span style={{ fontSize:11, fontWeight:800, color: complet ? '#34d399' : '#4A6CF7' }}>
-          {complet ? '🔥' : `${faits}/${seuil}`}
-        </span>
-      </div>
-      <div className="w-full h-[5px] rounded-full overflow-hidden" style={{ background:'var(--surface-2)' }}>
-        <div
-          className="h-full rounded-full"
-          style={{
-            width: `${Math.min(100, (faits / seuil) * 100)}%`,
-            background: complet ? '#34d399' : 'linear-gradient(90deg,#4A6CF7,#8B5CF6)',
-            transition: 'width 0.45s ease-out, background 0.3s',
-          }}
-        />
-      </div>
-      <div style={{ fontSize:10, color:'var(--text-muted)', marginTop:5 }}>
-        {complet ? RYTHME.streak.detailValidee : RYTHME.streak.detail(seuil - faits)}
-      </div>
-    </div>
-  );
 }
 
 // ─── Écran fin de série ───────────────────────────────────────────────────────
@@ -964,7 +932,7 @@ export default function RythmApp() {
     _resetToDefault();
   }, [_resetToDefault]);
 
-  const { addSession, rythmeIndivDuJour, seuilRythmeIndiv } = useProgressFirebase();
+  const { addSession, pointsDuJour, pointsJournee, rattrapage } = useProgressFirebase();
   const { user } = useAuth();
   const isGuest = !user; // non connecté → progression locale + incitation à créer un compte
 
@@ -2321,7 +2289,7 @@ export default function RythmApp() {
               <span style={{ fontSize:18, color:'#4A6CF7' }}>⚙</span>
             </button>
 
-            <JaugeStreakRythme faits={rythmeIndivDuJour} seuil={seuilRythmeIndiv} />
+            <JaugeJournee points={pointsDuJour} journee={pointsJournee} rattrapage={rattrapage} bareme={COMMUN.jauge.bareme.rythme} couleurs={['#4A6CF7','#8B5CF6']} />
 
             {/* CTA Commencer */}
             <button

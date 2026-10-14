@@ -208,3 +208,23 @@ Groupes : `binary` (4/4) ou `ternary` (12/8) · `totalMs = 4 * beatMs` pour les 
 - **Plafond pts par exercice = 100** (× révélation × extrême) — aligné act 3/4/5 et autres modules. Pas `× playableCount`.
 - **`scoreTap` conservé** uniquement pour dériver le grade par note dans l'adaptateur (à partir du résidu dead-zoné). Tolérances grade : `pf = beatMs×0.02` (Parfait), `gd = ×0.18` (Bien), `ok = ×0.30` (Moyen), au-delà = Raté.
 - Anciens helpers supprimés : `fitAffine`, `MIN_TAPS_FOR_TEMPO`, `TEMPO_COMP_LIMIT`, `TEMPO_MALUS_COEFF`, `TEMPO_MALUS_MAX`, `clamp` local. Remplacés par moteur TS pur.
+
+## Streak — points du jour et rattrapage (logique dans `hooks/progressLogic.ts`)
+- **10 points = journée validée**, cumulables entre modules : exercice Rythme isolé 1 · série
+  Théorie 5 · toute autre session (série Rythme, Code, Notes, Harmonie, Accordeur) 10.
+  Compteur `dailyPoints`. Les anciens `dailyRythmeIndiv`/`dailyTheorieSerie` ne servent plus
+  qu'au repli de lecture du jour du déploiement.
+- **Jauge partagée** `components/JaugeJournee.tsx` (Hub, Rythme, Théorie) : au-delà de 10 le
+  curseur repart de zéro + multiplicateur (`curseurJauge` : 15 → 5 ×1, 25 → 5 ×2).
+- **Rattrapage** : série rompue depuis 1/2/3 jours → le jour de reprise seulement, 3×/8×/15×
+  une journée (30/80/150 pts) la rétablit, jours manqués compris (12, 2 manqués → 15).
+  Mémorisé dans `streak.repair` dès la 1ʳᵉ session du jour (sinon perdu à la validation qui
+  remet `current` à 1). Règle unique `avancerSerie`, partagée avec le recalcul.
+- Pop-up `components/PopupRattrapage.tsx` (App, 1×/jour) ; réussite → célébration `reparation`.
+  Historique : `streakRepaired: true`.
+- **Recalcul rétroactif** une fois par compte (`serieRecalculee` vs `VERSION_RECALCUL_SERIE`),
+  au chargement du hook : rejeu de l'historique, jamais à la baisse, trophées 7/30 j en
+  silence, ignoré si la lecture vient du cache.
+- Triolets (`RythmStaff.jsx`) : un « 3 » par groupe (fermé à 2 valeurs de base, min. 1 temps)
+  — jamais de « 6 » fusionné, sauf sextolet de doubles croches.
+

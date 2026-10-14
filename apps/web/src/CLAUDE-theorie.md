@@ -11,20 +11,16 @@
 - **Entraînement** : 10 questions, feedback immédiat, catégories au choix
 - **Examen** : 40 questions, toutes catégories, seuil **35/40**
 
-## Streak — 2 séries pour valider la journée
-Une série d'entraînement (10 questions) est une activité **partielle** : il en faut
-`THEORIE_SERIES_POUR_STREAK = 2` dans la même journée pour valider le streak. Le Code de la
-route musicale (40 questions) reste une session pleine et valide immédiatement.
+## Streak — points du jour
+Une série d'entraînement (10 questions) vaut **5 points**, le Code de la route **10** : 10 points
+valident la journée, **cumulables avec les autres modules** (barème `pointsSession` dans
+`hooks/progressLogic.ts`, rattrapage de série inclus — voir `CLAUDE-rythme.md` § Streak).
 
-- Même mécanique que les exercices Rythme isolés : compteur `dailyTheorieSerie` dans
-  `ProgressState`, fonctions pures `theorieSeriesDuJour` / `resteAvantStreakTheorie`
-  (`hooks/progressLogic.ts`), couvertes par `hooks/progressStreak.test.ts`.
 - Le signal passe par `meta.serieTheorie` : `addSession({ …, meta: { serieTheorie: mode !== 'examen' } })`
-  dans `ResultScreen`. **Sans ce meta, la session validerait immédiatement.**
-- Le compteur n'est jamais remis à zéro en base : c'est la **lecture** qui neutralise celui
-  de la veille (test dédié).
-- Affichage : `JaugeStreakTheorie` en haut de `SetupScreen`, alimentée par
-  `theorieSeriesDuJour` / `seuilTheorieSeries` exposés par `useProgressFirebase`.
+  dans `ResultScreen`. **Sans ce meta, la session vaudrait 10 points.**
+- L'historique ne garde pas `serieTheorie` : le recalcul rétroactif reconnaît la série
+  d'entraînement à `details.mode === 'Entraînement'`. Ne pas renommer ce libellé.
+- Affichage : jauge partagée `components/JaugeJournee.tsx` en haut de `SetupScreen`.
 
 ## Bouton « Suivant »
 Placé **en haut**, juste sous la barre de progression, dans un conteneur à `minHeight: 46`

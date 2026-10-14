@@ -8,6 +8,8 @@ import TourGuide from './TourGuide'
 import ConsigneOverlay, { consigneSeen } from './ConsigneOverlay'
 import useProgressFirebase from './hooks/useProgressFirebase'
 import { NIVEAUX_THEORIE } from './hooks/progressLogic'
+import JaugeJournee from './components/JaugeJournee'
+import { COMMUN } from './content/commun'
 import { IS_DEV } from './isDev'
 
 const CATEGORIES = [
@@ -478,43 +480,8 @@ function HelpModalTheorie({ onTuto, onTour, onClose }) {
   )
 }
 
-// Jauge de validation de la journée par séries d'entraînement.
-// Même règle que les exercices Rythme isolés : une série de 10 questions est une
-// activité partielle, il en faut `seuil` dans la journée pour valider le streak.
-function JaugeStreakTheorie({ faits, seuil }) {
-  const complet = faits >= seuil
-  const reste = seuil - faits
-  return (
-    <div className="bg-surface border border-app rounded-2xl mb-4" style={{ padding: '11px 16px' }}>
-      <div className="flex justify-between items-center mb-1.5">
-        <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text)' }}>
-          {complet ? 'Journée validée' : 'Série du jour'}
-        </span>
-        <span style={{ fontSize: 11, fontWeight: 800, color: complet ? '#34d399' : '#8B5CF6' }}>
-          {complet ? '🔥' : `${faits}/${seuil}`}
-        </span>
-      </div>
-      <div className="w-full h-[5px] rounded-full overflow-hidden" style={{ background: 'var(--surface-2)' }}>
-        <div
-          className="h-full rounded-full"
-          style={{
-            width: `${Math.min(100, (faits / seuil) * 100)}%`,
-            background: complet ? '#34d399' : 'linear-gradient(90deg,#8B5CF6,#c084fc)',
-            transition: 'width 0.45s ease-out, background 0.3s',
-          }}
-        />
-      </div>
-      <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 5 }}>
-        {complet
-          ? 'Ta série est prolongée pour aujourd\'hui.'
-          : `Encore ${reste} série${reste > 1 ? 's' : ''} d'entraînement pour valider ta journée. Le Code de la route la valide d'un coup.`}
-      </div>
-    </div>
-  )
-}
-
 // ── Page de préparation (page unique) ───────────────────────────────────────────
-function SetupScreen({ questions, onStart, onLoadCSV, csvCount, templateQuestions, seriesFaites, seuilSeries }) {
+function SetupScreen({ questions, onStart, onLoadCSV, csvCount, templateQuestions, jauge }) {
   const [level, setLevel] = useState(loadStoredLevel)
   const [onlyCurrent, setOnlyCurrent] = useState(loadStoredOnlyCurrent)
   const [cats, setCats] = useState([])
@@ -545,7 +512,7 @@ function SetupScreen({ questions, onStart, onLoadCSV, csvCount, templateQuestion
       <h2 className="text-xl font-black mb-1" style={{ color: '#8B5CF6' }}>Théorie</h2>
       <p className="text-sm text-app-muted mb-5">Quiz de théorie musicale</p>
 
-      <JaugeStreakTheorie faits={seriesFaites} seuil={seuilSeries} />
+      <JaugeJournee {...jauge} bareme={COMMUN.jauge.bareme.theorie} couleurs={['#8B5CF6','#c084fc']} marginBottom={16} />
 
       {/* Niveau */}
       <div className="bg-surface border border-app rounded-2xl p-5 mb-4" data-tour="niveau-select">
@@ -840,9 +807,9 @@ function ResultScreen({ session, mode, onReplay, addSession }) {
       ? Math.round(totalPts * 100) + (passed ? 500 : 0)
       : Math.round(totalPts * 50)
     const medal = pct >= 0.9 ? '🥇' : pct >= 0.7 ? '🥈' : '🥉'
-    // Une série d'entraînement (10 questions) est une activité PARTIELLE : il en
-    // faut THEORIE_SERIES_POUR_STREAK dans la journée pour valider le streak.
-    // Le Code de la route (40 questions) reste une session pleine.
+    // Une série d'entraînement (10 questions) est une activité PARTIELLE : elle
+    // vaut la moitié d'une journée (progressLogic.pointsSession). Le Code de la
+    // route (40 questions) reste une session pleine.
     addSession({
       module: 'theorie', xpEarned, medal,
       meta: {
@@ -918,7 +885,7 @@ function ResultScreen({ session, mode, onReplay, addSession }) {
 
 // ── Page principale ────────────────────────────────────────────────────────────
 export default function TheoriePage() {
-  const { addSession, theorieSeriesDuJour, seuilTheorieSeries } = useProgressFirebase()
+  const { addSession, pointsDuJour, pointsJournee, rattrapage } = useProgressFirebase()
   const [screen, setScreen] = useState('setup')
   const [mode, setMode] = useState(null)
   const [allQuestions, setAllQuestions] = useState([])
@@ -1021,7 +988,7 @@ export default function TheoriePage() {
         </div>
 
         {showTutorial && <TheorieTutorial onDone={handleTutorialDone} />}
-        {screen === 'setup' && !showTutorial && <SetupScreen questions={mergedQuestions} onStart={handleStart} onLoadCSV={setCsvQuestions} csvCount={csvQuestions.length} templateQuestions={allQuestions} seriesFaites={theorieSeriesDuJour} seuilSeries={seuilTheorieSeries} />}
+        {screen === 'setup' && !showTutorial && <SetupScreen questions={mergedQuestions} onStart={handleStart} onLoadCSV={setCsvQuestions} csvCount={csvQuestions.length} templateQuestions={allQuestions} jauge={{ points: pointsDuJour, journee: pointsJournee, rattrapage }} />}
         {screen === 'quiz' && session && <QuizScreen key={session.currentIdx} session={session} mode={mode} onAnswer={handleAnswer} onNext={handleNext} />}
         {screen === 'result' && session && <ResultScreen session={session} mode={mode} addSession={addSession} onReplay={() => { setSession(null); setMode(null); setScreen('setup') }} />}
         {showHelp && (

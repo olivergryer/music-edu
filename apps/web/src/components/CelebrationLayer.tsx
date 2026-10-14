@@ -29,6 +29,14 @@ function contenuDe(c: Celebration): Contenu {
       couleur: '#fbbf24',
     }
   }
+  if (c.type === 'reparation') {
+    return {
+      icone: 'flamme',
+      titre: 'Série réparée !',
+      detail: `${c.jours} jours d’affilée, rien n’est perdu`,
+      couleur: '#fbbf24',
+    }
+  }
   if (c.type === 'rang') {
     const rang = RANKS.find(r => r.id === c.rangId)
     return {

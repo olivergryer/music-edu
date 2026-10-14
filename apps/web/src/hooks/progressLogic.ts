@@ -12,6 +12,25 @@ export interface Streak {
   current: number
   longest: number
   lastDate: string | null
+  /**
+   * Rattrapage du jour de reprise. Mémorisé dès la première session de ce jour :
+   * la validation de la journée remet `current` à 1 et écrase `lastDate`, la
+   * série rompue serait sinon perdue. `null` hors rattrapage (jamais `undefined`,
+   * que Firestore rejette).
+   */
+  repair?: StreakRepair | null
+}
+
+export interface StreakRepair {
+  /** Jour de reprise : le seul jour où la réparation est possible. */
+  date: string
+  /** Série rompue, telle qu'elle était au dernier jour validé. */
+  previous: number
+  /** Jours manqués entre le dernier jour validé et la reprise (1 à 3). */
+  missed: number
+  /** Points à atteindre le jour de reprise. */
+  target: number
+  done: boolean
 }
 
 export interface DailyCounter {
@@ -32,7 +51,11 @@ export interface ProgressState {
   }
   dailyRythmeIndiv: DailyCounter
   dailyTheorieSerie: DailyCounter
+  /** Points du jour, tous modules confondus (voir POINTS_JOURNEE). */
+  dailyPoints: DailyCounter
   highestRankIdx: number  // plus haut rang jamais atteint (index dans RANKS)
+  /** Version du recalcul rétroactif de la série déjà appliqué (0 = jamais). */
+  serieRecalculee: number
 }
 
 export interface AddSessionParams {
@@ -84,6 +107,8 @@ export interface HistoryEntry extends SessionDetails {
   individual?: boolean
   /** Cette session a validé la journée pour le streak (liseré doré du calendrier). */
   streakValidated?: boolean
+  /** Cette session a atteint l'objectif de rattrapage : série rompue rétablie. */
+  streakRepaired?: boolean
 }
 
 export interface ApplySessionResult {
@@ -92,6 +117,8 @@ export interface ApplySessionResult {
   rankedUp: boolean
   /** Cette session vient de valider la journée pour le streak. */
   streakValidated: boolean
+  /** Cette session vient de réparer une série rompue. */
+  streakRepaired: boolean
   /** Nouveau rang atteint, uniquement si `rankedUp`. */
   newRankId: string | null
   historyEntry: HistoryEntry
@@ -329,7 +356,7 @@ export const TROPHIES: Trophee[] = [
 
 export const DEFAULT_STATE: ProgressState = {
   xp: 0,
-  streak: { current: 0, longest: 0, lastDate: null },
+  streak: { current: 0, longest: 0, lastDate: null, repair: null },
   trophies: [],
   modules: {
     rythme:    { seriesPlayed: 0, exercisesPlayed: 0, xpTotal: 0 },
@@ -340,7 +367,9 @@ export const DEFAULT_STATE: ProgressState = {
   },
   dailyRythmeIndiv: { date: null, count: 0 },
   dailyTheorieSerie: { date: null, count: 0 },
+  dailyPoints: { date: null, count: 0 },
   highestRankIdx: 0,
+  serieRecalculee: 0,
 }
 
 export function mergeWithDefaults(data: Record<string, unknown>): ProgressState {
@@ -356,7 +385,9 @@ export function mergeWithDefaults(data: Record<string, unknown>): ProgressState 
     streak: { ...DEFAULT_STATE.streak, ...(d.streak ?? {}) },
     dailyRythmeIndiv: { ...DEFAULT_STATE.dailyRythmeIndiv, ...(d.dailyRythmeIndiv ?? {}) },
     dailyTheorieSerie: { ...DEFAULT_STATE.dailyTheorieSerie, ...(d.dailyTheorieSerie ?? {}) },
+    dailyPoints: { ...DEFAULT_STATE.dailyPoints, ...(d.dailyPoints ?? {}) },
     highestRankIdx: d.highestRankIdx ?? DEFAULT_STATE.highestRankIdx,
+    serieRecalculee: d.serieRecalculee ?? DEFAULT_STATE.serieRecalculee,
     modules: {
       rythme:    { ...DEFAULT_STATE.modules.rythme,    ...(d.modules?.['rythme']    ?? {}) },
       theorie:   { ...DEFAULT_STATE.modules.theorie,   ...(d.modules?.['theorie']   ?? {}) },
@@ -411,6 +442,7 @@ export function mergeGuestInto(account: ProgressState, guest: ProgressState): Pr
     current: primaryStreak.current,
     longest: Math.max(account.streak.longest, guest.streak.longest),
     lastDate: primaryStreak.lastDate,
+    repair: primaryStreak.repair ?? null,
   }
 
   // Compteur journalier : celui de la date la plus récente (l'autre est périmé).
@@ -436,7 +468,9 @@ export function mergeGuestInto(account: ProgressState, guest: ProgressState): Pr
     modules,
     dailyRythmeIndiv:  laterCounter(account.dailyRythmeIndiv,  guest.dailyRythmeIndiv),
     dailyTheorieSerie: laterCounter(account.dailyTheorieSerie, guest.dailyTheorieSerie),
+    dailyPoints:       laterCounter(account.dailyPoints,       guest.dailyPoints),
     highestRankIdx: Math.max(account.highestRankIdx, guest.highestRankIdx, getRankIdx(xp)),
+    serieRecalculee: account.serieRecalculee,
   }
 }
 
@@ -465,52 +499,189 @@ export function updateStreak(streak: Streak, today: string): Streak {
   const yesterday = previousDayStr(today)
   const next = streak.lastDate === yesterday ? streak.current + 1 : 1
   const longest = Math.max(streak.longest, next)
-  return { current: next, longest, lastDate: today }
+  return { ...streak, current: next, longest, lastDate: today }
 }
 
-// ─── Exercices Rythme isolés et validation de la journée ──────────────────────
-// Un exercice Rythme joué SEUL ne vaut pas une session complète : il en faut
-// RYTHME_INDIV_POUR_STREAK dans la même journée pour valider le streak. Toute
-// autre session (série Rythme, Théorie, Notes, Harmonie, Accordeur) le valide
-// immédiatement.
-export const RYTHME_INDIV_POUR_STREAK = 10
+// ─── Points du jour et validation de la journée ───────────────────────────────
+// Une journée se valide à POINTS_JOURNEE points, cumulables entre modules :
+//   - exercice Rythme isolé           : 1 point  (il en faut 10)
+//   - série d'entraînement Théorie    : 5 points (il en faut 2)
+//   - toute autre session (série Rythme, Code de la route, Notes, Harmonie,
+//     Accordeur)                      : 10 points (valide d'un coup)
+// C'est l'ancien barème (10 exercices isolés, 2 séries Théorie), rendu
+// cumulable. Les points continuent de s'accumuler au-delà de 10 : la jauge
+// affiche alors un multiplicateur, et c'est ce volume qui sert au rattrapage.
+export const POINTS_JOURNEE = 10
 
-/** Nombre d'exercices Rythme isolés déjà faits aujourd'hui (0 si le compteur date d'hier). */
-export function rythmeIndivDuJour(state: ProgressState, today: string): number {
-  return state.dailyRythmeIndiv.date === today ? state.dailyRythmeIndiv.count : 0
-}
-
-/**
- * Reste à faire aujourd'hui pour valider la journée via des exercices Rythme
- * isolés. Vaut 0 dès que la journée est validée — par ce biais ou par une autre
- * activité, d'où le test sur `lastDate`.
- */
-export function resteAvantStreak(state: ProgressState, today: string): number {
-  if (state.streak.lastDate === today) return 0
-  const faits = rythmeIndivDuJour(state, today)
-  return Math.max(0, RYTHME_INDIV_POUR_STREAK - faits)
-}
-
-// ─── Séries d'entraînement Théorie et validation de la journée ────────────────
-// Même logique que les exercices Rythme isolés : une série d'entraînement de 10
-// questions ne vaut pas une session complète, il en faut
-// THEORIE_SERIES_POUR_STREAK dans la même journée. Le Code de la route musicale
-// (40 questions) reste une session pleine et valide immédiatement.
-export const THEORIE_SERIES_POUR_STREAK = 2
-
-/** Nombre de séries d'entraînement Théorie déjà faites aujourd'hui (0 si le compteur date d'hier). */
-export function theorieSeriesDuJour(state: ProgressState, today: string): number {
-  return state.dailyTheorieSerie.date === today ? state.dailyTheorieSerie.count : 0
+/** Points rapportés par une session, selon son module et sa nature. */
+export function pointsSession(module: AddSessionParams['module'], meta: AddSessionParams['meta'] = {}): number {
+  if (module === 'rythme' && meta.individual === true) return 1
+  if (module === 'theorie' && meta.serieTheorie === true) return POINTS_JOURNEE / 2
+  return POINTS_JOURNEE
 }
 
 /**
- * Reste à faire aujourd'hui pour valider la journée via des séries d'entraînement
- * Théorie. Vaut 0 dès que la journée est validée — par ce biais ou autrement.
+ * Points accumulés aujourd'hui. Repli pour les états antérieurs au compteur de
+ * points (`dailyPoints.date` jamais renseigné) : on reconstitue depuis les
+ * anciens compteurs, pour que le jour du déploiement ne reparte pas de zéro.
  */
-export function resteAvantStreakTheorie(state: ProgressState, today: string): number {
-  if (state.streak.lastDate === today) return 0
-  const faits = theorieSeriesDuJour(state, today)
-  return Math.max(0, THEORIE_SERIES_POUR_STREAK - faits)
+export function pointsDuJour(state: ProgressState, today: string): number {
+  if (state.dailyPoints.date !== null) {
+    return state.dailyPoints.date === today ? state.dailyPoints.count : 0
+  }
+  const indiv   = state.dailyRythmeIndiv.date  === today ? state.dailyRythmeIndiv.count  : 0
+  const theorie = state.dailyTheorieSerie.date === today ? state.dailyTheorieSerie.count : 0
+  const ancien  = indiv + theorie * (POINTS_JOURNEE / 2)
+  return state.streak.lastDate === today ? Math.max(ancien, POINTS_JOURNEE) : ancien
+}
+
+/**
+ * Position de la jauge : au-delà d'une journée, le curseur repart de zéro et le
+ * multiplicateur compte les journées pleines (15 → 5 et ×1, 25 → 5 et ×2).
+ * Pile sur un multiple, la barre reste pleine plutôt que vide.
+ */
+export function curseurJauge(points: number, journee: number = POINTS_JOURNEE): { curseur: number; multiplicateur: number } {
+  const multiplicateur = Math.floor(points / journee)
+  const reste = points % journee
+  return { curseur: multiplicateur > 0 && reste === 0 ? journee : reste, multiplicateur }
+}
+
+// ─── Rattrapage de série ──────────────────────────────────────────────────────
+// Une série rompue depuis 1, 2 ou 3 jours peut être réparée le jour de la
+// reprise, à condition d'y faire 3×, 8× ou 15× le volume d'une journée. Les
+// jours manqués comptent alors dans la série : 12 jours, 2 jours manqués,
+// réparée le 3ᵉ → 15. Au-delà de 3 jours manqués, plus de réparation.
+export const MULTIPLES_RATTRAPAGE = [3, 8, 15] as const
+
+/**
+ * Rattrapage en jeu aujourd'hui, ou `null`. Une fois mémorisé dans
+ * `streak.repair` (dès la première session du jour), c'est lui qui fait foi :
+ * après validation de la journée, `lastDate` vaut aujourd'hui et l'écart qui
+ * le justifiait a disparu.
+ */
+export function rattrapageDuJour(streak: Streak, today: string): StreakRepair | null {
+  if (streak.repair?.date === today) return streak.repair
+  if (!streak.lastDate || streak.current < 1) return null
+  const missed = dateDiff(streak.lastDate, today) - 1
+  if (missed < 1 || missed > MULTIPLES_RATTRAPAGE.length) return null
+  return {
+    date: today,
+    previous: streak.current,
+    missed,
+    target: POINTS_JOURNEE * MULTIPLES_RATTRAPAGE[missed - 1],
+    done: false,
+  }
+}
+
+/** Objectif de points du jour : celui du rattrapage s'il est en cours, sinon une journée. */
+export function objectifDuJour(streak: Streak, today: string): number {
+  const r = rattrapageDuJour(streak, today)
+  return r && !r.done ? r.target : POINTS_JOURNEE
+}
+
+/**
+ * Fait évoluer la série quand les points du jour passent de `avant` à `apres`.
+ * Partagée par `applySession` et par le recalcul rétroactif : une seule règle.
+ */
+function avancerSerie(streak: Streak, avant: number, apres: number, today: string): { streak: Streak; repaired: boolean } {
+  const repair = rattrapageDuJour(streak, today)
+  let next = streak
+  if (avant < POINTS_JOURNEE && apres >= POINTS_JOURNEE) next = updateStreak(next, today)
+  if (repair && !repair.done && avant < repair.target && apres >= repair.target) {
+    const current = repair.previous + repair.missed + 1
+    return {
+      streak: { current, longest: Math.max(next.longest, current), lastDate: today, repair: { ...repair, done: true } },
+      repaired: true,
+    }
+  }
+  return { streak: { ...next, repair }, repaired: false }
+}
+
+// ─── Recalcul rétroactif de la série ──────────────────────────────────────────
+// Appliqué une fois par compte (voir `serieRecalculee`) : l'historique est rejoué
+// jour par jour avec la règle de rattrapage, comme si elle avait toujours existé.
+
+/** Version du recalcul : l'incrémenter relance le recalcul chez tous les comptes. */
+export const VERSION_RECALCUL_SERIE = 1
+
+/** Champs de l'historique utiles au rejeu. */
+export interface EntreeSerie {
+  date: string
+  module: AddSessionParams['module']
+  individual?: boolean
+  mode?: string
+}
+
+/**
+ * Points d'une entrée d'historique. L'historique ne garde pas `serieTheorie` :
+ * la série d'entraînement se reconnaît à son `mode`. Les entrées Théorie
+ * antérieures à ce champ comptent comme des sessions complètes.
+ */
+export function pointsEntreeHistorique(e: EntreeSerie): number {
+  if (e.module === 'theorie' && e.mode === 'Entraînement') return POINTS_JOURNEE / 2
+  return pointsSession(e.module, { individual: e.individual === true })
+}
+
+/** Rejoue l'historique jusqu'à `today` inclus. */
+export function rejouerSerie(entries: EntreeSerie[], today: string): { streak: Streak; pointsAujourdhui: number } {
+  const parJour = new Map<string, number>()
+  for (const e of entries) {
+    if (!e.date || e.date > today) continue
+    parJour.set(e.date, (parJour.get(e.date) ?? 0) + pointsEntreeHistorique(e))
+  }
+  let streak: Streak = DEFAULT_STATE.streak
+  for (const jour of [...parJour.keys()].sort()) {
+    streak = avancerSerie(streak, 0, parJour.get(jour) ?? 0, jour).streak
+  }
+  return { streak, pointsAujourdhui: parJour.get(today) ?? 0 }
+}
+
+const TROPHEES_SERIE = ['portee', 'mesure']
+
+/**
+ * Fusionne le rejeu dans l'état stocké. Garde-fou : la série ne baisse JAMAIS.
+ * Une progression invité fusionnée à l'inscription n'a pas d'historique, le
+ * rejeu l'ignorerait. On ne retient donc le rejeu que s'il aboutit au même
+ * dernier jour validé, et seulement s'il fait mieux.
+ * Les trophées de série débloqués ainsi sont attribués sans célébration.
+ */
+export function appliquerRecalculSerie(
+  state: ProgressState,
+  entries: EntreeSerie[],
+  today: string,
+): { state: ProgressState; nouveauxTrophees: string[] } {
+  const { streak: rejoue, pointsAujourdhui } = rejouerSerie(entries, today)
+  const actuel = state.streak
+  const memeFin = rejoue.lastDate === actuel.lastDate
+  const current = memeFin ? Math.max(actuel.current, rejoue.current) : actuel.current
+  const streak: Streak = {
+    current,
+    longest: Math.max(actuel.longest, rejoue.longest, current),
+    lastDate: actuel.lastDate,
+    repair: actuel.repair ?? (memeFin ? rejoue.repair : null),
+  }
+
+  const dejaAujourdhui = pointsDuJour(state, today)
+  const dailyPoints: DailyCounter = pointsAujourdhui > dejaAujourdhui
+    ? { date: today, count: pointsAujourdhui }
+    : state.dailyPoints
+
+  // Évalués sur la meilleure série atteinte : un trophée gagné par le passé
+  // reste mérité même si la série actuelle est plus courte.
+  const pourTrophees: ProgressState = { ...state, streak: { ...streak, current: streak.longest } }
+  const nouveauxTrophees = checkNewTrophies(pourTrophees, {}, state.trophies)
+    .filter(id => TROPHEES_SERIE.includes(id))
+
+  return {
+    state: {
+      ...state,
+      streak,
+      dailyPoints,
+      trophies: [...state.trophies, ...nouveauxTrophees],
+      serieRecalculee: VERSION_RECALCUL_SERIE,
+    },
+    nouveauxTrophees,
+  }
 }
 
 // Série « vivante » pour l'affichage : `current` n'est remis à 1 qu'au PROCHAIN jeu.
@@ -621,35 +792,12 @@ export function applySession(
   const newXp = decayedXp + xpGained
   const rankAfter = getRank(newXp).id
 
-  // Deux activités « partielles » ne valident pas la journée à elles seules : il
-  // en faut un certain nombre dans la journée. Toute autre session la valide
-  // immédiatement.
-  const isRythmeIndiv  = module === 'rythme'  && meta.individual   === true
-  const isTheorieSerie = module === 'theorie' && meta.serieTheorie === true
-
-  let newDailyRythmeIndiv  = prev.dailyRythmeIndiv
-  let newDailyTheorieSerie = prev.dailyTheorieSerie
-  let countsForStreak = !isRythmeIndiv && !isTheorieSerie
-
-  if (isRythmeIndiv) {
-    const sameDay = prev.dailyRythmeIndiv.date === today
-    const count = sameDay ? prev.dailyRythmeIndiv.count + 1 : 1
-    newDailyRythmeIndiv = { date: today, count }
-    countsForStreak = sameDay
-      && prev.dailyRythmeIndiv.count < RYTHME_INDIV_POUR_STREAK
-      && count >= RYTHME_INDIV_POUR_STREAK
-  }
-
-  if (isTheorieSerie) {
-    const sameDay = prev.dailyTheorieSerie.date === today
-    const count = sameDay ? prev.dailyTheorieSerie.count + 1 : 1
-    newDailyTheorieSerie = { date: today, count }
-    countsForStreak = sameDay
-      && prev.dailyTheorieSerie.count < THEORIE_SERIES_POUR_STREAK
-      && count >= THEORIE_SERIES_POUR_STREAK
-  }
-
-  const newStreak = countsForStreak ? updateStreak(prev.streak, today) : prev.streak
+  // Points du jour → validation de la journée et rattrapage éventuel.
+  const isRythmeIndiv = module === 'rythme' && meta.individual === true
+  const pointsAvant = pointsDuJour(prev, today)
+  const pointsApres = pointsAvant + pointsSession(module, meta)
+  const newDailyPoints: DailyCounter = { date: today, count: pointsApres }
+  const { streak: newStreak, repaired: streakRepaired } = avancerSerie(prev.streak, pointsAvant, pointsApres, today)
 
   // Les compteurs xpTotal par module reflètent l'XP réellement créditée (boost inclus).
   let moduleUpdate: ProgressState['modules']
@@ -700,8 +848,7 @@ export function applySession(
     xp: newXp,
     streak: newStreak,
     modules: moduleUpdate,
-    dailyRythmeIndiv: newDailyRythmeIndiv,
-    dailyTheorieSerie: newDailyTheorieSerie,
+    dailyPoints: newDailyPoints,
     highestRankIdx: newHighestRankIdx,
   }
 
@@ -713,12 +860,9 @@ export function applySession(
 
   const rankedUp = rankAfter !== rankBefore
 
-  // `countsForStreak` était calculé puis oublié. Il ne suffit pas : il vaut
-  // `true` à CHAQUE session hors Rythme-isolé, y compris quand la journée est
-  // déjà validée depuis ce matin. Il faut donc vérifier que la bascule a bien
-  // lieu maintenant — sinon on célébrerait à chaque exercice de la journée.
-  const streakValidated =
-    countsForStreak && prev.streak.lastDate !== today && newStreak.lastDate === today
+  // Bascule réelle, et non « session comptée » : une fois la journée validée,
+  // les sessions suivantes du jour ne doivent pas la célébrer de nouveau.
+  const streakValidated = prev.streak.lastDate !== today && newStreak.lastDate === today
 
   // Firestore REJETTE les champs `undefined` : l'entrée ne porte donc que les
   // clés réellement renseignées. `sansIndefinis` s'en charge — ne pas étaler
@@ -730,6 +874,7 @@ export function applySession(
     medal,
     individual: meta.individual === true ? true : undefined,
     streakValidated: streakValidated ? true : undefined,
+    streakRepaired: streakRepaired ? true : undefined,
     ...params.details,
   })
 
@@ -738,6 +883,7 @@ export function applySession(
     newTrophies: newTrophyIds,
     rankedUp,
     streakValidated,
+    streakRepaired,
     newRankId: rankedUp ? rankAfter : null,
     historyEntry,
   }

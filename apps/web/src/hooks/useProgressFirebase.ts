@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { doc, getDoc, setDoc, addDoc, collection, serverTimestamp } from 'firebase/firestore'
+import { doc, getDoc, getDocs, setDoc, addDoc, collection, serverTimestamp } from 'firebase/firestore'
 import { dateExpiration } from '../lib/donneesPersonnelles'
 import { db } from '../lib/firebase'
 import { useAuth } from '../auth/AuthProvider'
@@ -7,12 +7,12 @@ import { useCelebrations, type Celebration } from './CelebrationContext'
 import {
   applySession,
   applyDecayOnly,
-  rythmeIndivDuJour,
-  resteAvantStreak,
-  RYTHME_INDIV_POUR_STREAK,
-  theorieSeriesDuJour,
-  resteAvantStreakTheorie,
-  THEORIE_SERIES_POUR_STREAK,
+  pointsDuJour,
+  objectifDuJour,
+  rattrapageDuJour,
+  appliquerRecalculSerie,
+  VERSION_RECALCUL_SERIE,
+  POINTS_JOURNEE,
   DEFAULT_STATE,
   mergeWithDefaults,
   readGuestProgress,
@@ -21,8 +21,36 @@ import {
   getNextRank,
   todayStr,
   type AddSessionParams,
+  type EntreeSerie,
   type ProgressState,
 } from './progressLogic'
+
+/**
+ * Recalcul rétroactif de la série, une fois par compte. Relit l'historique
+ * Firestore de l'élève et le rejoue avec la règle de rattrapage. Sans écriture
+ * si la lecture vient du cache (hors ligne) : un historique partiel donnerait un
+ * résultat faux, et le drapeau empêcherait de le refaire.
+ * Plusieurs instances du hook peuvent le lancer en même temps : le calcul est
+ * déterministe, les écritures concurrentes sont identiques.
+ */
+async function recalculerSerie(uid: string, state: ProgressState): Promise<ProgressState> {
+  if (state.serieRecalculee >= VERSION_RECALCUL_SERIE) return state
+  const snap = await getDocs(collection(db, 'users', uid, 'history'))
+  if (snap.metadata.fromCache) return state
+  const entries: EntreeSerie[] = snap.docs.map(d => {
+    const e = d.data()
+    return { date: e.date, module: e.module, individual: e.individual, mode: e.mode }
+  })
+  const { state: next } = appliquerRecalculSerie(state, entries, todayStr())
+  // `merge` : seuls les champs recalculés sont écrits, `expireAt` reste intact.
+  await setDoc(doc(db, 'users', uid, 'progress', 'data'), {
+    streak: next.streak,
+    dailyPoints: next.dailyPoints,
+    trophies: next.trophies,
+    serieRecalculee: next.serieRecalculee,
+  }, { merge: true })
+  return next
+}
 
 export { RANKS, TROPHIES, getRank, getNextRank, rankLabel, displayStreak, todayStr } from './progressLogic'
 
@@ -49,12 +77,22 @@ export default function useProgressFirebase() {
       setLoaded(true)
       return
     }
+    // Repasse à « non chargé » : l'état invité lu avant la réponse de l'auth ne
+    // doit ni recevoir de session ni déclencher la pop-up de rattrapage.
+    setLoaded(false)
     // Le cache persistant sert cette lecture hors ligne. Le `catch` reste
     // indispensable : sans lui, un échec laissait `loaded` à false pour toujours,
     // et `addSession` jetait alors toute progression par son garde d'entrée.
     getDoc(doc(db, 'users', user.uid, 'progress', 'data'))
-      .then(snap => {
-        setRawData(snap.exists() ? mergeWithDefaults(snap.data()) : DEFAULT_STATE)
+      .then(async snap => {
+        const state = snap.exists() ? mergeWithDefaults(snap.data()) : DEFAULT_STATE
+        setRawData(state)
+        if (!snap.exists()) return
+        try {
+          setRawData(await recalculerSerie(user.uid, state))
+        } catch (err) {
+          console.warn('Série : recalcul rétroactif reporté.', err)
+        }
       })
       .catch(err => {
         console.warn('Progression : lecture impossible, démarrage sur l’état par défaut.', err)
@@ -99,6 +137,9 @@ export default function useProgressFirebase() {
     if (result.streakValidated) {
       events.push({ type: 'streak', jours: result.newState.streak.current })
     }
+    if (result.streakRepaired) {
+      events.push({ type: 'reparation', jours: result.newState.streak.current })
+    }
     if (result.rankedUp && result.newRankId) {
       events.push({ type: 'rang', rangId: result.newRankId })
     }
@@ -122,14 +163,11 @@ export default function useProgressFirebase() {
     rawData,             // état brut non-décayé (pour calculer le delta de decay)
     loaded,
     addSession,
-    // Progression du jour vers la validation du streak par exercices Rythme
-    // isolés. Calculée sur `rawData` : le decay ne touche que l'XP.
-    rythmeIndivDuJour: rythmeIndivDuJour(rawData, todayStr()),
-    resteAvantStreak: resteAvantStreak(rawData, todayStr()),
-    seuilRythmeIndiv: RYTHME_INDIV_POUR_STREAK,
-    // Idem pour les séries d'entraînement Théorie (10 questions).
-    theorieSeriesDuJour: theorieSeriesDuJour(rawData, todayStr()),
-    resteAvantStreakTheorie: resteAvantStreakTheorie(rawData, todayStr()),
-    seuilTheorieSeries: THEORIE_SERIES_POUR_STREAK,
+    // Progression du jour vers la validation de la journée, tous modules
+    // confondus. Calculée sur `rawData` : le decay ne touche que l'XP.
+    pointsDuJour: pointsDuJour(rawData, todayStr()),
+    objectifDuJour: objectifDuJour(rawData.streak, todayStr()),
+    pointsJournee: POINTS_JOURNEE,
+    rattrapage: rattrapageDuJour(rawData.streak, todayStr()),
   }
 }

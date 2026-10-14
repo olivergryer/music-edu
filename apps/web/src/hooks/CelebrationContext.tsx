@@ -11,6 +11,7 @@ import { createContext, useContext, useState, useCallback, ReactNode } from 'rea
 
 export type Celebration =
   | { type: 'streak'; jours: number }
+  | { type: 'reparation'; jours: number }
   | { type: 'rang'; rangId: string }
   | { type: 'trophee'; trophyId: string }
 
