@@ -1,4 +1,4 @@
-// ─── Figures rythmiques du métronome ──────────────────────────────────────────
+// ─── Figures rythmiques du métronome (carnet de gammes) ───────────────────────
 //
 // Une figure = le découpage d'UN temps. `onsets` : positions des attaques dans le
 // temps (0 = l'appui, 1 = temps suivant). L'appui et les subdivisions sont joués
