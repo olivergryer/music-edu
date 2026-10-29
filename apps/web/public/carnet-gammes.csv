@@ -1,0 +1,29 @@
+# Carnet de gammes — tempi objectifs (noire = tempo). Source de vérité : ajouter ici, pas dans le code.
+# niveau : C1 · C2/1 · C2/2 · C2/3 · C2/4 · C3 · CPES
+# tonalite : « Do M », « La m », « Fa# M », « Sib M »…  (M = majeur, m = mineur)
+# exercice : diatonique-lie · diatonique-detache · secondes · secondes-doublees · tierces · tierces-doublees · arpeges
+# figure (optionnel) : noire · croches · soupir-croche · doubles · triolet · soupir-2croches · croche-soupir-croche
+# EXEMPLE À REMPLACER : valeurs fictives pour tester la page.
+niveau,tonalite,exercice,tempo,figure
+C1,Do M,diatonique-lie,60,noire
+C1,Do M,diatonique-detache,56,noire
+C1,Sol M,diatonique-lie,56,noire
+C1,Fa M,diatonique-lie,56,noire
+C1,La m,diatonique-lie,52,noire
+C2/1,Do M,diatonique-lie,72,croches
+C2/1,Do M,diatonique-detache,66,croches
+C2/1,Do M,secondes,60,croches
+C2/1,Do M,arpeges,66,triolet
+C2/1,Ré M,diatonique-lie,66,croches
+C2/1,Sib M,diatonique-lie,60,croches
+C2/1,Mi m,diatonique-lie,66,croches
+C3,Do M,diatonique-lie,100,doubles
+C3,Do M,diatonique-detache,92,doubles
+C3,Do M,secondes,84,doubles
+C3,Do M,secondes-doublees,76,croches
+C3,Do M,tierces,76,croches
+C3,Do M,tierces-doublees,66,croches
+C3,Do M,arpeges,88,triolet
+C3,Fa# M,diatonique-lie,84,doubles
+C3,Fa# M,arpeges,72,triolet
+C3,Ré# m,diatonique-lie,80,doubles

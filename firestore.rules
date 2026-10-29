@@ -51,6 +51,14 @@ service cloud.firestore {
         allow delete: if request.auth.uid == uid;
       }
 
+      // Carnet de gammes (/carnet/gammes) : séances modifiables, effaçables.
+      match /carnet/{id} {
+        allow read: if request.auth.uid == uid
+          || (request.auth != null && request.auth.uid in get(/databases/$(db)/documents/users/$(uid)).data.profIds)
+          || estAdmin();
+        allow write: if request.auth.uid == uid;
+      }
+
       // Calibration interne (outil dev), accès strictement perso
       match /calibrations/{session} {
         allow read, write: if request.auth.uid == uid;

@@ -25,6 +25,7 @@ Firebase Spark : Firestore + Authentication (email/password). **DB partagée dev
 | `/harmonie/cadences` | `modules/harmonie/CadencesPage.tsx` — reconnaissance de cadences, niveau 3 + palier « toutes » hors barème | public |
 | `/harmonie/intervalles` | `modules/harmonie/IntervallesPage.tsx` — reconnaissance d'intervalles, hors barème | public |
 | `/harmonie/banc` | `modules/harmonie/BancPage.tsx` — banc d'écoute, `IS_DEV` seulement | dev |
+| `/carnet/gammes` | `modules/carnet/CarnetGammesPage.tsx` — carnet de gammes de classe (cercle des quintes, métronome, tempi). **Aucun lien depuis l'appli**, `noindex`, pas de `Disallow` robots. Données : `public/carnet-gammes.csv` (`niveau,tonalite,exercice,tempo,figure`, format long) | public |
 | `/profil` | `ProfilPage.jsx` → redirect dashboard selon rôle | protégée |
 | `/dashboard/eleve` | `pages/DashboardEleve.tsx` | protégée |
 | `/dashboard/prof` | `pages/DashboardProf.tsx` | protégée |
@@ -61,6 +62,9 @@ users/{uid}
 
 users/{uid}/progress/data
   xp · streak · trophies · modules { rythme · theorie · accordeur }
+
+users/{uid}/carnet/{id}
+  séances du carnet de gammes : date · maj · niveau · tonalite · objectifs{} · saisis{} · figure
 
 users/{uid}/history/{sessionId}
   date · module · xp · medal · createdAt (serverTimestamp)

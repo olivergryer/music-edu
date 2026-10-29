@@ -37,6 +37,8 @@ const PRECACHE = [
   // Source de vérité des formules du module Rythme : sans elle, Rythme démarre
   // sur son catalogue par défaut au lieu du contenu réel.
   '/formules-rythme-template.csv',
+  // Carnet de gammes (ressource de classe) : tempi objectifs, utilisable hors ligne.
+  '/carnet-gammes.csv',
   // Polices : sans elles, le premier démarrage hors ligne retombe sur les
   // polices système, y compris pour le titre de l'écran de démarrage.
   '/fonts/inter-latin-var.woff2',
