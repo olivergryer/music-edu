@@ -1,6 +1,15 @@
 {
   "framework": "vite",
-  "cleanUrls": true,
   "trailingSlash": false,
-  "rewrites": [{ "source": "/(.*)", "destination": "/" }]
+  "rewrites": [
+    { "source": "/accordeur", "destination": "/accordeur.html" },
+    { "source": "/confidentialite", "destination": "/confidentialite.html" },
+    { "source": "/credits", "destination": "/credits.html" },
+    { "source": "/harmonie", "destination": "/harmonie.html" },
+    { "source": "/mentions-legales", "destination": "/mentions-legales.html" },
+    { "source": "/notes", "destination": "/notes.html" },
+    { "source": "/rythme", "destination": "/rythme.html" },
+    { "source": "/theorie", "destination": "/theorie.html" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
 }
