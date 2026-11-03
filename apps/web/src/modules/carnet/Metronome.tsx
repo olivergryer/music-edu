@@ -34,6 +34,7 @@ export default function Metronome({ tempo, onTempo, figure, onFigure }: Props) {
   const [mode, setMode] = useState<Mode>(lireMode)
   const [enMarche, setEnMarche] = useState(false)
   const [saisie, setSaisie] = useState<string | null>(null)
+  const [figureOuverte, setFigureOuverte] = useState(false)
   const moteur = useRef<MoteurMetronome | null>(null)
   const bouton = useRef<HTMLButtonElement>(null)
   const modeRef = useRef(mode)
@@ -137,7 +138,32 @@ export default function Metronome({ tempo, onTempo, figure, onFigure }: Props) {
 
       {/* Figure + valeur du tempo */}
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, color: 'var(--text)' }}>
-        <FigureSvg id={figure} hauteur={52} />
+        {/* Figure : seule la subdivision active est affichée ; un clic révèle les options. */}
+        <button onClick={() => setFigureOuverte(o => !o)} aria-expanded={figureOuverte}
+          aria-label={`Figure rythmique : ${figureParId(figure).label}. ${figureOuverte ? 'Fermer' : 'Changer'} le choix`}
+          style={{ minHeight: 64, padding: '4px 16px', borderRadius: 14, cursor: 'pointer', color: 'var(--text)',
+            border: '2px solid var(--border-c)', background: 'var(--surface-2)', display: 'flex', alignItems: 'center', gap: 10 }}>
+          <FigureSvg id={figure} hauteur={52} />
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"
+            style={{ transform: figureOuverte ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }}>
+            <path d="M6 9l6 6 6-6" />
+          </svg>
+        </button>
+        {figureOuverte && (
+          <div role="radiogroup" aria-label="Figure rythmique"
+            style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 6, maxWidth: 340, margin: '6px 0' }}>
+            {FIGURES.map(f => (
+              <button key={f.id} role="radio" aria-checked={figure === f.id} aria-label={f.label} title={f.label}
+                onClick={() => { onFigure(f.id); setFigureOuverte(false) }}
+                style={{ minWidth: 56, minHeight: 52, padding: '0 6px', borderRadius: 10, cursor: 'pointer',
+                  border: `2px solid ${figure === f.id ? '#c084fc' : 'var(--border-c)'}`,
+                  background: figure === f.id ? 'rgba(124,58,237,0.18)' : 'var(--surface)', color: 'var(--text)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <FigureSvg id={f.id} hauteur={34} />
+              </button>
+            ))}
+          </div>
+        )}
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
           <button aria-label="Diminuer le tempo de 1" style={btnPas}
             onPointerDown={pas(-1)} onPointerUp={arreterRepetition} onPointerLeave={arreterRepetition} onPointerCancel={arreterRepetition}>
@@ -171,21 +197,6 @@ export default function Metronome({ tempo, onTempo, figure, onFigure }: Props) {
       </div>
 
       <TempoKnob value={tempo} onChange={onTempo} />
-
-      {/* Choix de la figure */}
-      <div role="radiogroup" aria-label="Figure rythmique"
-        style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 6 }}>
-        {FIGURES.map(f => (
-          <button key={f.id} role="radio" aria-checked={figure === f.id} aria-label={f.label} title={f.label}
-            onClick={() => onFigure(f.id)}
-            style={{ minWidth: 56, minHeight: 52, padding: '0 6px', borderRadius: 10, cursor: 'pointer',
-              border: `2px solid ${figure === f.id ? '#c084fc' : 'var(--border-c)'}`,
-              background: figure === f.id ? 'rgba(124,58,237,0.18)' : 'var(--surface)', color: 'var(--text)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <FigureSvg id={f.id} hauteur={34} />
-          </button>
-        ))}
-      </div>
     </div>
   )
 }

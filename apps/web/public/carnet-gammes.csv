@@ -1,29 +1,351 @@
-# Carnet de gammes — tempi objectifs (noire = tempo). Source de vérité : ajouter ici, pas dans le code.
-# niveau : C1 · C2/1 · C2/2 · C2/3 · C2/4 · C3 · CPES
-# tonalite : « Do M », « La m », « Fa# M », « Sib M »…  (M = majeur, m = mineur)
-# exercice : diatonique-lie · diatonique-detache · secondes · secondes-doublees · tierces · tierces-doublees · arpeges
-# figure (optionnel) : noire · croches · soupir-croche · doubles · triolet · soupir-2croches · croche-soupir-croche
-# EXEMPLE À REMPLACER : valeurs fictives pour tester la page.
-niveau,tonalite,exercice,tempo,figure
-C1,Do M,diatonique-lie,60,noire
-C1,Do M,diatonique-detache,56,noire
-C1,Sol M,diatonique-lie,56,noire
-C1,Fa M,diatonique-lie,56,noire
-C1,La m,diatonique-lie,52,noire
-C2/1,Do M,diatonique-lie,72,croches
-C2/1,Do M,diatonique-detache,66,croches
-C2/1,Do M,secondes,60,croches
-C2/1,Do M,arpeges,66,triolet
-C2/1,Ré M,diatonique-lie,66,croches
-C2/1,Sib M,diatonique-lie,60,croches
-C2/1,Mi m,diatonique-lie,66,croches
-C3,Do M,diatonique-lie,100,doubles
-C3,Do M,diatonique-detache,92,doubles
-C3,Do M,secondes,84,doubles
-C3,Do M,secondes-doublees,76,croches
-C3,Do M,tierces,76,croches
-C3,Do M,tierces-doublees,66,croches
-C3,Do M,arpeges,88,triolet
-C3,Fa# M,diatonique-lie,84,doubles
-C3,Fa# M,arpeges,72,triolet
-C3,Ré# m,diatonique-lie,80,doubles
+# Carnet de gammes — tempi objectifs (en battues à la noire).
+# Modèle de fichier : modifie les valeurs, ajoute ou retire des lignes, puis publie le fichier (CSV) et colle son adresse dans la page.
+# Aussi utilisé comme copie de secours quand le document en ligne de la classe ne répond pas.
+#
+# Colonnes (une ligne par niveau + tonalité + exercice) :
+#   niveau   : C1 · C2/1 · C2/2 · C2/3 · C2/4 · C3 · CPES
+#   tonalite : « Do M », « La m », « Fa# M », « Sib M »…   (M = majeur, m = mineur ; # dièse, b bémol)
+#   exercice : Diatonique lié · Diatonique détaché · Secondes · Secondes doublées · Tierces · Tierces doublées · Arpèges
+#              (tout autre nom est accepté et s'affiche tel quel)
+#   tempo    : entier, tempo objectif
+# Une combinaison absente du fichier n'est pas proposée dans le carnet.
+# Les lignes qui commencent par # sont ignorées.
+niveau,tonalite,exercice,tempo
+C1,Do M,Diatonique lié,92
+C1,La m,Diatonique lié,80
+C1,Sol M,Diatonique lié,80
+C1,Mi m,Diatonique lié,66
+C1,Fa M,Diatonique lié,80
+C1,Ré m,Diatonique lié,60
+C1,Do M,Secondes,100
+C1,La m,Secondes,100
+C1,Sol M,Secondes,100
+C1,Mi m,Secondes,92
+C1,Fa M,Secondes,100
+C1,Ré m,Secondes,80
+C1,Do M,Tierces,66
+C1,La m,Tierces,60
+C1,Sol M,Tierces,66
+C1,Mi m,Tierces,60
+C1,Fa M,Tierces,66
+C1,Ré m,Tierces,50
+C2/1,Do M,Diatonique lié,92
+C2/1,La m,Diatonique lié,80
+C2/1,Sol M,Diatonique lié,80
+C2/1,Mi m,Diatonique lié,66
+C2/1,Fa M,Diatonique lié,80
+C2/1,Ré m,Diatonique lié,60
+C2/1,Ré M,Diatonique lié,72
+C2/1,Si m,Diatonique lié,60
+C2/1,Sib M,Diatonique lié,72
+C2/1,Sol m,Diatonique lié,60
+C2/1,Do M,Secondes,100
+C2/1,La m,Secondes,100
+C2/1,Sol M,Secondes,100
+C2/1,Mi m,Secondes,92
+C2/1,Fa M,Secondes,100
+C2/1,Ré m,Secondes,80
+C2/1,Ré M,Secondes,92
+C2/1,Si m,Secondes,80
+C2/1,Sib M,Secondes,92
+C2/1,Sol m,Secondes,80
+C2/1,Do M,Tierces,66
+C2/1,La m,Tierces,60
+C2/1,Sol M,Tierces,66
+C2/1,Mi m,Tierces,60
+C2/1,Fa M,Tierces,66
+C2/1,Ré m,Tierces,50
+C2/1,Ré M,Tierces,60
+C2/1,Si m,Tierces,50
+C2/1,Sib M,Tierces,60
+C2/1,Sol m,Tierces,50
+C2/1,Do M,Arpèges,60
+C2/1,La m,Arpèges,56
+C2/1,Sol M,Arpèges,56
+C2/1,Mi m,Arpèges,50
+C2/1,Fa M,Arpèges,56
+C2/1,Ré m,Arpèges,50
+C2/1,Ré M,Arpèges,50
+C2/1,Si m,Arpèges,50
+C2/1,Sib M,Arpèges,50
+C2/1,Sol m,Arpèges,50
+C2/3,Do M,Diatonique lié,120
+C2/3,La m,Diatonique lié,108
+C2/3,Sol M,Diatonique lié,108
+C2/3,Mi m,Diatonique lié,92
+C2/3,Fa M,Diatonique lié,108
+C2/3,Ré m,Diatonique lié,86
+C2/3,Ré M,Diatonique lié,92
+C2/3,Si m,Diatonique lié,80
+C2/3,Sib M,Diatonique lié,92
+C2/3,Sol m,Diatonique lié,80
+C2/3,La M,Diatonique lié,86
+C2/3,Fa# m,Diatonique lié,80
+C2/3,Mib M,Diatonique lié,86
+C2/3,Do m,Diatonique lié,80
+C2/3,Do M,Secondes,120
+C2/3,La m,Secondes,112
+C2/3,Sol M,Secondes,112
+C2/3,Mi m,Secondes,100
+C2/3,Fa M,Secondes,112
+C2/3,Ré m,Secondes,92
+C2/3,Ré M,Secondes,100
+C2/3,Si m,Secondes,92
+C2/3,Sib M,Secondes,100
+C2/3,Sol m,Secondes,92
+C2/3,La M,Secondes,92
+C2/3,Fa# m,Secondes,80
+C2/3,Mib M,Secondes,92
+C2/3,Do m,Secondes,80
+C2/3,Do M,Tierces,92
+C2/3,La m,Tierces,80
+C2/3,Sol M,Tierces,80
+C2/3,Mi m,Tierces,72
+C2/3,Fa M,Tierces,80
+C2/3,Ré m,Tierces,66
+C2/3,Ré M,Tierces,72
+C2/3,Si m,Tierces,60
+C2/3,Sib M,Tierces,72
+C2/3,Sol m,Tierces,60
+C2/3,La M,Tierces,66
+C2/3,Fa# m,Tierces,60
+C2/3,Mib M,Tierces,66
+C2/3,Do m,Tierces,60
+C2/3,Do M,Arpèges,80
+C2/3,La m,Arpèges,72
+C2/3,Sol M,Arpèges,72
+C2/3,Mi m,Arpèges,66
+C2/3,Fa M,Arpèges,72
+C2/3,Ré m,Arpèges,66
+C2/3,Ré M,Arpèges,66
+C2/3,Si m,Arpèges,60
+C2/3,Sib M,Arpèges,66
+C2/3,Sol m,Arpèges,60
+C2/3,La M,Arpèges,60
+C2/3,Fa# m,Arpèges,60
+C2/3,Mib M,Arpèges,60
+C2/3,Do m,Arpèges,60
+C3,Do M,Diatonique lié,132
+C3,La m,Diatonique lié,120
+C3,Sol M,Diatonique lié,120
+C3,Mi m,Diatonique lié,108
+C3,Fa M,Diatonique lié,120
+C3,Ré m,Diatonique lié,108
+C3,Ré M,Diatonique lié,108
+C3,Si m,Diatonique lié,92
+C3,Sib M,Diatonique lié,108
+C3,Sol m,Diatonique lié,86
+C3,La M,Diatonique lié,92
+C3,Fa# m,Diatonique lié,80
+C3,Mib M,Diatonique lié,92
+C3,Do m,Diatonique lié,80
+C3,Mi M,Diatonique lié,86
+C3,Do# m,Diatonique lié,80
+C3,Lab M,Diatonique lié,86
+C3,Fa m,Diatonique lié,80
+C3,Do M,Diatonique détaché,112
+C3,La m,Diatonique détaché,100
+C3,Sol M,Diatonique détaché,100
+C3,Mi m,Diatonique détaché,100
+C3,Fa M,Diatonique détaché,100
+C3,Ré m,Diatonique détaché,100
+C3,Ré M,Diatonique détaché,108
+C3,Si m,Diatonique détaché,92
+C3,Sib M,Diatonique détaché,108
+C3,Sol m,Diatonique détaché,86
+C3,La M,Diatonique détaché,92
+C3,Fa# m,Diatonique détaché,80
+C3,Mib M,Diatonique détaché,92
+C3,Do m,Diatonique détaché,80
+C3,Mi M,Diatonique détaché,86
+C3,Do# m,Diatonique détaché,80
+C3,Lab M,Diatonique détaché,86
+C3,Fa m,Diatonique détaché,80
+C3,Do M,Secondes,144
+C3,La m,Secondes,126
+C3,Sol M,Secondes,126
+C3,Mi m,Secondes,112
+C3,Fa M,Secondes,126
+C3,Ré m,Secondes,112
+C3,Ré M,Secondes,112
+C3,Si m,Secondes,100
+C3,Sib M,Secondes,112
+C3,Sol m,Secondes,92
+C3,La M,Secondes,100
+C3,Fa# m,Secondes,92
+C3,Mib M,Secondes,100
+C3,Do m,Secondes,92
+C3,Mi M,Secondes,92
+C3,Do# m,Secondes,80
+C3,Lab M,Secondes,92
+C3,Fa m,Secondes,80
+C3,Do M,Secondes doublées,86
+C3,La m,Secondes doublées,76
+C3,Sol M,Secondes doublées,76
+C3,Mi m,Secondes doublées,66
+C3,Fa M,Secondes doublées,76
+C3,Ré m,Secondes doublées,66
+C3,Ré M,Secondes doublées,66
+C3,Si m,Secondes doublées,60
+C3,Sib M,Secondes doublées,66
+C3,Sol m,Secondes doublées,60
+C3,La M,Secondes doublées,60
+C3,Fa# m,Secondes doublées,56
+C3,Mib M,Secondes doublées,60
+C3,Do m,Secondes doublées,56
+C3,Mi M,Secondes doublées,56
+C3,Do# m,Secondes doublées,50
+C3,Lab M,Secondes doublées,56
+C3,Fa m,Secondes doublées,50
+C3,Do M,Tierces,108
+C3,La m,Tierces,92
+C3,Sol M,Tierces,100
+C3,Mi m,Tierces,80
+C3,Fa M,Tierces,100
+C3,Ré m,Tierces,80
+C3,Ré M,Tierces,80
+C3,Si m,Tierces,72
+C3,Sib M,Tierces,80
+C3,Sol m,Tierces,66
+C3,La M,Tierces,72
+C3,Fa# m,Tierces,60
+C3,Mib M,Tierces,72
+C3,Do m,Tierces,60
+C3,Mi M,Tierces,66
+C3,Do# m,Tierces,60
+C3,Lab M,Tierces,66
+C3,Fa m,Tierces,60
+C3,Do M,Tierces doublées,108
+C3,La m,Tierces doublées,92
+C3,Sol M,Tierces doublées,100
+C3,Mi m,Tierces doublées,80
+C3,Fa M,Tierces doublées,100
+C3,Ré m,Tierces doublées,80
+C3,Ré M,Tierces doublées,80
+C3,Si m,Tierces doublées,72
+C3,Sib M,Tierces doublées,80
+C3,Sol m,Tierces doublées,66
+C3,La M,Tierces doublées,72
+C3,Fa# m,Tierces doublées,60
+C3,Mib M,Tierces doublées,72
+C3,Do m,Tierces doublées,60
+C3,Mi M,Tierces doublées,66
+C3,Do# m,Tierces doublées,60
+C3,Lab M,Tierces doublées,66
+C3,Fa m,Tierces doublées,60
+C3,Do M,Arpèges,108
+C3,La m,Arpèges,96
+C3,Sol M,Arpèges,96
+C3,Mi m,Arpèges,80
+C3,Fa M,Arpèges,96
+C3,Ré m,Arpèges,80
+C3,Ré M,Arpèges,80
+C3,Si m,Arpèges,73
+C3,Sib M,Arpèges,80
+C3,Sol m,Arpèges,72
+C3,La M,Arpèges,72
+C3,Fa# m,Arpèges,66
+C3,Mib M,Arpèges,72
+C3,Do m,Arpèges,66
+C3,Mi M,Arpèges,66
+C3,Do# m,Arpèges,60
+C3,Lab M,Arpèges,66
+C3,Fa m,Arpèges,60
+CPES,Do M,Diatonique lié,160
+CPES,La m,Diatonique lié,160
+CPES,Sol M,Diatonique lié,160
+CPES,Mi m,Diatonique lié,144
+CPES,Fa M,Diatonique lié,160
+CPES,Ré m,Diatonique lié,138
+CPES,Ré M,Diatonique lié,152
+CPES,Si m,Diatonique lié,144
+CPES,Sib M,Diatonique lié,152
+CPES,Sol m,Diatonique lié,144
+CPES,La M,Diatonique lié,144
+CPES,Fa# m,Diatonique lié,138
+CPES,Mib M,Diatonique lié,144
+CPES,Do m,Diatonique lié,138
+CPES,Do M,Diatonique détaché,132
+CPES,La m,Diatonique détaché,132
+CPES,Sol M,Diatonique détaché,132
+CPES,Mi m,Diatonique détaché,126
+CPES,Fa M,Diatonique détaché,132
+CPES,Ré m,Diatonique détaché,126
+CPES,Ré M,Diatonique détaché,132
+CPES,Si m,Diatonique détaché,126
+CPES,Sib M,Diatonique détaché,132
+CPES,Sol m,Diatonique détaché,126
+CPES,La M,Diatonique détaché,126
+CPES,Fa# m,Diatonique détaché,120
+CPES,Mib M,Diatonique détaché,126
+CPES,Do m,Diatonique détaché,120
+CPES,Do M,Secondes,160
+CPES,La m,Secondes,160
+CPES,Sol M,Secondes,160
+CPES,Mi m,Secondes,160
+CPES,Fa M,Secondes,160
+CPES,Ré m,Secondes,160
+CPES,Ré M,Secondes,144
+CPES,Si m,Secondes,144
+CPES,Sib M,Secondes,144
+CPES,Sol m,Secondes,144
+CPES,La M,Secondes,144
+CPES,Fa# m,Secondes,144
+CPES,Mib M,Secondes,144
+CPES,Do m,Secondes,144
+CPES,Do M,Secondes doublées,100
+CPES,La m,Secondes doublées,100
+CPES,Sol M,Secondes doublées,100
+CPES,Mi m,Secondes doublées,92
+CPES,Fa M,Secondes doublées,100
+CPES,Ré m,Secondes doublées,86
+CPES,Ré M,Secondes doublées,92
+CPES,Si m,Secondes doublées,86
+CPES,Sib M,Secondes doublées,92
+CPES,Sol m,Secondes doublées,86
+CPES,La M,Secondes doublées,86
+CPES,Fa# m,Secondes doublées,80
+CPES,Mib M,Secondes doublées,86
+CPES,Do m,Secondes doublées,80
+CPES,Do M,Tierces,120
+CPES,La m,Tierces,112
+CPES,Sol M,Tierces,120
+CPES,Mi m,Tierces,112
+CPES,Fa M,Tierces,120
+CPES,Ré m,Tierces,112
+CPES,Ré M,Tierces,112
+CPES,Si m,Tierces,106
+CPES,Sib M,Tierces,112
+CPES,Sol m,Tierces,106
+CPES,La M,Tierces,100
+CPES,Fa# m,Tierces,92
+CPES,Mib M,Tierces,100
+CPES,Do m,Tierces,92
+CPES,Do M,Tierces doublées,120
+CPES,La m,Tierces doublées,112
+CPES,Sol M,Tierces doublées,120
+CPES,Mi m,Tierces doublées,112
+CPES,Fa M,Tierces doublées,120
+CPES,Ré m,Tierces doublées,112
+CPES,Ré M,Tierces doublées,112
+CPES,Si m,Tierces doublées,106
+CPES,Sib M,Tierces doublées,112
+CPES,Sol m,Tierces doublées,106
+CPES,La M,Tierces doublées,100
+CPES,Fa# m,Tierces doublées,92
+CPES,Mib M,Tierces doublées,100
+CPES,Do m,Tierces doublées,92
+CPES,Do M,Arpèges,132
+CPES,La m,Arpèges,132
+CPES,Sol M,Arpèges,120
+CPES,Mi m,Arpèges,120
+CPES,Fa M,Arpèges,120
+CPES,Ré m,Arpèges,120
+CPES,Ré M,Arpèges,116
+CPES,Si m,Arpèges,116
+CPES,Sib M,Arpèges,116
+CPES,Sol m,Arpèges,116
+CPES,La M,Arpèges,112
+CPES,Fa# m,Arpèges,112
+CPES,Mib M,Arpèges,112
+CPES,Do m,Arpèges,112

@@ -12,12 +12,19 @@ import CercleQuintes, { CLES_CERCLE } from './CercleQuintes.tsx'
 import Metronome from './Metronome.tsx'
 import TableauTempi, { type LigneTableau } from './TableauTempi.tsx'
 import ListeSeances from './ListeSeances.tsx'
+import AjoutExercice from './AjoutExercice.tsx'
+import SourceDonnees from './SourceDonnees.tsx'
 import { bornerTempo } from './TempoKnob.tsx'
 import type { FigureId } from './figures.ts'
 import {
   EXERCICES, affichageTonalite, exercicesPour, labelExercice, niveauxDisponibles,
-  parserGammesCsv, tonalitesDisponibles, type LigneGamme,
+  tonalitesDisponibles, type LigneGamme,
 } from './gammesData.ts'
+import { appliquerUrlPerso, charger, lireCachePourSource, lireUrlPerso, type Source } from './sourceGammes.ts'
+import {
+  ajouterLocal, creerExercicePerso, lireExercicesPerso, pousserExercice, retirerLocal,
+  supprimerExercice, synchroniserExercices, type ExercicePerso,
+} from './exercicesPerso.ts'
 import {
   lireSeances, nouvelId, pousserFirestore, sauverLocal, statsExercice, supprimerFirestore,
   supprimerLocal, synchroniser, type Seance,
@@ -44,7 +51,11 @@ const titreSection: React.CSSProperties = {
 
 export default function CarnetGammesPage() {
   const { user } = useAuth()
-  const [lignes, setLignes] = useState<LigneGamme[] | null>(null)
+  const [lignes, setLignes] = useState<LigneGamme[] | null>(() => lireCachePourSource(lireUrlPerso()))
+  const [source, setSource] = useState<Source>(() => (lireUrlPerso() ? 'perso' : 'classe'))
+  const [horsLigne, setHorsLigne] = useState(false)
+  const [urlPerso, setUrlPerso] = useState<string | null>(lireUrlPerso)
+  const [exosPerso, setExosPerso] = useState<ExercicePerso[]>(lireExercicesPerso)
   const [erreur, setErreur] = useState(false)
 
   const [niveau, setNiveau] = useState('')
@@ -54,6 +65,7 @@ export default function CarnetGammesPage() {
   const [sale, setSale] = useState(false)
   const [seances, setSeances] = useState<Seance[]>(lireSeances)
   const [tempo, setTempo] = useState(80)
+  // Toujours « noire » à l'ouverture de la page : la figure n'est ni mémorisée ni imposée par les données.
   const [figure, setFigure] = useState<FigureId>('noire')
   const [message, setMessage] = useState('')
 
@@ -68,30 +80,41 @@ export default function CarnetGammesPage() {
     return () => { meta.remove(); document.title = titre }
   }, [])
 
-  // Chargement du CSV de référence.
+  // Document de la classe (ou URL personnalisée) ; le cache s'affiche déjà, le réseau met à jour.
   useEffect(() => {
     let annule = false
-    fetch('/carnet-gammes.csv')
-      .then(r => { if (!r.ok) throw new Error(String(r.status)); return r.text() })
-      .then(t => {
+    charger(lireUrlPerso())
+      .then(c => {
         if (annule) return
-        const l = parserGammesCsv(t)
-        if (!l.length) { setErreur(true); return }
-        const niveaux = niveauxDisponibles(l)
-        const prefs = lirePrefs()
-        const n = prefs.niveau && niveaux.includes(prefs.niveau) ? prefs.niveau : niveaux[0]
-        setLignes(l)
-        setNiveau(n)
-        setTonalite(tonalitePar(tonalitesDisponibles(l, n), prefs.tonalite))
+        setLignes(c.lignes)
+        setSource(c.source)
+        setHorsLigne(c.horsLigne)
       })
       .catch(() => { if (!annule) setErreur(true) })
     return () => { annule = true }
   }, [])
 
+  // Valide la sélection dès que les données changent (premier chargement, nouvelle source).
+  useEffect(() => {
+    if (!lignes) return
+    const ns = niveauxDisponibles(lignes)
+    if (!ns.length) return
+    if (!niveau || (!courante && !ns.includes(niveau))) {
+      const prefs = lirePrefs()
+      const n = prefs.niveau && ns.includes(prefs.niveau) ? prefs.niveau : ns[0]
+      setNiveau(n)
+      setTonalite(tonalitePar(tonalitesDisponibles(lignes, n), prefs.tonalite))
+    } else if (!courante && !tonalitesDisponibles(lignes, niveau).has(tonalite)) {
+      setTonalite(tonalitePar(tonalitesDisponibles(lignes, niveau), tonalite))
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lignes])
+
   // Fusion local ↔ Firestore à la connexion.
   useEffect(() => {
     if (!user) return
     synchroniser(user.uid).then(setSeances).catch(() => { /* hors ligne : on reste en local */ })
+    synchroniserExercices(user.uid).then(setExosPerso).catch(() => { /* idem */ })
   }, [user])
 
   useEffect(() => {
@@ -110,21 +133,31 @@ export default function CarnetGammesPage() {
 
   const lignesTableau: LigneTableau[] = useMemo(() => {
     if (!lignes) return []
-    const figureCsv = (ex: string) => lignes.find(l => l.niveau === niveau && l.tonalite === tonalite && l.exercice === ex)?.figure
-    // Séance rouverte : ses objectifs mémorisés priment sur le CSV actuel.
-    const base: { exercice: string; objectif?: number }[] = courante
-      ? [...new Set([...Object.keys(courante.objectifs), ...Object.keys(courante.saisis)])]
-          .map(ex => ({ exercice: ex, objectif: courante.objectifs[ex] }))
-      : exercicesPour(lignes, niveau, tonalite).map(l => ({ exercice: l.exercice, objectif: l.tempo }))
-    const rang = (id: string) => { const i = EXERCICES.findIndex(e => e.id === id); return i < 0 ? 99 : i }
-    return base.sort((a, b) => rang(a.exercice) - rang(b.exercice)).map(b => ({
-      exercice: b.exercice,
-      label: labelExercice(b.exercice),
-      objectif: b.objectif,
-      figure: figureCsv(b.exercice),
+    const rang = (id: string) => { const i = EXERCICES.findIndex(e => e.id === id); return i < 0 ? EXERCICES.length : i }
+    const estPerso = (id: string) => exosPerso.some(e => e.id === id)
+    let base: Omit<LigneTableau, 'max' | 'precedent'>[]
+    if (courante) {
+      // Séance rouverte : objectifs et libellés mémorisés primant sur les données actuelles.
+      base = [...new Set([...Object.keys(courante.objectifs), ...Object.keys(courante.saisis)])]
+        .sort((a, b) => rang(a) - rang(b))
+        .map(ex => ({
+          exercice: ex,
+          label: courante.libelles?.[ex] ?? labelExercice(ex),
+          objectif: courante.objectifs[ex],
+          perso: estPerso(ex),
+        }))
+    } else {
+      const csv = exercicesPour(lignes, niveau, tonalite)
+        .map(l => ({ exercice: l.exercice, label: l.libelle ?? labelExercice(l.exercice), objectif: l.tempo as number | undefined, perso: false }))
+      const perso = exosPerso.filter(e => e.niveau === niveau)
+        .map(e => ({ exercice: e.id, label: e.nom, objectif: e.objectif, perso: true }))
+      base = [...csv, ...perso]
+    }
+    return base.map(b => ({
+      ...b,
       ...statsExercice(seances, niveau, tonalite, b.exercice, { id: courante?.id ?? null, date: courante?.date ?? '' }),
     }))
-  }, [lignes, niveau, tonalite, courante, seances])
+  }, [lignes, niveau, tonalite, courante, seances, exosPerso])
 
   // ── Actions ────────────────────────────────────────────────────────────────
 
@@ -156,7 +189,6 @@ export default function CarnetGammesPage() {
     setSaisis(Object.fromEntries(Object.entries(s.saisis).map(([k, v]) => [k, String(v)])))
     setCourante(s)
     setSale(false)
-    if (s.figure) setFigure(s.figure)
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
@@ -171,9 +203,31 @@ export default function CarnetGammesPage() {
     setSale(true)
   }
 
-  const envoyer = (t: number, f?: FigureId) => {
-    setTempo(bornerTempo(t))
-    if (f) setFigure(f)
+  const envoyer = (t: number) => setTempo(bornerTempo(t))
+
+  const ajouterExercice = (nom: string, objectif?: number) => {
+    const e = creerExercicePerso(niveau, nom, objectif)
+    setExosPerso(ajouterLocal(e))
+    if (user) pousserExercice(user.uid, e).catch(() => { /* file d'attente Firestore */ })
+  }
+
+  const retirerExercice = (id: string) => {
+    setExosPerso(retirerLocal(id))
+    setSaisis(prev => { const { [id]: _, ...reste } = prev; return reste })
+    if (user) supprimerExercice(user.uid, id).catch(() => { /* idem */ })
+  }
+
+  const appliquerSource = async (url: string | null): Promise<string | null> => {
+    try {
+      const c = await appliquerUrlPerso(url)
+      setLignes(c.lignes)
+      setSource(c.source)
+      setHorsLigne(c.horsLigne)
+      setUrlPerso(lireUrlPerso())
+      return null
+    } catch (e) {
+      return e instanceof Error ? e.message : 'Chargement impossible.'
+    }
   }
 
   const nombresSaisis = Object.fromEntries(
@@ -187,11 +241,15 @@ export default function CarnetGammesPage() {
     const objectifs = Object.fromEntries(
       lignesTableau.filter(l => l.objectif !== undefined).map(l => [l.exercice, l.objectif as number]),
     )
+    const libelles = Object.fromEntries(
+      lignesTableau.filter(l => l.label !== labelExercice(l.exercice)).map(l => [l.exercice, l.label]),
+    )
     const s: Seance = {
       id: courante?.id ?? nouvelId(),
       date: courante?.date ?? maintenant,
       maj: maintenant,
-      niveau, tonalite, objectifs, saisis: nombresSaisis, figure,
+      niveau, tonalite, objectifs, saisis: nombresSaisis,
+      ...(Object.keys(libelles).length && { libelles }),
       schemaVersion: 1,
     }
     setSeances(sauverLocal(s))
@@ -266,10 +324,11 @@ export default function CarnetGammesPage() {
                 )}
               </div>
               {lignesTableau.length ? (
-                <TableauTempi lignes={lignesTableau} saisis={saisis} onSaisie={saisie} onEnvoyer={envoyer} />
+                <TableauTempi lignes={lignesTableau} saisis={saisis} onSaisie={saisie} onEnvoyer={envoyer} onSupprimerPerso={retirerExercice} />
               ) : (
                 <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: 14 }}>Aucun exercice défini pour cette tonalité à ce niveau.</p>
               )}
+              {!courante && <AjoutExercice onAjouter={ajouterExercice} />}
               <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'center' }}>
                 <button onClick={sauvegarder} disabled={!peutSauver}
                   style={{ width: '100%', maxWidth: 360, minHeight: 52, borderRadius: 14, border: 'none', fontSize: 16, fontWeight: 700,
@@ -291,6 +350,10 @@ export default function CarnetGammesPage() {
                   ? 'Tes séances sont synchronisées avec ton compte.'
                   : <>Les séances sont gardées sur cet appareil. <Link to="/login" style={{ color: '#c084fc' }}>Connecte-toi</Link> pour les retrouver partout.</>}
               </p>
+            </section>
+
+            <section style={carte}>
+              <SourceDonnees source={source} horsLigne={horsLigne} urlPerso={urlPerso} onAppliquer={appliquerSource} />
             </section>
           </>
         )}

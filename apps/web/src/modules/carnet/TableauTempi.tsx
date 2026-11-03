@@ -1,13 +1,12 @@
 // Tableau des tempi : objectif · max atteint · séance précédente · saisie actuelle.
 // Toute valeur affichée est cliquable et envoie son tempo au métronome.
 
-import type { FigureId } from './figures.ts'
-
 export interface LigneTableau {
   exercice: string
   label: string
   objectif?: number
-  figure?: FigureId
+  /** Exercice ajouté par l'élève (supprimable). */
+  perso?: boolean
   max?: number
   precedent?: number
 }
@@ -16,18 +15,19 @@ interface Props {
   lignes: LigneTableau[]
   saisis: Record<string, string>
   onSaisie: (exercice: string, valeur: string) => void
-  onEnvoyer: (tempo: number, figure?: FigureId) => void
+  onEnvoyer: (tempo: number) => void
+  onSupprimerPerso?: (exercice: string) => void
 }
 
 const cellule: React.CSSProperties = { padding: '4px 3px', textAlign: 'center', verticalAlign: 'middle' }
 const entete: React.CSSProperties = { ...cellule, fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', lineHeight: 1.2 }
 
-export default function TableauTempi({ lignes, saisis, onSaisie, onEnvoyer }: Props) {
-  const valeurCliquable = (v: number | undefined, figure?: FigureId) =>
+export default function TableauTempi({ lignes, saisis, onSaisie, onEnvoyer, onSupprimerPerso }: Props) {
+  const valeurCliquable = (v: number | undefined) =>
     v === undefined ? (
       <span style={{ color: 'var(--text-muted)' }}>—</span>
     ) : (
-      <button onPointerDown={e => e.stopPropagation()} onClick={() => onEnvoyer(v, figure)}
+      <button onPointerDown={e => e.stopPropagation()} onClick={() => onEnvoyer(v)}
         aria-label={`Envoyer ${v} au métronome`}
         style={{ minWidth: 48, minHeight: 44, border: '1px solid var(--border-c)', borderRadius: 10,
           background: 'var(--surface-2)', color: 'var(--text)', fontSize: 16, fontWeight: 600,
@@ -55,8 +55,19 @@ export default function TableauTempi({ lignes, saisis, onSaisie, onEnvoyer }: Pr
             const atteint = Number.isFinite(n) && l.objectif !== undefined && n >= l.objectif
             return (
               <tr key={l.exercice} style={{ borderTop: '1px solid var(--border-c)' }}>
-                <td style={{ ...cellule, textAlign: 'left', fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>{l.label}</td>
-                <td style={cellule}>{valeurCliquable(l.objectif, l.figure)}</td>
+                <td style={{ ...cellule, textAlign: 'left', fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>
+                  {l.label}
+                  {l.perso && onSupprimerPerso && (
+                    <button onPointerDown={e => e.stopPropagation()}
+                      onClick={() => { if (window.confirm(`Supprimer l’exercice « ${l.label} » ?`)) onSupprimerPerso(l.exercice) }}
+                      aria-label={`Supprimer l’exercice ${l.label}`}
+                      style={{ marginLeft: 4, width: 44, height: 44, border: 'none', background: 'transparent', color: 'var(--text-muted)',
+                        cursor: 'pointer', verticalAlign: 'middle', padding: 0 }}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
+                    </button>
+                  )}
+                </td>
+                <td style={cellule}>{valeurCliquable(l.objectif)}</td>
                 <td style={cellule}>{valeurCliquable(l.max)}</td>
                 <td style={cellule}>{valeurCliquable(l.precedent)}</td>
                 <td style={cellule}>

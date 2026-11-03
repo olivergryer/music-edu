@@ -82,7 +82,7 @@ export async function effacerMesDonnees(): Promise<ResultatEffacement> {
       teacherCode = (profil.data()?.teacherCode as string | undefined) ?? null
     } catch { /* profil illisible : rien à nettoyer côté teacherCodes */ }
 
-    for (const sousCollection of ['history', 'sessions', 'calibrations', 'progress', 'carnet']) {
+    for (const sousCollection of ['history', 'sessions', 'calibrations', 'progress', 'carnet', 'carnet-exercices']) {
       try {
         resultat.documentsSupprimes += await viderSousCollection(uid, sousCollection)
       } catch (err) {

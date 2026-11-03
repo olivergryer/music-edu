@@ -14,6 +14,7 @@ import banniereLight from './assets/banniere_light.svg'
 import { SHOW_TEST_BADGE } from './featureFlags'
 import { IS_DEV } from './isDev'
 import { MODULES, MODULE_IDS } from './lib/modules'
+import { peutVoirCarnet } from './modules/carnet/acces'
 
 // Cartes dérivées du registre unique (lib/modules.ts) — ajouter un module = 1 ligne là-bas.
 const MODULE_CARDS = MODULE_IDS.map(id => ({ id, to: MODULES[id].route, ...MODULES[id] }))
@@ -118,6 +119,22 @@ export default function HubPage() {
               : <ModuleCard key={m.id} {...m} testPhase={testPhase} />
           })}
         </div>
+
+        {/* Carnet de gammes : raccourci réservé à la classe (admin + élèves du prof), pour la PWA. */}
+        {peutVoirCarnet(user?.uid, profile) && (
+          <Link
+            to="/carnet/gammes"
+            className="no-underline mt-4 flex items-center gap-3 text-app"
+            style={{ minHeight: 56, padding: '10px 16px', borderRadius: 16, border: '1px solid var(--border-c)', background: 'var(--surface)' }}
+          >
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M8 21h8l-2-17h-4z" />
+              <path d="M12 16L16 6" />
+              <circle cx="15.2" cy="8.2" r="1" fill="#7c3aed" />
+            </svg>
+            <span className="font-bold text-sm">Carnet de gammes</span>
+          </Link>
+        )}
 
         {/* Précisions de contenu — visibles partout, contrairement au bandeau :
             elles annoncent ce qui manque encore, pas une phase de test. */}

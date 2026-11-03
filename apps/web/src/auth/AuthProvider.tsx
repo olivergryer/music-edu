@@ -8,6 +8,7 @@ interface UserProfile {
   displayName: string
   teacherCode: string | null
   profIds: string[]
+  profCodes?: string[]
 }
 
 interface AuthContextValue {

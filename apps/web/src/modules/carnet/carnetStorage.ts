@@ -20,7 +20,10 @@ export interface Seance {
   tonalite: string
   objectifs: Record<string, number>  // copie du CSV au moment de la séance
   saisis: Record<string, number>
+  /** Anciennes séances seulement : la figure n'est plus enregistrée. */
   figure?: FigureId
+  /** Libellés des exercices hors liste standard (exercices ajoutés, CSV perso). */
+  libelles?: Record<string, string>
   schemaVersion: 1
 }
 
@@ -57,7 +60,9 @@ export function supprimerLocal(id: string): Seance[] {
 // ─── Firestore ────────────────────────────────────────────────────────────────
 
 export async function pousserFirestore(uid: string, seance: Seance): Promise<void> {
-  await setDoc(doc(db, 'users', uid, 'carnet', seance.id), { ...seance, expireAt: dateExpiration() })
+  // Firestore refuse `undefined` : on retire les clés vides.
+  const propre = JSON.parse(JSON.stringify(seance)) as Seance
+  await setDoc(doc(db, 'users', uid, 'carnet', seance.id), { ...propre, expireAt: dateExpiration() })
 }
 
 export async function supprimerFirestore(uid: string, id: string): Promise<void> {

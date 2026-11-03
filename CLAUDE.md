@@ -25,7 +25,7 @@ Firebase Spark : Firestore + Authentication (email/password). **DB partagée dev
 | `/harmonie/cadences` | `modules/harmonie/CadencesPage.tsx` — reconnaissance de cadences, niveau 3 + palier « toutes » hors barème | public |
 | `/harmonie/intervalles` | `modules/harmonie/IntervallesPage.tsx` — reconnaissance d'intervalles, hors barème | public |
 | `/harmonie/banc` | `modules/harmonie/BancPage.tsx` — banc d'écoute, `IS_DEV` seulement | dev |
-| `/carnet/gammes` | `modules/carnet/CarnetGammesPage.tsx` — carnet de gammes de classe (cercle des quintes, métronome, tempi). **Aucun lien depuis l'appli**, `noindex`, pas de `Disallow` robots. Données : `public/carnet-gammes.csv` (`niveau,tonalite,exercice,tempo,figure`, format long) | public |
+| `/carnet/gammes` | `modules/carnet/CarnetGammesPage.tsx` — carnet de gammes de classe (cercle des quintes, métronome, tempi, exercices perso). **Aucun lien tapable** : icône Hub réservée admin + élèves du prof TSVX-54 (`modules/carnet/acces.ts`), `noindex`, pas de `Disallow` robots. Données : document Google Sheets publié de la classe (une feuille = un niveau, lue via `pubhtml`) → cache local → secours `public/carnet-gammes.csv` (format long `niveau,tonalite,exercice,tempo`, aussi modèle téléchargeable) ; URL CSV perso possible (`sourceGammes.ts`) | public |
 | `/profil` | `ProfilPage.jsx` → redirect dashboard selon rôle | protégée |
 | `/dashboard/eleve` | `pages/DashboardEleve.tsx` | protégée |
 | `/dashboard/prof` | `pages/DashboardProf.tsx` | protégée |
@@ -64,7 +64,10 @@ users/{uid}/progress/data
   xp · streak · trophies · modules { rythme · theorie · accordeur }
 
 users/{uid}/carnet/{id}
-  séances du carnet de gammes : date · maj · niveau · tonalite · objectifs{} · saisis{} · figure
+  séances du carnet de gammes : date · maj · niveau · tonalite · objectifs{} · saisis{} · libelles{}
+
+users/{uid}/carnet-exercices/{id}
+  exercices ajoutés par l'élève (tous les tonalités d'un niveau) : niveau · nom · objectif? · maj
 
 users/{uid}/history/{sessionId}
   date · module · xp · medal · createdAt (serverTimestamp)
