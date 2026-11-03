@@ -5,6 +5,11 @@
 // centre. Un appui sur un nom choisit la tonalité ; un appui sur une paire
 // voisine la ramène au centre. La roue est cyclique.
 //
+// Geste « à la iOS » : le doigt entraîne la roue 1:1 ; au lâcher, l'élan (vitesse
+// mesurée sur les ~100 dernières ms) la fait continuer, puis un ressort
+// quasi-critique la pose sur la paire visée, avec un très léger dépassement. Un
+// cran de vibration accompagne chaque paire qui passe sous la fenêtre.
+//
 // `onSelect` renvoie false quand le parent refuse le changement (ex. saisies non
 // sauvegardées) : la roue revient alors à la tonalité courante.
 
@@ -20,6 +25,13 @@ const CY = 34 + R_MAJ                   // la majeure centrale se lit à y = 34
 const PAS_DEG = 30
 const PAS_PX = R_MAJ * PAS_DEG * Math.PI / 180   // distance entre deux paires, en unités SVG
 const SEUIL_DRAG = 6
+// Ressort de pose (unités : paires, secondes) — raideur 170, amortissement ~0,9 du critique.
+const RAIDEUR = 170
+const AMORTISSEMENT = 0.9 * 2 * Math.sqrt(RAIDEUR)
+// Élan : distance parcourue = vitesse / FROTTEMENT (décroissance exponentielle).
+const FROTTEMENT = 6
+const FENETRE_VITESSE_MS = 100
+const PORTEE_MAX = 5
 const COULEUR_MAJ = '#7c3aed'
 const COULEUR_MIN = '#0ea5e9'
 
@@ -39,19 +51,39 @@ export default function RoueTonalites({ tonalite, disponibles, onSelect }: Props
   const [pos, setPos] = useState(idxProp)
   const posRef = useRef(idxProp)
   const anim = useRef(0)
-  const drag = useRef<{ x: number; pos0: number; deplace: boolean } | null>(null)
+  const drag = useRef<{ x: number; pos0: number; deplace: boolean; echantillons: { t: number; pos: number }[] } | null>(null)
   const clicSupprime = useRef(false)
   const dernierEntier = useRef(idxProp)
   const svgRef = useRef<SVGSVGElement>(null)
 
-  const poser = useCallback((v: number) => { posRef.current = v; setPos(v) }, [])
+  const poser = useCallback((v: number) => {
+    posRef.current = v
+    setPos(v)
+    const r = Math.round(v)
+    if (r !== dernierEntier.current) {
+      dernierEntier.current = r
+      try { navigator.vibrate?.(6) } catch { /* non supporté */ }
+    }
+  }, [])
 
-  const animerVers = useCallback((cible: number) => {
+  /** Ressort amorti vers `cible` (en paires), avec la vitesse initiale `v0` (paires/s). */
+  const animerVers = useCallback((cible: number, v0 = 0) => {
     cancelAnimationFrame(anim.current)
-    const pas = () => {
-      const d = cible - posRef.current
-      if (Math.abs(d) < 0.003) { poser(cible); return }
-      poser(posRef.current + d * 0.28)
+    let v = v0
+    let dernier = performance.now()
+    const pas = (t: number) => {
+      let dt = Math.min((t - dernier) / 1000, 1 / 20)
+      dernier = t
+      // Sous-pas de 4 ms : intégration stable même sur un écran 30 Hz.
+      while (dt > 0) {
+        const h = Math.min(dt, 0.004)
+        const a = -RAIDEUR * (posRef.current - cible) - AMORTISSEMENT * v
+        v += a * h
+        posRef.current += v * h
+        dt -= h
+      }
+      if (Math.abs(posRef.current - cible) < 0.002 && Math.abs(v) < 0.02) { poser(cible); return }
+      poser(posRef.current)
       anim.current = requestAnimationFrame(pas)
     }
     anim.current = requestAnimationFrame(pas)
@@ -91,7 +123,7 @@ export default function RoueTonalites({ tonalite, disponibles, onSelect }: Props
   // ── Geste ────────────────────────────────────────────────────────────────
   const onDown = (e: React.PointerEvent) => {
     cancelAnimationFrame(anim.current)
-    drag.current = { x: e.clientX, pos0: posRef.current, deplace: false }
+    drag.current = { x: e.clientX, pos0: posRef.current, deplace: false, echantillons: [] }
   }
   const onMove = (e: React.PointerEvent) => {
     const d = drag.current
@@ -105,11 +137,9 @@ export default function RoueTonalites({ tonalite, disponibles, onSelect }: Props
     const echelle = svgRef.current!.getBoundingClientRect().width / W
     const v = d.pos0 - dx / (PAS_PX * echelle)
     poser(v)
-    const r = Math.round(v)
-    if (r !== dernierEntier.current) {
-      dernierEntier.current = r
-      try { navigator.vibrate?.(6) } catch { /* non supporté */ }
-    }
+    const maintenant = performance.now()
+    d.echantillons.push({ t: maintenant, pos: v })
+    while (d.echantillons.length > 2 && maintenant - d.echantillons[0].t > FENETRE_VITESSE_MS) d.echantillons.shift()
   }
   const onUp = () => {
     const d = drag.current
@@ -117,12 +147,25 @@ export default function RoueTonalites({ tonalite, disponibles, onSelect }: Props
     if (!d?.deplace) return
     clicSupprime.current = true
     window.setTimeout(() => { clicSupprime.current = false }, 0)
-    const n = entierDisponible(posRef.current)
+
+    // Vitesse au lâcher (paires/s) ; nulle si le doigt s'est arrêté avant de lever.
+    const e = d.echantillons
+    const maintenant = performance.now()
+    let v = 0
+    if (e.length >= 2 && maintenant - e[e.length - 1].t < 80) {
+      const dt = (e[e.length - 1].t - e[0].t) / 1000
+      if (dt > 0.005) v = (e[e.length - 1].pos - e[0].pos) / dt
+    }
+    // Atterrissage projeté (élan qui s'éteint), borné pour rester contrôlable.
+    const projete = posRef.current + Math.max(-PORTEE_MAX, Math.min(PORTEE_MAX, v / FROTTEMENT))
+
+    const n = entierDisponible(projete)
     if (n === null) { retour(); return }
     const paire = PAIRES[mod12(n)]
     const cle = clePourMode(paire, majeur, disponibles) ?? clePourMode(paire, !majeur, disponibles)
     if (!cle) { retour(); return }
-    choisir(n, cle)
+    if (cle === tonalite || onSelect(cle)) animerVers(n, v)
+    else retour()
   }
 
   // ── Rendu ────────────────────────────────────────────────────────────────
@@ -160,8 +203,9 @@ export default function RoueTonalites({ tonalite, disponibles, onSelect }: Props
       if (y > H - 4) return null
       const choisie = cles.includes(tonalite)
       const taille = (estMaj ? 24 : 20) * facteur
-      const largeur = (estMaj ? 70 : 62) * facteur
-      const hauteur = (estMaj ? 38 : 34) * facteur
+      // Pastille proportionnée au texte, avec une vraie marge autour.
+      const largeur = (affichageTonalite(affichee).length * 0.56 * taille + (estMaj ? 40 : 26))
+      const hauteur = taille * (estMaj ? 1.85 : 1.9)
       return (
         <g key={`${n}-${estMaj ? 'M' : 'm'}`}
           role="button" tabIndex={cle ? 0 : -1} aria-label={affichageTonalite(affichee)} aria-pressed={choisie}
@@ -192,7 +236,7 @@ export default function RoueTonalites({ tonalite, disponibles, onSelect }: Props
       <circle cx={CX} cy={CY} r={R_MIN} fill="none" stroke={COULEUR_MIN} strokeOpacity={0.16} strokeWidth={EP} />
       {separateurs}
       {/* Fenêtre fixe : la paire au centre est celle qui sera choisie */}
-      <rect x={CX - 45} y={5} width={90} height={H - 10} rx={26} fill="rgba(192,132,252,0.07)" stroke="#c084fc" strokeWidth={2} />
+      <rect x={CX - 55} y={5} width={110} height={H - 10} rx={26} fill="rgba(192,132,252,0.07)" stroke="#c084fc" strokeWidth={2} />
       {items}
     </svg>
   )
