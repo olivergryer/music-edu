@@ -1,9 +1,9 @@
-// Roue des tonalités : arc rotatif du cercle des quintes.
-//
-// Seul le haut de la roue est visible (5 paires). On la fait glisser au pouce,
-// elle s'aimante sur une paire (armure) ; la majeure est toujours au-dessus, sa
-// relative mineure en dessous. Un appui sur le nom choisit la tonalité ; un
-// appui sur une paire voisine la ramène au centre. La roue est cyclique.
+// Roue des tonalités : deux disques concentriques du cercle des quintes, dont on
+// ne voit que le haut. Anneau extérieur (violet) = majeures, anneau intérieur
+// (bleu) = relatives mineures, séparés par un espace net. On la fait glisser au
+// pouce : elle s'aimante sur une paire (armure) placée dans la fenêtre fixe du
+// centre. Un appui sur un nom choisit la tonalité ; un appui sur une paire
+// voisine la ramène au centre. La roue est cyclique.
 //
 // `onSelect` renvoie false quand le parent refuse le changement (ex. saisies non
 // sauvegardées) : la roue revient alors à la tonalité courante.
@@ -12,10 +12,16 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { PAIRES, clePourMode, indexPaire } from './quintes.ts'
 import { affichageTonalite } from './gammesData.ts'
 
-const W = 360, H = 150, CX = 180, CY = 140
-const R_MAJ = 112, R_MIN = 68, PAS_DEG = 30
+// Repère SVG : centre des disques sous la zone visible.
+const W = 360, H = 134, CX = 180
+const R_MAJ = 175, R_MIN = 115          // rayons médians des deux anneaux
+const EP = 50                           // épaisseur de chaque anneau (espace entre les deux : 10)
+const CY = 34 + R_MAJ                   // la majeure centrale se lit à y = 34
+const PAS_DEG = 30
 const PAS_PX = R_MAJ * PAS_DEG * Math.PI / 180   // distance entre deux paires, en unités SVG
 const SEUIL_DRAG = 6
+const COULEUR_MAJ = '#7c3aed'
+const COULEUR_MIN = '#0ea5e9'
 
 const mod12 = (n: number) => ((n % 12) + 12) % 12
 const delta12 = (cible: number, depuis: number) => ((((cible - depuis) % 12) + 18) % 12) - 6  // ∈ [-6, 6)
@@ -121,16 +127,28 @@ export default function RoueTonalites({ tonalite, disponibles, onSelect }: Props
 
   // ── Rendu ────────────────────────────────────────────────────────────────
   const centre = Math.round(pos)
+  const separateurs: React.ReactNode[] = []
   const items: React.ReactNode[] = []
+
   for (let k = -3; k <= 3; k++) {
     const n = centre + k
     const angle = (n - pos) * PAS_DEG
     const abs = Math.abs(angle)
-    if (abs > 82) continue
-    const paire = PAIRES[mod12(n)]
     const rad = angle * Math.PI / 180
-    const facteur = Math.max(0.55, 1 - abs / 110)
-    const opaciteBase = Math.max(0.35, 1 - abs / 120)
+
+    // Traits radiaux entre deux secteurs (la roue tourne visiblement).
+    const sep = (n - pos + 0.5) * PAS_DEG * Math.PI / 180
+    separateurs.push(
+      <line key={`s${n}`}
+        x1={CX + (R_MIN - EP / 2) * Math.sin(sep)} y1={CY - (R_MIN - EP / 2) * Math.cos(sep)}
+        x2={CX + (R_MAJ + EP / 2) * Math.sin(sep)} y2={CY - (R_MAJ + EP / 2) * Math.cos(sep)}
+        stroke="var(--border-c)" strokeWidth={1} opacity={0.9} />,
+    )
+
+    if (abs > 75) continue
+    const paire = PAIRES[mod12(n)]
+    const facteur = Math.max(0.72, 1 - abs / 140)
+    const opaciteBase = Math.max(0.45, 1 - abs / 110)
 
     const etiquette = (estMaj: boolean) => {
       const cles = estMaj ? paire.maj : paire.min
@@ -139,10 +157,11 @@ export default function RoueTonalites({ tonalite, disponibles, onSelect }: Props
       const r = estMaj ? R_MAJ : R_MIN
       const x = CX + r * Math.sin(rad)
       const y = CY - r * Math.cos(rad)
+      if (y > H - 4) return null
       const choisie = cles.includes(tonalite)
-      const taille = (estMaj ? 21 : 16) * facteur
-      const largeur = (estMaj ? 54 : 48) * facteur
-      const hauteur = (estMaj ? 30 : 26) * facteur
+      const taille = (estMaj ? 24 : 20) * facteur
+      const largeur = (estMaj ? 70 : 62) * facteur
+      const hauteur = (estMaj ? 38 : 34) * facteur
       return (
         <g key={`${n}-${estMaj ? 'M' : 'm'}`}
           role="button" tabIndex={cle ? 0 : -1} aria-label={affichageTonalite(affichee)} aria-pressed={choisie}
@@ -150,10 +169,11 @@ export default function RoueTonalites({ tonalite, disponibles, onSelect }: Props
           onClick={() => { if (!clicSupprime.current && cle) choisir(n, cle) }}
           onKeyDown={e => { if (cle && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); choisir(n, cle) } }}
           style={{ cursor: cle ? 'pointer' : 'default', outline: 'none' }}
-          opacity={cle ? opaciteBase : 0.2}>
+          opacity={cle ? opaciteBase : 0.22}>
           <rect x={x - largeur / 2} y={y - hauteur / 2} width={largeur} height={hauteur} rx={hauteur / 2}
-            fill={choisie ? '#7c3aed' : 'transparent'} stroke={choisie ? '#c084fc' : 'none'} strokeWidth={1.5} />
-          <text x={x} y={y} textAnchor="middle" dominantBaseline="central" fontSize={taille} fontWeight={choisie ? 700 : 600}
+            fill={choisie ? (estMaj ? COULEUR_MAJ : COULEUR_MIN) : 'transparent'}
+            stroke={choisie ? '#fff' : 'none'} strokeWidth={2} strokeOpacity={0.85} />
+          <text x={x} y={y} textAnchor="middle" dominantBaseline="central" fontSize={taille} fontWeight={choisie ? 800 : 600}
             fill={choisie ? '#fff' : 'var(--text)'} style={{ pointerEvents: 'none', fontFamily: 'inherit' }}>
             {affichageTonalite(affichee)}
           </text>
@@ -166,12 +186,13 @@ export default function RoueTonalites({ tonalite, disponibles, onSelect }: Props
   return (
     <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`} role="group" aria-label="Roue des tonalités, glisser pour changer d’armure"
       onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp}
-      style={{ width: '100%', maxWidth: 440, display: 'block', margin: '0 auto', touchAction: 'pan-y', userSelect: 'none' }}>
-      {/* Fenêtre fixe : paire au centre */}
-      <rect x={CX - 38} y={6} width={76} height={92} rx={24} fill="rgba(124,58,237,0.08)" stroke="var(--border-c)" strokeWidth={1.5} />
-      {/* Rail */}
-      <path d={`M ${CX - R_MAJ * Math.sin(1.4)} ${CY - R_MAJ * Math.cos(1.4)} A ${R_MAJ} ${R_MAJ} 0 0 1 ${CX + R_MAJ * Math.sin(1.4)} ${CY - R_MAJ * Math.cos(1.4)}`}
-        fill="none" stroke="var(--border-c)" strokeWidth={1} strokeDasharray="2 5" opacity={0.7} />
+      style={{ width: '100%', maxWidth: 460, display: 'block', margin: '0 auto', touchAction: 'pan-y', userSelect: 'none' }}>
+      {/* Deux disques : majeures (violet) à l'extérieur, mineures (bleu) à l'intérieur */}
+      <circle cx={CX} cy={CY} r={R_MAJ} fill="none" stroke={COULEUR_MAJ} strokeOpacity={0.16} strokeWidth={EP} />
+      <circle cx={CX} cy={CY} r={R_MIN} fill="none" stroke={COULEUR_MIN} strokeOpacity={0.16} strokeWidth={EP} />
+      {separateurs}
+      {/* Fenêtre fixe : la paire au centre est celle qui sera choisie */}
+      <rect x={CX - 45} y={5} width={90} height={H - 10} rx={26} fill="rgba(192,132,252,0.07)" stroke="#c084fc" strokeWidth={2} />
       {items}
     </svg>
   )
