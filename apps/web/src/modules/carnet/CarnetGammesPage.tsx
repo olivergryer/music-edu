@@ -1,20 +1,23 @@
 // ─── Carnet de gammes — /carnet/gammes ────────────────────────────────────────
 //
-// Page de travail pour la classe : niveau + tonalité (cercle des quintes),
-// métronome, tableau des tempi, séances sauvegardées. Aucun lien vers cette page
+// Page de travail pour la classe : niveau (menu), tonalité (roue des quintes),
+// tableau des tempi, métronome (mini-barre sur téléphone, colonne sur grand écran),
+// séances sauvegardées. Aucun lien vers cette page
 // depuis l'appli ; <meta robots noindex> posée à l'affichage.
 
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../auth/AuthProvider'
 import { ThemeToggleInline } from '../../ThemeContext'
-import CercleQuintes, { CLES_CERCLE } from './CercleQuintes.tsx'
+import RoueTonalites from './RoueTonalites.tsx'
+import { CLES_CERCLE } from './quintes.ts'
 import Metronome from './Metronome.tsx'
+import { useLargeEcran } from './useLargeEcran.ts'
 import TableauTempi, { type LigneTableau } from './TableauTempi.tsx'
 import ListeSeances from './ListeSeances.tsx'
 import AjoutExercice from './AjoutExercice.tsx'
 import SourceDonnees from './SourceDonnees.tsx'
-import { bornerTempo } from './TempoKnob.tsx'
+import { bornerTempo } from './CouronneTempo.tsx'
 import type { FigureId } from './figures.ts'
 import {
   EXERCICES, affichageTonalite, exercicesPour, labelExercice, niveauxDisponibles,
@@ -68,6 +71,8 @@ export default function CarnetGammesPage() {
   // Toujours « noire » à l'ouverture de la page : la figure n'est ni mémorisée ni imposée par les données.
   const [figure, setFigure] = useState<FigureId>('noire')
   const [message, setMessage] = useState('')
+  const [exerciceActif, setExerciceActif] = useState<string | null>(null)
+  const large = useLargeEcran(900)
 
   // Page confidentielle : hors index des moteurs de recherche.
   useEffect(() => {
@@ -163,7 +168,7 @@ export default function CarnetGammesPage() {
 
   const peutQuitter = () => !sale || window.confirm('Des tempi saisis ne sont pas sauvegardés. Continuer sans les garder ?')
 
-  const repartirAZero = () => { setSaisis({}); setCourante(null); setSale(false) }
+  const repartirAZero = () => { setSaisis({}); setCourante(null); setSale(false); setExerciceActif(null) }
 
   const changerNiveau = (n: string) => {
     if (n === niveau && !courante) return
@@ -173,11 +178,13 @@ export default function CarnetGammesPage() {
     repartirAZero()
   }
 
-  const changerTonalite = (t: string) => {
-    if (t === tonalite && !courante) return
-    if (!peutQuitter()) return
+  /** Renvoie false si le changement est refusé (saisies non sauvegardées) : la roue revient en arrière. */
+  const changerTonalite = (t: string): boolean => {
+    if (t === tonalite && !courante) return true
+    if (!peutQuitter()) return false
     setTonalite(t)
     repartirAZero()
+    return true
   }
 
   const nouvelleSeance = () => { if (peutQuitter()) repartirAZero() }
@@ -230,6 +237,18 @@ export default function CarnetGammesPage() {
     }
   }
 
+  // Ligne active : celle que remplit « Noter » (par défaut la première).
+  const indexActif = Math.max(0, lignesTableau.findIndex(l => l.exercice === exerciceActif))
+  const ligneActive = lignesTableau[indexActif] ?? null
+  const noter = ligneActive ? {
+    label: `Noter ${tempo} · ${ligneActive.label}`,
+    onClick: () => {
+      saisie(ligneActive.exercice, String(tempo))
+      const suivante = lignesTableau[indexActif + 1]
+      if (suivante) setExerciceActif(suivante.exercice)
+    },
+  } : null
+
   const nombresSaisis = Object.fromEntries(
     Object.entries(saisis).map(([k, v]) => [k, parseInt(v, 10)]).filter(([, n]) => Number.isFinite(n) && (n as number) > 0),
   ) as Record<string, number>
@@ -261,15 +280,95 @@ export default function CarnetGammesPage() {
 
   // ── Rendu ──────────────────────────────────────────────────────────────────
 
+  const tableau = (
+    <section style={carte}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
+        <h2 style={{ ...titreSection, margin: 0 }}>
+          {niveau} · {tonalite ? affichageTonalite(tonalite) : '—'}
+          {courante && <span style={{ fontSize: 12, fontWeight: 400, color: 'var(--text-muted)' }}> — séance du {new Date(courante.date).toLocaleDateString('fr-FR')}</span>}
+        </h2>
+        {courante && (
+          <button onClick={nouvelleSeance}
+            style={{ minHeight: 44, padding: '0 14px', borderRadius: 12, border: '1px solid var(--border-c)', background: 'var(--surface-2)',
+              color: 'var(--text)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+            Nouvelle séance
+          </button>
+        )}
+      </div>
+      {lignesTableau.length ? (
+        <TableauTempi lignes={lignesTableau} saisis={saisis} onSaisie={saisie} onEnvoyer={envoyer}
+          onSupprimerPerso={retirerExercice} actif={ligneActive?.exercice ?? null} onActiver={setExerciceActif} />
+      ) : (
+        <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: 14 }}>Aucun exercice défini pour cette tonalité à ce niveau.</p>
+      )}
+      {!courante && <AjoutExercice onAjouter={ajouterExercice} />}
+      <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'center' }}>
+        <button onClick={sauvegarder} disabled={!peutSauver}
+          style={{ width: '100%', maxWidth: 360, minHeight: 52, borderRadius: 14, border: 'none', fontSize: 16, fontWeight: 700,
+            cursor: peutSauver ? 'pointer' : 'not-allowed', background: peutSauver ? '#7c3aed' : 'var(--surface-2)',
+            color: peutSauver ? '#fff' : 'var(--text-muted)' }}>
+          {courante ? 'Mettre à jour la séance' : 'Sauvegarder la séance'}
+        </button>
+        {!peutSauver && <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Saisis au moins un tempo atteint.</span>}
+        <span role="status" style={{ fontSize: 13, color: '#34d399', minHeight: 18, textAlign: 'center' }}>{message}</span>
+      </div>
+    </section>
+  )
+
+  const colonnePrincipale = lignes && (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12, minWidth: 0 }}>
+      <section style={{ ...carte, padding: '8px 8px 4px' }} aria-label="Tonalité">
+        <RoueTonalites tonalite={tonalite} disponibles={dispos} onSelect={changerTonalite} />
+      </section>
+
+      {tableau}
+
+      <section style={carte}>
+        <details>
+          <summary style={{ cursor: 'pointer', fontWeight: 700, fontSize: 16, minHeight: 44, display: 'flex', alignItems: 'center' }}>
+            Mes séances ({seances.length})
+          </summary>
+          <div style={{ paddingTop: 8 }}>
+            <ListeSeances seances={seances} ouverte={courante?.id ?? null} onOuvrir={ouvrir} onSupprimer={supprimer} />
+            <p style={{ margin: '12px 0 0', fontSize: 12, color: 'var(--text-muted)' }}>
+              {user
+                ? 'Tes séances sont synchronisées avec ton compte.'
+                : <>Les séances sont gardées sur cet appareil. <Link to="/login" style={{ color: '#c084fc' }}>Connecte-toi</Link> pour les retrouver partout.</>}
+            </p>
+          </div>
+        </details>
+      </section>
+
+      <section style={carte}>
+        <SourceDonnees source={source} horsLigne={horsLigne} urlPerso={urlPerso} onAppliquer={appliquerSource} />
+      </section>
+    </div>
+  )
+
+  const metronome = (
+    <Metronome tempo={tempo} onTempo={t => setTempo(bornerTempo(t))} figure={figure} onFigure={setFigure}
+      compact={!large} noter={noter} />
+  )
+
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg)', color: 'var(--text)', fontFamily: "'Poppins', 'Inter', 'Segoe UI', sans-serif" }}>
-      <div style={{ maxWidth: 900, margin: '0 auto', padding: '16px 16px 48px', display: 'flex', flexDirection: 'column', gap: 16 }}>
-        <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-          <div>
-            <h1 style={{ margin: 0, fontSize: 26, fontFamily: "'Righteous', 'Inter', sans-serif", fontWeight: 400 }}>Carnet de gammes</h1>
+    <div style={{ minHeight: '100dvh', background: 'var(--bg)', color: 'var(--text)', fontFamily: "'Poppins', 'Inter', 'Segoe UI', sans-serif" }}>
+      <div style={{ maxWidth: large ? 980 : 560, margin: '0 auto', padding: `12px 12px ${large ? 48 : 120}px`, display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+          <div style={{ minWidth: 0 }}>
+            <h1 style={{ margin: 0, fontSize: 22, fontFamily: "'Righteous', 'Inter', sans-serif", fontWeight: 400, lineHeight: 1.15 }}>Carnet de gammes</h1>
             <Link to="/" style={{ fontSize: 12, color: 'var(--text-muted)' }}>Tessitura</Link>
           </div>
-          <ThemeToggleInline />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            {lignes && niveaux.length > 0 && (
+              <select value={niveau} onChange={e => changerNiveau(e.target.value)} aria-label="Niveau"
+                style={{ height: 44, minWidth: 84, padding: '0 10px', borderRadius: 12, fontSize: 15, fontWeight: 700, cursor: 'pointer',
+                  border: '2px solid #c084fc', background: 'var(--surface)', color: 'var(--text)' }}>
+                {niveaux.map(n => <option key={n} value={n}>{n}</option>)}
+                {niveau && !niveaux.includes(niveau) && <option value={niveau}>{niveau}</option>}
+              </select>
+            )}
+            <ThemeToggleInline />
+          </div>
         </header>
 
         {erreur && (
@@ -279,84 +378,20 @@ export default function CarnetGammesPage() {
         )}
         {!lignes && !erreur && <div style={{ ...carte, color: 'var(--text-muted)' }}>Chargement…</div>}
 
-        {lignes && (
+        {lignes && (large ? (
+          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 380px', gap: 16, alignItems: 'start' }}>
+            {colonnePrincipale}
+            <aside style={{ ...carte, position: 'sticky', top: 12 }} aria-label="Métronome">
+              <h2 style={titreSection}>Métronome</h2>
+              {metronome}
+            </aside>
+          </div>
+        ) : (
           <>
-            {/* Niveau */}
-            <section style={carte}>
-              <h2 style={titreSection}>Niveau</h2>
-              <div role="radiogroup" aria-label="Niveau" style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                {niveaux.map(n => (
-                  <button key={n} role="radio" aria-checked={n === niveau} onClick={() => changerNiveau(n)}
-                    style={{ minWidth: 56, minHeight: 44, padding: '0 14px', borderRadius: 12, cursor: 'pointer', fontSize: 15, fontWeight: 700,
-                      border: `2px solid ${n === niveau ? '#c084fc' : 'var(--border-c)'}`,
-                      background: n === niveau ? '#7c3aed' : 'var(--surface-2)', color: n === niveau ? '#fff' : 'var(--text)' }}>
-                    {n}
-                  </button>
-                ))}
-              </div>
-            </section>
-
-            {/* Cercle des quintes + métronome */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 16, alignItems: 'start' }}>
-              <section style={carte}>
-                <h2 style={titreSection}>Tonalité</h2>
-                <CercleQuintes tonalite={tonalite} disponibles={dispos} onSelect={changerTonalite} />
-              </section>
-              <section style={carte}>
-                <h2 style={titreSection}>Métronome</h2>
-                <Metronome tempo={tempo} onTempo={t => setTempo(bornerTempo(t))} figure={figure} onFigure={setFigure} />
-              </section>
-            </div>
-
-            {/* Tableau */}
-            <section style={carte}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
-                <h2 style={{ ...titreSection, margin: 0 }}>
-                  {niveau} · {tonalite ? affichageTonalite(tonalite) : '—'}
-                  {courante && <span style={{ fontSize: 12, fontWeight: 400, color: 'var(--text-muted)' }}> — séance du {new Date(courante.date).toLocaleDateString('fr-FR')}</span>}
-                </h2>
-                {courante && (
-                  <button onClick={nouvelleSeance}
-                    style={{ minHeight: 44, padding: '0 14px', borderRadius: 12, border: '1px solid var(--border-c)', background: 'var(--surface-2)',
-                      color: 'var(--text)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-                    Nouvelle séance
-                  </button>
-                )}
-              </div>
-              {lignesTableau.length ? (
-                <TableauTempi lignes={lignesTableau} saisis={saisis} onSaisie={saisie} onEnvoyer={envoyer} onSupprimerPerso={retirerExercice} />
-              ) : (
-                <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: 14 }}>Aucun exercice défini pour cette tonalité à ce niveau.</p>
-              )}
-              {!courante && <AjoutExercice onAjouter={ajouterExercice} />}
-              <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'center' }}>
-                <button onClick={sauvegarder} disabled={!peutSauver}
-                  style={{ width: '100%', maxWidth: 360, minHeight: 52, borderRadius: 14, border: 'none', fontSize: 16, fontWeight: 700,
-                    cursor: peutSauver ? 'pointer' : 'not-allowed', background: peutSauver ? '#7c3aed' : 'var(--surface-2)',
-                    color: peutSauver ? '#fff' : 'var(--text-muted)' }}>
-                  {courante ? 'Mettre à jour la séance' : 'Sauvegarder la séance'}
-                </button>
-                {!peutSauver && <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Saisis au moins un tempo atteint.</span>}
-                <span role="status" style={{ fontSize: 13, color: '#34d399', minHeight: 18, textAlign: 'center' }}>{message}</span>
-              </div>
-            </section>
-
-            {/* Séances */}
-            <section style={carte}>
-              <h2 style={titreSection}>Mes séances</h2>
-              <ListeSeances seances={seances} ouverte={courante?.id ?? null} onOuvrir={ouvrir} onSupprimer={supprimer} />
-              <p style={{ margin: '12px 0 0', fontSize: 12, color: 'var(--text-muted)' }}>
-                {user
-                  ? 'Tes séances sont synchronisées avec ton compte.'
-                  : <>Les séances sont gardées sur cet appareil. <Link to="/login" style={{ color: '#c084fc' }}>Connecte-toi</Link> pour les retrouver partout.</>}
-              </p>
-            </section>
-
-            <section style={carte}>
-              <SourceDonnees source={source} horsLigne={horsLigne} urlPerso={urlPerso} onAppliquer={appliquerSource} />
-            </section>
+            {colonnePrincipale}
+            {metronome}
           </>
-        )}
+        ))}
       </div>
     </div>
   )
