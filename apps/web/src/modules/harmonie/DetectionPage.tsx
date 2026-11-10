@@ -11,6 +11,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { dansLeParcours, niveauImpose } from './parcours.ts'
+import { useParcours } from './useParcours.ts'
 
 import useProgressFirebase from '../../hooks/useProgressFirebase'
 import { useModuleProgress } from '../../hooks/useModuleProgress'
@@ -87,7 +89,15 @@ export default function DetectionPage() {
   const [ecran, setEcran] = useState<Ecran>('reglages')
 
   const [modeSession, setModeSession] = useState<ModeSession>('majeur')
-  const [niveau, setNiveau] = useState(4) // dans [NIVEAU_MIN_DETECTION, NIVEAU_MAX_DETECTION]
+  // Cohabitation : ouverte depuis le parcours, la page reçoit son niveau par l'URL.
+  const parcours = useParcours()
+  const niveauxDetection = Array.from(
+    { length: NIVEAU_MAX_DETECTION - NIVEAU_MIN_DETECTION + 1 },
+    (_, i) => NIVEAU_MIN_DETECTION + i,
+  )
+  const niveauUrl = niveauImpose(parcours, niveauxDetection)
+  const enParcours = dansLeParcours(parcours)
+  const [niveau, setNiveau] = useState(niveauUrl ?? 4) // dans [NIVEAU_MIN_DETECTION, NIVEAU_MAX_DETECTION]
 
   const [items, setItems] = useState<ItemDetection[]>([])
   const [rang, setRang] = useState(0)
@@ -121,11 +131,11 @@ export default function DetectionPage() {
       toutEnDo?: unknown
     }
     if (estModeSession(p.dernierMode)) setModeSession(p.dernierMode)
-    if (typeof p.dernierNiveau === 'number') setNiveau(p.dernierNiveau)
+    if (niveauUrl === null && typeof p.dernierNiveau === 'number') setNiveau(p.dernierNiveau)
     if (estVuePortee(p.porteeVue)) setVuePortee(p.porteeVue)
     if (estIntro(p.introTonale)) setIntro(p.introTonale)
     if (typeof p.toutEnDo === 'boolean') setToutEnDo(p.toutEnDo)
-  }, [mp.loaded, mp.progress.payload])
+  }, [mp.loaded, mp.progress.payload, niveauUrl])
 
   useEffect(() => () => arreter(), [])
 
@@ -422,6 +432,7 @@ export default function DetectionPage() {
         <EcranReglages
           mode={modeSession}
           niveau={niveau}
+          niveauMasque={enParcours}
           intro={intro}
           onMode={setModeSession}
           onNiveau={setNiveau}
@@ -469,6 +480,7 @@ export default function DetectionPage() {
 function EcranReglages({
   mode,
   niveau,
+  niveauMasque,
   intro,
   onMode,
   onNiveau,
@@ -477,6 +489,8 @@ function EcranReglages({
 }: {
   mode: ModeSession
   niveau: number
+  /** Ouvert depuis le parcours : le niveau est imposé, pas de sélecteur. */
+  niveauMasque: boolean
   intro: Intro
   onMode: (m: ModeSession) => void
   onNiveau: (n: number) => void
@@ -504,13 +518,15 @@ function EcranReglages({
         />
       </Bloc>
 
-      <Bloc titre="Niveau">
-        <Segments
-          options={niveaux.map((n) => ({ valeur: String(n), label: String(n) }))}
-          actif={String(niveau)}
-          onChange={(v) => onNiveau(Number(v))}
-        />
-        <p className="text-app-muted" style={{ fontSize: 12, margin: '8px 0 0' }}>
+      <Bloc titre={niveauMasque ? 'Vocabulaire' : 'Niveau'}>
+        {!niveauMasque && (
+          <Segments
+            options={niveaux.map((n) => ({ valeur: String(n), label: String(n) }))}
+            actif={String(niveau)}
+            onChange={(v) => onNiveau(Number(v))}
+          />
+        )}
+        <p className="text-app-muted" style={{ fontSize: 12, margin: niveauMasque ? 0 : '8px 0 0' }}>
           Degrés : {spec.vocabulaire.join(', ')} · renversements : {spec.renversements.join(', ')}
           {spec.septiemeSur.length > 0 && ` · septième sur ${spec.septiemeSur.join(', ')}`}
         </p>

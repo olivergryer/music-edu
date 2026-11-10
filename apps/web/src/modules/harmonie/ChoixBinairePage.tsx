@@ -11,6 +11,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { dansLeParcours, niveauImpose } from './parcours.ts'
+import { useParcours } from './useParcours.ts'
 
 import useProgressFirebase from '../../hooks/useProgressFirebase'
 import { useModuleProgress } from '../../hooks/useModuleProgress'
@@ -62,7 +64,11 @@ export default function ChoixBinairePage() {
 
   const [ecran, setEcran] = useState<Ecran>('reglages')
   const [modeSession, setModeSession] = useState<ModeSession>('majeur')
-  const [niveau, setNiveau] = useState<number>(NIVEAUX_BINAIRE[0])
+  // Cohabitation : ouverte depuis le parcours, la page reçoit son niveau par l'URL.
+  const parcours = useParcours()
+  const niveauUrl = niveauImpose(parcours, NIVEAUX_BINAIRE)
+  const enParcours = dansLeParcours(parcours)
+  const [niveau, setNiveau] = useState<number>(niveauUrl ?? NIVEAUX_BINAIRE[0])
   const [items, setItems] = useState<ItemBinaire[]>([])
   const [rang, setRang] = useState(0)
   const [repondu, setRepondu] = useState<Reponse | null>(null)
@@ -88,13 +94,13 @@ export default function ChoixBinairePage() {
       toutEnDo?: unknown
     }
     if (estModeSession(p.binaireMode)) setModeSession(p.binaireMode)
-    if (typeof p.binaireNiveau === 'number' && NIVEAUX_BINAIRE.includes(p.binaireNiveau)) {
+    if (niveauUrl === null && typeof p.binaireNiveau === 'number' && NIVEAUX_BINAIRE.includes(p.binaireNiveau)) {
       setNiveau(p.binaireNiveau)
     }
     if (estVuePortee(p.porteeVue)) setVuePortee(p.porteeVue)
     if (estIntro(p.introTonale)) setIntro(p.introTonale)
     if (typeof p.toutEnDo === 'boolean') setToutEnDo(p.toutEnDo)
-  }, [mp.loaded, mp.progress.payload])
+  }, [mp.loaded, mp.progress.payload, niveauUrl])
 
   useEffect(() => () => arreter(), [])
 
@@ -268,7 +274,8 @@ export default function ChoixBinairePage() {
             une session.
           </p>
 
-          <Bloc titre="Niveau">
+          <Bloc titre={enParcours ? 'Question' : 'Niveau'}>
+            {!enParcours && (
             <div className="flex flex-wrap" style={{ gap: 6 }}>
               {NIVEAUX_BINAIRE.map((n) => (
                 <button
@@ -286,7 +293,8 @@ export default function ChoixBinairePage() {
                 </button>
               ))}
             </div>
-            <p className="text-app-muted" style={{ fontSize: 12, margin: '8px 0 0', lineHeight: 1.5 }}>
+            )}
+            <p className="text-app-muted" style={{ fontSize: 12, margin: enParcours ? 0 : '8px 0 0', lineHeight: 1.5 }}>
               {spec.question} — {spec.aide}
             </p>
           </Bloc>

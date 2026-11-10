@@ -759,5 +759,44 @@ l'écran en mineur. Un tirage par item demanderait de changer de mode en cours d
 **Couverture du barème** : 0 aucune activité · 1 dictée · 2 binaire · 3 détection · 4-5 binaire +
 détection · 6-7 **flux** + détection · 8 non générable.
 
-**La réorganisation activités × niveaux** est analysée dans `docs/organisation-harmonie.md` (trois
-pistes, une recommandation) — note de conception, rien n'est codé.
+**La réorganisation activités × niveaux** est analysée dans `docs/organisation-harmonie.md` ; la
+solution retenue est décrite ci-dessous.
+
+## Parcours guidé ET mode libre — `parcours.ts` (2026-11-10)
+
+`/harmonie` offre **deux entrées qui cohabitent** : « Parcours guidé » (4 étapes) et « Mode libre »
+(la liste d'activités d'avant, inchangée). Mêmes routes, mêmes pages, mêmes clés `levels` : un élève
+passe de l'une à l'autre sans rien perdre. **Défaut : mode libre.**
+
+| Étape | Niveaux | Exercices (★ = proposé par « Continuer ») |
+|---|---|---|
+| 1 La basse | 0-1 | ★ dictée · *(niveau 0 : aucune activité encore)* |
+| 2 Les fonctions | 2-3 | ★ binaire 2 · ★ cadences 3 |
+| 3 L'état de l'accord | 4-5 | ★ binaire 4 · ★ binaire 5 · détection 4, 5 |
+| 4 Chiffrer | 6-7 | ★ flux 6 · ★ flux 7 · détection 6, 7 |
+
+Vocabulaire : **étape** (pas « niveau », déjà pris par C1…C3). Intervalles et cadences « toutes » sont
+hors parcours (mode libre seulement). Niveau 8 hors parcours tant qu'il n'est pas générable.
+
+- **`parcours.ts`** : PUR, testé (`harmonieParcours.test.ts`). Table `ETAPES`, `etapeCourante`,
+  `exerciceConseille`, `lienJalon`, `lireParametresParcours`, `niveauImpose`. Ne touche aucune page.
+- **Sans verrouillage** : l'étape courante ne sert qu'à décider quoi PROPOSER. Tout reste ouvert.
+- **Validé = ≥ 2 tentatives ET meilleur score ≥ 80 %.** ⚠ Approximation : `levels` ne garde que
+  `best` et `attempts`, pas l'historique — « 80 % sur 2 sessions » au sens strict est invérifiable.
+- **Cohabitation par l'URL** : `/harmonie/binaire?niveau=4&etape=3`. Sans paramètre, la page se
+  comporte comme avant. `useParcours.ts` branche l'URL ; les 4 pages concernées (binaire, flux,
+  détection, cadences) lisent le niveau et **masquent leur sélecteur** quand `etape` est présent.
+  La dictée n'a rien à changer (pas de sélecteur).
+- ⚠ **Un niveau imposé par l'URL GAGNE sur le `payload` relu** (`dernierNiveau`, `binaireNiveau`,
+  `fluxNiveau`) : chaque effet de relecture est gardé par `niveauUrl === null`, sinon il écraserait
+  le niveau du parcours. Cadences : `?niveau=3` impose le palier « niveau 3 ».
+- ⚠ **La détection garde la clé `levels` NUE** (`"4"`) : `clesLevels` lit aussi `detection:4`, sans
+  migration. Les deux sont fusionnées (meilleur score, tentatives additionnées).
+- ⚠ **Le choix de vue vit en `localStorage` (`harmonie-vue-v1`), pas dans `payload`** : le hook
+  partagé `useModuleProgress` n'écrit `payload` qu'en fin de session, et une préférence d'affichage
+  par appareil ne justifie pas de le modifier. Conséquence utile : le bouton retour des activités
+  (`/harmonie`) retombe sur la frise sans toucher aucune page.
+- Un invité (sans compte) n'a pas de `levels` : le parcours reste à l'étape 1.
+
+**Reste** : le niveau 0 (majeur / mineur) — seule vraie nouvelle activité ; à ajouter comme jalon de
+l'étape 1 dans `ETAPES` (le test « niveau 1-7 couvert » est déjà en place).

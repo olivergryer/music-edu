@@ -42,6 +42,7 @@ import {
   ITEMS_PAR_SESSION_CADENCES,
   LIBELLES_APPROCHE,
   LIBELLES_CADENCE,
+  NIVEAU_CADENCES,
   approchesDuPalier,
   construireSessionCadences,
   partitionDeCadence,
@@ -60,6 +61,8 @@ import {
 } from './cadences.ts'
 import { TONIQUE_UT } from './notation.ts'
 import { type Mode } from './types.ts'
+import { dansLeParcours, niveauImpose } from './parcours.ts'
+import { useParcours } from './useParcours.ts'
 
 const ACCENT = '#c084fc'
 const SUCCES = '#34d399'
@@ -84,6 +87,11 @@ export default function CadencesPage() {
   const mp = useModuleProgress('harmonie')
 
   const [ecran, setEcran] = useState<Ecran>('reglages')
+  // Cohabitation : depuis le parcours (niveau 3), le palier « niveau 3 » est imposé.
+  const parcours = useParcours()
+  const palierImpose = niveauImpose(parcours, [NIVEAU_CADENCES]) !== null
+  // Sélecteur masqué seulement si le palier est vraiment imposé (lien sain).
+  const enParcours = dansLeParcours(parcours) && palierImpose
   const [palier, setPalier] = useState<Palier>('niveau3')
   // Le mineur est le cadre idiomatique des accords chromatiques ; c'est donc lui
   // que l'écran propose d'abord dès que le palier les contient.
@@ -118,11 +126,11 @@ export default function CadencesPage() {
       toutEnDo?: unknown
     }
     if (estModeSession(p.cadenceMode)) setModeSession(p.cadenceMode)
-    if (p.cadencePalier) setPalier(p.cadencePalier)
+    if (p.cadencePalier && !palierImpose) setPalier(p.cadencePalier)
     if (p.cadenceContexte) setContexte(p.cadenceContexte)
     if (estVuePortee(p.porteeVue)) setVuePortee(p.porteeVue)
     if (typeof p.toutEnDo === 'boolean') setToutEnDo(p.toutEnDo)
-  }, [mp.loaded, mp.progress.payload])
+  }, [mp.loaded, mp.progress.payload, palierImpose])
 
   useEffect(() => () => arreter(), [])
 
@@ -328,6 +336,7 @@ export default function CadencesPage() {
           </p>
 
           <Bloc titre="Cadences">
+            {!enParcours && (
             <div className="flex" style={{ gap: 6 }}>
               {(['niveau3', 'tout'] as Palier[]).map((p) => (
                 <Segment
@@ -344,7 +353,8 @@ export default function CadencesPage() {
                 </Segment>
               ))}
             </div>
-            <p className="text-app-muted" style={{ fontSize: 12, margin: '8px 0 0', lineHeight: 1.5 }}>
+            )}
+            <p className="text-app-muted" style={{ fontSize: 12, margin: enParcours ? 0 : '8px 0 0', lineHeight: 1.5 }}>
               {palier === 'niveau3'
                 ? `${typesDuPalier('niveau3').map((t) => LIBELLES_CADENCE[t]).join(' · ')} — compte au barème.`
                 : 'Les cinq cadences et les quatre accords d’approche — hors barème.'}

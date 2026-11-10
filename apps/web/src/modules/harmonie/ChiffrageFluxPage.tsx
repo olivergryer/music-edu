@@ -19,6 +19,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { dansLeParcours, niveauImpose } from './parcours.ts'
+import { useParcours } from './useParcours.ts'
 
 import useProgressFirebase from '../../hooks/useProgressFirebase'
 import { useModuleProgress } from '../../hooks/useModuleProgress'
@@ -115,7 +117,11 @@ export default function ChiffrageFluxPage() {
 
   const [ecran, setEcran] = useState<Ecran>('reglages')
   const [modeSession, setModeSession] = useState<ModeSession>('majeur')
-  const [niveau, setNiveau] = useState<number>(NIVEAU_MIN_FLUX)
+  // Cohabitation : ouverte depuis le parcours, la page reçoit son niveau par l'URL.
+  const parcours = useParcours()
+  const niveauUrl = niveauImpose(parcours, NIVEAUX)
+  const enParcours = dansLeParcours(parcours)
+  const [niveau, setNiveau] = useState<number>(niveauUrl ?? NIVEAU_MIN_FLUX)
   const [items, setItems] = useState<ItemFlux[]>([])
   const [rang, setRang] = useState(0)
   const [saisies, setSaisies] = useState<(Accord | null)[]>([])
@@ -147,12 +153,12 @@ export default function ChiffrageFluxPage() {
       toutEnDo?: unknown
     }
     if (estModeSession(p.fluxMode)) setModeSession(p.fluxMode)
-    if (typeof p.fluxNiveau === 'number' && NIVEAUX.includes(p.fluxNiveau)) setNiveau(p.fluxNiveau)
+    if (niveauUrl === null && typeof p.fluxNiveau === 'number' && NIVEAUX.includes(p.fluxNiveau)) setNiveau(p.fluxNiveau)
     // Réglages communs aux quatre activités du module.
     if (estVuePortee(p.porteeVue)) setVuePortee(p.porteeVue)
     if (estIntro(p.introTonale)) setIntro(p.introTonale)
     if (typeof p.toutEnDo === 'boolean') setToutEnDo(p.toutEnDo)
-  }, [mp.loaded, mp.progress.payload])
+  }, [mp.loaded, mp.progress.payload, niveauUrl])
 
   useEffect(() => () => arreter(), [])
 
@@ -453,6 +459,7 @@ export default function ChiffrageFluxPage() {
             roue, l’état sur la bande. Tu valides quand tu as fini — rien n’est chronométré.
           </p>
 
+          {!enParcours && (
           <Bloc titre="Niveau">
             <div className="flex flex-wrap" style={{ gap: 6 }}>
               {NIVEAUX.map((n) => (
@@ -472,6 +479,7 @@ export default function ChiffrageFluxPage() {
               ))}
             </div>
           </Bloc>
+          )}
 
           <Bloc titre="Intro tonale">
             <ToggleIntro
