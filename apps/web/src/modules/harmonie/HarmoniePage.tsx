@@ -20,14 +20,17 @@ import { NIVEAU_CADENCES } from './cadences.ts'
 import { NIVEAU_MAX_FLUX, NIVEAU_MIN_FLUX } from './flux.ts'
 import {
   ETAPES,
-  alternatives,
   avancementEtape,
+  etapeCourante,
+  etapeTerminee,
   exerciceConseille,
+  jalonValide,
   lienJalon,
   statutsEtapes,
   type CarteLevels,
   type Etape,
   type Jalon,
+  type NumeroEtape,
 } from './parcours.ts'
 
 const ACCENT = '#c084fc'
@@ -257,60 +260,112 @@ function libelleJalon(j: Jalon): string {
 
 function Parcours({ levels }: { levels: CarteLevels }) {
   const statuts = statutsEtapes(levels)
+  const courante = etapeCourante(levels)
+  // L'étape affichée : celle que l'élève a touchée, sinon la courante (la dernière
+  // si le parcours est fini). Pas d'effet de synchronisation : `levels` arrive en
+  // différé, et tant que l'élève n'a rien choisi, l'affichage suit la courante.
+  const [choix, setChoix] = useState<NumeroEtape | null>(null)
+  const numero = choix ?? courante?.numero ?? ETAPES[ETAPES.length - 1].numero
+  const etape = ETAPES.find((e) => e.numero === numero) ?? ETAPES[0]
 
   return (
     <>
       <p className="text-app-muted" style={{ fontSize: 14, margin: '0 0 4px', lineHeight: 1.5 }}>
-        Quatre étapes, de la basse au chiffrage complet. Rien n’est verrouillé : tu peux
-        aller où tu veux.
+        Choisis une étape, puis un exercice. Rien n’est verrouillé.
       </p>
-      {ETAPES.map((e) => (
-        <CarteEtape key={e.numero} etape={e} statut={statuts[e.numero]} levels={levels} />
-      ))}
+
+      <div
+        role="group"
+        aria-label="Étape"
+        className="flex"
+        style={{
+          background: 'var(--surface)',
+          border: '1px solid var(--border-c)',
+          borderRadius: 12,
+          padding: 4,
+          gap: 4,
+        }}
+      >
+        {ETAPES.map((e) => {
+          const actif = e.numero === numero
+          const statut = statuts[e.numero]
+          return (
+            <button
+              key={e.numero}
+              type="button"
+              aria-pressed={actif}
+              aria-label={`Étape ${e.numero} : ${e.titre}${statut === 'terminee' ? ', terminée' : statut === 'courante' ? ', en cours' : ''}`}
+              onClick={() => setChoix(e.numero)}
+              className="flex items-center justify-center"
+              style={{
+                flex: 1,
+                minHeight: 44,
+                gap: 6,
+                borderRadius: 9,
+                border: 'none',
+                fontSize: 14,
+                fontWeight: 600,
+                background: actif ? ACCENT : 'transparent',
+                color: actif ? '#030712' : 'var(--text-muted)',
+              }}
+            >
+              <span aria-hidden="true">{e.numero}</span>
+              {statut === 'terminee' && <IconeValide couleur={actif ? '#030712' : '#34d399'} />}
+              {statut === 'courante' && (
+                <span
+                  aria-hidden="true"
+                  style={{
+                    width: 7,
+                    height: 7,
+                    borderRadius: '50%',
+                    background: actif ? '#030712' : ACCENT,
+                  }}
+                />
+              )}
+            </button>
+          )
+        })}
+      </div>
+
+      <DetailEtape etape={etape} courante={statuts[etape.numero] === 'courante'} levels={levels} />
     </>
   )
 }
 
-function CarteEtape({
+function DetailEtape({
   etape,
-  statut,
+  courante,
   levels,
 }: {
   etape: Etape
-  statut: 'terminee' | 'courante' | 'a_venir'
+  courante: boolean
   levels: CarteLevels
 }) {
-  const courante = statut === 'courante'
   const propose = exerciceConseille(levels, etape)
-  const autres = alternatives(levels, etape)
   const avancement = avancementEtape(levels, etape)
+  const termine = etapeTerminee(levels, etape)
+  const actionPropose = courante ? 'Continuer' : termine ? 'Rejouer' : 'Commencer'
+  const conseilles = etape.jalons.filter((j) => j.conseille)
+  const enPlus = etape.jalons.filter((j) => !j.conseille)
 
   return (
     <section
       aria-label={`Étape ${etape.numero} : ${etape.titre}`}
       className="bg-surface"
       style={{
-        borderWidth: courante ? 2 : 1,
-        borderStyle: 'solid',
-        borderColor: courante ? ACCENT : 'var(--border-c)',
+        border: '1px solid var(--border-c)',
         borderRadius: 14,
         padding: 16,
-        opacity: statut === 'a_venir' ? 0.8 : 1,
       }}
     >
-      <div className="flex items-center" style={{ gap: 12 }}>
-        <PastilleEtape numero={etape.numero} terminee={statut === 'terminee'} courante={courante} />
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 17, fontWeight: 600, color: 'var(--text)' }}>{etape.titre}</div>
-          <div className="text-app-muted" style={{ fontSize: 13, lineHeight: 1.4 }}>
-            {etape.question}
-          </div>
-        </div>
+      <div style={{ fontSize: 17, fontWeight: 600, color: 'var(--text)' }}>{etape.titre}</div>
+      <div className="text-app-muted" style={{ fontSize: 13, lineHeight: 1.4, marginTop: 2 }}>
+        {etape.question}
       </div>
 
       <div
         aria-hidden="true"
-        style={{ height: 4, borderRadius: 2, background: 'var(--border-c)', margin: '12px 0' }}
+        style={{ height: 4, borderRadius: 2, background: 'var(--border-c)', margin: '12px 0 4px' }}
       >
         <div
           style={{
@@ -322,86 +377,145 @@ function CarteEtape({
         />
       </div>
 
-      <Link
-        to={lienJalon(propose, etape.numero)}
-        className="no-underline flex items-center justify-between"
-        style={{
-          minHeight: 44,
-          padding: '0 14px',
-          borderRadius: 10,
-          background: courante ? ACCENT : 'transparent',
-          border: courante ? 'none' : '1px solid var(--border-c)',
-          color: courante ? '#030712' : 'var(--text)',
-          fontSize: 14,
-          fontWeight: 600,
-          gap: 8,
-        }}
-      >
-        <span>{courante ? 'Continuer' : statut === 'terminee' ? 'Rejouer' : 'Commencer'}</span>
-        <span style={{ fontWeight: 400, fontSize: 13, textAlign: 'right' }}>{libelleJalon(propose)}</span>
-      </Link>
-
-      {autres.length > 0 && (
-        <div className="flex flex-wrap" style={{ gap: 8, marginTop: 10 }}>
-          {autres.map((j) => (
-            <Link
-              key={`${j.activite}:${j.niveau}`}
-              to={lienJalon(j, etape.numero)}
-              className="no-underline text-app-muted"
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                minHeight: 44,
-                padding: '0 12px',
-                borderRadius: 999,
-                border: '1px solid var(--border-c)',
-                fontSize: 12,
-              }}
-            >
-              {libelleJalon(j)}
-            </Link>
-          ))}
-        </div>
+      <GroupeExercices
+        titre="Conseillé"
+        jalons={conseilles}
+        etape={etape}
+        propose={propose}
+        actionPropose={actionPropose}
+        courante={courante}
+        levels={levels}
+      />
+      {enPlus.length > 0 && (
+        <GroupeExercices
+          titre="En plus"
+          jalons={enPlus}
+          etape={etape}
+          propose={propose}
+          actionPropose={actionPropose}
+          courante={courante}
+          levels={levels}
+        />
       )}
     </section>
   )
 }
 
-function PastilleEtape({
-  numero,
-  terminee,
+/** Un groupe titré. Le texte des exercices est toujours aligné à gauche : seule la
+ *  ligne proposée porte une pastille à droite, les autres un chevron. */
+function GroupeExercices({
+  titre,
+  jalons,
+  etape,
+  propose,
+  actionPropose,
   courante,
+  levels,
 }: {
-  numero: number
-  terminee: boolean
+  titre: string
+  jalons: Jalon[]
+  etape: Etape
+  propose: Jalon
+  actionPropose: string
   courante: boolean
+  levels: CarteLevels
 }) {
   return (
-    <span
+    <div style={{ marginTop: 12 }}>
+      <div
+        style={{
+          fontSize: 11,
+          fontWeight: 600,
+          letterSpacing: 0.8,
+          textTransform: 'uppercase',
+          color: 'var(--text-muted)',
+        }}
+      >
+        {titre}
+      </div>
+      <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
+        {jalons.map((j, i) => {
+          const estPropose = j.activite === propose.activite && j.niveau === propose.niveau
+          return (
+            <li
+              key={`${j.activite}:${j.niveau}`}
+              style={{ borderTop: i === 0 ? 'none' : '1px solid var(--border-c)' }}
+            >
+              <Link
+                to={lienJalon(j, etape.numero)}
+                className="no-underline flex items-center"
+                style={{ minHeight: 48, gap: 10, color: 'var(--text)' }}
+              >
+                <span style={{ flex: 1, minWidth: 0, fontSize: 14, fontWeight: 600, lineHeight: 1.3 }}>
+                  {libelleJalon(j)}
+                </span>
+                {jalonValide(levels, j) && <IconeValide />}
+                {estPropose ? (
+                  <span
+                    style={{
+                      flexShrink: 0,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      minHeight: 36,
+                      padding: '0 14px',
+                      borderRadius: 999,
+                      background: courante ? ACCENT : 'transparent',
+                      border: courante ? 'none' : `1px solid ${ACCENT}`,
+                      color: courante ? '#030712' : ACCENT,
+                      fontSize: 13,
+                      fontWeight: 600,
+                    }}
+                  >
+                    {actionPropose}
+                  </span>
+                ) : (
+                  <Chevron />
+                )}
+              </Link>
+            </li>
+          )
+        })}
+      </ul>
+    </div>
+  )
+}
+
+function Chevron() {
+  return (
+    <svg
       aria-hidden="true"
-      style={{
-        width: 36,
-        height: 36,
-        borderRadius: '50%',
-        flexShrink: 0,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        fontSize: 15,
-        fontWeight: 700,
-        background: terminee ? '#34d399' : courante ? ACCENT : 'transparent',
-        border: terminee || courante ? 'none' : '1px solid var(--border-c)',
-        color: terminee || courante ? '#030712' : 'var(--text-muted)',
-      }}
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="var(--text-muted)"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      style={{ flexShrink: 0 }}
     >
-      {terminee ? (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-          <polyline points="20 6 9 17 4 12" />
-        </svg>
-      ) : (
-        numero
-      )}
-    </span>
+      <polyline points="9 6 15 12 9 18" />
+    </svg>
+  )
+}
+
+function IconeValide({ couleur = '#34d399' }: { couleur?: string }) {
+  return (
+    <svg
+      role="img"
+      aria-label="Validé"
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke={couleur}
+      strokeWidth="3"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      style={{ flexShrink: 0 }}
+    >
+      <polyline points="20 6 9 17 4 12" />
+    </svg>
   )
 }
 

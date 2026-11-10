@@ -797,6 +797,11 @@ hors parcours (mode libre seulement). Niveau 8 hors parcours tant qu'il n'est pa
   par appareil ne justifie pas de le modifier. Conséquence utile : le bouton retour des activités
   (`/harmonie`) retombe sur la frise sans toucher aucune page.
 - Un invité (sans compte) n'a pas de `levels` : le parcours reste à l'étape 1.
+- **Écran du parcours** : un sélecteur à 4 segments (étape ; ✓ terminée, ● courante, présélection =
+  courante) puis UNE liste pour l'étape choisie, en deux groupes titrés **Conseillé** / **En plus**.
+  Les textes sont alignés à gauche ; seule la ligne proposée porte la pastille Continuer / Commencer /
+  Rejouer à droite, les autres un chevron. Dropdown et carousel écartés (cachent l'ensemble ; le swipe
+  entre en conflit avec le scroll). La détection garde ses deux entrées par étape (décidé).
 
 **Reste** : le niveau 0 (majeur / mineur) — seule vraie nouvelle activité ; à ajouter comme jalon de
 l'étape 1 dans `ETAPES` (le test « niveau 1-7 couvert » est déjà en place).
