@@ -43,6 +43,8 @@ export type TrameAnalyse = {
   battements: Battement[]
   mpmHz?: number | null      // piste rapide seule (affichage « côte à côte »)
   modeleHz?: number | null   // modèle conjoint seul
+  statF?: number             // statistique de présence du modèle (calibration)
+  gainRel?: number           // part d'énergie expliquée par l'élève (calibration)
 }
 export type EtatStrobe = { voix: number; m: number; angle: number; vitesseHz: number; intensite: number }
 export type NoteFinale = {

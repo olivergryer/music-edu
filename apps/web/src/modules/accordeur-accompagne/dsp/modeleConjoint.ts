@@ -32,12 +32,15 @@ export type OptionsModele = {
   seuilF?: number             // seuil de la statistique de présence (25)
   coupureBins?: number        // couplage négligé au-delà (16 bins)
   battementMaxHz?: number     // 25
-  gainRelatifMin?: number     // plancher de présence : (E_playback − E) / énergie du signal (1e-6 ≈ −60 dB)
+  sigmaSystCents?: number     // plancher d'incertitude : écart modèle ↔ acoustique réelle (0,25 ¢)
+  facteurSigma?: number       // inflation de σ statistique (3) ; les deux à recalibrer par appareil
+  gainRelatifMin?: number     // plancher de présence : (E_playback − E) / énergie du signal. Calibré sur playback seul
+                                // (MacBook : p95 1,4e-3, max 1,5e-2 ; F p95 19, max 31) → 4e-3 et F > 50
 }
 
 const DEF = {
   kMax: 16, bandeHz: 6000, pasGrilleCents: 2, demiLargeurCents: 60,
-  kGrossier: 8, seuilF: 25, coupureBins: 16, battementMaxHz: 25, gainRelatifMin: 1e-6,
+  kGrossier: 8, seuilF: 50, coupureBins: 16, battementMaxHz: 25, gainRelatifMin: 4e-3, sigmaSystCents: 0.25, facteurSigma: 3,
 }
 
 // ─── FFT radix-2 ─────────────────────────────────────────────────────────────
@@ -324,6 +327,7 @@ export type ResultatModele = {
   sigmaCents: number
   E: number; EPlayback: number
   statF: number
+  gainRel: number          // (E_playback − E) / énergie du signal : part de l'énergie expliquée par l'élève
   presence: boolean
   degenere: boolean
   libres: number[]; nonResolues: number[]
@@ -372,7 +376,7 @@ export function ajusterF0(ctx: Contexte, candidats: number[], surcharge: { demiL
   const demi = surcharge.demiLargeurCents ?? o.demiLargeurCents
   const cands = dedoublonner(candidats, demi)
   const vide: ResultatModele = {
-    f0Hz: null, sigmaCents: Infinity, E: ctx.EP, EPlayback: ctx.EP, statF: 0, presence: false, degenere: true,
+    f0Hz: null, sigmaCents: Infinity, E: ctx.EP, EPlayback: ctx.EP, statF: 0, gainRel: 0, presence: false, degenere: true,
     libres: [], nonResolues: [], battements: [], ampEleve: [], ampPlayback: [], scores: [],
   }
   if (!cands.length) return vide
@@ -399,6 +403,19 @@ export function ajusterF0(ctx: Contexte, candidats: number[], surcharge: { demiL
     if (!final || ev.crit < final.crit) final = ev
   }
   if (!final) return vide
+  // Garde-fou d'octave par parité : si f0 est la moitié de la vraie fondamentale, les
+  // harmoniques impaires du modèle sont quasi nulles (elles tombent entre les vrais
+  // partiels) alors que les paires portent tout le signal.
+  if (!final.degenere && final.s) {
+    const ampH = (k: number) => { const i = final!.libres.indexOf(k); return i >= 0 ? Math.hypot(final!.s![2 * i], final!.s![2 * i + 1]) : null }
+    const imp: number[] = [], pai: number[] = []
+    for (const k of final.libres) (k % 2 ? imp : pai).push(ampH(k)!)
+    const moy = (a: number[]) => a.reduce((x, y) => x + y, 0) / a.length
+    if (imp.length >= 2 && pai.length >= 2 && moy(imp) < 0.12 * moy(pai) && final.f0 * 2 <= 2000) {
+      const alt = raffiner(ctx, final.f0 * 2, 1.0)
+      if (!alt.degenere && alt.E <= final.E * 1.15 + 1e-9 * ctx.Ey) final = alt
+    }
+  }
   if (final.degenere) return { ...vide, f0Hz: final.f0, nonResolues: final.nonResolues, scores }
 
   // 3) incertitude : courbure de E(f0) à ±1 ¢, variance du bruit résiduel
@@ -411,7 +428,10 @@ export function ajusterF0(ctx: Contexte, candidats: number[], surcharge: { demiL
   const dof = ctx.nEff - final.nParams
   const sigma2 = dof > 1 ? e0 / (ctx.sumW * Math.max(1e-9, 1 - final.nParams / ctx.nEff)) : Infinity
   const varF = d2 > 0 ? sigma2 * (ctx.sumW2 / ctx.sumW) * 2 / d2 : Infinity
-  const sigmaCents = Number.isFinite(varF) ? (1200 / LN2) * Math.sqrt(varF) / final.f0 : Infinity
+  const sigmaStat = Number.isFinite(varF) ? (1200 / LN2) * Math.sqrt(varF) / final.f0 : Infinity
+  // σ calibré (MacBook, haut-parleur intégré, notes de 500 ms) : le modèle ne connaît pas l'écart à
+  // l'acoustique réelle ; l'erreur observée ne descend pas sous ~0,2 ¢ alors que σ statistique vaut 0,02 ¢.
+  const sigmaCents = Number.isFinite(sigmaStat) ? Math.hypot(o.facteurSigma * sigmaStat, o.sigmaSystCents) : Infinity
 
   // 4) présence : l'élève réduit-il significativement l'énergie du modèle « playback seul » ?
   const nS = 2 * libres.length
@@ -441,7 +461,7 @@ export function ajusterF0(ctx: Contexte, candidats: number[], surcharge: { demiL
     }
   }
   return {
-    f0Hz: final.f0, sigmaCents, E: e0, EPlayback: ctx.EP, statF, presence, degenere: false,
+    f0Hz: final.f0, sigmaCents, E: e0, EPlayback: ctx.EP, statF, gainRel: (ctx.EP - e0) / Math.max(ctx.Ey, 1e-300), presence, degenere: false,
     libres, nonResolues: final.nonResolues, battements, ampEleve, ampPlayback, scores,
   }
 }

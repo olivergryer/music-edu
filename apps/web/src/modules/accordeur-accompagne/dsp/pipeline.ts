@@ -70,6 +70,7 @@ export function creerAnalyseurFlux(fsMic: number, planning: Planning, acces: Acc
   let actif: { onset: number; f0: number; sigma: number; vu: number } | null = null
   let evPrec: EvenementAccord | null = null
   let rmsPrec = 0
+  let precedenteBrute = false       // présence brute à la trame précédente (confirmation d'attaque)
   const tranche16 = acces.tranche16
 
   return function etape(t: number): TrameAnalyse {
@@ -164,8 +165,12 @@ export function creerAnalyseurFlux(fsMic: number, planning: Planning, acces: Acc
         if (choix) degenereF0 = choix
       }
     }
-    const presence = presenceModele || f0Mpm !== null
-    if (!presence && voix.length && t - Math.max(t - 0.1, debutPropre) >= 0.1) {
+    // Une attaque doit être confirmée sur deux trames consécutives : sur enregistrement réel,
+    // des trames isolées apparaissent (variations de niveau du haut-parleur) sans élève.
+    const brute = presenceModele || f0Mpm !== null
+    const presence = brute && (actif !== null || precedenteBrute)
+    precedenteBrute = brute
+    if (!brute && voix.length && t - Math.max(t - 0.1, debutPropre) >= 0.1) {
       const pbRef = fusionnerPartiels(voix, 0.1, 6000)
       const cr = creerContexte(tranche16(t - 0.1, t), FS_MODELE, pbRef)
       appris.apprendre(pbRef.map(p => p.freqHz), amplitudesPlaybackSeul(cr))
@@ -184,7 +189,7 @@ export function creerAnalyseurFlux(fsMic: number, planning: Planning, acces: Acc
       t, f0Hz: presence ? f0Hz : null, sigmaCents, source: fus?.source ?? 'modele',
       candidats: res ? res.scores.map(s => s.f0Hz) : [], presence, rmsResidu,
       battements: res?.battements ?? [],
-      mpmHz: f0Mpm, modeleHz: estMod?.f0Hz ?? null,
+      mpmHz: f0Mpm, modeleHz: estMod?.f0Hz ?? null, statF: resPres?.statF, gainRel: resPres?.gainRel,
     }
 
     // ── suivi de la note en cours ──
