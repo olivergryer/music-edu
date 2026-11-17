@@ -40,6 +40,8 @@ const FeedbackPage         = lazy(() => import('./pages/FeedbackPage'))
 const QuestionsAdminPage   = lazy(() => import('./QuestionsAdminPage'))
 const CarnetGammesPage     = lazy(() => import('./modules/carnet/CarnetGammesPage'))
 const CalibrationPage      = lazy(() => import('./pages/CalibrationPage'))
+const TestAccompagnePage   = lazy(() => import('./modules/accordeur-accompagne/TestAccompagnePage'))
+const EleveSynthetiquePage = lazy(() => import('./modules/accordeur-accompagne/EleveSynthetiquePage'))
 const MentionsLegalesPage  = lazy(() => import('./pages/legal/MentionsLegalesPage'))
 const ConfidentialitePage  = lazy(() => import('./pages/legal/ConfidentialitePage'))
 const CreditsPage          = lazy(() => import('./pages/legal/CreditsPage'))
@@ -105,6 +107,8 @@ function AppRoutes() {
       {/* Banc d'écoute Harmonie — harnais de dev, aucun lien depuis le Hub */}
       {IS_DEV && <Route path="/harmonie/banc" element={<BancPage />} />}
       {IS_DEV && <Route path="/accordeur/calibration" element={<ProtectedRoute><CalibrationPage /></ProtectedRoute>} />}
+      {IS_DEV && <Route path="/accordeur/test-accompagne" element={<TestAccompagnePage />} />}
+      {IS_DEV && <Route path="/accordeur/test-accompagne/eleve-synthetique" element={<EleveSynthetiquePage />} />}
       <Route path="/profil" element={<ProtectedRoute><ProfilPage /></ProtectedRoute>} />
       <Route path="/dashboard/eleve" element={<ProtectedRoute><DashboardEleve /></ProtectedRoute>} />
       <Route path="/dashboard/prof" element={<ProtectedRoute><DashboardProf /></ProtectedRoute>} />

@@ -36,3 +36,6 @@ yarn-error.log*
 # Misc
 .DS_Store
 *.pem
+
+# Spike accordeur accompagné — enregistrements de référence (hors dépôt)
+docs/accordeur-accompagne/enregistrements/

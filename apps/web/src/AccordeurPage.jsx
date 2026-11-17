@@ -1101,6 +1101,15 @@ export default function AccordeurPage() {
                 <circle cx="18" cy="2.5" r="2.5" fill="currentColor" />
               </svg>
             </Link>
+            {/* Spike « accordeur accompagné » : dev et préversion uniquement */}
+            {IS_DEV && (
+              <Link
+                to="/accordeur/test-accompagne"
+                title="Test accompagné (dev)"
+                className="flex items-center rounded-lg border border-app bg-surface no-underline"
+                style={{ height: 32, padding: '0 10px', fontSize: 11, fontWeight: 700, color: 'var(--text-muted)' }}
+              >Test accompagné</Link>
+            )}
           </div>
           <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
             <ThemeToggleInline />
