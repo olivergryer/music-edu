@@ -16,6 +16,8 @@ Firebase Spark : Firestore + Authentication (email/password). **DB partagée dev
 | `/theorie` | `TheoriePage.jsx` | public |
 | `/accordeur` | `AccordeurPage.jsx` + `AccordeurStaff.jsx` + `accordeurUtils.js` | public |
 | `/accordeur/generateur` | `GenerateurAccordPage.jsx` — accessible uniquement depuis AccordeurPage | public |
+| `/accordeur/accompagne` | `modules/accordeur-accompagne/PhrasePage.tsx` (+ `AccordPage.tsx`, logique pure `phrase/qualites/realisation/references/couleurs/portee/notation/annotation/bilan.ts`) — phrase en slots + écran Accord, accompagnement et mesure simultanés. `IS_DEV` tant que `ACCOMPAGNE_VISIBLE` (`visibilite.ts`) vaut false. Brief : `docs/accordeur-accompagne/rapport-spike.md` | public |
+| `/accordeur/test-accompagne` | `modules/accordeur-accompagne/TestAccompagnePage.tsx` + `EleveSynthetiquePage.tsx` — banc de test du spike, `IS_DEV` seulement | dev |
 | `/notes` | `modules/notes/NotesPage.tsx` + `NotesStaff.tsx` + `RadialWheel.tsx` (+ logique pure `modules/notes/*.ts`) | public |
 | `/harmonie` | `modules/harmonie/HarmoniePage.tsx` — choix d'activité (+ noyau pur `modules/harmonie/*.ts`) | public |
 | `/harmonie/detection` | `modules/harmonie/DetectionPage.tsx` — détection d'erreur, niveaux 3-7 | public |

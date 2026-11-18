@@ -54,7 +54,10 @@ if (existsSync(join(dossier, 'verite.json'))) verite = JSON.parse(readFileSync(j
 if (existsSync(join(dossier, 'meta.json'))) meta = { ...JSON.parse(readFileSync(join(dossier, 'meta.json'), 'utf8')), ...meta }
 
 // ── alignement sur le chirp : t = 0 au chirp ; l'écart est la latence de boucle ──
-const { indice, qualite } = trouverChirp(micro, fs)
+// --latence-ms <x> : impose la latence (ex. valeur du meta.json) quand le chirp de l'appareil est
+// absent du micro (annulation d'écho). --eleve-s <t> : instant du chirp de l'élève dans le micro brut.
+const latenceImposee = typeof a('latence-ms') === 'string' ? Number(a('latence-ms')) : null
+const { indice, qualite } = latenceImposee !== null ? { indice: Math.round((latenceImposee / 1000) * fs), qualite: NaN } : trouverChirp(micro, fs)
 const latenceMs = (indice / fs) * 1000
 micro = micro.subarray(indice)
 planning = { ...planning, latenceBoucleMs: 0 }
@@ -62,10 +65,11 @@ console.log(`Chirp trouvé à ${latenceMs.toFixed(1)} ms (qualité ${qualite.toF
 meta['latence de boucle mesurée'] = `${latenceMs.toFixed(1)} ms (qualité du pic ${qualite.toFixed(1)})`
 
 // ── élève synthétique sur un second appareil : son chirp est le 2e du micro, verite.json y est relative ──
+const eleveImpose = typeof a('eleve-s') === 'string' ? Number(a('eleve-s')) - latenceMs / 1000 : null
 if (verite && !a('simule') && !a('sans-chirp-eleve')) {
   const m12 = reechantillonner(micro, fs, 12000)
-  const r2 = trouverChirp(m12, 12000, m12.length / 12000, 0.05, 2.0)
-  if (r2.qualite >= 8) {
+  const r2 = eleveImpose !== null ? { indice: Math.round(eleveImpose * 12000), qualite: NaN } : trouverChirp(m12, 12000, m12.length / 12000, 0.05, 2.0)
+  if (eleveImpose !== null || r2.qualite >= 8) {
     const dt = r2.indice / 12000
     verite = {
       ...verite,

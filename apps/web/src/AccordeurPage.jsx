@@ -6,6 +6,7 @@ import TourGuide from './TourGuide'
 import { PitchDetector } from 'pitchy'
 import AccordeurStaff from './AccordeurStaff'
 import { IS_DEV } from './isDev'
+import { ACCOMPAGNE_ACCESSIBLE } from './modules/accordeur-accompagne/visibilite'
 import ConsigneOverlay, { consigneSeen } from './ConsigneOverlay'
 import SpectrePaneau from './SpectrePaneau'
 import GenerateurAccord from './GenerateurAccord'
@@ -1101,6 +1102,23 @@ export default function AccordeurPage() {
                 <circle cx="18" cy="2.5" r="2.5" fill="currentColor" />
               </svg>
             </Link>
+            {/* Accordeur accompagné : dev et préversion tant que ACCOMPAGNE_VISIBLE est false */}
+            {ACCOMPAGNE_ACCESSIBLE && (
+              <Link
+                to="/accordeur/accompagne"
+                title="Accordeur accompagné"
+                className="flex items-center justify-center rounded-lg border border-app bg-surface no-underline"
+                style={{ width: 32, height: 32, color: '#FF8B3D' }}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  {[6, 10, 14, 18].map(y => <line key={y} x1="2" y1={y} x2="22" y2={y} stroke="currentColor" strokeWidth="1.3" />)}
+                  <ellipse cx="7" cy="14" rx="2.6" ry="1.9" fill="currentColor" transform="rotate(-20 7 14)" />
+                  <ellipse cx="12.5" cy="10" rx="2.6" ry="1.9" fill="currentColor" transform="rotate(-20 12.5 10)" />
+                  <ellipse cx="18" cy="14" rx="2.6" ry="1.9" fill="currentColor" transform="rotate(-20 18 14)" />
+                  <path d="M2 21.5 Q7 18.5 12 21.5 T22 21.5" stroke="currentColor" strokeWidth="1.3" fill="none" />
+                </svg>
+              </Link>
+            )}
             {/* Spike « accordeur accompagné » : dev et préversion uniquement */}
             {IS_DEV && (
               <Link

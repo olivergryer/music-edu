@@ -3,7 +3,9 @@
 // native (Capacitor) pourra remplacer `MoteurWeb` sans toucher à l'analyse ni aux pages.
 
 import { construirePlanning, type OptionsPlanning } from './dsp/synthese.ts'
+import type { Reglage } from './dsp/reglages.ts'
 import type { EtatStrobe, NoteFinale, Planning, TrameAnalyse } from './dsp/types.ts'
+import { latenceSortieS, tempsAudible } from './temps.ts'
 import type { DepuisWorker, DepuisWorklet, ModeAffichage, VersWorker, VersWorklet } from './protocole.ts'
 // `?worker&url` : bundle le worklet avec ses imports (un `?url` d'un .ts ne le transpilerait pas)
 import urlWorklet from './processeurAccompagne.worklet.ts?worker&url'
@@ -12,12 +14,14 @@ export type VarianteEcho = 'desactivee' | 'activee' | 'all'
 export type SessionAudioIOS = 'defaut' | 'play-and-record'
 
 export type OptionsSession = {
-  planning: Omit<OptionsPlanning, 'sampleRate'>
+  planning?: Omit<OptionsPlanning, 'sampleRate'>        // planning de test (accord unique)
+  planningPhrase?: (sampleRate: number) => Planning    // planning de phrase entière (page de production)
   mode: ModeAffichage
   echo: VarianteEcho
   sessionIOS: SessionAudioIOS
   analyse: boolean            // false : étape 0, on enregistre seulement
   diapason: number
+  latenceMemoriseeMs?: number // valeur mémorisée (`acc_latence`), utilisée pour le temps audible avant la mesure
 }
 
 export type Resultat = {
@@ -40,6 +44,14 @@ export interface MoteurAudioAccompagne {
   demarrer(o: OptionsSession, abonnes: Abonnes): Promise<void>
   arreter(): Promise<Resultat>
   enCours(): boolean
+  /** Cents / volume / muet d'un son qui sonne : appliqué au prochain bloc, transition de 30 ms. */
+  reglerSon(entree: number, role: string, reglage: Reglage): void
+  /** Changement de structure : le nouveau planning prend le relais à `tCoupure` (frontière d'entrée). */
+  remplacerPlanning(nouveau: Planning, tCoupure: number): void
+  definirGain(gain: number): void
+  /** Temps du planning actuellement entendu (s), ou null avant le départ. */
+  tempsAudible(): number | null
+  tempsCourant(): number | null
 }
 
 export class MoteurWeb implements MoteurAudioAccompagne {
@@ -50,6 +62,9 @@ export class MoteurWeb implements MoteurAudioAccompagne {
   private planning: Planning | null = null
   private latenceMs: number | null = null
   private coupures = 0
+  private dernierStrobe: { t: number; tCtx: number } | null = null
+  private latenceRefMs = 0
+  private sansMicro = false
   private infoAudio: Record<string, string> = {}
   private attenteFin: ((r: Resultat) => void) | null = null
   private rejetFin: ((e: Error) => void) | null = null
@@ -58,7 +73,7 @@ export class MoteurWeb implements MoteurAudioAccompagne {
 
   async demarrer(o: OptionsSession, ab: Abonnes): Promise<void> {
     if (this.ctx) throw new Error('Session déjà en cours')
-    this.latenceMs = null; this.coupures = 0
+    this.latenceMs = null; this.coupures = 0; this.dernierStrobe = null; this.latenceRefMs = o.latenceMemoriseeMs ?? 0
     // iOS : session audio (WebKit) — à documenter à l'étape 0
     const nav = navigator as Navigator & { audioSession?: { type: string } }
     this.infoAudio['audioSession.type avant'] = nav.audioSession?.type ?? 'non disponible'
@@ -67,10 +82,19 @@ export class MoteurWeb implements MoteurAudioAccompagne {
     // micro : aucune correction du navigateur par défaut (comme l'Accordeur existant)
     const echo = o.echo === 'all' ? 'all' : o.echo === 'activee'
     const audio: MediaTrackConstraints = { echoCancellation: echo as unknown as boolean, noiseSuppression: false, autoGainControl: false }
-    this.flux = await navigator.mediaDevices.getUserMedia({ audio })
-    const reglages = this.flux.getAudioTracks()[0]?.getSettings() as MediaTrackSettings & { echoCancellation?: unknown }
+    this.sansMicro = false
+    try {
+      this.flux = await navigator.mediaDevices.getUserMedia({ audio })
+    } catch (err) {
+      // pas de micro : la phrase se joue quand même, sans mesure (le refus d'autorisation, lui, est remonté)
+      if (!/NotFound|DevicesNotFound|Overconstrained/i.test(String((err as Error)?.name ?? err))) throw err
+      this.flux = null; this.sansMicro = true
+      o = { ...o, analyse: false }
+      ab.erreur?.('micro-absent')
+    }
+    const reglages = this.flux?.getAudioTracks()[0]?.getSettings() as (MediaTrackSettings & { echoCancellation?: unknown }) | undefined
     this.infoAudio['echoCancellation obtenu'] = String(reglages?.echoCancellation)
-    this.infoAudio['étiquette du micro'] = this.flux.getAudioTracks()[0]?.label ?? ''
+    this.infoAudio['étiquette du micro'] = this.flux?.getAudioTracks()[0]?.label ?? (this.sansMicro ? 'aucun' : '')
 
     const ctx = new AudioContext({ latencyHint: 'interactive' })
     this.ctx = ctx
@@ -80,14 +104,16 @@ export class MoteurWeb implements MoteurAudioAccompagne {
     this.infoAudio['outputLatency'] = String((ctx as AudioContext & { outputLatency?: number }).outputLatency ?? 'n/a')
     this.infoAudio['audioSession.type après'] = nav.audioSession?.type ?? 'non disponible'
 
-    const planning = construirePlanning({ ...o.planning, sampleRate: ctx.sampleRate, tDebut: 0.3 })
+    const planning = o.planningPhrase
+      ? o.planningPhrase(ctx.sampleRate)
+      : construirePlanning({ ...(o.planning as NonNullable<OptionsSession['planning']>), sampleRate: ctx.sampleRate, tDebut: 0.3 })
     this.planning = planning
 
     await ctx.audioWorklet.addModule(urlWorklet)
     const noeud = new AudioWorkletNode(ctx, 'processeur-accompagne', { numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [2] })
     this.noeud = noeud
-    const source = ctx.createMediaStreamSource(this.flux)
-    source.connect(noeud); noeud.connect(ctx.destination)
+    if (this.flux) ctx.createMediaStreamSource(this.flux).connect(noeud)
+    noeud.connect(ctx.destination)
 
     const worker = new Worker(new URL('./analyseAccompagne.worker.ts', import.meta.url), { type: 'module' })
     this.worker = worker
@@ -97,7 +123,7 @@ export class MoteurWeb implements MoteurAudioAccompagne {
       if (m.type === 'trame') ab.trame?.(m.trame, m.msCalcul)
       else if (m.type === 'latence') { this.latenceMs = m.ms; ab.latence?.(m.ms, m.qualite) }
       else if (m.type === 'progression') ab.progression?.(m.texte)
-      else if (m.type === 'erreur') { ab.erreur?.(m.message); this.rejetFin?.(new Error(m.message)) }
+      else if (m.type === 'erreur') { if (this.sansMicro) return; ab.erreur?.(m.message); this.rejetFin?.(new Error(m.message)) }
       else if (m.type === 'fini') {
         const r: Resultat = {
           planning, sampleRate: ctx.sampleRate, notes: m.notes, trames: m.trames, micro: m.micro, sortie: m.sortie,
@@ -108,7 +134,7 @@ export class MoteurWeb implements MoteurAudioAccompagne {
     }
     noeud.port.onmessage = (e: MessageEvent<DepuisWorklet>) => {
       const m = e.data
-      if (m.type === 'strobe') { this.coupures = m.coupures; ab.strobe?.(m.etats, m.rmsMicro, m.coupures) }
+      if (m.type === 'strobe') { this.coupures = m.coupures; this.dernierStrobe = { t: m.t, tCtx: m.tCtx }; ab.strobe?.(m.etats, m.rmsMicro, m.coupures) }
     }
     const init: VersWorker = { type: 'init', port: canal.port1, planning, fs: ctx.sampleRate, mode: o.mode, diapason: o.diapason, analyse: o.analyse }
     worker.postMessage(init, [canal.port1])
@@ -118,6 +144,37 @@ export class MoteurWeb implements MoteurAudioAccompagne {
     noeud.port.postMessage(p2)
     const p3: VersWorklet = { type: 'demarrer' }
     noeud.port.postMessage(p3)
+  }
+
+  reglerSon(entree: number, role: string, reglage: Reglage): void {
+    const m: VersWorklet = { type: 'reglage', entree, role, reglage }
+    this.noeud?.port.postMessage(m)
+  }
+
+  remplacerPlanning(nouveau: Planning, tCoupure: number): void {
+    this.planning = nouveau
+    const m: VersWorklet = { type: 'futur', planning: nouveau, tCoupure }
+    this.noeud?.port.postMessage(m)
+  }
+
+  definirGain(gain: number): void {
+    const m: VersWorklet = { type: 'gain', gain }
+    this.noeud?.port.postMessage(m)
+  }
+
+  tempsAudible(): number | null {
+    const c = this.ctx
+    if (!c || !this.dernierStrobe) return null
+    const tPlanning = this.dernierStrobe.t + (c.currentTime - this.dernierStrobe.tCtx)
+    const ctx = c as AudioContext & { outputLatency?: number }
+    return tempsAudible(tPlanning, latenceSortieS({ outputLatency: ctx.outputLatency, baseLatency: c.baseLatency, latenceBoucleMs: this.latenceMs ?? this.latenceRefMs }))
+  }
+
+  /** Instant du planning en cours de synthèse (sans correction de latence), ou null avant le départ. */
+  tempsCourant(): number | null {
+    const c = this.ctx
+    if (!c || !this.dernierStrobe) return null
+    return this.dernierStrobe.t + (c.currentTime - this.dernierStrobe.tCtx)
   }
 
   async arreter(): Promise<Resultat> {

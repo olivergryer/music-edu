@@ -34,13 +34,17 @@ export type OptionsModele = {
   battementMaxHz?: number     // 25
   sigmaSystCents?: number     // plancher d'incertitude : écart modèle ↔ acoustique réelle (0,25 ¢)
   facteurSigma?: number       // inflation de σ statistique (3) ; les deux à recalibrer par appareil
+  seuilFBas?: number          // second critère : F plus bas mais gain d'énergie fort (résidu réel bruité)
+  gainRelatifFort?: number
   gainRelatifMin?: number     // plancher de présence : (E_playback − E) / énergie du signal. Calibré sur playback seul
-                                // (MacBook : p95 1,4e-3, max 1,5e-2 ; F p95 19, max 31) → 4e-3 et F > 50
+                                // (MacBook : F p95 19, max 31 ; élève : F ≥ 1e3). F décide ; le plancher de gain ne sert qu'à éviter
+                                // les faux positifs sans bruit (E → 0). Un plancher de gain plus haut (4e-3) coupait
+                                // l'élève à l'unisson, dont seules les harmoniques > 8 expliquent de l'énergie (3,5e-3).
 }
 
 const DEF = {
   kMax: 16, bandeHz: 6000, pasGrilleCents: 2, demiLargeurCents: 60,
-  kGrossier: 8, seuilF: 50, coupureBins: 16, battementMaxHz: 25, gainRelatifMin: 4e-3, sigmaSystCents: 0.25, facteurSigma: 3,
+  kGrossier: 8, seuilF: 60, coupureBins: 16, battementMaxHz: 25, gainRelatifMin: 1e-4, seuilFBas: 25, gainRelatifFort: 2e-2, sigmaSystCents: 0.25, facteurSigma: 3,
 }
 
 // ─── FFT radix-2 ─────────────────────────────────────────────────────────────
@@ -437,7 +441,13 @@ export function ajusterF0(ctx: Contexte, candidats: number[], surcharge: { demiL
   const nS = 2 * libres.length
   const statF = dof > 0 && e0 > 0 ? ((ctx.EP - e0) / nS) / (e0 / dof) : (ctx.EP > e0 ? Infinity : 0)
   // plancher absolu : sans bruit, E → 0 et F explose pour un gain négligeable
-  const presence = statF > o.seuilF && (ctx.EP - e0) > o.gainRelatifMin * ctx.Ey
+  // Deux critères en OU, calibrés sur enregistrements MacBook (haut-parleur intégré, 1 m) :
+  //  - F élevé (modèle quasi exact : simulation, unisson dont seules les harmoniques > 8 portent l'énergie) ;
+  //  - gain d'énergie fort avec F plus modeste : sur signal réel le résidu est plus bruyant que le modèle
+  //    ne le suppose, F reste à 45-60 même avec l'élève bien présent (gain 5 %), alors que playback seul
+  //    donne F ≤ 31 et gain ≤ 1,5e-2.
+  const gainRel = (ctx.EP - e0) / Math.max(ctx.Ey, 1e-300)
+  const presence = (statF > o.seuilF && gainRel > o.gainRelatifMin) || (statF > o.seuilFBas && gainRel > o.gainRelatifFort)
 
   // 5) battements
   const amp = (v: Float64Array, i: number) => Math.hypot(v[2 * i], v[2 * i + 1])

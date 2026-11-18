@@ -14,6 +14,7 @@ const g = globalThis as unknown as Record<string, unknown>
 const sortieWorklet: unknown[] = []
 g.sampleRate = FS
 g.currentFrame = 0
+g.currentTime = 0
 g.AudioWorkletProcessor = class { port = { onmessage: null as unknown, postMessage: (m: unknown) => { sortieWorklet.push(m) } } }
 let Ctor: (new () => Proc) | null = null
 g.registerProcessor = (_: string, c: new () => Proc) => { Ctor = c }
@@ -43,6 +44,7 @@ async function session(mode: 'live' | 'fin', secondes: number, eleve: { f0: numb
   const B = 128
   for (let k = 0; k + B <= N; k += B) {
     g.currentFrame = k
+    g.currentTime = k / FS
     const entree = new Float32Array(B)
     for (let i = 0; i < B; i++) entree[i] = (k + i >= retard ? histo[k + i - retard] : 0) + el[k + i]
     const out = [new Float32Array(B), new Float32Array(B)]
@@ -88,4 +90,47 @@ test('mode Live : trames au fil de l’eau, note retrouvée, présence relayée 
   assert.ok(r.notes.length >= 1 && Math.abs(centsEntre(r.notes[0].f0Hz, f0)) < 0.5)
   const strobes = sortieWorklet.filter(m => (m as { type: string }).type === 'strobe')
   assert.ok(strobes.length > 100, `${strobes.length} messages stroboscope`)
+})
+
+test('réglages à chaud : le worklet applique cents, volume, muet, planning futur et gain sans coupure ni valeur invalide', async () => {
+  const { PHRASES_FOURNIES } = await import('./phrase.ts')
+  const { construirePlanningPhrase } = await import('./planningPhrase.ts')
+  const { prochaineFrontiere } = await import('./dsp/reglages.ts')
+  venantDuWorker.length = 0; sortieWorklet.length = 0
+  const cad = PHRASES_FOURNIES[0]
+  const { planning } = construirePlanningPhrase({ ...cad, tempo: 120 }, { sampleRate: FS, dureeS: 8 })
+  const futur = construirePlanningPhrase({ ...cad, tempo: 120, entrees: { ...cad.entrees, 8: { ...cad.entrees[8], degre: 2 } } }, { sampleRate: FS, dureeS: 8 }).planning
+  const proc = new Ctor!()
+  const canal = new MessageChannel()
+  const recus: { type: string; t?: number }[] = []
+  canal.port1.onmessage = (e: MessageEvent) => { recus.push(e.data) }
+  const versProc = (d: unknown) => proc.port.onmessage!({ data: d })
+  versProc({ type: 'port', port: canal.port2 })
+  versProc({ type: 'planning', planning })
+  versProc({ type: 'demarrer' })
+  const B = 128, N = Math.round(3 * FS)
+  let maxi = 0, valide = true, dernier = 0
+  for (let k = 0; k + B <= N; k += B) {
+    g.currentFrame = k; g.currentTime = k / FS
+    if (k === 20 * B) versProc({ type: 'reglage', entree: 0, role: '3', reglage: { cents: 8, volume: 0.5 } })
+    if (k === 40 * B) versProc({ type: 'reglage', entree: 0, role: '5', reglage: { muet: true } })
+    if (k === 60 * B) versProc({ type: 'futur', planning: futur, tCoupure: prochaineFrontiere(planning, k / FS)! })
+    if (k === 80 * B) versProc({ type: 'gain', gain: planning.gain * 0.5 })
+    const out = [new Float32Array(B), new Float32Array(B)]
+    proc.process([[new Float32Array(B)]], [out])
+    for (let i = 0; i < B; i++) {
+      const v = out[0][i]
+      if (!Number.isFinite(v)) valide = false
+      maxi = Math.max(maxi, Math.abs(v - dernier)); dernier = v
+    }
+  }
+  await attendre(50)
+  assert.ok(valide, 'valeurs finies')
+  assert.ok(maxi < 0.5, `pas de saut brutal (${maxi})`)
+  assert.equal(sortieWorklet.filter(m => (m as { coupures?: number }).coupures).length, 0)
+  const types = recus.map(m => m.type)
+  assert.ok(types.includes('reglage') && types.includes('futur') && types.includes('gain'), types.join(','))
+  const r = recus.filter(m => m.type === 'reglage')
+  assert.equal(r.length, 2)
+  assert.ok(Math.abs(r[0].t! - 20 * B / FS) < 1e-9)               // l'instant exact est transmis au Worker
 })

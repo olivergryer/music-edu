@@ -10,6 +10,7 @@ import { NiveauPlaybackAppris, choisirCandidatDegenere } from './presence.ts'
 import { reechantillonner } from './reechantillonnage.ts'
 import { segmenterTrames } from './segmentation.ts'
 import { detecterSurResidu, mpm, PROFIL_ACCOMPAGNE } from './soustraction.ts'
+import { DUREE_CLIC_S, voixSonnantes } from './synthese.ts'
 import {
   DIAPASON_PAR_DEFAUT, hzVersMidi, midiVersHz,
   type Battement, type EvenementAccord, type NoteFinale, type Planning, type TrameAnalyse, type Voix,
@@ -22,6 +23,7 @@ const FENETRE_AMORCE_S = 0.080
 const DEBUT_STABLE_S = 0.060
 const FENETRE_MAX_S = 1.0
 const SILENCE_FIN_S = 0.105
+const GARDE_CLIC_S = DUREE_CLIC_S + 0.04   // décompte : le clic est large bande, on l'écarte comme une attaque
 
 export type OptionsPipeline = {
   diapason?: number
@@ -44,6 +46,13 @@ const evenementA = (p: Planning, t: number): EvenementAccord | null =>
 function derniereAttaque(p: Planning, t: number): number {
   let a = -Infinity
   for (const e of p.evenements) for (const x of e.attaques) if (x <= t && x > a) a = x
+  return a + p.latenceBoucleMs / 1000
+}
+
+/** Fin du dernier clic de décompte avant t (-Infinity s'il n'y en a pas). */
+function dernierClic(p: Planning, t: number): number {
+  let a = -Infinity
+  for (const c of p.clics ?? []) if (c.t <= t && c.t > a) a = c.t
   return a + p.latenceBoucleMs / 1000
 }
 
@@ -75,10 +84,10 @@ export function creerAnalyseurFlux(fsMic: number, planning: Planning, acces: Acc
 
   return function etape(t: number): TrameAnalyse {
     const ev = evenementA(planning, t)
-    const voix: Voix[] = ev ? ev.voix : []
+    const voix: Voix[] = ev ? voixSonnantes(ev) : []
     if (ev !== evPrec) { if (!evPrec || !ev || evPrec.accordId !== ev.accordId || evPrec.accordage !== ev.accordage) appris.oublier(); evPrec = ev }
     const tAtt = ev ? derniereAttaque(planning, t) : -Infinity
-    const debutPropre = tAtt + GARDE_ATTAQUE_S
+    const debutPropre = Math.max(tAtt + GARDE_ATTAQUE_S, dernierClic(planning, t) + GARDE_CLIC_S)
 
     // ── piste rapide : soustraction + MPM sur le résidu ──
     let f0Mpm: number | null = null, rmsResidu = 0
@@ -167,6 +176,13 @@ export function creerAnalyseurFlux(fsMic: number, planning: Planning, acces: Acc
     }
     // Une attaque doit être confirmée sur deux trames consécutives : sur enregistrement réel,
     // des trames isolées apparaissent (variations de niveau du haut-parleur) sans élève.
+    // MPM sur résidu seul peut voir la fondamentale virtuelle de l'accord (ex. 65,7 Hz pour Do-Sol-Do-Mi) à
+    // cause d'une soustraction imparfaite. Une détection MPM SOUS la voix la plus grave de l'accord (< 0,75×)
+    // n'est donc retenue que si le modèle la confirme. Ailleurs MPM décide seul : exiger partout la confirmation
+    // du modèle écartait de vraies notes (prises MacBook : identification 100 % → 44-68 %).
+    const modeleJuge = !!resPres && !resPres.degenere
+    const fMinVoix = voix.length ? Math.min(...voix.map(v => v.freqHz)) : Infinity
+    if (f0Mpm !== null && modeleJuge && !presenceModele && f0Mpm < 0.75 * fMinVoix) f0Mpm = null
     const brute = presenceModele || f0Mpm !== null
     const presence = brute && (actif !== null || precedenteBrute)
     precedenteBrute = brute
@@ -225,26 +241,41 @@ export function analyserEnregistrement(micro: Float32Array, fsMic: number, plann
 // ─── Passe finale (non causale), §6.8 ────────────────────────────────────────
 export type OptionsFinale = { diapason?: number; profil?: typeof PROFIL_ACCOMPAGNE }
 
+/** Instants strictement intérieurs à ]a, b[ où l'entrée de phrase change (changements d'accord). */
+export function changementsDAccord(planning: Planning, a: number, b: number, marge = 0.03): number[] {
+  const evs = planning.evenements
+  const out: number[] = []
+  for (let i = 1; i < evs.length; i++) {
+    const e0 = evs[i - 1], e1 = evs[i]
+    if (e0.entree === undefined || e1.entree === undefined || e0.entree === e1.entree) continue
+    if (e1.tDebut > a + marge && e1.tDebut < b - marge) out.push(e1.tDebut)
+  }
+  return out
+}
+
+type Segment = { debutMs: number; finMs: number; midiCible: number; frames: { tMs: number; hz: number }[] }
+
 export function passeFinale(micro: Float32Array, fsMic: number, planning: Planning, trames: TrameAnalyse[], o: OptionsFinale = {}): NoteFinale[] {
   const diapason = o.diapason ?? DIAPASON_PAR_DEFAUT
-  const segs = segmenterTrames(trames, diapason, o.profil ?? PROFIL_ACCOMPAGNE) as unknown as {
-    debutMs: number; finMs: number; midiCible: number; frames: { tMs: number; hz: number }[]
-  }[]
+  const segs = segmenterTrames(trames, diapason, o.profil ?? PROFIL_ACCOMPAGNE) as unknown as Segment[]
   const micro16 = reechantillonner(micro, fsMic, FS_MODELE)
   const notes: NoteFinale[] = []
-  for (const s of segs) {
-    const tOn = s.debutMs / 1000, tOff = s.finMs / 1000
+
+  /** Une note (ou un morceau de note) sur [tOn, tOff], avec ses propres valeurs et sa propre référence. */
+  const noteSurMorceau = (tOn: number, tOff: number, frames: { tMs: number; hz: number }[], coupeAvant: boolean, coupeApres: boolean): void => {
+    if (!frames.length) return
     const milieu = 0.5 * (tOn + tOff)
     const ev = evenementA(planning, milieu)
-    const voix = ev?.voix ?? []
+    const voix = ev ? voixSonnantes(ev) : []
+    const base = { entree: ev?.entree, ...(coupeAvant ? { coupeAvant: true } : {}), ...(coupeApres ? { coupeApres: true } : {}) }
     const a = Math.max(tOn + DEBUT_STABLE_S, ev ? derniereAttaque(planning, milieu) + GARDE_ATTAQUE_S : -Infinity)
     const b = Math.min(tOff - 0.03, ev ? ev.tFin - 0.06 : Infinity)
-    const hzs = s.frames.map(f => f.hz).sort((x, y) => x - y)
+    const hzs = frames.map(f => f.hz).sort((x, y) => x - y)
     const medHz = hzs[Math.floor(hzs.length / 2)]
     const midi = Math.round(hzVersMidi(medHz, diapason))
     if (b - a < 0.06) {
-      notes.push({ tOn, tOff, midi, f0Hz: medHz, centsTempere: centsDe(medHz, midiVersHz(midi, diapason)), sigmaCents: Infinity, sigmaIntraCents: 0, poids: 0, battements: [] })
-      continue
+      notes.push({ tOn, tOff, midi, f0Hz: medHz, centsTempere: centsDe(medHz, midiVersHz(midi, diapason)), sigmaCents: Infinity, sigmaIntraCents: 0, poids: 0, battements: [], ...base })
+      return
     }
     const y = micro16.subarray(Math.round(a * FS_MODELE), Math.round(b * FS_MODELE))
     const T = y.length / FS_MODELE
@@ -267,8 +298,20 @@ export function passeFinale(micro: Float32Array, fsMic: number, planning: Planni
       centsTempere: centsDe(f0, midiVersHz(Math.round(hzVersMidi(f0, diapason)), diapason)),
       sigmaCents: sigma, sigmaIntraCents: sigmaIntra,
       poids: Number.isFinite(sigma) && sigma > 0 ? 1 / (sigma * sigma) : 0,
-      battements: res.battements as Battement[],
+      battements: res.battements as Battement[], ...base,
     })
+  }
+
+  for (const s of segs) {
+    const tOn = s.debutMs / 1000, tOff = s.finMs / 1000
+    // Une note tenue à travers un changement d'accord devient deux morceaux, chacun avec ses
+    // valeurs et sa référence : la même note doit se réajuster (§ 4.4.4).
+    const bornes = [tOn, ...changementsDAccord(planning, tOn, tOff), tOff]
+    for (let i = 0; i + 1 < bornes.length; i++) {
+      const x0 = bornes[i], x1 = bornes[i + 1]
+      const fr = bornes.length === 2 ? s.frames : s.frames.filter(f => f.tMs / 1000 >= x0 - 1e-9 && f.tMs / 1000 < x1 - 1e-9)
+      noteSurMorceau(x0, x1, fr, i > 0, i + 2 < bornes.length)
+    }
   }
   return notes
 }

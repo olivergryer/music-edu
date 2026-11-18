@@ -6,6 +6,7 @@
 import { trouverChirp } from './dsp/chirp.ts'
 import { creerAnalyseurFlux, FS_MODELE, analyserEnregistrement, passeFinale, type AccesMicro } from './dsp/pipeline.ts'
 import { reechantillonner } from './dsp/reechantillonnage.ts'
+import { appliquerReglage, remplacerAPartirDe } from './dsp/reglages.ts'
 import type { TrameAnalyse } from './dsp/types.ts'
 import type { DepuisWorker, VersWorker, WorkerVersWorklet, WorkletVersWorker } from './protocole.ts'
 
@@ -121,7 +122,13 @@ ctx.onmessage = (e: MessageEvent<VersWorker>) => {
     port.onmessage = (ev: MessageEvent<WorkletVersWorker>) => {
       const b = ev.data
       if (b.type === 'micro') { micro.ajouter(b.donnees); chercherChirp() }
-      else sortie.ajouter(b.donnees)
+      else if (b.type === 'sortie') sortie.ajouter(b.donnees)
+      else if (!planning) return
+      // modifications du planning, appliquées à l'instant transmis par le worklet : l'objet `planning`
+      // est muté en place car l'analyseur par trame le tient par référence.
+      else if (b.type === 'reglage') Object.assign(planning, appliquerReglage(planning, b.entree, b.role, b.reglage, b.t))
+      else if (b.type === 'futur') Object.assign(planning, remplacerAPartirDe(planning, b.planning, b.tCoupure))
+      else if (b.type === 'gain') planning.gain = b.gain
     }
   } else if (m.type === 'arreter') arreter()
 }

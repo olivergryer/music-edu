@@ -5,10 +5,20 @@
 export const DIAPASON_PAR_DEFAUT = 442   // `DIAPASON_DEFAULT` n'existe pas dans le dépôt
 
 // ─── Playback ────────────────────────────────────────────────────────────────
-export type Partiel = { k: number; freqHz: number; amp: number; phase0: number }
-export type Voix = { midi: number; cents: number; freqHz: number; partiels: Partiel[] }
+export type Partiel = {
+  k: number; freqHz: number; amp: number; phase0: number
+  // Transition d'un réglage en cours de lecture : le partiel part de (freqDe, ampDe) et rejoint
+  // (freqHz, amp) en `EvenementAccord.glissS` secondes, phase continue (phase0 = phase à tDebut).
+  freqDe?: number; ampDe?: number
+}
+export type Voix = {
+  midi: number; cents: number; freqHz: number; partiels: Partiel[]
+  role?: string        // 'F' | '3' | '5' | '7' (accompagnement de phrase)
+  muet?: boolean       // son de référence silencieux : exclu de la synthèse ET du modèle d'analyse
+  volume?: number
+}
 export type Formule = 'tenu' | 'blanche' | 'noire' | 'croche' | 'clignotant'
-export type Accordage = 'juste' | 'tempere'
+export type Accordage = 'juste' | 'tempere' | 'utilisateur'
 
 export type EvenementAccord = {
   tDebut: number; tFin: number               // secondes, horloge du contexte audio
@@ -16,13 +26,18 @@ export type EvenementAccord = {
   accordage: Accordage
   voix: Voix[]
   formule: Formule
-  attaques: number[]                         // instants d'attaque du playback
+  attaques: number[]                         // instants d'attaque du playback (ou de réglage : l'analyse les écarte)
+  entree?: number                            // index d'entrée de phrase (frontières d'accord)
+  continuiteAvant?: boolean                  // pas de rampe d'attaque (suite d'un événement coupé par un réglage)
+  continuiteApres?: boolean                  // pas de rampe de relâchement
+  glissS?: number                            // durée de la transition des partiels (freqDe/ampDe)
 }
 export type Planning = {
   sampleRate: number
   latenceBoucleMs: number
   evenements: EvenementAccord[]
   gain: number                               // gain maître appliqué à la synthèse
+  clics?: { t: number; accent: boolean }[]  // décompte : instants connus, écartés par l'analyse
 }
 
 // ─── Analyse ─────────────────────────────────────────────────────────────────
@@ -54,6 +69,9 @@ export type NoteFinale = {
   sigmaIntraCents: number // variabilité dans la note (comme calculerEcarts)
   poids: number           // 1/sigma², pour les bilans
   battements: Battement[] // moyens, par voix
+  entree?: number         // index d'entrée de phrase en vigueur (référence harmonique de la note)
+  coupeAvant?: boolean    // morceau d'une note tenue à travers un changement d'accord
+  coupeApres?: boolean
 }
 
 // ─── Utilitaires de conversion ────────────────────────────────────────────────

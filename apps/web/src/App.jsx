@@ -11,6 +11,7 @@ import AvertissementSon from './components/AvertissementSon'
 import PopupRattrapage from './components/PopupRattrapage'
 import { CelebrationProvider } from './hooks/CelebrationContext'
 import { IS_DEV } from './isDev'
+import { ACCOMPAGNE_ACCESSIBLE } from './modules/accordeur-accompagne/visibilite'
 
 // Le Hub reste dans le bundle d'entrée : c'est la première page vue, et elle
 // n'utilise aucune dépendance lourde. Tout le reste est chargé à la demande —
@@ -40,6 +41,7 @@ const FeedbackPage         = lazy(() => import('./pages/FeedbackPage'))
 const QuestionsAdminPage   = lazy(() => import('./QuestionsAdminPage'))
 const CarnetGammesPage     = lazy(() => import('./modules/carnet/CarnetGammesPage'))
 const CalibrationPage      = lazy(() => import('./pages/CalibrationPage'))
+const PhraseAccompagnePage = lazy(() => import('./modules/accordeur-accompagne/PhrasePage'))
 const TestAccompagnePage   = lazy(() => import('./modules/accordeur-accompagne/TestAccompagnePage'))
 const EleveSynthetiquePage = lazy(() => import('./modules/accordeur-accompagne/EleveSynthetiquePage'))
 const MentionsLegalesPage  = lazy(() => import('./pages/legal/MentionsLegalesPage'))
@@ -107,6 +109,7 @@ function AppRoutes() {
       {/* Banc d'écoute Harmonie — harnais de dev, aucun lien depuis le Hub */}
       {IS_DEV && <Route path="/harmonie/banc" element={<BancPage />} />}
       {IS_DEV && <Route path="/accordeur/calibration" element={<ProtectedRoute><CalibrationPage /></ProtectedRoute>} />}
+      {ACCOMPAGNE_ACCESSIBLE && <Route path="/accordeur/accompagne" element={<PhraseAccompagnePage />} />}
       {IS_DEV && <Route path="/accordeur/test-accompagne" element={<TestAccompagnePage />} />}
       {IS_DEV && <Route path="/accordeur/test-accompagne/eleve-synthetique" element={<EleveSynthetiquePage />} />}
       <Route path="/profil" element={<ProtectedRoute><ProfilPage /></ProtectedRoute>} />

@@ -42,11 +42,44 @@ export function voixDeAccord(accordId: string, accordage: Accordage, diapason = 
 }
 
 /** Enveloppe d'un événement à l'instant t (secondes). */
-export function enveloppe(t: number, ev: Pick<EvenementAccord, 'tDebut' | 'tFin'>): number {
+export function enveloppe(t: number, ev: Pick<EvenementAccord, 'tDebut' | 'tFin' | 'continuiteAvant' | 'continuiteApres'>): number {
   if (t < ev.tDebut || t >= ev.tFin) return 0
-  const a = Math.min(1, (t - ev.tDebut) / ATTAQUE_S)
-  const r = Math.min(1, (ev.tFin - t) / RELACHEMENT_S)
+  const a = ev.continuiteAvant ? 1 : Math.min(1, (t - ev.tDebut) / ATTAQUE_S)
+  const r = ev.continuiteApres ? 1 : Math.min(1, (ev.tFin - t) / RELACHEMENT_S)
   return Math.min(a, r)
+}
+
+/** Phase (radians) d'un partiel à `tau` secondes après le début de l'événement, transition éventuelle comprise. */
+export function phasePartiel(p: Partiel, tau: number, glissS?: number): number {
+  if (glissS && p.freqDe !== undefined && p.freqDe !== p.freqHz) {
+    const G = glissS
+    if (tau < G) return p.phase0 + 2 * Math.PI * (p.freqDe * tau + ((p.freqHz - p.freqDe) * tau * tau) / (2 * G))
+    return p.phase0 + 2 * Math.PI * (((p.freqDe + p.freqHz) * G) / 2 + p.freqHz * (tau - G))
+  }
+  return p.phase0 + 2 * Math.PI * p.freqHz * tau
+}
+
+/** Amplitude d'un partiel à `tau`, transition linéaire éventuelle comprise. */
+export function ampPartiel(p: Partiel, tau: number, glissS?: number): number {
+  if (glissS && p.ampDe !== undefined && tau < glissS) return p.ampDe + ((p.amp - p.ampDe) * tau) / glissS
+  return p.amp
+}
+
+/** Contribution d'un partiel au signal (avant gain maître et enveloppe). */
+export function contributionPartiel(p: Partiel, tau: number, glissS?: number): number {
+  return ampPartiel(p, tau, glissS) * Math.sin(phasePartiel(p, tau, glissS))
+}
+
+/** Voix qui sonnent réellement (exclut les sons muets, qui restent de simples références). */
+export function voixSonnantes(ev: Pick<EvenementAccord, 'voix'>): Voix[] {
+  return ev.voix.some(v => v.muet) ? ev.voix.filter(v => !v.muet) : ev.voix
+}
+
+/** Clic de décompte : sinusoïde brève à décroissance rapide (1 kHz, 1,5 kHz accentué). Durée utile 40 ms. */
+export const DUREE_CLIC_S = 0.04
+export function signalClic(tau: number, accent: boolean): number {
+  if (tau < 0 || tau >= DUREE_CLIC_S) return 0
+  return 0.5 * Math.exp(-tau / 0.008) * Math.sin(2 * Math.PI * (accent ? 1500 : 1000) * tau)
 }
 
 /** Gain maître tel que la crête du mélange vaille `dbfs` (−24, −12, −6). */
@@ -120,9 +153,13 @@ export function rendrePlayback(planning: Planning, nEchantillons: number, n0 = 0
       if (e === 0) continue
       const tau = t - ev.tDebut                // phase 0 à l'attaque
       let s = 0
-      for (const v of ev.voix) for (const p of v.partiels) s += p.amp * Math.sin(2 * Math.PI * p.freqHz * tau + p.phase0)
+      for (const v of ev.voix) for (const p of v.partiels) s += contributionPartiel(p, tau, ev.glissS)
       out[i - n0] += planning.gain * e * s
     }
+  }
+  for (const c of planning.clics ?? []) {
+    const i0 = Math.max(n0, Math.floor(c.t * fs)), i1 = Math.min(n0 + nEchantillons, Math.ceil((c.t + DUREE_CLIC_S) * fs))
+    for (let i = i0; i < i1; i++) out[i - n0] += signalClic(i / fs - c.t, c.accent)
   }
   return out
 }
