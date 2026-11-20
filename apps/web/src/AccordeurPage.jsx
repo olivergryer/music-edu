@@ -7,6 +7,7 @@ import { PitchDetector } from 'pitchy'
 import AccordeurStaff from './AccordeurStaff'
 import { IS_DEV } from './isDev'
 import { ACCOMPAGNE_ACCESSIBLE } from './modules/accordeur-accompagne/visibilite'
+import { PROFILS_DEFAUT } from './profilsSegmentation'
 import ConsigneOverlay, { consigneSeen } from './ConsigneOverlay'
 import SpectrePaneau from './SpectrePaneau'
 import GenerateurAccord from './GenerateurAccord'
@@ -34,17 +35,10 @@ const SILENCE_MS_DEFAULT      = 40
 const NOTE_JUMP_CENTS_DEFAULT = 30
 const MIN_NOTE_MS_DEFAULT     = 100
 
-// Profils de réglages segmentation (défauts).
-// Override possible via localStorage 'acc_profiles_custom' (page calibration interne).
-// Défauts calibrés (méthode : centre de l'intersection des plages valides sur toutes
-// les sessions de calibration). Régénérer via `npm run calibrate:defaults`.
-// Base actuelle : 2 sessions clarinette (iPhone + MacBook, 16/08/2026).
-// ⚠ détaché : clarté + silence issus d'un fallback (intersection vide, cf. notes répétées).
-const _ACC_PROFILES_DEFAULTS = {
-  legato:  { clarityThreshold: 0.70, gateLevel: 0.015,  silenceDurationMs: 105, noteJumpCents: 25, minNoteDurationMs: 85, reattackDropRatio: 0 },
-  detache: { clarityThreshold: 0.75, gateLevel: 0.0175, silenceDurationMs: 105, noteJumpCents: 58, minNoteDurationMs: 65, reattackDropRatio: 0 },
-  rapide:  { clarityThreshold: 0.70, gateLevel: 0.0275, silenceDurationMs: 105, noteJumpCents: 25, minNoteDurationMs: 80, reattackDropRatio: 0 },
-}
+// Profils de réglages segmentation : défauts dans `profilsSegmentation.ts` (partagés avec la
+// page « Accordeur accompagné »). Override possible via localStorage 'acc_profiles_custom'
+// (page calibration interne). Régénérer les défauts via `npm run calibrate:defaults`.
+const _ACC_PROFILES_DEFAULTS = PROFILS_DEFAUT
 function _readProfilesOverride() {
   try {
     const raw = localStorage.getItem('acc_profiles_custom')

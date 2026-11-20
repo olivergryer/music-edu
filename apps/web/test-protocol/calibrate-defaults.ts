@@ -73,15 +73,15 @@ for (const profile of ['legato', 'detache', 'rapide']) {
   }
 }
 
-// ─── Bloc prêt à coller dans AccordeurPage.jsx (_ACC_PROFILES_DEFAULTS) ────────
+// ─── Bloc prêt à coller dans src/profilsSegmentation.ts (PROFILS_DEFAUT) ────────
 const line = (name: string) => {
   const p: any = profiles[name]
   const body = PARAM_KEYS.map(k => `${k}: ${PARAM_FMT[k](p[k])}`).join(', ')
   return `  ${name.padEnd(8)}: { ${body} },`
 }
 console.log('\n' + '='.repeat(72))
-console.log('// À coller dans _ACC_PROFILES_DEFAULTS (AccordeurPage.jsx) :')
-console.log('const _ACC_PROFILES_DEFAULTS = {')
+console.log('// À coller dans PROFILS_DEFAUT (src/profilsSegmentation.ts) :')
+console.log('export const PROFILS_DEFAUT = {')
 console.log(line('legato'))
 console.log(line('detache'))
 console.log(line('rapide'))

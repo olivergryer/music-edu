@@ -1,5 +1,5 @@
 // ─── Barre de transport, fixée en bas (brief UI v1, § 5.5) ────────────────────────────
-import type { ModeAffichage } from './protocole.ts'
+import type { ModeAffichage, MoteurDetection } from './protocole.ts'
 import { ORANGE, pastille } from './stylesAcc.ts'
 import type { EtatSession } from './useSession.ts'
 
@@ -15,6 +15,8 @@ interface Props {
   onBoucle: (b: boolean) => void
   decompte: boolean
   onDecompte: (b: boolean) => void
+  moteur: MoteurDetection
+  onMoteur: (m: MoteurDetection) => void
   volume: number
   onVolume: (v: number) => void
   libelleDepart?: string
@@ -46,6 +48,10 @@ export default function BarreTransport(p: Props) {
         <div role="group" aria-label="Mode d’affichage" style={{ display: 'flex', gap: 4 }}>
           <button style={pastille(p.mode === 'live')} onClick={() => p.onMode('live')} aria-pressed={p.mode === 'live'}>Live</button>
           <button style={pastille(p.mode === 'fin')} onClick={() => p.onMode('fin')} aria-pressed={p.mode === 'fin'}>Fin</button>
+        </div>
+        <div role="group" aria-label="Moteur de détection" style={{ display: 'flex', gap: 4 }}>
+          <button style={pastille(p.moteur === 'ancien')} onClick={() => p.onMoteur('ancien')} aria-pressed={p.moteur === 'ancien'} disabled={joue}>Ancien</button>
+          <button style={pastille(p.moteur === 'nouveau')} onClick={() => p.onMoteur('nouveau')} aria-pressed={p.moteur === 'nouveau'} disabled={joue}>Nouveau</button>
         </div>
         <button style={pastille(p.boucle, { display: 'flex', alignItems: 'center', gap: 6 })} onClick={() => p.onBoucle(!p.boucle)} aria-pressed={p.boucle} disabled={joue}><IconeBoucle />Boucle</button>
         <button style={pastille(p.decompte)} onClick={() => p.onDecompte(!p.decompte)} aria-pressed={p.decompte} disabled={joue}>Décompte</button>

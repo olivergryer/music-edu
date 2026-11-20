@@ -34,6 +34,7 @@ export type OptionsPipeline = {
   fenetreMaxS?: number
   seuilF?: number
   sigmaMpmCents?: number
+  gardeAttaqueS?: number        // temps ignoré après chaque attaque du playback (40 ms)
   surTrame?: (t: number, trame: TrameAnalyse) => void
 }
 
@@ -75,6 +76,7 @@ export function creerAnalyseurFlux(fsMic: number, planning: Planning, acces: Acc
   const profil = o.profil ?? PROFIL_ACCOMPAGNE
   const fenMax = o.fenetreMaxS ?? FENETRE_MAX_S
   const sigmaMpm = o.sigmaMpmCents ?? SIGMA_MPM_DEFAUT_CENTS
+  const garde = o.gardeAttaqueS ?? GARDE_ATTAQUE_S
   const appris = new NiveauPlaybackAppris()
   let actif: { onset: number; f0: number; sigma: number; vu: number } | null = null
   let evPrec: EvenementAccord | null = null
@@ -87,7 +89,7 @@ export function creerAnalyseurFlux(fsMic: number, planning: Planning, acces: Acc
     const voix: Voix[] = ev ? voixSonnantes(ev) : []
     if (ev !== evPrec) { if (!evPrec || !ev || evPrec.accordId !== ev.accordId || evPrec.accordage !== ev.accordage) appris.oublier(); evPrec = ev }
     const tAtt = ev ? derniereAttaque(planning, t) : -Infinity
-    const debutPropre = Math.max(tAtt + GARDE_ATTAQUE_S, dernierClic(planning, t) + GARDE_CLIC_S)
+    const debutPropre = Math.max(tAtt + garde, dernierClic(planning, t) + GARDE_CLIC_S)
 
     // ── piste rapide : soustraction + MPM sur le résidu ──
     let f0Mpm: number | null = null, rmsResidu = 0
@@ -239,7 +241,7 @@ export function analyserEnregistrement(micro: Float32Array, fsMic: number, plann
 }
 
 // ─── Passe finale (non causale), §6.8 ────────────────────────────────────────
-export type OptionsFinale = { diapason?: number; profil?: typeof PROFIL_ACCOMPAGNE }
+export type OptionsFinale = { diapason?: number; profil?: typeof PROFIL_ACCOMPAGNE; gardeAttaqueS?: number }
 
 /** Instants strictement intérieurs à ]a, b[ où l'entrée de phrase change (changements d'accord). */
 export function changementsDAccord(planning: Planning, a: number, b: number, marge = 0.03): number[] {
@@ -268,7 +270,7 @@ export function passeFinale(micro: Float32Array, fsMic: number, planning: Planni
     const ev = evenementA(planning, milieu)
     const voix = ev ? voixSonnantes(ev) : []
     const base = { entree: ev?.entree, ...(coupeAvant ? { coupeAvant: true } : {}), ...(coupeApres ? { coupeApres: true } : {}) }
-    const a = Math.max(tOn + DEBUT_STABLE_S, ev ? derniereAttaque(planning, milieu) + GARDE_ATTAQUE_S : -Infinity)
+    const a = Math.max(tOn + DEBUT_STABLE_S, ev ? derniereAttaque(planning, milieu) + (o.gardeAttaqueS ?? GARDE_ATTAQUE_S) : -Infinity)
     const b = Math.min(tOff - 0.03, ev ? ev.tFin - 0.06 : Infinity)
     const hzs = frames.map(f => f.hz).sort((x, y) => x - y)
     const medHz = hzs[Math.floor(hzs.length / 2)]

@@ -6,8 +6,12 @@ import { construirePlanning, type OptionsPlanning } from './dsp/synthese.ts'
 import type { Reglage } from './dsp/reglages.ts'
 import type { EtatStrobe, NoteFinale, Planning, TrameAnalyse } from './dsp/types.ts'
 import { latenceSortieS, tempsAudible } from './temps.ts'
-import type { DepuisWorker, DepuisWorklet, ModeAffichage, VersWorker, VersWorklet } from './protocole.ts'
+import type { ReglagesSegmentation } from '../../profilsSegmentation.ts'
+import type { NoteAncien } from './ancienMoteur.ts'
+import type { ReglagesNouveau } from './reglagesNouveau.ts'
+import type { DepuisWorker, DepuisWorklet, ModeAffichage, MoteurDetection, VersWorker, VersWorklet } from './protocole.ts'
 // `?worker&url` : bundle le worklet avec ses imports (un `?url` d'un .ts ne le transpilerait pas)
+import { REGLAGES_PAR_DEFAUT } from '../../profilsSegmentation.ts'
 import urlWorklet from './processeurAccompagne.worklet.ts?worker&url'
 
 export type VarianteEcho = 'desactivee' | 'activee' | 'all'
@@ -22,6 +26,9 @@ export type OptionsSession = {
   analyse: boolean            // false : étape 0, on enregistre seulement
   diapason: number
   latenceMemoriseeMs?: number // valeur mémorisée (`acc_latence`), utilisée pour le temps audible avant la mesure
+  moteur?: MoteurDetection    // défaut : 'nouveau'
+  reglagesAncien?: ReglagesSegmentation
+  reglagesNouveau?: ReglagesNouveau
 }
 
 export type Resultat = {
@@ -30,6 +37,8 @@ export type Resultat = {
   micro: Float32Array; sortie: Float32Array
   tempsCalculMs: number[]; latenceMs: number | null; coupures: number
   infoAudio: Record<string, string>
+  offsetMicro?: number        // retard de boucle (échantillons) : micro[i] ↔ planning (i − offset)/fs
+  brut?: { hz: Float32Array; clarity: Float32Array; rms: Float32Array }   // ancien moteur
 }
 
 export type Abonnes = {
@@ -38,6 +47,7 @@ export type Abonnes = {
   latence?: (ms: number, qualite: number) => void
   progression?: (texte: string) => void
   erreur?: (message: string) => void
+  notesAncien?: (notes: NoteAncien[]) => void
 }
 
 export interface MoteurAudioAccompagne {
@@ -49,6 +59,8 @@ export interface MoteurAudioAccompagne {
   /** Changement de structure : le nouveau planning prend le relais à `tCoupure` (frontière d'entrée). */
   remplacerPlanning(nouveau: Planning, tCoupure: number): void
   definirGain(gain: number): void
+  /** Ancien moteur : nouveaux seuils pour le Live en cours. */
+  reglerAncien(reglages: ReglagesSegmentation): void
   /** Temps du planning actuellement entendu (s), ou null avant le départ. */
   tempsAudible(): number | null
   tempsCourant(): number | null
@@ -123,11 +135,12 @@ export class MoteurWeb implements MoteurAudioAccompagne {
       if (m.type === 'trame') ab.trame?.(m.trame, m.msCalcul)
       else if (m.type === 'latence') { this.latenceMs = m.ms; ab.latence?.(m.ms, m.qualite) }
       else if (m.type === 'progression') ab.progression?.(m.texte)
+      else if (m.type === 'notesAncien') ab.notesAncien?.(m.notes)
       else if (m.type === 'erreur') { if (this.sansMicro) return; ab.erreur?.(m.message); this.rejetFin?.(new Error(m.message)) }
       else if (m.type === 'fini') {
         const r: Resultat = {
-          planning, sampleRate: ctx.sampleRate, notes: m.notes, trames: m.trames, micro: m.micro, sortie: m.sortie,
-          tempsCalculMs: m.tempsCalculMs, latenceMs: this.latenceMs, coupures: this.coupures, infoAudio: this.infoAudio,
+          planning: m.planning ?? planning, sampleRate: ctx.sampleRate, notes: m.notes, trames: m.trames, micro: m.micro, sortie: m.sortie,
+          tempsCalculMs: m.tempsCalculMs, latenceMs: this.latenceMs, coupures: this.coupures, infoAudio: this.infoAudio, offsetMicro: m.offsetMicro, brut: m.brut,
         }
         this.attenteFin?.(r)
       }
@@ -136,7 +149,8 @@ export class MoteurWeb implements MoteurAudioAccompagne {
       const m = e.data
       if (m.type === 'strobe') { this.coupures = m.coupures; this.dernierStrobe = { t: m.t, tCtx: m.tCtx }; ab.strobe?.(m.etats, m.rmsMicro, m.coupures) }
     }
-    const init: VersWorker = { type: 'init', port: canal.port1, planning, fs: ctx.sampleRate, mode: o.mode, diapason: o.diapason, analyse: o.analyse }
+    const init: VersWorker = { type: 'init', port: canal.port1, planning, fs: ctx.sampleRate, mode: o.mode, diapason: o.diapason, analyse: o.analyse,
+      moteur: o.moteur ?? 'nouveau', reglagesAncien: o.reglagesAncien ?? REGLAGES_PAR_DEFAUT, latenceSecoursMs: o.latenceMemoriseeMs ?? null, reglagesNouveau: o.reglagesNouveau }
     worker.postMessage(init, [canal.port1])
     const p1: VersWorklet = { type: 'port', port: canal.port2 }
     noeud.port.postMessage(p1, [canal.port2])
@@ -160,6 +174,11 @@ export class MoteurWeb implements MoteurAudioAccompagne {
   definirGain(gain: number): void {
     const m: VersWorklet = { type: 'gain', gain }
     this.noeud?.port.postMessage(m)
+  }
+
+  reglerAncien(reglages: ReglagesSegmentation): void {
+    const m: VersWorker = { type: 'reglagesAncien', reglages }
+    this.worker?.postMessage(m)
   }
 
   tempsAudible(): number | null {

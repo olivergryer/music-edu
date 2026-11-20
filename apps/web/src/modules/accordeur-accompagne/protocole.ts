@@ -7,9 +7,13 @@
 //   Worker ──(worker)──▶ fil principal         : trames, latence, notes finales, enregistrements
 
 import type { Reglage } from './dsp/reglages.ts'
+import type { ReglagesSegmentation } from '../../profilsSegmentation.ts'
+import type { NoteAncien } from './ancienMoteur.ts'
+import type { ReglagesNouveau } from './reglagesNouveau.ts'
 import type { EtatStrobe, NoteFinale, Planning, TrameAnalyse } from './dsp/types.ts'
 
 export type ModeAffichage = 'live' | 'fin'
+export type MoteurDetection = 'ancien' | 'nouveau'
 
 // fil principal → worklet
 export type VersWorklet =
@@ -38,7 +42,9 @@ export type WorkerVersWorklet = { type: 'presence'; present: boolean }
 
 // fil principal → Worker
 export type VersWorker =
-  | { type: 'init'; port: MessagePort; planning: Planning; fs: number; mode: ModeAffichage; diapason: number; analyse: boolean }
+  | { type: 'init'; port: MessagePort; planning: Planning; fs: number; mode: ModeAffichage; diapason: number; analyse: boolean
+      moteur?: MoteurDetection; reglagesAncien?: ReglagesSegmentation; latenceSecoursMs?: number | null; reglagesNouveau?: ReglagesNouveau }
+  | { type: 'reglagesAncien'; reglages: ReglagesSegmentation }
   | { type: 'arreter' }
 
 // Worker → fil principal
@@ -46,5 +52,21 @@ export type DepuisWorker =
   | { type: 'latence'; ms: number; qualite: number }
   | { type: 'trame'; trame: TrameAnalyse; msCalcul: number }
   | { type: 'progression'; texte: string }
-  | { type: 'fini'; notes: NoteFinale[]; trames: TrameAnalyse[]; micro: Float32Array; sortie: Float32Array; tempsCalculMs: number[]; offsetMicro: number }
+  | { type: 'notesAncien'; notes: NoteAncien[] }
+  | { type: 'fini'; notes: NoteFinale[]; trames: TrameAnalyse[]; micro: Float32Array; sortie: Float32Array; tempsCalculMs: number[]; offsetMicro: number
+      brut?: { hz: Float32Array; clarity: Float32Array; rms: Float32Array }
+      planning?: Planning }   // planning tel que le Worker l'a modifié (réglages à chaud)
   | { type: 'erreur'; message: string }
+
+// ─── Recalcul d'une prise déjà enregistrée (autre moteur, autres réglages) ─────────
+// fil principal → Worker de recalcul
+export type VersRecalcul =
+  | { type: 'ancien'; id: number; micro: Float32Array; fs: number }
+  | { type: 'nouveau'; id: number; micro: Float32Array; fs: number; offset: number; planning: Planning; diapason: number
+      reglages: ReglagesNouveau; trames?: TrameAnalyse[] }      // trames fournies : on saute l'analyse par trame
+// Worker de recalcul → fil principal
+export type DepuisRecalcul =
+  | { type: 'progression'; id: number; texte: string }
+  | { type: 'ancien'; id: number; brut: { hz: Float32Array; clarity: Float32Array; rms: Float32Array } }
+  | { type: 'nouveau'; id: number; trames: TrameAnalyse[]; notes: NoteFinale[] }
+  | { type: 'erreur'; id: number; message: string }

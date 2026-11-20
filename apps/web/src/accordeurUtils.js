@@ -257,43 +257,64 @@ function filtrerIsolés(serie) {
   })
 }
 
-export function analyserBuffer(audioBuffer, opts = {}) {
+export const TAILLE_TRAME = 2048
+export const PAS_TRAME    = 512
+
+let _detecteur = null
+const detecteur = () => (_detecteur ??= PitchDetector.forFloat32Array(TAILLE_TRAME))
+
+/** Nombre de trames complètes d'un signal de `n` échantillons. */
+export function nbTramesBrutes(n) {
+  return n < TAILLE_TRAME ? 0 : Math.floor((n - TAILLE_TRAME) / PAS_TRAME) + 1
+}
+
+/**
+ * Hauteur, clarté et RMS BRUTS des trames k0 ≤ k < k1 (sans aucun seuil). Ne dépend d'aucun
+ * réglage : on peut donc le calculer une fois (et au fil de l'eau) puis ré-appliquer les
+ * seuils à volonté avec `appliquerSeuils`.
+ * @returns {{hz: number[], clarity: number[], rms: number[]}}
+ */
+export function analyserTramesBrutes(channelData, sampleRate, k0 = 0, k1 = nbTramesBrutes(channelData.length)) {
+  const hz = [], clarity = [], rms = []
+  const det = detecteur()
+  for (let k = k0; k < k1; k++) {
+    const frame = channelData.subarray(k * PAS_TRAME, k * PAS_TRAME + TAILLE_TRAME)
+    const [f, c] = det.findPitch(preEmphasis(frame), sampleRate)
+    hz.push(f); clarity.push(c); rms.push(frameRMS(frame))
+  }
+  return { hz, clarity, rms }
+}
+
+/**
+ * Applique normalisation, gate RMS et seuil de clarté à une série brute → série
+ * {tMs, hz|null, rms} (rms normalisé), puis écarte les trames isolées.
+ */
+export function appliquerSeuils(brut, sampleRate, opts = {}) {
   const clarityThreshold = opts.clarityThreshold ?? 0.85
-  const rmsGate   = opts.rmsGate ?? 0.02
+  const rmsGate     = opts.rmsGate ?? 0.02
   const normalize   = opts.normalize ?? true
   const normTarget  = opts.normalizeTarget ?? NORMALIZE_TARGET_RMS
-  const sampleRate  = audioBuffer.sampleRate
-  const channelData = audioBuffer.getChannelData(0)
-
-  const frameSize = 2048
-  const hopSize   = 512
-  const detector  = PitchDetector.forFloat32Array(frameSize)
-
-  // Passe préalable : facteur d'échelle basé sur la frame RMS la plus forte.
+  const n = brut.hz.length
   let rmsScale = 1
   if (normalize) {
     let rmsMax = 0
-    for (let i = 0; i + frameSize <= channelData.length; i += hopSize) {
-      const r = frameRMS(channelData.subarray(i, i + frameSize))
-      if (r > rmsMax) rmsMax = r
-    }
+    for (let k = 0; k < n; k++) if (brut.rms[k] > rmsMax) rmsMax = brut.rms[k]
     if (rmsMax > 0) rmsScale = normTarget / rmsMax
   }
-
   const serie = []
-
-  for (let i = 0; i + frameSize <= channelData.length; i += hopSize) {
-    const frame         = channelData.subarray(i, i + frameSize)
-    const rms           = frameRMS(frame) * rmsScale   // niveau normalisé
-    const emphasized    = preEmphasis(frame)           // pitch insensible à l'échelle
-    const [hz, clarity] = detector.findPitch(emphasized, sampleRate)
-    const tMs           = (i / sampleRate) * 1000
-    const hzVal = (rms >= rmsGate && clarity >= clarityThreshold && hz >= HZ_MIN && hz <= HZ_MAX) ? hz : null
+  for (let k = 0; k < n; k++) {
+    const rms = brut.rms[k] * rmsScale
+    const hz = brut.hz[k]
+    const hzVal = (rms >= rmsGate && brut.clarity[k] >= clarityThreshold && hz >= HZ_MIN && hz <= HZ_MAX) ? hz : null
     // rms (normalisé) conservé pour la détection de ré-attaque (notes répétées)
-    serie.push({ tMs, hz: hzVal, rms })
+    serie.push({ tMs: (k * PAS_TRAME / sampleRate) * 1000, hz: hzVal, rms })
   }
-
   return filtrerIsolés(serie)
+}
+
+export function analyserBuffer(audioBuffer, opts = {}) {
+  const channelData = audioBuffer.getChannelData(0)
+  return appliquerSeuils(analyserTramesBrutes(channelData, audioBuffer.sampleRate), audioBuffer.sampleRate, opts)
 }
 
 // ─── Segmentation ─────────────────────────────────────────────────────────────

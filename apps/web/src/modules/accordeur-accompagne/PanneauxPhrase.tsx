@@ -8,6 +8,9 @@ import { couleurEcart, formaterEcart } from './couleurs.ts'
 import { noteEcrite, tonaliteEcrite } from './notation.ts'
 import type { Phrase } from './phrase.ts'
 import type { PolitiqueEcho, ReglagesAccordeur, ReglagesPage } from './reglagesLocaux.ts'
+import { SectionNouveau, SectionSegmentation } from './ReglagesSegmentation.tsx'
+import type { EtatNouveau } from './useReglagesNouveau.ts'
+import type { EtatSegmentation } from './useReglagesSegmentation.ts'
 import { ORANGE, carte, pastille, rangee, titreSection } from './stylesAcc.ts'
 
 const voile: React.CSSProperties = { position: 'fixed', inset: 0, zIndex: 60, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }
@@ -110,11 +113,13 @@ interface ReglProps {
   pageReg: ReglagesPage
   onChange: (p: Partial<ReglagesPage>) => void
   latenceMs: number | null
+  seg: EtatSegmentation
+  nouveau: EtatNouveau
   onFermer: () => void
   onAide: () => void
 }
 
-export function FeuilleReglages({ reg, pageReg, onChange, latenceMs, onFermer, onAide }: ReglProps) {
+export function FeuilleReglages({ reg, pageReg, onChange, latenceMs, seg, nouveau, onFermer, onAide }: ReglProps) {
   const echo: [PolitiqueEcho, string][] = [['auto', 'Auto'], ['activee', 'Activée'], ['desactivee', 'Désactivée']]
   return (
     <Fenetre titre="Réglages" onFermer={onFermer} enfants={
@@ -127,6 +132,8 @@ export function FeuilleReglages({ reg, pageReg, onChange, latenceMs, onFermer, o
         <p style={titreSection}>Annulation d’écho du micro</p>
         <div style={rangee}>{echo.map(([k, l]) => <button key={k} style={pastille(pageReg.echo === k)} onClick={() => onChange({ echo: k })}>{l}</button>)}</div>
         <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '4px 0 0' }}>Auto : activée sur iPhone et iPad, désactivée ailleurs. Activée sur ordinateur, elle peut effacer ton jeu.</p>
+        <SectionSegmentation seg={seg} />
+        <SectionNouveau nouveau={nouveau} />
         <p style={titreSection}>Réglages de l’Accordeur (partagés)</p>
         <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13, lineHeight: 1.6 }}>
           <li>Diapason : {reg.diapason} Hz</li>

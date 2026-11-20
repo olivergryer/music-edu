@@ -8,6 +8,9 @@ import { creerAnalyseurFlux, FS_MODELE, analyserEnregistrement, passeFinale, typ
 import { reechantillonner } from './dsp/reechantillonnage.ts'
 import { appliquerReglage, remplacerAPartirDe } from './dsp/reglages.ts'
 import type { TrameAnalyse } from './dsp/types.ts'
+import type { ReglagesSegmentation } from '../../profilsSegmentation.ts'
+import { notesAncien, SerieBrute } from './ancienMoteur.ts'
+import { NOUVEAU_DEFAUT, optionsFinaleDe, optionsPipelineDe, type ReglagesNouveau } from './reglagesNouveau.ts'
 import type { DepuisWorker, VersWorker, WorkerVersWorklet, WorkletVersWorker } from './protocole.ts'
 
 const ctx = self as unknown as { postMessage: (m: DepuisWorker, t?: Transferable[]) => void; onmessage: ((e: MessageEvent<VersWorker>) => void) | null }
@@ -31,6 +34,12 @@ let fs = 48000
 let planning: Parameters<typeof creerAnalyseurFlux>[1] | null = null
 let mode: 'live' | 'fin' = 'live'
 let analyse = true
+let ancien = false                       // ancien moteur : micro seul, trames brutes + seuils
+let reglagesAncien: ReglagesSegmentation | null = null
+let secoursMs: number | null = null
+let nouveau: ReglagesNouveau = NOUVEAU_DEFAUT
+const serie = new SerieBrute()
+let minuteurAncien: ReturnType<typeof setInterval> | null = null
 let micro: Tampon, sortie: Tampon
 let offset = -1                         // échantillons : retard de boucle (chirp)
 let prochainT = 0
@@ -43,11 +52,25 @@ let presencePrec = false
 function chercherChirp(): void {
   if (offset >= 0 || micro.n < POUR_CHIRP_S * fs) return
   const r = trouverChirp(micro.vue(), fs, 1.0)
+  if (r.qualite < 8 && ancien) { offset = secours(); return }
   if (r.qualite < 8) { ctx.postMessage({ type: 'erreur', message: `Chirp introuvable dans le micro (qualité ${r.qualite.toFixed(1)}). Micro muet, sortie coupée ou son trop faible ?` }); offset = 0; return }
   offset = r.indice
   ctx.postMessage({ type: 'latence', ms: (offset / fs) * 1000, qualite: r.qualite })
-  if (analyse && mode === 'live') demarrerLive()
+  if (analyse && !ancien && mode === 'live') demarrerLive()
 }
+
+/** Retard de boucle de secours (chirp effacé par l'annulation d'écho) : valeur mémorisée, sinon 0. */
+function secours(): number { return secoursMs ? Math.round(secoursMs / 1000 * fs) : 0 }
+
+/** Ancien moteur : calcule les trames brutes arrivées, puis (Live) republie les notes. */
+function tickAncien(publier: boolean): void {
+  if (!ancien || !reglagesAncien || !planning) return
+  serie.avancer(micro.vue(), fs)
+  if (!publier || offset < 0) return
+  const notes = notesAncien(serie, { fs, offsetS: offset / fs, diapason: diapasonAncien, planning, reglages: reglagesAncien })
+  ctx.postMessage({ type: 'notesAncien', notes })
+}
+let diapasonAncien = 442
 
 function acces(): AccesMicro {
   return {
@@ -61,7 +84,7 @@ function acces(): AccesMicro {
 
 function demarrerLive(): void {
   if (!planning) return
-  etape = creerAnalyseurFlux(fs, planning, acces())
+  etape = creerAnalyseurFlux(fs, planning, acces(), optionsPipelineDe(nouveau))
   prochainT = 0.15
   minuteur = setInterval(avancer, 25)
 }
@@ -88,21 +111,29 @@ function avancer(): void {
 
 function arreter(): void {
   if (minuteur) { clearInterval(minuteur); minuteur = null }
+  if (minuteurAncien) { clearInterval(minuteurAncien); minuteurAncien = null }
   if (!planning) return
   const v = micro.vue()
   if (offset < 0) chercherChirpForce()
   const alignee = v.subarray(Math.max(0, offset))
   let tr = trames, tc = temps
   try {
+    if (ancien) {
+      ctx.postMessage({ type: 'progression', texte: 'Analyse de l’enregistrement…' })
+      serie.avancer(v, fs)
+      const micro0 = v.slice(), sortie0 = sortie.vue().slice()
+      ctx.postMessage({ type: 'fini', notes: [], trames: [], micro: micro0, sortie: sortie0, tempsCalculMs: [], offsetMicro: Math.max(0, offset), brut: serie.exporter() }, [micro0.buffer, sortie0.buffer])
+      return
+    }
     if (analyse && (mode === 'fin' || !trames.length)) {
       ctx.postMessage({ type: 'progression', texte: 'Analyse de l’enregistrement…' })
-      const s = analyserEnregistrement(alignee, fs, planning)
+      const s = analyserEnregistrement(alignee, fs, planning, optionsPipelineDe(nouveau))
       tr = s.trames; tc = s.tempsCalculMs
     }
     ctx.postMessage({ type: 'progression', texte: 'Passe finale…' })
-    const notes = analyse ? passeFinale(alignee, fs, planning, tr) : []
+    const notes = analyse ? passeFinale(alignee, fs, planning, tr, optionsFinaleDe(nouveau, diapasonAncien)) : []
     const micro0 = v.slice(), sortie0 = sortie.vue().slice()
-    ctx.postMessage({ type: 'fini', notes, trames: tr, micro: micro0, sortie: sortie0, tempsCalculMs: tc, offsetMicro: Math.max(0, offset) }, [micro0.buffer, sortie0.buffer])
+    ctx.postMessage({ type: 'fini', notes, trames: tr, micro: micro0, sortie: sortie0, tempsCalculMs: tc, offsetMicro: Math.max(0, offset), planning }, [micro0.buffer, sortie0.buffer])
   } catch (e) {
     ctx.postMessage({ type: 'erreur', message: String((e as Error)?.message ?? e) })
   }
@@ -110,13 +141,16 @@ function arreter(): void {
 
 function chercherChirpForce(): void {
   const r = trouverChirp(micro.vue(), fs, Math.min(1.0, micro.n / fs - 0.06))
-  offset = r.qualite >= 8 ? r.indice : 0
+  offset = r.qualite >= 8 ? r.indice : (ancien ? secours() : 0)
 }
 
 ctx.onmessage = (e: MessageEvent<VersWorker>) => {
   const m = e.data
   if (m.type === 'init') {
     port = m.port; fs = m.fs; planning = m.planning; mode = m.mode; analyse = m.analyse
+    ancien = m.moteur === 'ancien'; reglagesAncien = m.reglagesAncien ?? null; secoursMs = m.latenceSecoursMs ?? null; diapasonAncien = m.diapason; nouveau = m.reglagesNouveau ?? NOUVEAU_DEFAUT
+    serie.vider()
+    if (ancien) minuteurAncien = setInterval(() => tickAncien(mode === 'live'), 300)
     micro = new Tampon(DUREE_MAX_S, fs); sortie = new Tampon(DUREE_MAX_S, fs)
     offset = -1; trames.length = 0; temps.length = 0; presencePrec = false
     port.onmessage = (ev: MessageEvent<WorkletVersWorker>) => {
@@ -130,5 +164,6 @@ ctx.onmessage = (e: MessageEvent<VersWorker>) => {
       else if (b.type === 'futur') Object.assign(planning, remplacerAPartirDe(planning, b.planning, b.tCoupure))
       else if (b.type === 'gain') planning.gain = b.gain
     }
-  } else if (m.type === 'arreter') arreter()
+  } else if (m.type === 'reglagesAncien') reglagesAncien = m.reglages
+  else if (m.type === 'arreter') arreter()
 }

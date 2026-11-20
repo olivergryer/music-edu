@@ -26,6 +26,8 @@ import { realiserPhrase } from './realisation.ts'
 import { ecrire, estIPhone, lireReglagesAccordeur, lireReglagesPage, type ReglagesPage } from './reglagesLocaux.ts'
 import { NEUTRE, ORANGE, carte, pastille } from './stylesAcc.ts'
 import { useRaf } from './useRaf.ts'
+import { useReglagesNouveau } from './useReglagesNouveau.ts'
+import { useReglagesSegmentation } from './useReglagesSegmentation.ts'
 import { useSession } from './useSession.ts'
 
 const LS = 54          // largeur d'un slot (un temps), en px
@@ -38,7 +40,7 @@ export default function PhrasePage() {
   const majPage = useCallback((p: Partial<ReglagesPage>) => {
     setPageReg(r => {
       const n = { ...r, ...p }
-      ecrire('acc_cle', n.cle); ecrire('acc_affichage', n.affichage); ecrire('acc_vue_accord', n.vueAccord); ecrire('acc_echo', n.echo); ecrire('acc_install_vu', n.installVu ? '1' : '0')
+      ecrire('acc_cle', n.cle); ecrire('acc_affichage', n.affichage); ecrire('acc_vue_accord', n.vueAccord); ecrire('acc_echo', n.echo); ecrire('acc_install_vu', n.installVu ? '1' : '0'); ecrire('acc_moteur', n.moteur)
       return n
     })
   }, [])
@@ -73,7 +75,9 @@ export default function PhrasePage() {
     } else enregistrer(perso.map(x => (x.id === p.id ? p : x)))
   }, [perso, enregistrer])
 
-  const session = useSession(reg, pageReg.echo)
+  const seg = useReglagesSegmentation()
+  const nouveau = useReglagesNouveau()
+  const session = useSession(reg, pageReg.echo, pageReg.moteur, seg.reglages, nouveau.reglages)
   const [slotOuvert, setSlotOuvert] = useState<number | null>(null)
   const [slotSel, setSlotSel] = useState<number | null>(null)
   const [mention, setMention] = useState<string | null>(null)
@@ -247,6 +251,12 @@ export default function PhrasePage() {
         )}
 
         {session.etat === 'analyse' && <p role="status" style={{ ...carte, marginTop: 8, fontSize: 13 }}>Passe finale en cours : les valeurs définitives remplacent les provisoires…</p>}
+        {session.etat === 'repos' && session.calcul && <p role="status" style={{ ...carte, marginTop: 8, fontSize: 13 }}>{session.calcul}</p>}
+        {!joue && session.priseDispo && session.etat === 'repos' && (
+          <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '8px 2px 0' }}>
+            Résultat affiché : {pageReg.moteur === 'ancien' ? 'ancien' : 'nouveau'} moteur. Change de moteur dans la barre du bas pour comparer sur la même prise.
+          </p>
+        )}
         {!joue && session.notesFinales && session.etat === 'repos' && (
           <div style={{ marginTop: 8 }}>
             <Bilan
@@ -266,6 +276,7 @@ export default function PhrasePage() {
         mode={pageReg.affichage} onMode={m => { if (!joue) majPage({ affichage: m }) }}
         boucle={phrase.boucle} onBoucle={b => changer({ ...phrase, boucle: b })}
         decompte={phrase.decompte === 1} onDecompte={d => changer({ ...phrase, decompte: d ? 1 : 0 })}
+        moteur={pageReg.moteur} onMoteur={m => { if (!joue) majPage({ moteur: m }) }}
         volume={phrase.volume} onVolume={v => { changer({ ...phrase, volume: v }); session.definirVolume(v) }}
       />
 
@@ -290,7 +301,7 @@ export default function PhrasePage() {
           onFermer={() => setMenu(false)}
         />
       )}
-      {reglages && <FeuilleReglages reg={reg} pageReg={pageReg} onChange={majPage} latenceMs={session.latenceMs} onFermer={() => setReglages(false)} onAide={() => { setReglages(false); setAide(true) }} />}
+      {reglages && <FeuilleReglages reg={reg} pageReg={pageReg} onChange={majPage} latenceMs={session.latenceMs} seg={seg} nouveau={nouveau} onFermer={() => setReglages(false)} onAide={() => { setReglages(false); setAide(true) }} />}
       {(aide || !pageReg.installVu) && <EcranInstallation aide={aide} onFermer={() => { setAide(false); majPage({ installVu: true }) }} />}
     </div>
   )

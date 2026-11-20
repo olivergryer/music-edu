@@ -5,13 +5,16 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { Reglage } from './dsp/reglages.ts'
-import type { EtatStrobe } from './dsp/types.ts'
+import type { EtatStrobe, NoteFinale, Planning, TrameAnalyse } from './dsp/types.ts'
+import type { ReglagesSegmentation } from '../../profilsSegmentation.ts'
+import { notesAncien, type NoteAncien } from './ancienMoteur.ts'
 import { annoterNote, annoterNotes, type ContexteAnnotation, type NoteAnnotee } from './annotation.ts'
 import { MoteurWeb, type Resultat } from './moteurAudio.ts'
 import { SuiviNotes } from './notesLive.ts'
 import type { EntreeSlot, Phrase } from './phrase.ts'
 import { construirePlanningPhrase, type PlanningPhrase } from './planningPhrase.ts'
-import type { ModeAffichage } from './protocole.ts'
+import type { DepuisRecalcul, ModeAffichage, MoteurDetection, VersRecalcul } from './protocole.ts'
+import { cleTrames, type ReglagesNouveau } from './reglagesNouveau.ts'
 import { realiserPhrase } from './realisation.ts'
 import { echoEffectif, type PolitiqueEcho, type ReglagesAccordeur } from './reglagesLocaux.ts'
 import { cleAppareil, lireLatence, memoriserLatence } from './temps.ts'
@@ -33,7 +36,21 @@ export function phraseTenue(base: Phrase, entree: EntreeSlot): Phrase {
   return { ...base, mesure: '4/4', nbMesures: 1, boucle: true, decompte: 0, entrees: { 0: { ...entree, formule: 'tenu' } } }
 }
 
-export function useSession(reg: ReglagesAccordeur, politiqueEcho: PolitiqueEcho) {
+/** Prise conservée après l'arrêt : de quoi la ré-analyser avec l'un ou l'autre moteur, sans rejouer. */
+interface Prise {
+  micro: Float32Array; fs: number; offset: number     // offset : échantillons (retard de boucle)
+  planning: Planning                                  // planning tel que le Worker l'a modifié
+  ctx: ContexteAnnotation
+}
+type BrutAncien = { hz: Float32Array; clarity: Float32Array; rms: Float32Array }
+interface ResultatNouveau { trames: TrameAnalyse[]; notes: NoteFinale[]; reglages: ReglagesNouveau }
+const DELAI_RECALCUL_MS = 500
+type SansId<T> = T extends unknown ? Omit<T, 'id'> : never
+
+export function useSession(
+  reg: ReglagesAccordeur, politiqueEcho: PolitiqueEcho, moteurChoisi: MoteurDetection,
+  reglagesSeg: ReglagesSegmentation, reglagesNouveau: ReglagesNouveau,
+) {
   const moteur = useRef<MoteurWeb | null>(null)
   const ppRef = useRef<PlanningPhrase | null>(null)
   const ctxRef = useRef<ContexteAnnotation | null>(null)
@@ -41,6 +58,11 @@ export function useSession(reg: ReglagesAccordeur, politiqueEcho: PolitiqueEcho)
   const strobeRef = useRef<EtatStrobe[]>([])
   const rmsRef = useRef(0)
   const gainBase = useRef(0.1)
+  const moteurDuRun = useRef<MoteurDetection>('nouveau')
+  const brutesAncien = useRef<NoteAncien[]>([])
+  const reglagesDuRun = useRef<ReglagesNouveau>(reglagesNouveau)
+  const reglagesRef = useRef(reglagesSeg)
+  reglagesRef.current = reglagesSeg
   const phraseCourante = useRef<Phrase | null>(null)
   const [etat, setEtat] = useState<EtatSession>('repos')
   const [erreur, setErreur] = useState<string | null>(null)
@@ -48,7 +70,14 @@ export function useSession(reg: ReglagesAccordeur, politiqueEcho: PolitiqueEcho)
   const [coupures, setCoupures] = useState(0)
   const [notesLive, setNotesLive] = useState<NoteAnnotee[]>([])
   const [noteEnCours, setNoteEnCours] = useState<NoteAnnotee | null>(null)
-  const [notesFinales, setNotesFinales] = useState<NoteAnnotee[] | null>(null)
+  const [prise, setPrise] = useState<Prise | null>(null)
+  const [brutAncien, setBrutAncien] = useState<BrutAncien | null>(null)
+  const [resNouveau, setResNouveau] = useState<ResultatNouveau | null>(null)
+  const [calcul, setCalcul] = useState<string | null>(null)       // recalcul en cours (texte de progression)
+  const recalcul = useRef<{ worker: Worker; id: number; type: 'ancien' | 'nouveau' } | null>(null)
+  const compteurId = useRef(0)
+  const reglagesNouveauRef = useRef(reglagesNouveau)
+  reglagesNouveauRef.current = reglagesNouveau
   const [resultat, setResultat] = useState<Resultat | null>(null)
   const [version, setVersion] = useState(0)             // change à chaque nouveau planning (tours, départ)
 
@@ -58,7 +87,7 @@ export function useSession(reg: ReglagesAccordeur, politiqueEcho: PolitiqueEcho)
 
   const demarrer = useCallback(async (o: OptionsDemarrage) => {
     if (moteur.current) return
-    setErreur(null); setNotesFinales(null); setResultat(null); setNotesLive([]); setNoteEnCours(null); setLatenceMs(null); setCoupures(0)
+    setErreur(null); setPrise(null); setBrutAncien(null); setResNouveau(null); setCalcul(null); arreterRecalcul(); brutesAncien.current = []; moteurDuRun.current = moteurChoisi; reglagesDuRun.current = reglagesNouveauRef.current; setResultat(null); setNotesLive([]); setNoteEnCours(null); setLatenceMs(null); setCoupures(0)
     suivi.current.reinitialiser()
     const phrase = o.tenir ? phraseTenue(o.phrase, o.phrase.entrees[o.departSlot ?? 0] ?? o.phrase.entrees[0]) : o.phrase
     phraseCourante.current = phrase
@@ -79,7 +108,7 @@ export function useSession(reg: ReglagesAccordeur, politiqueEcho: PolitiqueEcho)
           return pp.planning
         },
         mode: o.mode, echo: echoEffectif(politiqueEcho), sessionIOS: 'defaut', analyse: true, diapason: reg.diapason,
-        latenceMemoriseeMs: memo ?? undefined,
+        latenceMemoriseeMs: memo ?? undefined, moteur: moteurChoisi, reglagesAncien: reglagesRef.current, reglagesNouveau: reglagesNouveauRef.current,
       }, {
         trame: t => { suivi.current.ajouter(t) },
         strobe: (etats, rms, c) => { strobeRef.current = etats; rmsRef.current = rms; if (c) setCoupures(c) },
@@ -88,6 +117,7 @@ export function useSession(reg: ReglagesAccordeur, politiqueEcho: PolitiqueEcho)
           memoriserLatence(cleAppareil({ userAgent: navigator.userAgent, sampleRate: ppRef.current?.planning.sampleRate ?? 48000 }), ms)
         },
         erreur: msg => setErreur(msg),
+        notesAncien: ns => { brutesAncien.current = ns },
       })
       setVersion(v => v + 1)
       setEtat('joue')
@@ -97,7 +127,7 @@ export function useSession(reg: ReglagesAccordeur, politiqueEcho: PolitiqueEcho)
       const msg = String((e as Error)?.message ?? e)
       setErreur(/Permission|NotAllowed|denied/i.test(msg) ? 'micro-refuse' : /NotFound|Requested device/i.test(msg) ? 'micro-absent' : msg)
     }
-  }, [reg, politiqueEcho])
+  }, [reg, politiqueEcho, moteurChoisi])
 
   const arreter = useCallback(async () => {
     const m = moteur.current
@@ -107,7 +137,11 @@ export function useSession(reg: ReglagesAccordeur, politiqueEcho: PolitiqueEcho)
       const r = await m.arreter()
       const c = ctxRef.current
       setResultat(r)
-      if (c) setNotesFinales(annoterNotes(r.notes, c, false))
+      if (c) {
+        setPrise({ micro: r.micro, fs: r.sampleRate, offset: r.offsetMicro ?? 0, planning: r.planning, ctx: c })
+        if (moteurDuRun.current === 'ancien') { if (r.brut) setBrutAncien(r.brut) }
+        else setResNouveau({ trames: r.trames, notes: r.notes, reglages: reglagesDuRun.current })
+      }
       if (r.latenceMs) setLatenceMs(r.latenceMs)
     } catch (e) {
       setErreur(String((e as Error)?.message ?? e))
@@ -124,13 +158,69 @@ export function useSession(reg: ReglagesAccordeur, politiqueEcho: PolitiqueEcho)
     const id = setInterval(() => {
       const c = ctxRef.current
       if (!c) return
-      const brutes = suivi.current.notes
+      const ancien = moteurDuRun.current === 'ancien'
+      const brutes = ancien ? brutesAncien.current : suivi.current.notes
       setNotesLive(annoterNotes(brutes, c, true))
-      const en = suivi.current.enCours
+      const en = ancien ? brutesAncien.current[brutesAncien.current.length - 1] : suivi.current.enCours
       setNoteEnCours(en && en.ouverte ? annoterNote(en, c, true) : null)
     }, 100)
     return () => clearInterval(id)
   }, [etat])
+
+  // ancien moteur : nouveaux seuils pendant le jeu (Live), recalcul automatique après l'arrêt
+  useEffect(() => { if (etat === 'joue' && moteurDuRun.current === 'ancien') moteur.current?.reglerAncien(reglagesSeg) }, [etat, reglagesSeg])
+  // ── recalcul de la prise : autre moteur, ou autres réglages du nouveau moteur ──
+  const arreterRecalcul = useCallback(() => {
+    recalcul.current?.worker.terminate(); recalcul.current = null
+  }, [])
+
+  const lancerRecalcul = useCallback((msg: SansId<VersRecalcul>) => {
+    arreterRecalcul()
+    const worker = new Worker(new URL('./recalculPrise.worker.ts', import.meta.url), { type: 'module' })
+    const id = ++compteurId.current
+    recalcul.current = { worker, id, type: msg.type }
+    setCalcul('Recalcul…')
+    worker.onmessage = (e: MessageEvent<DepuisRecalcul>) => {
+      const m = e.data
+      if (m.id !== recalcul.current?.id) return
+      if (m.type === 'progression') setCalcul(m.texte)
+      else if (m.type === 'ancien') { setBrutAncien(m.brut); setCalcul(null); arreterRecalcul() }
+      else if (m.type === 'nouveau') {
+        setResNouveau({ trames: m.trames, notes: m.notes, reglages: (msg as Extract<VersRecalcul, { type: 'nouveau' }>).reglages }); setCalcul(null); arreterRecalcul()
+      } else { setErreur(m.message); setCalcul(null); arreterRecalcul() }
+    }
+    worker.postMessage({ ...msg, id } as VersRecalcul)
+  }, [arreterRecalcul])
+
+  useEffect(() => {
+    if (etat !== 'repos' || !prise) return
+    const { micro, fs, offset, planning } = prise
+    if (moteurChoisi === 'ancien') {
+      if (brutAncien || recalcul.current?.type === 'ancien') return
+      lancerRecalcul({ type: 'ancien', micro, fs })
+      return
+    }
+    const demande = reglagesNouveau
+    if (resNouveau && JSON.stringify(resNouveau.reglages) === JSON.stringify(demande)) return
+    // réglages modifiés : on attend un instant (on tape souvent plusieurs valeurs de suite)
+    const t = setTimeout(() => {
+      const memeTrames = resNouveau && cleTrames(resNouveau.reglages) === cleTrames(demande)
+      lancerRecalcul({ type: 'nouveau', micro, fs, offset, planning, diapason: reg.diapason, reglages: demande, trames: memeTrames ? resNouveau.trames : undefined })
+    }, DELAI_RECALCUL_MS)
+    return () => clearTimeout(t)
+  }, [etat, prise, moteurChoisi, brutAncien, resNouveau, reglagesNouveau, reg.diapason, lancerRecalcul])
+
+  const notesFinales = useMemo(() => {
+    if (!prise) return null
+    if (moteurChoisi === 'ancien') {
+      if (!brutAncien) return null
+      const brutes = notesAncien(brutAncien, { fs: prise.fs, offsetS: prise.offset / prise.fs, diapason: reg.diapason, planning: prise.ctx.planning, reglages: reglagesSeg })
+      return annoterNotes(brutes, prise.ctx, false)
+    }
+    return resNouveau ? annoterNotes(resNouveau.notes, prise.ctx, false) : null
+  }, [prise, moteurChoisi, brutAncien, resNouveau, reglagesSeg, reg.diapason])
+
+  useEffect(() => () => { recalcul.current?.worker.terminate() }, [])
 
   useEffect(() => () => { void moteur.current?.arreter().catch(() => undefined) }, [])
 
@@ -156,9 +246,9 @@ export function useSession(reg: ReglagesAccordeur, politiqueEcho: PolitiqueEcho)
   const tempsCourant = useCallback((): number | null => moteur.current?.tempsCourant() ?? null, [])
 
   return useMemo(() => ({
-    etat, erreur, latenceMs, coupures, notesLive, noteEnCours, notesFinales, resultat, version,
+    etat, erreur, latenceMs, coupures, notesLive, noteEnCours, notesFinales, resultat, version, calcul, priseDispo: !!prise,
     strobeRef, rmsRef, ppRef, ctxRef,
     demarrer, arreter, reglerSon, definirVolume, changerAccordTenu, tempsAudible, tempsCourant,
-    effacer: () => { setNotesFinales(null); setResultat(null); setNotesLive([]); setNoteEnCours(null); suivi.current.reinitialiser() },
-  }), [etat, erreur, latenceMs, coupures, notesLive, noteEnCours, notesFinales, resultat, version, demarrer, arreter, reglerSon, definirVolume, changerAccordTenu, tempsAudible, tempsCourant])
+    effacer: () => { setPrise(null); setBrutAncien(null); setResNouveau(null); setCalcul(null); arreterRecalcul(); setResultat(null); setNotesLive([]); setNoteEnCours(null); suivi.current.reinitialiser() },
+  }), [etat, erreur, latenceMs, coupures, notesLive, noteEnCours, notesFinales, resultat, version, calcul, prise, demarrer, arreter, reglerSon, definirVolume, changerAccordTenu, tempsAudible, tempsCourant])
 }

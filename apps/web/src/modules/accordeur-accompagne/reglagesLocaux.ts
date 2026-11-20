@@ -3,6 +3,7 @@
 
 import type { Referentiel } from './references.ts'
 import type { Cle } from './notation.ts'
+import type { MoteurDetection } from './protocole.ts'
 
 export interface ReglagesAccordeur {
   diapason: number
@@ -44,16 +45,18 @@ export interface ReglagesPage {
   vueAccord: VueAccord
   echo: PolitiqueEcho
   installVu: boolean
+  moteur: MoteurDetection
 }
 
 export function lireReglagesPage(): ReglagesPage {
-  const c = lire('acc_cle'), a = lire('acc_affichage'), v = lire('acc_vue_accord'), e = lire('acc_echo')
+  const c = lire('acc_cle'), a = lire('acc_affichage'), v = lire('acc_vue_accord'), e = lire('acc_echo'), mo = lire('acc_moteur')
   return {
     cle: c === 'fa' ? 'fa' : 'sol',
     affichage: a === 'fin' ? 'fin' : 'live',
     vueAccord: v === 'echelle' ? 'echelle' : 'horloge',
     echo: e === 'activee' || e === 'desactivee' ? e : 'auto',
     installVu: lire('acc_install_vu') === '1',
+    moteur: mo === 'nouveau' ? 'nouveau' : 'ancien',
   }
 }
 
