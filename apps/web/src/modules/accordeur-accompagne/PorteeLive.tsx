@@ -97,9 +97,11 @@ interface Props {
   onNote?: (t: TeteAffichee) => void
   /** Note ouverte dans la bulle : entourée d'un anneau. */
   selection?: NoteAnnotee | null
+  /** Avec `selection` : seule la tête qui commence à ce temps musical est entourée (bout de note). */
+  selectionBout?: number | null
 }
 
-export default function PorteeLive({ phrase, transpo, cle, seuil, X0, LS, tetes, tetesAnciennes, registrerAncienne, onNote, selection }: Props) {
+export default function PorteeLive({ phrase, transpo, cle, seuil, X0, LS, tetes, tetesAnciennes, registrerAncienne, onNote, selection, selectionBout }: Props) {
   const { dark } = useTheme()
   const hote = useRef<HTMLDivElement>(null)
   const e0 = tonaliteEcrite(phrase.entrees[0].tonalite, transpo)
@@ -159,7 +161,7 @@ export default function PorteeLive({ phrase, transpo, cle, seuil, X0, LS, tetes,
       <g key={k} opacity={gris ? 0.5 : t.note.provisoire ? 0.92 : 1} onPointerDown={e => e.stopPropagation()} onClick={() => onNote?.(t)} style={{ cursor: onNote ? 'pointer' : 'default' }}>
         {lignesSupplementaires(t.pos).map(p => <line key={p} x1={t.x - 12} x2={t.x + 12} y1={Y_BAS - p * DEMI} y2={Y_BAS - p * DEMI} stroke={couleurPortee} strokeWidth={2} />)}
         {t.signe && <text x={t.x - 17} y={t.y + 5} textAnchor="middle" fontSize={17} fill={couleurPortee}>{t.signe === 'diese' ? '♯' : t.signe === 'bemol' ? '♭' : '♮'}</text>}
-        {!gris && selection === t.note && <circle cx={t.x} cy={t.y} r={13} fill="none" stroke="var(--text)" strokeWidth={1.6} strokeDasharray="3 2" />}
+        {!gris && selection === t.note && (selectionBout == null || Math.abs(selectionBout - t.piece.debut) < 1e-6) && <circle cx={t.x} cy={t.y} r={13} fill="none" stroke="var(--text)" strokeWidth={1.6} strokeDasharray="3 2" />}
         <ellipse cx={t.x} cy={t.y} rx={7.2} ry={4.9} transform={`rotate(-20 ${t.x} ${t.y})`} fill={c} stroke="var(--text)" strokeWidth={0.8} style={{ transition: 'fill .4s' }} />
         <rect x={t.x - 12} y={t.y - 12} width={24} height={24} fill="transparent" />
         <title>{`${t.nom}${t.note.provisoire ? ' (provisoire)' : ''}`}</title>

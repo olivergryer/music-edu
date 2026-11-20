@@ -7,7 +7,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { Reglage } from './dsp/reglages.ts'
 import type { EtatStrobe, NoteFinale, Planning, TrameAnalyse } from './dsp/types.ts'
 import type { ReglagesSegmentation } from '../../profilsSegmentation.ts'
-import { notesAncien, pointsAncien, type NoteAncien } from './ancienMoteur.ts'
+import { notesDepuisSegments, pointsAncien, segmentsAncien, type NoteAncien } from './ancienMoteur.ts'
+import { decalageOptimal, nombreDeTetes } from './decalage.ts'
 import { ajouterCorrection, appliquerCorrections, type Correction } from './corrections.ts'
 import type { PointHauteur } from './sparklines.ts'
 import { annoterNote, annoterNotes, type ContexteAnnotation, type NoteAnnotee } from './annotation.ts'
@@ -43,6 +44,7 @@ interface Prise {
   micro: Float32Array; fs: number; offset: number     // offset : échantillons (retard de boucle)
   planning: Planning                                  // planning tel que le Worker l'a modifié
   ctx: ContexteAnnotation
+  pp: PlanningPhrase                                  // pour passer du temps du planning aux temps musicaux
 }
 type BrutAncien = { hz: Float32Array; clarity: Float32Array; rms: Float32Array }
 interface ResultatNouveau { trames: TrameAnalyse[]; notes: NoteFinale[]; reglages: ReglagesNouveau }
@@ -65,6 +67,7 @@ export function useSession(
   const pointsLive = useRef<PointHauteur[]>([])
   const [points, setPoints] = useState<PointHauteur[]>([])
   const [corrections, setCorrections] = useState<Correction[]>([])
+  const [decalageManuelMs, setDecalageManuelMs] = useState<number | null>(null)     // null = automatique
   const reglagesDuRun = useRef<ReglagesNouveau>(reglagesNouveau)
   const reglagesRef = useRef(reglagesSeg)
   reglagesRef.current = reglagesSeg
@@ -92,7 +95,7 @@ export function useSession(
 
   const demarrer = useCallback(async (o: OptionsDemarrage) => {
     if (moteur.current) return
-    setErreur(null); setPrise(null); setBrutAncien(null); setResNouveau(null); setCalcul(null); arreterRecalcul(); brutesAncien.current = []; pointsLive.current = []; setPoints([]); setCorrections([]); moteurDuRun.current = moteurChoisi; reglagesDuRun.current = reglagesNouveauRef.current; setResultat(null); setNotesLive([]); setNoteEnCours(null); setLatenceMs(null); setCoupures(0)
+    setErreur(null); setPrise(null); setBrutAncien(null); setResNouveau(null); setCalcul(null); arreterRecalcul(); brutesAncien.current = []; pointsLive.current = []; setPoints([]); setCorrections([]); setDecalageManuelMs(null); moteurDuRun.current = moteurChoisi; reglagesDuRun.current = reglagesNouveauRef.current; setResultat(null); setNotesLive([]); setNoteEnCours(null); setLatenceMs(null); setCoupures(0)
     suivi.current.reinitialiser()
     suivi.current.regler({ dureeMinS: reglagesNouveauRef.current.minNoteDurationMs / 1000, silenceFinS: reglagesNouveauRef.current.silenceDurationMs / 1000, sautCents: reglagesNouveauRef.current.noteJumpCents })
     const phrase = o.tenir ? phraseTenue(o.phrase, o.phrase.entrees[o.departSlot ?? 0] ?? o.phrase.entrees[0]) : o.phrase
@@ -154,7 +157,7 @@ export function useSession(
       const c = ctxRef.current
       setResultat(r)
       if (c) {
-        setPrise({ micro: r.micro, fs: r.sampleRate, offset: r.offsetMicro ?? 0, planning: r.planning, ctx: c })
+        setPrise({ micro: r.micro, fs: r.sampleRate, offset: r.offsetMicro ?? 0, planning: r.planning, ctx: c, pp: ppRef.current! })
         if (moteurDuRun.current === 'ancien') { if (r.brut) setBrutAncien(r.brut) }
         else setResNouveau({ trames: r.trames, notes: r.notes, reglages: reglagesDuRun.current })
       }
@@ -227,24 +230,50 @@ export function useSession(
     return () => clearTimeout(t)
   }, [etat, prise, moteurChoisi, brutAncien, resNouveau, reglagesNouveau, reg.diapason, lancerRecalcul])
 
+  // ── ancien moteur : segments, décalage temporel (préréglé au meilleur) et notes ──
+  const segmentsA = useMemo(
+    () => (prise && brutAncien ? segmentsAncien(brutAncien, prise.fs, reg.diapason, reglagesSeg) : null),
+    [prise, brutAncien, reglagesSeg, reg.diapason],
+  )
+  const optionsNotes = useMemo(
+    () => (prise ? { fs: prise.fs, offsetS: prise.offset / prise.fs, planning: prise.ctx.planning, reglages: reglagesSeg } : null),
+    [prise, reglagesSeg],
+  )
+  const optimum = useMemo(
+    () => (segmentsA && optionsNotes && prise ? decalageOptimal(segmentsA, optionsNotes, prise.ctx.phrase, prise.pp) : null),
+    [segmentsA, optionsNotes, prise],
+  )
+  const decalageMs = moteurChoisi === 'ancien' ? (decalageManuelMs ?? optimum?.decalageMs ?? 0) : 0
+  const decalageRef = useRef(0)
+  decalageRef.current = decalageMs
+
   const notesFinales = useMemo(() => {
     if (!prise) return null
     if (moteurChoisi === 'ancien') {
-      if (!brutAncien) return null
-      const brutes = notesAncien(brutAncien, { fs: prise.fs, offsetS: prise.offset / prise.fs, diapason: reg.diapason, planning: prise.ctx.planning, reglages: reglagesSeg })
-      return annoterNotes(appliquerCorrections(brutes, corrections, prise.ctx.planning), prise.ctx, false)
+      if (!segmentsA || !optionsNotes) return null
+      const d = decalageMs / 1000
+      const brutes = notesDepuisSegments(segmentsA, { ...optionsNotes, decalageS: d })
+      return annoterNotes(appliquerCorrections(brutes, corrections, prise.ctx.planning, d), prise.ctx, false)
     }
     return resNouveau ? annoterNotes(appliquerCorrections(resNouveau.notes, corrections, prise.ctx.planning), prise.ctx, false) : null
-  }, [prise, moteurChoisi, brutAncien, resNouveau, reglagesSeg, reg.diapason, corrections])
+  }, [prise, moteurChoisi, segmentsA, optionsNotes, decalageMs, resNouveau, corrections])
+
+  const nbTetes = useMemo(() => (notesFinales && prise ? nombreDeTetes(notesFinales, prise.ctx.phrase, prise.pp) : 0), [notesFinales, prise])
 
   // sparkline après l'arrêt : trames de la prise avec le moteur affiché
   const pointsFinaux = useMemo((): PointHauteur[] => {
     if (!prise) return []
-    if (moteurChoisi === 'ancien') return brutAncien ? pointsAncien(brutAncien, { fs: prise.fs, offsetS: prise.offset / prise.fs, reglages: reglagesSeg }) : []
+    if (moteurChoisi === 'ancien') return brutAncien ? pointsAncien(brutAncien, { fs: prise.fs, offsetS: prise.offset / prise.fs, reglages: reglagesSeg, decalageS: decalageMs / 1000 }) : []
     return resNouveau ? resNouveau.trames.map(t => ({ t: t.t, hz: t.presence ? t.f0Hz : null })) : []
-  }, [prise, moteurChoisi, brutAncien, resNouveau, reglagesSeg])
+  }, [prise, moteurChoisi, brutAncien, resNouveau, reglagesSeg, decalageMs])
 
-  const corriger = useCallback((c: Correction) => setCorrections(l => ajouterCorrection(l, c)), [])
+  /** Une correction est enregistrée en temps de prise, sans décalage : elle suit sa note quand le curseur bouge. */
+  const corriger = useCallback((c: Correction) => {
+    const d = decalageRef.current / 1000
+    const base = { ...c, tOn: c.tOn - d, tOff: c.tOff - d, ...(c.bout ? { bout: { t0: c.bout.t0 - d, t1: c.bout.t1 - d } } : {}) } as Correction
+    setCorrections(l => ajouterCorrection(l, base))
+  }, [])
+  const reglerDecalage = useCallback((ms: number | null) => setDecalageManuelMs(ms), [])
   const reinitialiserCorrections = useCallback(() => setCorrections([]), [])
 
   useEffect(() => () => { recalcul.current?.worker.terminate() }, [])
@@ -274,9 +303,9 @@ export function useSession(
 
   return useMemo(() => ({
     etat, erreur, latenceMs, coupures, notesLive, noteEnCours, notesFinales, resultat, version, calcul, priseDispo: !!prise,
-    points: etat === 'joue' ? points : pointsFinaux, nbCorrections: corrections.length, corriger, reinitialiserCorrections,
+    points: etat === 'joue' ? points : pointsFinaux, decalage: { ms: decalageMs, auto: decalageManuelMs === null, optimumMs: optimum?.decalageMs ?? null, actif: moteurChoisi === 'ancien' && !!segmentsA, tetes: nbTetes, notes: notesFinales?.length ?? 0 }, reglerDecalage, nbCorrections: corrections.length, corriger, reinitialiserCorrections,
     strobeRef, rmsRef, ppRef, ctxRef,
     demarrer, arreter, reglerSon, definirVolume, changerAccordTenu, tempsAudible, tempsCourant,
-    effacer: () => { setCorrections([]); setPoints([]); setPrise(null); setBrutAncien(null); setResNouveau(null); setCalcul(null); arreterRecalcul(); setResultat(null); setNotesLive([]); setNoteEnCours(null); suivi.current.reinitialiser() },
-  }), [etat, erreur, latenceMs, coupures, notesLive, noteEnCours, notesFinales, resultat, version, calcul, prise, points, pointsFinaux, corrections, corriger, reinitialiserCorrections, demarrer, arreter, reglerSon, definirVolume, changerAccordTenu, tempsAudible, tempsCourant])
+    effacer: () => { setCorrections([]); setDecalageManuelMs(null); setPoints([]); setPrise(null); setBrutAncien(null); setResNouveau(null); setCalcul(null); arreterRecalcul(); setResultat(null); setNotesLive([]); setNoteEnCours(null); suivi.current.reinitialiser() },
+  }), [etat, erreur, latenceMs, coupures, notesLive, noteEnCours, notesFinales, resultat, version, calcul, prise, points, pointsFinaux, corrections, decalageMs, decalageManuelMs, optimum, segmentsA, moteurChoisi, nbTetes, reglerDecalage, corriger, reinitialiserCorrections, demarrer, arreter, reglerSon, definirVolume, changerAccordTenu, tempsAudible, tempsCourant])
 }

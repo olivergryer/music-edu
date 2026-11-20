@@ -82,51 +82,63 @@ export interface OptionsNotes {
   diapason: number
   planning: Planning
   reglages: ReglagesSegmentation
+  /** Décalage temporel (s) : > 0 = les notes sont placées plus tard dans la phrase (élève en avance sur la grille). */
+  decalageS?: number
 }
 
-/**
- * Notes de la série brute. Une note tenue à travers un changement d'accord est coupée en deux
- * morceaux (même règle que le nouveau moteur) ; la dernière note est « ouverte » si elle vient
- * de se terminer (< silence + 1 trame avant la fin du signal) : utile en Live.
- */
-export function notesAncien(brut: BrutAncien, o: OptionsNotes): NoteAncien[] {
-  const r = o.reglages
-  const n = brut.hz.length
-  if (!n) return []
-  const serie = appliquerSeuils(brut, o.fs, { clarityThreshold: r.clarityThreshold, rmsGate: r.gateLevel }) as { tMs: number; hz: number | null }[]
-  const segs = segmenter(serie, o.diapason, {
+export interface SegmentsAncien { segs: Seg[]; dernierMs: number }
+
+/** Segmentation seule (gate, clarté, silence, saut, durée, ré-attaque) : ne dépend ni du planning ni du décalage. */
+export function segmentsAncien(brut: BrutAncien, fs: number, diapason: number, r: ReglagesSegmentation): SegmentsAncien {
+  if (!brut.hz.length) return { segs: [], dernierMs: 0 }
+  const serie = appliquerSeuils(brut, fs, { clarityThreshold: r.clarityThreshold, rmsGate: r.gateLevel }) as { tMs: number; hz: number | null }[]
+  const segs = segmenter(serie, diapason, {
     silenceDurationMs: r.silenceDurationMs, noteJumpCents: r.noteJumpCents,
     minNoteDurationMs: r.minNoteDurationMs, reattackDropRatio: r.reattackDropRatio,
   }) as Seg[]
-  const dernierMs = serie[serie.length - 1].tMs
+  return { segs, dernierMs: serie[serie.length - 1].tMs }
+}
+
+/**
+ * Notes à partir des segments. Une note tenue à travers un changement d'accord est coupée en deux
+ * morceaux (même règle que le nouveau moteur) ; la dernière note est « ouverte » si elle vient
+ * de se terminer (< silence + 1 trame avant la fin du signal) : utile en Live.
+ */
+export function notesDepuisSegments(sg: SegmentsAncien, o: Omit<OptionsNotes, 'diapason'>): NoteAncien[] {
+  const offsetS = o.offsetS - (o.decalageS ?? 0)
+  const decalage = DEMI_TRAME_MS / o.fs * 1000
   const out: NoteAncien[] = []
-  for (const s of segs) {
-    const decalage = DEMI_TRAME_MS / o.fs * 1000
-    const tOn = (s.debutMs + decalage) / 1000 - o.offsetS, tOff = (s.finMs + decalage) / 1000 - o.offsetS
+  for (const s of sg.segs) {
+    const tOn = (s.debutMs + decalage) / 1000 - offsetS, tOff = (s.finMs + decalage) / 1000 - offsetS
     const bornes = [tOn, ...changementsDAccord(o.planning, tOn, tOff), tOff]
     for (let i = 0; i + 1 < bornes.length; i++) {
       const x0 = bornes[i], x1 = bornes[i + 1]
       const fr = bornes.length === 2 ? s.frames
-        : s.frames.filter(f => (f.tMs + decalage) / 1000 - o.offsetS >= x0 - 1e-9 && (f.tMs + decalage) / 1000 - o.offsetS < x1 - 1e-9)
-      const note = noteDe(fr, o.fs, o.offsetS, i > 0, i + 2 < bornes.length)
+        : s.frames.filter(f => (f.tMs + decalage) / 1000 - offsetS >= x0 - 1e-9 && (f.tMs + decalage) / 1000 - offsetS < x1 - 1e-9)
+      const note = noteDe(fr, o.fs, offsetS, i > 0, i + 2 < bornes.length)
       if (note) out.push(note)
     }
   }
   const der = out[out.length - 1]
-  if (der && segs.length && dernierMs - segs[segs.length - 1].finMs <= r.silenceDurationMs + 2 * PAS_TRAME / o.fs * 1000) der.ouverte = true
+  const dernier = sg.segs[sg.segs.length - 1]
+  if (der && dernier && sg.dernierMs - dernier.finMs <= o.reglages.silenceDurationMs + 2 * PAS_TRAME / o.fs * 1000) der.ouverte = true
   return out
+}
+
+export function notesAncien(brut: BrutAncien, o: OptionsNotes): NoteAncien[] {
+  return notesDepuisSegments(segmentsAncien(brut, o.fs, o.diapason, o.reglages), o)
 }
 
 /**
  * Points de hauteur (instants du planning) après gate et clarté : de quoi tracer la sparkline.
  * `depuisT` limite la sortie à la fin de la série (envoi au fil de l'eau pendant le Live).
  */
-export function pointsAncien(brut: BrutAncien, o: { fs: number; offsetS: number; reglages: ReglagesSegmentation; depuisT?: number }): PointHauteur[] {
+export function pointsAncien(brut: BrutAncien, o: { fs: number; offsetS: number; reglages: ReglagesSegmentation; depuisT?: number; decalageS?: number }): PointHauteur[] {
   const serie = appliquerSeuils(brut, o.fs, { clarityThreshold: o.reglages.clarityThreshold, rmsGate: o.reglages.gateLevel }) as { tMs: number; hz: number | null }[]
   const decalage = DEMI_TRAME_MS / o.fs * 1000
   const out: PointHauteur[] = []
   for (const p of serie) {
-    const t = (p.tMs + decalage) / 1000 - o.offsetS
+    const t = (p.tMs + decalage) / 1000 - o.offsetS + (o.decalageS ?? 0)
     if (o.depuisT === undefined || t >= o.depuisT) out.push({ t, hz: p.hz })
   }
   return out

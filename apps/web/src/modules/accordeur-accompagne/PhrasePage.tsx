@@ -23,6 +23,7 @@ import {
 import { tempsMusical } from './planningPhrase.ts'
 import SparklinesJustesse, { HAUTEUR_SPARK } from './SparklinesJustesse.tsx'
 import { entreesVoisines } from './corrections.ts'
+import { DECALAGE_MAX_MS, PAS_DECALAGE_MS } from './decalage.ts'
 import PorteeLive, { HAUTEUR_PORTEE, calculerTetes, largeurPrefixe, type TeteAffichee } from './PorteeLive.tsx'
 import { realiserPhrase } from './realisation.ts'
 import { ecrire, estIPhone, lireReglagesAccordeur, lireReglagesPage, type ReglagesPage } from './reglagesLocaux.ts'
@@ -87,7 +88,7 @@ export default function PhrasePage() {
   const [reglages, setReglages] = useState(false)
   const [aide, setAide] = useState(false)
   const [messageMenu, setMessageMenu] = useState<string | null>(null)
-  const [bulle, setBulle] = useState<number | null>(null)       // index dans les notes triées
+  const [bulle, setBulle] = useState<{ index: number; bout: number | null } | null>(null)   // note (index dans les notes triées) et bout sélectionné
   const [slotAudible, setSlotAudible] = useState(0)
   const [tourVu, setTourVu] = useState(0)
   const [lastDeb, setLastDeb] = useState(0)
@@ -106,8 +107,10 @@ export default function PhrasePage() {
     [notesAff, phrase, session.version, pageReg.cle, reg.transpo, reg.seuil, X0],
   )
   const notesTriees = useMemo(() => [...(session.notesFinales ?? [])].sort((a, b) => a.tOn - b.tOn), [session.notesFinales])
-  useEffect(() => { if (bulle !== null && bulle >= notesTriees.length) setBulle(notesTriees.length ? notesTriees.length - 1 : null) }, [bulle, notesTriees])
-  const noteBulle = bulle !== null && !joue ? notesTriees[bulle] ?? null : null
+  useEffect(() => { if (bulle && bulle.index >= notesTriees.length) setBulle(notesTriees.length ? { index: notesTriees.length - 1, bout: null } : null) }, [bulle, notesTriees])
+  const noteBulle = bulle && !joue ? notesTriees[bulle.index] ?? null : null
+  const boutsBulle = useMemo(() => (noteBulle ? tetes.filter(t => t.note === noteBulle).sort((a, b) => a.piece.debut - b.piece.debut) : []), [tetes, noteBulle])
+  const boutChoisi = bulle && boutsBulle.length > 1 && bulle.bout !== null ? Math.min(bulle.bout, boutsBulle.length - 1) : null
   const tetesVues = tetes.filter(t => t.tour === tourVu)
   const tetesAnciennes = joue ? tetes.filter(t => t.tour === tourVu - 1) : []
 
@@ -243,8 +246,13 @@ export default function PhrasePage() {
               <PorteeLive
                 phrase={phrase} transpo={reg.transpo} cle={pageReg.cle} seuil={reg.seuil} X0={X0} LS={LS}
                 tetes={tetesVues} tetesAnciennes={tetesAnciennes} registrerAncienne={registrerAncienne}
-                selection={noteBulle}
-                onNote={joue ? undefined : t => { const i = notesTriees.indexOf(t.note); setBulle(b => (b === i ? null : i)) }}
+                selection={noteBulle} selectionBout={boutChoisi !== null ? boutsBulle[boutChoisi].piece.debut : null}
+                onNote={joue ? undefined : t => {
+                  const i = notesTriees.indexOf(t.note)
+                  const bouts = tetes.filter(x => x.note === t.note).sort((a, b) => a.piece.debut - b.piece.debut)
+                  const bout = bouts.length > 1 ? bouts.indexOf(t) : null
+                  setBulle(b => (b && b.index === i && b.bout === bout ? null : { index: i, bout }))
+                }}
               />
               <SparklinesJustesse phrase={phrase} pp={pp} ctx={session.ctxRef.current} tetes={tetesVues} points={session.points} X0={X0} LS={LS} seuil={reg.seuil} />
               <BandeSlots phrase={phrase} transpo={reg.transpo} X0={X0} LS={LS} onOuvrir={k => void ouvrirSlot(k)} onAjouterMesure={() => changer(ajouterMesure(phrase))} registrer={registrerSlot} />
@@ -255,22 +263,49 @@ export default function PhrasePage() {
 
         {noteBulle && (() => {
           const planningPrise = session.ctxRef.current?.planning ?? session.ppRef.current?.planning ?? null
-          const v = planningPrise ? entreesVoisines(planningPrise, noteBulle.tOn, noteBulle.tOff) : { courante: noteBulle.entree, avant: null, apres: null }
+          const pp2 = session.ppRef.current
+          const tempsDe = (beat: number): number => (pp2 ? pp2.t0 + (beat - pp2.departSlot) * pp2.noireS : 0)
+          const bout = boutChoisi !== null && pp2 ? { t0: tempsDe(boutsBulle[boutChoisi].piece.debut), t1: tempsDe(boutsBulle[boutChoisi].piece.fin) } : null
+          const cible = bout ? { tOn: bout.t0, tOff: bout.t1 } : noteBulle
+          const v = planningPrise ? entreesVoisines(planningPrise, cible.tOn, cible.tOff) : { courante: noteBulle.entree, avant: null, apres: null }
+          const index = bulle?.index ?? 0
           return (
             <BulleNote
               note={noteBulle} transpo={reg.transpo} planning={planningPrise} phrase={phrase} seuil={reg.seuil} onFermer={() => setBulle(null)}
               actions={{
-                index: bulle ?? 0, total: notesTriees.length,
-                onPrecedent: () => setBulle(i => Math.max(0, (i ?? 0) - 1)),
-                onSuivant: () => setBulle(i => Math.min(notesTriees.length - 1, (i ?? 0) + 1)),
-                onSupprimer: () => session.corriger({ tOn: noteBulle.tOn, tOff: noteBulle.tOff, action: 'supprimer' }),
+                index, total: notesTriees.length,
+                onPrecedent: () => setBulle({ index: Math.max(0, index - 1), bout: null }),
+                onSuivant: () => setBulle({ index: Math.min(notesTriees.length - 1, index + 1), bout: null }),
+                onSupprimer: () => session.corriger({ tOn: noteBulle.tOn, tOff: noteBulle.tOff, action: 'supprimer', ...(bout ? { bout } : {}) }),
                 avant: v.avant, apres: v.apres,
-                onRattacher: entree => session.corriger({ tOn: noteBulle.tOn, tOff: noteBulle.tOff, action: 'entree', entree }),
+                onRattacher: entree => session.corriger({ tOn: noteBulle.tOn, tOff: noteBulle.tOff, action: 'entree', entree, ...(bout ? { bout } : {}) }),
                 nbCorrections: session.nbCorrections, onReinitialiser: session.reinitialiserCorrections,
+                bout: boutChoisi !== null ? { index: boutChoisi, total: boutsBulle.length, onChoisir: i => setBulle({ index, bout: i < 0 ? null : Math.min(boutsBulle.length - 1, i) }) } : (boutsBulle.length > 1 ? { index: -1, total: boutsBulle.length, onChoisir: i => setBulle({ index, bout: i < 0 ? null : Math.min(boutsBulle.length - 1, i) }) } : null),
               }}
             />
           )
         })()}
+
+        {!joue && session.etat === 'repos' && session.decalage.actif && (
+          <section style={{ ...carte, marginTop: 8 }} aria-label="Décalage temporel">
+            <label style={{ display: 'block', fontSize: 13 }}>
+              <span style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                <strong>Décalage temporel</strong>
+                <span>{session.decalage.ms > 0 ? '+' : ''}{session.decalage.ms} ms{session.decalage.auto ? ' (auto)' : ''}</span>
+              </span>
+              <input type="range" min={-DECALAGE_MAX_MS} max={DECALAGE_MAX_MS} step={PAS_DECALAGE_MS} value={session.decalage.ms}
+                onChange={e => session.reglerDecalage(parseInt(e.target.value, 10))}
+                style={{ width: '100%', minHeight: 44, accentColor: ORANGE }} aria-label="Décalage temporel des notes (ms)" />
+            </label>
+            <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '0 0 6px', lineHeight: 1.4 }}>
+              Déplace toutes les notes sur la grille : positif = plus tard. Présélectionné pour que le moins de notes possible enjambent une barre ou un changement d’accord
+              ({session.decalage.notes} note{session.decalage.notes > 1 ? 's' : ''}, {session.decalage.tetes} tête{session.decalage.tetes > 1 ? 's' : ''}).
+            </p>
+            <button style={pastille(session.decalage.auto)} onClick={() => session.reglerDecalage(null)} disabled={session.decalage.auto}>
+              Automatique{session.decalage.optimumMs !== null ? ` (${session.decalage.optimumMs > 0 ? '+' : ''}${session.decalage.optimumMs} ms)` : ''}
+            </button>
+          </section>
+        )}
 
         {session.etat === 'analyse' && <p role="status" style={{ ...carte, marginTop: 8, fontSize: 13 }}>Passe finale en cours : les valeurs définitives remplacent les provisoires…</p>}
         {session.etat === 'repos' && session.calcul && <p role="status" style={{ ...carte, marginTop: 8, fontSize: 13 }}>{session.calcul}</p>}

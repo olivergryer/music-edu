@@ -48,3 +48,33 @@ test('le rattachement à un autre accord remet les battements à zéro', () => {
   assert.equal(r[0].entree, 0)
   assert.deepEqual(r[0].battements, [])
 })
+
+test('correction d\'un bout : la tête qui déborde est rattachée à un autre accord sans toucher le reste', () => {
+  // une note de 1,6 s à 2,4 s, d'un seul tenant (entrée 1 au milieu : le planning change à 2)
+  const n = note(1.5, 3.1, { entree: 1 })
+  const r = appliquerCorrections([n], [{ tOn: 1.5, tOff: 3.1, action: 'entree', entree: 2, bout: { t0: 2.9, t1: 3.1 } }], planning)
+  assert.equal(r.length, 2)
+  assert.equal(r[0].entree, 1); assert.equal(r[1].entree, 2)
+  assert.ok(Math.abs(r[0].tOff - 2.9) < 1e-9 && Math.abs(r[1].tOn - 2.9) < 1e-9)
+})
+
+test('retirer un bout au bord raccourcit la note (sans la fusionner de nouveau)', () => {
+  const n = note(1.9, 3.0, { entree: 0, coupeApres: false })
+  const r = appliquerCorrections([n], [{ tOn: 1.9, tOff: 3.0, action: 'supprimer', bout: { t0: 1.9, t1: 2.0 } }], planning)
+  assert.equal(r.length, 1)
+  assert.ok(Math.abs(r[0].tOn - 2.0) < 1e-9)
+})
+
+test('les corrections suivent la note quand le décalage temporel change', () => {
+  const n = note(1.0, 1.5)
+  // correction créée avec un décalage de +0,1 s : elle est enregistrée en temps sans décalage (0,9 à 1,4)
+  const r = appliquerCorrections([{ ...n, tOn: 1.1, tOff: 1.6 }], [{ tOn: 0.9, tOff: 1.4, action: 'supprimer' }], planning, 0.1)
+  assert.equal(r.length, 0)
+  const r2 = appliquerCorrections([{ ...n, tOn: 1.3, tOff: 1.8 }], [{ tOn: 0.9, tOff: 1.4, action: 'supprimer' }], planning, 0.3)
+  assert.equal(r2.length, 0)
+})
+
+test('une suppression de bout n\'écrase pas une correction de note entière', () => {
+  const l = ajouterCorrection(ajouterCorrection([], { tOn: 0, tOff: 1, action: 'supprimer' }), { tOn: 0, tOff: 1, action: 'entree', entree: 1, bout: { t0: 0.8, t1: 1 } })
+  assert.equal(l.length, 2)
+})

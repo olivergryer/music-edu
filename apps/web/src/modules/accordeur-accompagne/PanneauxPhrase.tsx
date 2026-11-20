@@ -164,6 +164,8 @@ export interface ActionsNote {
   avant: number | null; apres: number | null
   onRattacher: (entree: number) => void
   nbCorrections: number; onReinitialiser: () => void
+  /** Note enjambant une barre ou un changement d'accord : plusieurs têtes liées, chacune sélectionnable. */
+  bout: { index: number; total: number; onChoisir: (i: number) => void } | null
 }
 
 /** Bulle d'une note après l'arrêt : nom écrit, écart, σ, rôle, battements ; navigation et corrections. */
@@ -201,11 +203,18 @@ export function BulleNote({ note, transpo, planning, phrase, seuil, actions, onF
           ))}
         </ul>
       )}
-      <p style={{ ...titreSection, marginTop: 8 }}>Corriger cette note</p>
+      {actions.bout && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8 }} role="group" aria-label="Bout de note">
+          <button style={pastille(false, { padding: 0, width: 44, display: 'flex', alignItems: 'center', justifyContent: 'center' })} onClick={() => actions.bout!.onChoisir(actions.bout!.index - 1)} disabled={actions.bout.index < 0} aria-label="Bout précédent"><Chevron gauche /></button>
+          <span style={{ flex: 1, textAlign: 'center', fontSize: 13 }}>Cette note enjambe une barre ou un accord : <strong>{actions.bout.index < 0 ? `${actions.bout.total} bouts : choisis-en un` : `bout ${actions.bout.index + 1} sur ${actions.bout.total}`}</strong></span>
+          <button style={pastille(false, { padding: 0, width: 44, display: 'flex', alignItems: 'center', justifyContent: 'center' })} onClick={() => actions.bout!.onChoisir(actions.bout!.index + 1)} disabled={actions.bout.index >= actions.bout.total - 1} aria-label="Bout suivant"><Chevron /></button>
+        </div>
+      )}
+      <p style={{ ...titreSection, marginTop: 8 }}>{actions.bout ? 'Corriger ce bout' : 'Corriger cette note'}</p>
       <div style={rangee}>
         <button style={pastille(false)} disabled={actions.avant === null} onClick={() => actions.avant !== null && actions.onRattacher(actions.avant)}>Accord d’avant ({nomAccord(actions.avant)})</button>
         <button style={pastille(false)} disabled={actions.apres === null} onClick={() => actions.apres !== null && actions.onRattacher(actions.apres)}>Accord d’après ({nomAccord(actions.apres)})</button>
-        <button style={pastille(false, { color: '#f87171', borderColor: '#f87171' })} onClick={actions.onSupprimer}>Supprimer la note</button>
+        <button style={pastille(false, { color: '#f87171', borderColor: '#f87171' })} onClick={actions.onSupprimer}>{actions.bout ? 'Retirer ce bout' : 'Supprimer la note'}</button>
       </div>
       {actions.nbCorrections > 0 && (
         <button style={pastille(false, { marginTop: 6, fontSize: 12 })} onClick={actions.onReinitialiser}>Annuler les {actions.nbCorrections} correction{actions.nbCorrections > 1 ? 's' : ''}</button>
