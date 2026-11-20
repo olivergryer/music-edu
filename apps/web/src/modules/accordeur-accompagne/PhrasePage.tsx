@@ -21,6 +21,8 @@ import {
   sauverPhraseCourante, sauverPhrases, type Phrase,
 } from './phrase.ts'
 import { tempsMusical } from './planningPhrase.ts'
+import SparklinesJustesse, { HAUTEUR_SPARK } from './SparklinesJustesse.tsx'
+import { entreesVoisines } from './corrections.ts'
 import PorteeLive, { HAUTEUR_PORTEE, calculerTetes, largeurPrefixe, type TeteAffichee } from './PorteeLive.tsx'
 import { realiserPhrase } from './realisation.ts'
 import { ecrire, estIPhone, lireReglagesAccordeur, lireReglagesPage, type ReglagesPage } from './reglagesLocaux.ts'
@@ -85,7 +87,7 @@ export default function PhrasePage() {
   const [reglages, setReglages] = useState(false)
   const [aide, setAide] = useState(false)
   const [messageMenu, setMessageMenu] = useState<string | null>(null)
-  const [bulle, setBulle] = useState<TeteAffichee | null>(null)
+  const [bulle, setBulle] = useState<number | null>(null)       // index dans les notes triées
   const [slotAudible, setSlotAudible] = useState(0)
   const [tourVu, setTourVu] = useState(0)
   const [lastDeb, setLastDeb] = useState(0)
@@ -103,6 +105,9 @@ export default function PhrasePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [notesAff, phrase, session.version, pageReg.cle, reg.transpo, reg.seuil, X0],
   )
+  const notesTriees = useMemo(() => [...(session.notesFinales ?? [])].sort((a, b) => a.tOn - b.tOn), [session.notesFinales])
+  useEffect(() => { if (bulle !== null && bulle >= notesTriees.length) setBulle(notesTriees.length ? notesTriees.length - 1 : null) }, [bulle, notesTriees])
+  const noteBulle = bulle !== null && !joue ? notesTriees[bulle] ?? null : null
   const tetesVues = tetes.filter(t => t.tour === tourVu)
   const tetesAnciennes = joue ? tetes.filter(t => t.tour === tourVu - 1) : []
 
@@ -234,21 +239,38 @@ export default function PhrasePage() {
 
         <section style={{ ...carte, padding: 0, overflow: 'hidden' }} aria-label="Portée et slots">
           <div ref={defil} style={{ overflowX: 'auto', overflowY: 'hidden', position: 'relative' }}>
-            <div style={{ position: 'relative', width: X0 + n * LS + 100, minHeight: HAUTEUR_PORTEE + 130 }}>
+            <div style={{ position: 'relative', width: X0 + n * LS + 100, minHeight: HAUTEUR_PORTEE + HAUTEUR_SPARK + 130 }}>
               <PorteeLive
                 phrase={phrase} transpo={reg.transpo} cle={pageReg.cle} seuil={reg.seuil} X0={X0} LS={LS}
                 tetes={tetesVues} tetesAnciennes={tetesAnciennes} registrerAncienne={registrerAncienne}
-                onNote={joue ? undefined : t => setBulle(b => (b === t ? null : t))}
+                selection={noteBulle}
+                onNote={joue ? undefined : t => { const i = notesTriees.indexOf(t.note); setBulle(b => (b === i ? null : i)) }}
               />
+              <SparklinesJustesse phrase={phrase} pp={pp} ctx={session.ctxRef.current} tetes={tetesVues} points={session.points} X0={X0} LS={LS} seuil={reg.seuil} />
               <BandeSlots phrase={phrase} transpo={reg.transpo} X0={X0} LS={LS} onOuvrir={k => void ouvrirSlot(k)} onAjouterMesure={() => changer(ajouterMesure(phrase))} registrer={registrerSlot} />
-              <div ref={tete} aria-hidden="true" style={{ position: 'absolute', left: 0, top: 6, width: 2, height: HAUTEUR_PORTEE + 124, background: 'var(--text)', opacity: 0, pointerEvents: 'none', willChange: 'transform' }} />
+              <div ref={tete} aria-hidden="true" style={{ position: 'absolute', left: 0, top: 6, width: 2, height: HAUTEUR_PORTEE + HAUTEUR_SPARK + 124, background: 'var(--text)', opacity: 0, pointerEvents: 'none', willChange: 'transform' }} />
             </div>
           </div>
         </section>
 
-        {bulle && !joue && (
-          <BulleNote note={bulle.note} transpo={reg.transpo} planning={session.ppRef.current?.planning ?? null} phrase={phrase} seuil={reg.seuil} onFermer={() => setBulle(null)} />
-        )}
+        {noteBulle && (() => {
+          const planningPrise = session.ctxRef.current?.planning ?? session.ppRef.current?.planning ?? null
+          const v = planningPrise ? entreesVoisines(planningPrise, noteBulle.tOn, noteBulle.tOff) : { courante: noteBulle.entree, avant: null, apres: null }
+          return (
+            <BulleNote
+              note={noteBulle} transpo={reg.transpo} planning={planningPrise} phrase={phrase} seuil={reg.seuil} onFermer={() => setBulle(null)}
+              actions={{
+                index: bulle ?? 0, total: notesTriees.length,
+                onPrecedent: () => setBulle(i => Math.max(0, (i ?? 0) - 1)),
+                onSuivant: () => setBulle(i => Math.min(notesTriees.length - 1, (i ?? 0) + 1)),
+                onSupprimer: () => session.corriger({ tOn: noteBulle.tOn, tOff: noteBulle.tOff, action: 'supprimer' }),
+                avant: v.avant, apres: v.apres,
+                onRattacher: entree => session.corriger({ tOn: noteBulle.tOn, tOff: noteBulle.tOff, action: 'entree', entree }),
+                nbCorrections: session.nbCorrections, onReinitialiser: session.reinitialiserCorrections,
+              }}
+            />
+          )
+        })()}
 
         {session.etat === 'analyse' && <p role="status" style={{ ...carte, marginTop: 8, fontSize: 13 }}>Passe finale en cours : les valeurs définitives remplacent les provisoires…</p>}
         {session.etat === 'repos' && session.calcul && <p role="status" style={{ ...carte, marginTop: 8, fontSize: 13 }}>{session.calcul}</p>}

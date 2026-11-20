@@ -9,7 +9,7 @@ import { reechantillonner } from './dsp/reechantillonnage.ts'
 import { appliquerReglage, remplacerAPartirDe } from './dsp/reglages.ts'
 import type { TrameAnalyse } from './dsp/types.ts'
 import type { ReglagesSegmentation } from '../../profilsSegmentation.ts'
-import { notesAncien, SerieBrute } from './ancienMoteur.ts'
+import { notesAncien, pointsAncien, SerieBrute } from './ancienMoteur.ts'
 import { NOUVEAU_DEFAUT, optionsFinaleDe, optionsPipelineDe, type ReglagesNouveau } from './reglagesNouveau.ts'
 import type { DepuisWorker, VersWorker, WorkerVersWorklet, WorkletVersWorker } from './protocole.ts'
 
@@ -68,13 +68,16 @@ function tickAncien(publier: boolean): void {
   serie.avancer(micro.vue(), fs)
   if (!publier || offset < 0) return
   const notes = notesAncien(serie, { fs, offsetS: offset / fs, diapason: diapasonAncien, planning, reglages: reglagesAncien })
-  ctx.postMessage({ type: 'notesAncien', notes })
+  // points de hauteur : seulement la fin de la série (le reste ne bouge plus), l'appelant fusionne
+  const depuisT = Math.max(0, serie.n * 512 / fs - offset / fs - 6)
+  const points = pointsAncien(serie, { fs, offsetS: offset / fs, reglages: reglagesAncien, depuisT })
+  ctx.postMessage({ type: 'notesAncien', notes, points, depuisT })
 }
 let diapasonAncien = 442
 
 function acces(): AccesMicro {
   return {
-    trame: t0 => { const i0 = Math.round(t0 * fs) + offset; return micro.vue().subarray(i0, i0 + 2048) },
+    trame: (t0, n = 2048) => { const i0 = Math.round(t0 * fs) + offset; return micro.vue().subarray(i0, i0 + n) },
     tranche16: (t0, t1) => {
       const a = Math.max(0, Math.round(t0 * fs) + offset), b = Math.min(micro.n, Math.round(t1 * fs) + offset)
       return reechantillonner(micro.vue().subarray(a, b), fs, FS_MODELE)
@@ -86,7 +89,7 @@ function demarrerLive(): void {
   if (!planning) return
   etape = creerAnalyseurFlux(fs, planning, acces(), optionsPipelineDe(nouveau))
   prochainT = 0.15
-  minuteur = setInterval(avancer, 25)
+  minuteur = setInterval(avancer, Math.max(8, Math.min(25, nouveau.pasMs / 2)))
 }
 
 function avancer(): void {
@@ -104,7 +107,7 @@ function avancer(): void {
     port?.postMessage(m)
   }
   ctx.postMessage({ type: 'trame', trame, msCalcul: ms })
-  prochainT += 0.05
+  prochainT += nouveau.pasMs / 1000
   // rattrapage si on a pris du retard (sans dépasser 4 étapes d'affilée)
   if ((micro.n - offset) / fs - prochainT > 0.3) prochainT = (micro.n - offset) / fs - 0.1
 }

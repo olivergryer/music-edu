@@ -1,7 +1,7 @@
 // ─── Réglages de segmentation de l'ancien moteur (repris de l'Accordeur) ───────────────
 import type { ReglagesSegmentation as Reglages } from '../../profilsSegmentation.ts'
 import { LIBELLES_PROFILS, NOMS_PROFILS } from '../../profilsSegmentation.ts'
-import { CHAMPS_NOUVEAU, type ChampNouveau, type GroupeNouveau } from './reglagesNouveau.ts'
+import { appliquerPreregalage, CHAMPS_NOUVEAU, PREREGLAGES_NOUVEAU, preregalageActif, type ChampNouveau, type GroupeNouveau } from './reglagesNouveau.ts'
 import type { EtatNouveau } from './useReglagesNouveau.ts'
 import type { EtatSegmentation } from './useReglagesSegmentation.ts'
 import { ORANGE, pastille, rangee, titreSection } from './stylesAcc.ts'
@@ -71,6 +71,17 @@ export function SectionSegmentation({ seg }: { seg: EtatSegmentation }) {
 }
 
 function ChampDecrit({ champ, valeur, onChange }: { champ: ChampNouveau; valeur: number; onChange: (v: number) => void }) {
+  if (champ.choix) {
+    return (
+      <div style={{ marginTop: 10 }}>
+        <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{champ.label}</span>
+        <div style={{ ...rangee, marginTop: 4 }} role="group" aria-label={champ.label}>
+          {champ.choix.map(c => <button key={c.valeur} style={pastille(valeur === c.valeur)} aria-pressed={valeur === c.valeur} onClick={() => onChange(c.valeur)}>{c.label}</button>)}
+        </div>
+        <p style={{ ...note, fontSize: 11, lineHeight: 1.4 }}>{champ.aide}</p>
+      </div>
+    )
+  }
   return (
     <label style={{ display: 'block', fontSize: 12, color: 'var(--text-muted)', marginTop: 10 }}>
       {champ.label}
@@ -98,6 +109,15 @@ export function SectionNouveau({ nouveau }: { nouveau: EtatNouveau }) {
       <p style={{ ...note, fontSize: 11 }}>
         Le nouveau moteur retire l’accompagnement du micro avant de mesurer ton jeu. Le recalcul de la dernière prise est automatique
         quand tu changes une valeur (la prise en cours de jeu garde les valeurs du départ).
+      </p>
+      <div style={{ ...rangee, marginTop: 8 }} role="group" aria-label="Préréglage du nouveau moteur">
+        {PREREGLAGES_NOUVEAU.map(p => {
+          const actif = preregalageActif(nouveau.reglages) === p.id
+          return <button key={p.id} style={pastille(actif)} aria-pressed={actif} onClick={() => nouveau.remplacer(appliquerPreregalage(p))}>{p.label}</button>
+        })}
+      </div>
+      <p style={{ ...note, fontSize: 11, lineHeight: 1.4 }}>
+        {PREREGLAGES_NOUVEAU.find(p => p.id === preregalageActif(nouveau.reglages))?.aide ?? 'Réglage personnalisé : tu as modifié au moins une valeur d’un préréglage.'}
       </p>
       {(['trame', 'segmentation'] as const).map(g => (
         <div key={g}>

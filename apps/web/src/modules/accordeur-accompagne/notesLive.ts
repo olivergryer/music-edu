@@ -12,15 +12,19 @@ export interface NoteEnCours extends NoteBrute { ouverte: boolean }
 
 const mediane = (a: number[]): number => { const s = [...a].sort((x, y) => x - y); return s[Math.floor(s.length / 2)] }
 
+export interface OptionsSuivi { dureeMinS: number; silenceFinS: number; sautCents: number }
+
 export class SuiviNotes {
   readonly notes: NoteEnCours[] = []
+  private o: OptionsSuivi = { dureeMinS: DUREE_MIN_NOTE_S, silenceFinS: SILENCE_FIN_NOTE_S, sautCents: SAUT_NOTE_CENTS }
+  regler(o: OptionsSuivi): void { this.o = o }
   private courante: { note: NoteEnCours; hz: number[]; dernierT: number } | null = null
 
   /** Intègre une trame ; renvoie la note touchée (ouverte ou tout juste fermée), sinon null. */
   ajouter(t: TrameAnalyse): NoteEnCours | null {
     const c = this.courante
     if (t.presence && t.f0Hz) {
-      if (c && Math.abs(1200 * Math.log2(t.f0Hz / mediane(c.hz.slice(-5)))) > SAUT_NOTE_CENTS) this.fermer()
+      if (c && Math.abs(1200 * Math.log2(t.f0Hz / mediane(c.hz.slice(-5)))) > this.o.sautCents) this.fermer()
       if (!this.courante) {
         const note: NoteEnCours = { tOn: t.t, tOff: t.t, f0Hz: t.f0Hz, sigmaCents: t.sigmaCents, ouverte: true }
         this.courante = { note, hz: [], dernierT: t.t }
@@ -30,10 +34,10 @@ export class SuiviNotes {
       cc.note.tOff = t.t
       cc.note.f0Hz = mediane(cc.hz.slice(-8))
       cc.note.sigmaCents = t.sigmaCents
-      if (t.t - cc.note.tOn >= DUREE_MIN_NOTE_S && !this.notes.includes(cc.note)) this.notes.push(cc.note)
+      if (t.t - cc.note.tOn >= this.o.dureeMinS && !this.notes.includes(cc.note)) this.notes.push(cc.note)
       return this.notes.includes(cc.note) ? cc.note : null
     }
-    if (c && t.t - c.dernierT >= SILENCE_FIN_NOTE_S) return this.fermer()
+    if (c && t.t - c.dernierT >= this.o.silenceFinS) return this.fermer()
     return null
   }
 

@@ -9,6 +9,7 @@
 import type { Reglage } from './dsp/reglages.ts'
 import type { ReglagesSegmentation } from '../../profilsSegmentation.ts'
 import type { NoteAncien } from './ancienMoteur.ts'
+import type { PointHauteur } from './sparklines.ts'
 import type { ReglagesNouveau } from './reglagesNouveau.ts'
 import type { EtatStrobe, NoteFinale, Planning, TrameAnalyse } from './dsp/types.ts'
 
@@ -52,7 +53,7 @@ export type DepuisWorker =
   | { type: 'latence'; ms: number; qualite: number }
   | { type: 'trame'; trame: TrameAnalyse; msCalcul: number }
   | { type: 'progression'; texte: string }
-  | { type: 'notesAncien'; notes: NoteAncien[] }
+  | { type: 'notesAncien'; notes: NoteAncien[]; points: PointHauteur[]; depuisT: number }
   | { type: 'fini'; notes: NoteFinale[]; trames: TrameAnalyse[]; micro: Float32Array; sortie: Float32Array; tempsCalculMs: number[]; offsetMicro: number
       brut?: { hz: Float32Array; clarity: Float32Array; rms: Float32Array }
       planning?: Planning }   // planning tel que le Worker l'a modifié (réglages à chaud)

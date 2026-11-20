@@ -7,7 +7,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { Reglage } from './dsp/reglages.ts'
 import type { EtatStrobe, NoteFinale, Planning, TrameAnalyse } from './dsp/types.ts'
 import type { ReglagesSegmentation } from '../../profilsSegmentation.ts'
-import { notesAncien, type NoteAncien } from './ancienMoteur.ts'
+import { notesAncien, pointsAncien, type NoteAncien } from './ancienMoteur.ts'
+import { ajouterCorrection, appliquerCorrections, type Correction } from './corrections.ts'
+import type { PointHauteur } from './sparklines.ts'
 import { annoterNote, annoterNotes, type ContexteAnnotation, type NoteAnnotee } from './annotation.ts'
 import { MoteurWeb, type Resultat } from './moteurAudio.ts'
 import { SuiviNotes } from './notesLive.ts'
@@ -60,6 +62,9 @@ export function useSession(
   const gainBase = useRef(0.1)
   const moteurDuRun = useRef<MoteurDetection>('nouveau')
   const brutesAncien = useRef<NoteAncien[]>([])
+  const pointsLive = useRef<PointHauteur[]>([])
+  const [points, setPoints] = useState<PointHauteur[]>([])
+  const [corrections, setCorrections] = useState<Correction[]>([])
   const reglagesDuRun = useRef<ReglagesNouveau>(reglagesNouveau)
   const reglagesRef = useRef(reglagesSeg)
   reglagesRef.current = reglagesSeg
@@ -87,8 +92,9 @@ export function useSession(
 
   const demarrer = useCallback(async (o: OptionsDemarrage) => {
     if (moteur.current) return
-    setErreur(null); setPrise(null); setBrutAncien(null); setResNouveau(null); setCalcul(null); arreterRecalcul(); brutesAncien.current = []; moteurDuRun.current = moteurChoisi; reglagesDuRun.current = reglagesNouveauRef.current; setResultat(null); setNotesLive([]); setNoteEnCours(null); setLatenceMs(null); setCoupures(0)
+    setErreur(null); setPrise(null); setBrutAncien(null); setResNouveau(null); setCalcul(null); arreterRecalcul(); brutesAncien.current = []; pointsLive.current = []; setPoints([]); setCorrections([]); moteurDuRun.current = moteurChoisi; reglagesDuRun.current = reglagesNouveauRef.current; setResultat(null); setNotesLive([]); setNoteEnCours(null); setLatenceMs(null); setCoupures(0)
     suivi.current.reinitialiser()
+    suivi.current.regler({ dureeMinS: reglagesNouveauRef.current.minNoteDurationMs / 1000, silenceFinS: reglagesNouveauRef.current.silenceDurationMs / 1000, sautCents: reglagesNouveauRef.current.noteJumpCents })
     const phrase = o.tenir ? phraseTenue(o.phrase, o.phrase.entrees[o.departSlot ?? 0] ?? o.phrase.entrees[0]) : o.phrase
     phraseCourante.current = phrase
     const m = new MoteurWeb()
@@ -110,14 +116,24 @@ export function useSession(
         mode: o.mode, echo: echoEffectif(politiqueEcho), sessionIOS: 'defaut', analyse: true, diapason: reg.diapason,
         latenceMemoriseeMs: memo ?? undefined, moteur: moteurChoisi, reglagesAncien: reglagesRef.current, reglagesNouveau: reglagesNouveauRef.current,
       }, {
-        trame: t => { suivi.current.ajouter(t) },
+        trame: t => {
+          suivi.current.ajouter(t)
+          if (moteurDuRun.current === 'nouveau') pointsLive.current.push({ t: t.t, hz: t.presence ? t.f0Hz : null })
+        },
         strobe: (etats, rms, c) => { strobeRef.current = etats; rmsRef.current = rms; if (c) setCoupures(c) },
         latence: ms => {
           setLatenceMs(ms)
           memoriserLatence(cleAppareil({ userAgent: navigator.userAgent, sampleRate: ppRef.current?.planning.sampleRate ?? 48000 }), ms)
         },
         erreur: msg => setErreur(msg),
-        notesAncien: ns => { brutesAncien.current = ns },
+        notesAncien: (ns, pts, depuisT) => {
+          brutesAncien.current = ns
+          const a = pointsLive.current
+          let i = a.length
+          while (i > 0 && a[i - 1].t >= depuisT) i--
+          a.length = i
+          for (const p of pts) a.push(p)
+        },
       })
       setVersion(v => v + 1)
       setEtat('joue')
@@ -161,6 +177,7 @@ export function useSession(
       const ancien = moteurDuRun.current === 'ancien'
       const brutes = ancien ? brutesAncien.current : suivi.current.notes
       setNotesLive(annoterNotes(brutes, c, true))
+      setPoints(pointsLive.current.slice())
       const en = ancien ? brutesAncien.current[brutesAncien.current.length - 1] : suivi.current.enCours
       setNoteEnCours(en && en.ouverte ? annoterNote(en, c, true) : null)
     }, 100)
@@ -215,10 +232,20 @@ export function useSession(
     if (moteurChoisi === 'ancien') {
       if (!brutAncien) return null
       const brutes = notesAncien(brutAncien, { fs: prise.fs, offsetS: prise.offset / prise.fs, diapason: reg.diapason, planning: prise.ctx.planning, reglages: reglagesSeg })
-      return annoterNotes(brutes, prise.ctx, false)
+      return annoterNotes(appliquerCorrections(brutes, corrections, prise.ctx.planning), prise.ctx, false)
     }
-    return resNouveau ? annoterNotes(resNouveau.notes, prise.ctx, false) : null
-  }, [prise, moteurChoisi, brutAncien, resNouveau, reglagesSeg, reg.diapason])
+    return resNouveau ? annoterNotes(appliquerCorrections(resNouveau.notes, corrections, prise.ctx.planning), prise.ctx, false) : null
+  }, [prise, moteurChoisi, brutAncien, resNouveau, reglagesSeg, reg.diapason, corrections])
+
+  // sparkline après l'arrêt : trames de la prise avec le moteur affiché
+  const pointsFinaux = useMemo((): PointHauteur[] => {
+    if (!prise) return []
+    if (moteurChoisi === 'ancien') return brutAncien ? pointsAncien(brutAncien, { fs: prise.fs, offsetS: prise.offset / prise.fs, reglages: reglagesSeg }) : []
+    return resNouveau ? resNouveau.trames.map(t => ({ t: t.t, hz: t.presence ? t.f0Hz : null })) : []
+  }, [prise, moteurChoisi, brutAncien, resNouveau, reglagesSeg])
+
+  const corriger = useCallback((c: Correction) => setCorrections(l => ajouterCorrection(l, c)), [])
+  const reinitialiserCorrections = useCallback(() => setCorrections([]), [])
 
   useEffect(() => () => { recalcul.current?.worker.terminate() }, [])
 
@@ -247,8 +274,9 @@ export function useSession(
 
   return useMemo(() => ({
     etat, erreur, latenceMs, coupures, notesLive, noteEnCours, notesFinales, resultat, version, calcul, priseDispo: !!prise,
+    points: etat === 'joue' ? points : pointsFinaux, nbCorrections: corrections.length, corriger, reinitialiserCorrections,
     strobeRef, rmsRef, ppRef, ctxRef,
     demarrer, arreter, reglerSon, definirVolume, changerAccordTenu, tempsAudible, tempsCourant,
-    effacer: () => { setPrise(null); setBrutAncien(null); setResNouveau(null); setCalcul(null); arreterRecalcul(); setResultat(null); setNotesLive([]); setNoteEnCours(null); suivi.current.reinitialiser() },
-  }), [etat, erreur, latenceMs, coupures, notesLive, noteEnCours, notesFinales, resultat, version, calcul, prise, demarrer, arreter, reglerSon, definirVolume, changerAccordTenu, tempsAudible, tempsCourant])
+    effacer: () => { setCorrections([]); setPoints([]); setPrise(null); setBrutAncien(null); setResNouveau(null); setCalcul(null); arreterRecalcul(); setResultat(null); setNotesLive([]); setNoteEnCours(null); suivi.current.reinitialiser() },
+  }), [etat, erreur, latenceMs, coupures, notesLive, noteEnCours, notesFinales, resultat, version, calcul, prise, points, pointsFinaux, corrections, corriger, reinitialiserCorrections, demarrer, arreter, reglerSon, definirVolume, changerAccordTenu, tempsAudible, tempsCourant])
 }

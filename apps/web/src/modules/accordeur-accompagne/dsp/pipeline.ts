@@ -35,6 +35,11 @@ export type OptionsPipeline = {
   seuilF?: number
   sigmaMpmCents?: number
   gardeAttaqueS?: number        // temps ignoré après chaque attaque du playback (40 ms)
+  amorceS?: number              // fenêtre du modèle pour amorcer / confirmer une note (80 ms)
+  debutStableS?: number         // début de note ignoré avant la mesure fine (60 ms)
+  silenceFinS?: number          // silence qui termine la note suivie (105 ms)
+  confirmations?: number        // trames consécutives pour confirmer une attaque (2)
+  fenetreMpm?: number           // échantillons de la piste rapide (2048) : plus court = note plus vite, hauteur grave moins sûre
   surTrame?: (t: number, trame: TrameAnalyse) => void
 }
 
@@ -62,7 +67,7 @@ const centsDe = (f: number, ref: number) => 1200 * Math.log2(f / ref)
 /** Accès au micro (déjà aligné sur le planning) : tampon complet hors ligne, fenêtre glissante dans le Worker. */
 export type AccesMicro = {
   /** 2048 échantillons à fsMic à partir de t0 (tableau plus court si les données manquent). */
-  trame: (t0: number) => Float32Array
+  trame: (t0: number, n?: number) => Float32Array
   /** Signal à 16 kHz entre t0 et t1. */
   tranche16: (t0: number, t1: number) => Float32Array
 }
@@ -77,6 +82,12 @@ export function creerAnalyseurFlux(fsMic: number, planning: Planning, acces: Acc
   const fenMax = o.fenetreMaxS ?? FENETRE_MAX_S
   const sigmaMpm = o.sigmaMpmCents ?? SIGMA_MPM_DEFAUT_CENTS
   const garde = o.gardeAttaqueS ?? GARDE_ATTAQUE_S
+  const amorce = o.amorceS ?? FENETRE_AMORCE_S
+  const debutStable = o.debutStableS ?? DEBUT_STABLE_S
+  const silenceFin = o.silenceFinS ?? SILENCE_FIN_S
+  const confirmations = Math.max(1, Math.round(o.confirmations ?? 2))
+  let rangBrut = 0                  // trames brutes consécutives
+  const fenMpm = o.fenetreMpm ?? FENETRE_MPM
   const appris = new NiveauPlaybackAppris()
   let actif: { onset: number; f0: number; sigma: number; vu: number } | null = null
   let evPrec: EvenementAccord | null = null
@@ -93,10 +104,10 @@ export function creerAnalyseurFlux(fsMic: number, planning: Planning, acces: Acc
 
     // ── piste rapide : soustraction + MPM sur le résidu ──
     let f0Mpm: number | null = null, rmsResidu = 0
-    const tMpm0 = t - FENETRE_MPM / fsMic
+    const tMpm0 = t - fenMpm / fsMic
     if (tMpm0 >= debutPropre) {
-      const trame = acces.trame(tMpm0)
-      if (trame.length === FENETRE_MPM) {
+      const trame = acces.trame(tMpm0, fenMpm)
+      if (trame.length === fenMpm) {
         if (voix.length) {
           const d = detecterSurResidu(trame, fsMic, voix, profil)
           f0Mpm = d.f0Hz; rmsResidu = d.rmsResidu
@@ -112,7 +123,7 @@ export function creerAnalyseurFlux(fsMic: number, planning: Planning, acces: Acc
     if (actif && f0Mpm && Math.abs(centsDe(f0Mpm, actif.f0)) > 40) {
       // MPM s'écarte de la note en cours : nouvelle note, ou résidu trompeur (multiple) ?
       // Le modèle court tranche : si l'ancienne note sonne encore, MPM est ignoré.
-      const ws = Math.max(t - FENETRE_AMORCE_S, debutPropre)
+      const ws = Math.max(t - amorce, debutPropre)
       let encore = false
       if (t - ws >= 0.06) {
         const ys = tranche16(ws, t)
@@ -126,7 +137,7 @@ export function creerAnalyseurFlux(fsMic: number, planning: Planning, acces: Acc
     rmsPrec = rmsResidu
 
     // ── piste précise : modèle conjoint sur fenêtre croissante ──
-    const wDebut: number = actif ? Math.max(actif.onset + DEBUT_STABLE_S, t - fenMax, debutPropre) : Math.max(t - FENETRE_AMORCE_S, debutPropre)
+    const wDebut: number = actif ? Math.max(actif.onset + debutStable, t - fenMax, debutPropre) : Math.max(t - amorce, debutPropre)
     let res: ResultatModele | null = null
     let cands0: number[] = []
     let ctxPresence: ReturnType<typeof creerContexte> | null = null
@@ -152,7 +163,7 @@ export function creerAnalyseurFlux(fsMic: number, planning: Planning, acces: Acc
     //    l'affinage contient encore la note qui vient de finir et resterait « présente ». ──
     let resPres: ResultatModele | null = res
     if (actif && res) {
-      const ws = Math.max(t - FENETRE_AMORCE_S, debutPropre)
+      const ws = Math.max(t - amorce, debutPropre)
       resPres = null
       if (t - ws >= 0.06) {
         const ys = tranche16(ws, t)
@@ -186,7 +197,8 @@ export function creerAnalyseurFlux(fsMic: number, planning: Planning, acces: Acc
     const fMinVoix = voix.length ? Math.min(...voix.map(v => v.freqHz)) : Infinity
     if (f0Mpm !== null && modeleJuge && !presenceModele && f0Mpm < 0.75 * fMinVoix) f0Mpm = null
     const brute = presenceModele || f0Mpm !== null
-    const presence = brute && (actif !== null || precedenteBrute)
+    rangBrut = brute ? rangBrut + 1 : 0
+    const presence = brute && (actif !== null || rangBrut >= confirmations)
     precedenteBrute = brute
     if (!brute && voix.length && t - Math.max(t - 0.1, debutPropre) >= 0.1) {
       const pbRef = fusionnerPartiels(voix, 0.1, 6000)
@@ -212,9 +224,9 @@ export function creerAnalyseurFlux(fsMic: number, planning: Planning, acces: Acc
 
     // ── suivi de la note en cours ──
     if (presence && f0Hz) {
-      if (!actif) actif = { onset: Math.max(wDebut, t - FENETRE_AMORCE_S), f0: f0Hz, sigma: sigmaCents, vu: t }
+      if (!actif) actif = { onset: Math.max(wDebut, t - amorce), f0: f0Hz, sigma: sigmaCents, vu: t }
       else { actif.f0 = f0Hz; actif.sigma = sigmaCents; actif.vu = t }
-    } else if (actif && t - actif.vu >= SILENCE_FIN_S) actif = null
+    } else if (actif && t - actif.vu >= silenceFin) actif = null
     return trame
   }
 }
@@ -224,13 +236,13 @@ export function analyserEnregistrement(micro: Float32Array, fsMic: number, plann
   const micro16 = reechantillonner(micro, fsMic, FS_MODELE)
   const duree = micro.length / fsMic
   const acces: AccesMicro = {
-    trame: t0 => { const i0 = Math.round(t0 * fsMic); return micro.subarray(i0, i0 + FENETRE_MPM) },
+    trame: (t0, n = FENETRE_MPM) => { const i0 = Math.round(t0 * fsMic); return micro.subarray(i0, i0 + n) },
     tranche16: (t0, t1) => micro16.subarray(Math.max(0, Math.round(t0 * FS_MODELE)), Math.min(micro16.length, Math.round(t1 * FS_MODELE))),
   }
   const etape = creerAnalyseurFlux(fsMic, planning, acces, o)
   const trames: TrameAnalyse[] = []
   const temps: number[] = []
-  for (let t = Math.max(FENETRE_MPM / fsMic + 0.02, o.depuisS ?? 0); t <= Math.min(duree, o.jusqueS ?? duree); t += pas) {
+  for (let t = Math.max((o.fenetreMpm ?? FENETRE_MPM) / fsMic + 0.02, o.depuisS ?? 0); t <= Math.min(duree, o.jusqueS ?? duree); t += pas) {
     const c0 = performance.now()
     const trame = etape(t)
     trames.push(trame)
@@ -241,7 +253,7 @@ export function analyserEnregistrement(micro: Float32Array, fsMic: number, plann
 }
 
 // ─── Passe finale (non causale), §6.8 ────────────────────────────────────────
-export type OptionsFinale = { diapason?: number; profil?: typeof PROFIL_ACCOMPAGNE; gardeAttaqueS?: number }
+export type OptionsFinale = { diapason?: number; profil?: typeof PROFIL_ACCOMPAGNE; gardeAttaqueS?: number; debutStableS?: number }
 
 /** Instants strictement intérieurs à ]a, b[ où l'entrée de phrase change (changements d'accord). */
 export function changementsDAccord(planning: Planning, a: number, b: number, marge = 0.03): number[] {
@@ -270,7 +282,7 @@ export function passeFinale(micro: Float32Array, fsMic: number, planning: Planni
     const ev = evenementA(planning, milieu)
     const voix = ev ? voixSonnantes(ev) : []
     const base = { entree: ev?.entree, ...(coupeAvant ? { coupeAvant: true } : {}), ...(coupeApres ? { coupeApres: true } : {}) }
-    const a = Math.max(tOn + DEBUT_STABLE_S, ev ? derniereAttaque(planning, milieu) + (o.gardeAttaqueS ?? GARDE_ATTAQUE_S) : -Infinity)
+    const a = Math.max(tOn + (o.debutStableS ?? DEBUT_STABLE_S), ev ? derniereAttaque(planning, milieu) + (o.gardeAttaqueS ?? GARDE_ATTAQUE_S) : -Infinity)
     const b = Math.min(tOff - 0.03, ev ? ev.tFin - 0.06 : Infinity)
     const hzs = frames.map(f => f.hz).sort((x, y) => x - y)
     const medHz = hzs[Math.floor(hzs.length / 2)]

@@ -6,6 +6,7 @@ import type { Planning } from './dsp/types.ts'
 import type { NoteAnnotee } from './annotation.ts'
 import { couleurEcart, formaterEcart } from './couleurs.ts'
 import { noteEcrite, tonaliteEcrite } from './notation.ts'
+import { nomCourt } from './qualites.ts'
 import type { Phrase } from './phrase.ts'
 import type { PolitiqueEcho, ReglagesAccordeur, ReglagesPage } from './reglagesLocaux.ts'
 import { SectionNouveau, SectionSegmentation } from './ReglagesSegmentation.tsx'
@@ -149,21 +150,41 @@ export function FeuilleReglages({ reg, pageReg, onChange, latenceMs, seg, nouvea
   )
 }
 
-/** Bulle d'une note après l'arrêt : nom écrit, écart, σ, rôle, battements avec chaque son qui sonnait. */
-export function BulleNote({ note, transpo, planning, phrase, seuil, onFermer }: {
-  note: NoteAnnotee; transpo: string; planning: Planning | null; phrase: Phrase; seuil: number; onFermer: () => void
+const Chevron = ({ gauche }: { gauche?: boolean }) => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d={gauche ? 'M15 5l-7 7 7 7' : 'M9 5l7 7-7 7'} />
+  </svg>
+)
+
+export interface ActionsNote {
+  index: number; total: number
+  onPrecedent: () => void; onSuivant: () => void
+  onSupprimer: () => void
+  /** Accords voisins (entrées de phrase) auxquels on peut rattacher la note ; null = pas d'accord de ce côté. */
+  avant: number | null; apres: number | null
+  onRattacher: (entree: number) => void
+  nbCorrections: number; onReinitialiser: () => void
+}
+
+/** Bulle d'une note après l'arrêt : nom écrit, écart, σ, rôle, battements ; navigation et corrections. */
+export function BulleNote({ note, transpo, planning, phrase, seuil, actions, onFermer }: {
+  note: NoteAnnotee; transpo: string; planning: Planning | null; phrase: Phrase; seuil: number; actions: ActionsNote; onFermer: () => void
 }) {
   const e = phrase.entrees[note.entree] ?? phrase.entrees[0]
   const nom = noteEcrite(note.midi, tonaliteEcrite(e.tonalite, transpo))
   const ev = planning ? evenementAu(planning, 0.5 * (note.tOn + note.tOff)) : null
   const sonn = ev ? voixSonnantes(ev) : []
   const noms: Record<string, string> = { F: 'fondamentale', '3': 'tierce', '5': 'quinte', '7': 'septième' }
-  const [ouvert] = useState(true)
-  if (!ouvert) return null
+  const nomAccord = (i: number | null): string => (i !== null && phrase.entrees[i] ? nomCourt(phrase.entrees[i]) : '—')
   return (
     <section role="dialog" aria-label="Détail de la note" style={{ ...carte, margin: '8px 0', borderColor: couleurEcart(note.ecart, seuil) }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <strong style={{ fontSize: 15 }}>{nom.nom}{nom.octave} · {formaterEcart(note.ecart)}</strong>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 6 }}>
+        <button style={pastille(false, { padding: 0, width: 44, display: 'flex', alignItems: 'center', justifyContent: 'center' })} onClick={actions.onPrecedent} disabled={actions.index <= 0} aria-label="Note précédente"><Chevron gauche /></button>
+        <strong style={{ fontSize: 15, textAlign: 'center', flex: 1 }}>
+          {nom.nom}{nom.octave} · {formaterEcart(note.ecart)}
+          <span style={{ display: 'block', fontSize: 11, fontWeight: 400, color: 'var(--text-muted)' }}>note {actions.index + 1} sur {actions.total} · accord {nomAccord(note.entree)}</span>
+        </strong>
+        <button style={pastille(false, { padding: 0, width: 44, display: 'flex', alignItems: 'center', justifyContent: 'center' })} onClick={actions.onSuivant} disabled={actions.index >= actions.total - 1} aria-label="Note suivante"><Chevron /></button>
         <button style={pastille(false, { padding: 0, width: 44 })} onClick={onFermer} aria-label="Fermer le détail">✕</button>
       </div>
       <p style={{ margin: '2px 0', fontSize: 13 }}>
@@ -179,6 +200,15 @@ export function BulleNote({ note, transpo, planning, phrase, seuil, onFermer }: 
             </li>
           ))}
         </ul>
+      )}
+      <p style={{ ...titreSection, marginTop: 8 }}>Corriger cette note</p>
+      <div style={rangee}>
+        <button style={pastille(false)} disabled={actions.avant === null} onClick={() => actions.avant !== null && actions.onRattacher(actions.avant)}>Accord d’avant ({nomAccord(actions.avant)})</button>
+        <button style={pastille(false)} disabled={actions.apres === null} onClick={() => actions.apres !== null && actions.onRattacher(actions.apres)}>Accord d’après ({nomAccord(actions.apres)})</button>
+        <button style={pastille(false, { color: '#f87171', borderColor: '#f87171' })} onClick={actions.onSupprimer}>Supprimer la note</button>
+      </div>
+      {actions.nbCorrections > 0 && (
+        <button style={pastille(false, { marginTop: 6, fontSize: 12 })} onClick={actions.onReinitialiser}>Annuler les {actions.nbCorrections} correction{actions.nbCorrections > 1 ? 's' : ''}</button>
       )}
     </section>
   )

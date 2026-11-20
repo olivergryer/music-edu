@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { CHAMPS_NOUVEAU, NOUVEAU_DEFAUT, cleTrames, optionsFinaleDe, optionsPipelineDe, profilDe } from './reglagesNouveau.ts'
+import { CHAMPS_NOUVEAU, NOUVEAU_DEFAUT, PREREGLAGES_NOUVEAU, appliquerPreregalage, cleTrames, optionsFinaleDe, optionsPipelineDe, preregalageActif, profilDe } from './reglagesNouveau.ts'
 
 test('chaque réglage a une description, des bornes cohérentes et son défaut dans les bornes', () => {
   for (const c of CHAMPS_NOUVEAU) {
@@ -21,4 +21,14 @@ test('la clé des trames ignore les réglages de segmentation et réagit aux aut
   assert.equal(cleTrames({ ...NOUVEAU_DEFAUT, silenceDurationMs: 30, reattackDropRatio: 0.8 }), k)
   assert.notEqual(cleTrames({ ...NOUVEAU_DEFAUT, seuilF: 80 }), k)
   assert.notEqual(cleTrames({ ...NOUVEAU_DEFAUT, gardeAttaqueMs: 60 }), k)
+})
+
+test('les champs à choix contiennent leur défaut ; les préréglages sont reconnus', () => {
+  for (const c of CHAMPS_NOUVEAU.filter(x => x.choix)) assert.ok(c.choix!.some(x => x.valeur === NOUVEAU_DEFAUT[c.cle]), c.cle)
+  assert.equal(preregalageActif(NOUVEAU_DEFAUT), 'standard')
+  const rapides = appliquerPreregalage(PREREGLAGES_NOUVEAU.find(p => p.id === 'rapides')!)
+  assert.equal(preregalageActif(rapides), 'rapides')
+  assert.equal(preregalageActif({ ...rapides, seuilF: 99 }), null)
+  const o = optionsPipelineDe(rapides)
+  assert.equal(o.pasS, 0.025); assert.equal(o.fenetreMpm, 1024); assert.equal(o.confirmations, 1)
 })

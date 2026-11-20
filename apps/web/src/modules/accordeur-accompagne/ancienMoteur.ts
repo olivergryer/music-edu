@@ -10,6 +10,7 @@ import {
   TAILLE_TRAME, PAS_TRAME, analyserTramesBrutes, appliquerSeuils, nbTramesBrutes, segmenter,
 } from '../../accordeurUtils.js'
 import type { NoteBrute } from './annotation.ts'
+import type { PointHauteur } from './sparklines.ts'
 import { changementsDAccord } from './dsp/pipeline.ts'
 import type { Planning } from './dsp/types.ts'
 import type { ReglagesSegmentation } from '../../profilsSegmentation.ts'
@@ -113,5 +114,20 @@ export function notesAncien(brut: BrutAncien, o: OptionsNotes): NoteAncien[] {
   }
   const der = out[out.length - 1]
   if (der && segs.length && dernierMs - segs[segs.length - 1].finMs <= r.silenceDurationMs + 2 * PAS_TRAME / o.fs * 1000) der.ouverte = true
+  return out
+}
+
+/**
+ * Points de hauteur (instants du planning) après gate et clarté : de quoi tracer la sparkline.
+ * `depuisT` limite la sortie à la fin de la série (envoi au fil de l'eau pendant le Live).
+ */
+export function pointsAncien(brut: BrutAncien, o: { fs: number; offsetS: number; reglages: ReglagesSegmentation; depuisT?: number }): PointHauteur[] {
+  const serie = appliquerSeuils(brut, o.fs, { clarityThreshold: o.reglages.clarityThreshold, rmsGate: o.reglages.gateLevel }) as { tMs: number; hz: number | null }[]
+  const decalage = DEMI_TRAME_MS / o.fs * 1000
+  const out: PointHauteur[] = []
+  for (const p of serie) {
+    const t = (p.tMs + decalage) / 1000 - o.offsetS
+    if (o.depuisT === undefined || t >= o.depuisT) out.push({ t, hz: p.hz })
+  }
   return out
 }

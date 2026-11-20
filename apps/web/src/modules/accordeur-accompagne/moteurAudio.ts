@@ -8,6 +8,7 @@ import type { EtatStrobe, NoteFinale, Planning, TrameAnalyse } from './dsp/types
 import { latenceSortieS, tempsAudible } from './temps.ts'
 import type { ReglagesSegmentation } from '../../profilsSegmentation.ts'
 import type { NoteAncien } from './ancienMoteur.ts'
+import type { PointHauteur } from './sparklines.ts'
 import type { ReglagesNouveau } from './reglagesNouveau.ts'
 import type { DepuisWorker, DepuisWorklet, ModeAffichage, MoteurDetection, VersWorker, VersWorklet } from './protocole.ts'
 // `?worker&url` : bundle le worklet avec ses imports (un `?url` d'un .ts ne le transpilerait pas)
@@ -47,7 +48,7 @@ export type Abonnes = {
   latence?: (ms: number, qualite: number) => void
   progression?: (texte: string) => void
   erreur?: (message: string) => void
-  notesAncien?: (notes: NoteAncien[]) => void
+  notesAncien?: (notes: NoteAncien[], points: PointHauteur[], depuisT: number) => void
 }
 
 export interface MoteurAudioAccompagne {
@@ -135,7 +136,7 @@ export class MoteurWeb implements MoteurAudioAccompagne {
       if (m.type === 'trame') ab.trame?.(m.trame, m.msCalcul)
       else if (m.type === 'latence') { this.latenceMs = m.ms; ab.latence?.(m.ms, m.qualite) }
       else if (m.type === 'progression') ab.progression?.(m.texte)
-      else if (m.type === 'notesAncien') ab.notesAncien?.(m.notes)
+      else if (m.type === 'notesAncien') ab.notesAncien?.(m.notes, m.points, m.depuisT)
       else if (m.type === 'erreur') { if (this.sansMicro) return; ab.erreur?.(m.message); this.rejetFin?.(new Error(m.message)) }
       else if (m.type === 'fini') {
         const r: Resultat = {
